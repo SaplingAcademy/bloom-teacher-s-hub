@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
+import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,13 +34,20 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/calendar': typeof AppCalendarRoute
   '/leads': typeof AppLeadsRoute
   '/students': typeof AppStudentsRoute
 }
 export interface FileRoutesByTo {
+  '/calendar': typeof AppCalendarRoute
   '/leads': typeof AppLeadsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
@@ -47,16 +55,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_app/calendar': typeof AppCalendarRoute
   '/_app/leads': typeof AppLeadsRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/leads' | '/students'
+  fullPaths: '/' | '/calendar' | '/leads' | '/students'
   fileRoutesByTo: FileRoutesByTo
-  to: '/leads' | '/students' | '/'
-  id: '__root__' | '/_app' | '/_app/leads' | '/_app/students' | '/_app/'
+  to: '/calendar' | '/leads' | '/students' | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/calendar'
+    | '/_app/leads'
+    | '/_app/students'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,16 +108,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/calendar': {
+      id: '/_app/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCalendarRoute: typeof AppCalendarRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCalendarRoute: AppCalendarRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppIndexRoute: AppIndexRoute,
