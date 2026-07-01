@@ -77,19 +77,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Bloom — The all-in-one platform for language teachers" },
+      {
+        name: "description",
+        content:
+          "Bloom brings students, lessons, scheduling, finances and a teacher community into one calm, modern workspace built for independent language teachers and schools.",
+      },
+      { name: "author", content: "Bloom" },
+      { property: "og:title", content: "Bloom — Run your entire teaching business in one place" },
+      {
+        property: "og:description",
+        content:
+          "The workspace independent language teachers open every morning: students, lessons, calendar, finance, AI and community.",
+      },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:site", content: "@Bloom" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap",
       },
     ],
   }),
