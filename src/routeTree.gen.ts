@@ -18,6 +18,7 @@ import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppInsightsRouteImport } from './routes/_app.insights'
 import { Route as AppFinanceRouteImport } from './routes/_app.finance'
+import { Route as AppCommunityRouteImport } from './routes/_app.community'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 
 const AppRoute = AppRouteImport.update({
@@ -64,6 +65,11 @@ const AppFinanceRoute = AppFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCommunityRoute = AppCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -73,6 +79,7 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/calendar': typeof AppCalendarRoute
+  '/community': typeof AppCommunityRoute
   '/finance': typeof AppFinanceRoute
   '/insights': typeof AppInsightsRoute
   '/leads': typeof AppLeadsRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/calendar': typeof AppCalendarRoute
+  '/community': typeof AppCommunityRoute
   '/finance': typeof AppFinanceRoute
   '/insights': typeof AppInsightsRoute
   '/leads': typeof AppLeadsRoute
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/calendar': typeof AppCalendarRoute
+  '/_app/community': typeof AppCommunityRoute
   '/_app/finance': typeof AppFinanceRoute
   '/_app/insights': typeof AppInsightsRoute
   '/_app/leads': typeof AppLeadsRoute
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/calendar'
+    | '/community'
     | '/finance'
     | '/insights'
     | '/leads'
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/calendar'
+    | '/community'
     | '/finance'
     | '/insights'
     | '/leads'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/_app/calendar'
+    | '/_app/community'
     | '/_app/finance'
     | '/_app/insights'
     | '/_app/leads'
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFinanceRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/community': {
+      id: '/_app/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof AppCommunityRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/calendar': {
       id: '/_app/calendar'
       path: '/calendar'
@@ -223,6 +242,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppCalendarRoute: typeof AppCalendarRoute
+  AppCommunityRoute: typeof AppCommunityRoute
   AppFinanceRoute: typeof AppFinanceRoute
   AppInsightsRoute: typeof AppInsightsRoute
   AppLeadsRoute: typeof AppLeadsRoute
@@ -235,6 +255,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppCalendarRoute: AppCalendarRoute,
+  AppCommunityRoute: AppCommunityRoute,
   AppFinanceRoute: AppFinanceRoute,
   AppInsightsRoute: AppInsightsRoute,
   AppLeadsRoute: AppLeadsRoute,
