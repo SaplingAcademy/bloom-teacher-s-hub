@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppResourcesRouteImport } from './routes/_app.resources'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
@@ -35,6 +36,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppStudentsRoute = AppStudentsRouteImport.update({
   id: '/students',
   path: '/students',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppResourcesRoute = AppResourcesRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof AppMessagesRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
+  '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
 }
 export interface FileRoutesByTo {
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/messages': typeof AppMessagesRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
+  '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
 }
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/_app/messages': typeof AppMessagesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/resources': typeof AppResourcesRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/': typeof AppIndexRoute
 }
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/profile'
     | '/resources'
+    | '/settings'
     | '/students'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/profile'
     | '/resources'
+    | '/settings'
     | '/students'
     | '/'
   id:
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/_app/messages'
     | '/_app/profile'
     | '/_app/resources'
+    | '/_app/settings'
     | '/_app/students'
     | '/_app/'
   fileRoutesById: FileRoutesById
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/students'
       fullPath: '/students'
       preLoaderRoute: typeof AppStudentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/resources': {
@@ -289,6 +308,7 @@ interface AppRouteChildren {
   AppMessagesRoute: typeof AppMessagesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppResourcesRoute: typeof AppResourcesRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -304,6 +324,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMessagesRoute: AppMessagesRoute,
   AppProfileRoute: AppProfileRoute,
   AppResourcesRoute: AppResourcesRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppIndexRoute: AppIndexRoute,
 }
