@@ -50,7 +50,7 @@ function TodayPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow={today}
-        title="Good morning, Maria 🌱"
+        title="Good morning, Maria"
         description="Here's everything that needs you today. Bloom keeps the busywork out of your way."
         actions={
           <button className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-warm px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-sm)] transition-transform hover:-translate-y-0.5">
