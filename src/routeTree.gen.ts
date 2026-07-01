@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
 import { Route as AppResourcesRouteImport } from './routes/_app.resources'
+import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppFinanceRouteImport } from './routes/_app.finance'
@@ -35,6 +36,11 @@ const AppStudentsRoute = AppStudentsRouteImport.update({
 const AppResourcesRoute = AppResourcesRouteImport.update({
   id: '/resources',
   path: '/resources',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMessagesRoute = AppMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLessonsRoute = AppLessonsRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof AppFinanceRoute
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
+  '/messages': typeof AppMessagesRoute
   '/resources': typeof AppResourcesRoute
   '/students': typeof AppStudentsRoute
 }
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/finance': typeof AppFinanceRoute
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
+  '/messages': typeof AppMessagesRoute
   '/resources': typeof AppResourcesRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/_app/finance': typeof AppFinanceRoute
   '/_app/leads': typeof AppLeadsRoute
   '/_app/lessons': typeof AppLessonsRoute
+  '/_app/messages': typeof AppMessagesRoute
   '/_app/resources': typeof AppResourcesRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/': typeof AppIndexRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/leads'
     | '/lessons'
+    | '/messages'
     | '/resources'
     | '/students'
   fileRoutesByTo: FileRoutesByTo
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/leads'
     | '/lessons'
+    | '/messages'
     | '/resources'
     | '/students'
     | '/'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/_app/finance'
     | '/_app/leads'
     | '/_app/lessons'
+    | '/_app/messages'
     | '/_app/resources'
     | '/_app/students'
     | '/_app/'
@@ -152,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppResourcesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/messages': {
+      id: '/_app/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AppMessagesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/lessons': {
       id: '/_app/lessons'
       path: '/lessons'
@@ -188,6 +207,7 @@ interface AppRouteChildren {
   AppFinanceRoute: typeof AppFinanceRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppLessonsRoute: typeof AppLessonsRoute
+  AppMessagesRoute: typeof AppMessagesRoute
   AppResourcesRoute: typeof AppResourcesRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -198,6 +218,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFinanceRoute: AppFinanceRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppLessonsRoute: AppLessonsRoute,
+  AppMessagesRoute: AppMessagesRoute,
   AppResourcesRoute: AppResourcesRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppIndexRoute: AppIndexRoute,
