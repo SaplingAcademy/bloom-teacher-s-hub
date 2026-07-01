@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
+import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 
@@ -29,6 +30,11 @@ const AppStudentsRoute = AppStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLessonsRoute = AppLessonsRouteImport.update({
+  id: '/lessons',
+  path: '/lessons',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -44,11 +50,13 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/calendar': typeof AppCalendarRoute
   '/leads': typeof AppLeadsRoute
+  '/lessons': typeof AppLessonsRoute
   '/students': typeof AppStudentsRoute
 }
 export interface FileRoutesByTo {
   '/calendar': typeof AppCalendarRoute
   '/leads': typeof AppLeadsRoute
+  '/lessons': typeof AppLessonsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
 }
@@ -57,19 +65,21 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/leads': typeof AppLeadsRoute
+  '/_app/lessons': typeof AppLessonsRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/calendar' | '/leads' | '/students'
+  fullPaths: '/' | '/calendar' | '/leads' | '/lessons' | '/students'
   fileRoutesByTo: FileRoutesByTo
-  to: '/calendar' | '/leads' | '/students' | '/'
+  to: '/calendar' | '/leads' | '/lessons' | '/students' | '/'
   id:
     | '__root__'
     | '/_app'
     | '/_app/calendar'
     | '/_app/leads'
+    | '/_app/lessons'
     | '/_app/students'
     | '/_app/'
   fileRoutesById: FileRoutesById
@@ -101,6 +111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/lessons': {
+      id: '/_app/lessons'
+      path: '/lessons'
+      fullPath: '/lessons'
+      preLoaderRoute: typeof AppLessonsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/leads': {
       id: '/_app/leads'
       path: '/leads'
@@ -121,6 +138,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppCalendarRoute: typeof AppCalendarRoute
   AppLeadsRoute: typeof AppLeadsRoute
+  AppLessonsRoute: typeof AppLessonsRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -128,6 +146,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCalendarRoute: AppCalendarRoute,
   AppLeadsRoute: AppLeadsRoute,
+  AppLessonsRoute: AppLessonsRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppIndexRoute: AppIndexRoute,
 }
