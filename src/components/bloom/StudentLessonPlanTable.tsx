@@ -52,6 +52,8 @@ interface Props {
   onLessonsChange: (updatedLessons: StudentLesson[]) => void;
 }
 
+import { useLanguage } from "@/hooks/use-language";
+
 export function StudentLessonPlanTable({
   studentId,
   teacherId,
@@ -64,6 +66,7 @@ export function StudentLessonPlanTable({
   lessons,
   onLessonsChange,
 }: Props) {
+  const { t, formatStatus } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "present" | "absent" | "rescheduled">("all");
   const [isSaving, setIsSaving] = useState(false);
@@ -553,17 +556,17 @@ export function StudentLessonPlanTable({
                                 : "bg-transparent text-muted-foreground border-transparent hover:border-border"
                             }`}
                           >
-                            <SelectValue placeholder="— Selecionar —" />
+                            <SelectValue placeholder={t("students.hwUnrecorded")} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="unrecorded">
-                              <span className="font-normal text-muted-foreground">— Selecionar —</span>
+                              <span className="font-normal text-muted-foreground">{t("students.hwUnrecorded")}</span>
                             </SelectItem>
                             <SelectItem value="pending">
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">Pendente</span>
+                              <span className="font-semibold text-amber-700 dark:text-amber-400">{t("students.hwPending")}</span>
                             </SelectItem>
                             <SelectItem value="posted">
-                              <span className="font-semibold text-emerald-700 dark:text-emerald-400">Entregue</span>
+                              <span className="font-semibold text-emerald-700 dark:text-emerald-400">{t("students.hwPosted")}</span>
                             </SelectItem>
                           </SelectContent>
                         </Select>

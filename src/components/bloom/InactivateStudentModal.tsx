@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, UserX, Calendar, DollarSign, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/use-language";
 
 interface Props {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export function InactivateStudentModal({
   activeClassCount = 0,
   onSuccess,
 }: Props) {
+  const { t, lang } = useLanguage();
   const [inactivationDate, setInactivationDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -60,11 +62,11 @@ export function InactivateStudentModal({
   useEffect(() => {
     if (isOpen) {
       setInactivationDate(new Date().toISOString().split("T")[0]);
-      setInactivationReason("Pausou as aulas");
+      setInactivationReason(lang === "pt" ? "Pausou as aulas" : "Paused lessons");
       setStopBilling(true);
       setCancelFutureEvents(true);
     }
-  }, [isOpen]);
+  }, [isOpen, lang]);
 
   const handleConfirmInactivation = async () => {
     if (!studentId || !teacherId) return;
@@ -112,7 +114,7 @@ export function InactivateStudentModal({
           .eq("status", "Scheduled");
       }
 
-      toast.success(`${studentName} foi marcado(a) como inativo(a). Todo o histórico foi preservado.`);
+      toast.success(t("students.inactivateSuccessToast").replace("{name}", studentName));
       onSuccess({
         inactivationDate,
         inactivationReason,
@@ -138,10 +140,10 @@ export function InactivateStudentModal({
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground">
-                Marcar aluno como inativo?
+                {t("students.inactivateModalTitle")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                O perfil e todo o histórico deste aluno serão preservados, mas ele deixará de aparecer entre os alunos ativos.
+                {t("students.inactivateModalSubtitle")}
               </DialogDescription>
             </div>
           </div>
@@ -152,11 +154,13 @@ export function InactivateStudentModal({
           <div className="flex items-center justify-between font-semibold text-foreground">
             <span>{studentName}</span>
             <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
-              Sairá da lista ativa
+              {t("students.willLeaveActiveList")}
             </Badge>
           </div>
           {packageName && (
-            <p className="text-[11px] text-muted-foreground">Pacote atual: {packageName}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {t("students.currentPackageLabel").replace("{name}", packageName)}
+            </p>
           )}
         </div>
 
@@ -165,9 +169,9 @@ export function InactivateStudentModal({
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
             <div>
-              <p className="font-bold">Atenção: Turmas / Duplas</p>
+              <p className="font-bold">{t("students.classWarningTitle")}</p>
               <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                Este aluno participa de {activeClassCount} turma(s) ativa(s). A inativação preservará o histórico de participação na turma.
+                {t("students.classWarningDesc").replace("{count}", String(activeClassCount))}
               </p>
             </div>
           </div>
@@ -178,7 +182,7 @@ export function InactivateStudentModal({
           {/* Data de Inativação */}
           <div className="space-y-1.5">
             <Label htmlFor="inactivation-date" className="text-xs font-semibold text-foreground">
-              Data de inativação (opcional)
+              {t("students.inactivationDateLabel")}
             </Label>
             <Input
               id="inactivation-date"
@@ -192,19 +196,19 @@ export function InactivateStudentModal({
           {/* Motivo */}
           <div className="space-y-1.5">
             <Label htmlFor="inactivation-reason" className="text-xs font-semibold text-foreground">
-              Motivo da inativação (opcional)
+              {t("students.inactivationReasonLabel")}
             </Label>
             <Select value={inactivationReason} onValueChange={setInactivationReason}>
               <SelectTrigger id="inactivation-reason" className="h-9 text-xs bg-background border-border">
-                <SelectValue placeholder="Selecione o motivo" />
+                <SelectValue placeholder={t("students.selectReasonPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Concluiu o curso">Concluiu o curso</SelectItem>
-                <SelectItem value="Pausou as aulas">Pausou as aulas</SelectItem>
-                <SelectItem value="Cancelou">Cancelou</SelectItem>
-                <SelectItem value="Mudança de horário">Mudança de horário</SelectItem>
-                <SelectItem value="Questões financeiras">Questões financeiras</SelectItem>
-                <SelectItem value="Outro">Outro</SelectItem>
+                <SelectItem value="Concluiu o curso">{t("students.reasonCompleted")}</SelectItem>
+                <SelectItem value="Pausou as aulas">{t("students.reasonPaused")}</SelectItem>
+                <SelectItem value="Cancelou">{t("students.reasonCancelled")}</SelectItem>
+                <SelectItem value="Mudança de horário">{t("students.reasonScheduleChange")}</SelectItem>
+                <SelectItem value="Questões financeiras">{t("students.reasonFinancial")}</SelectItem>
+                <SelectItem value="Outro">{t("students.reasonOther")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -220,10 +224,10 @@ export function InactivateStudentModal({
               />
               <div className="grid gap-0.5 leading-none">
                 <label htmlFor="stop-billing" className="text-xs font-medium text-foreground cursor-pointer">
-                  Encerrar cobranças futuras a partir da data de inativação
+                  {t("students.stopBillingLabel")}
                 </label>
                 <p className="text-[11px] text-muted-foreground">
-                  Preserva todas as faturas e pagamentos já emitidos.
+                  {t("students.stopBillingDesc")}
                 </p>
               </div>
             </div>
@@ -237,10 +241,10 @@ export function InactivateStudentModal({
               />
               <div className="grid gap-0.5 leading-none">
                 <label htmlFor="cancel-future-events" className="text-xs font-medium text-foreground cursor-pointer">
-                  Cancelar aulas futuras no calendário após a data de inativação
+                  {t("students.cancelEventsLabel")}
                 </label>
                 <p className="text-[11px] text-muted-foreground">
-                  Preserva todas as aulas e presenças passadas.
+                  {t("students.cancelEventsDesc")}
                 </p>
               </div>
             </div>
@@ -255,7 +259,7 @@ export function InactivateStudentModal({
             disabled={isSubmitting}
             className="h-9 text-xs"
           >
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -263,7 +267,7 @@ export function InactivateStudentModal({
             disabled={isSubmitting}
             className="h-9 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
           >
-            {isSubmitting ? "Inativando..." : "Marcar como inativo"}
+            {isSubmitting ? t("students.inactivating") : t("students.markInactive")}
           </Button>
         </DialogFooter>
       </DialogContent>
