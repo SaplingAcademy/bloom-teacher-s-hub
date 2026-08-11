@@ -4,6 +4,7 @@ import { Sparkles, Pin, PinOff } from "lucide-react";
 import { navSections, bottomNav } from "@/lib/navigation";
 import { BloomLogo, BloomMark } from "@/components/bloom/Logo";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/use-language";
 import {
   Tooltip,
   TooltipContent,
@@ -26,6 +27,7 @@ export function AppSidebar({
   onTogglePin,
   onExpandChange,
 }: AppSidebarProps) {
+  const { t } = useLanguage();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 
@@ -143,7 +145,7 @@ export function AppSidebar({
                 <button
                   onClick={onTogglePin}
                   className="rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer"
-                  title={isPinned ? "Desafixar menu (retrair ao sair o mouse)" : "Fixar menu aberto"}
+                  title={isPinned ? t("common.close") : t("common.edit")}
                   aria-label={isPinned ? "Desafixar menu" : "Fixar menu"}
                 >
                   {isPinned ? (
@@ -164,13 +166,15 @@ export function AppSidebar({
               {/* Section Header */}
               {isExpanded && (
                 <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 transition-opacity duration-200">
-                  {section.label}
+                  {section.id === "workspace" ? t("nav.workspace", section.label) : t("nav.communitySection", section.label)}
                 </p>
               )}
 
               <ul className="space-y-1">
                 {section.items.map((item) => {
                   const active = isActive(item.to);
+                  const itemLabel = t(`nav.${item.id}`, item.label);
+                  const badgeLabel = item.badge ? t("nav.soon", item.badge) : null;
 
                   const linkContent = (
                     <Link
@@ -195,25 +199,25 @@ export function AppSidebar({
 
                       {isExpanded && (
                         <span className="flex-1 truncate transition-opacity duration-200">
-                          {item.label}
+                          {itemLabel}
                         </span>
                       )}
 
-                      {isExpanded && item.badge && (
+                      {isExpanded && badgeLabel && (
                         <span className="rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
-                          {item.badge}
+                          {badgeLabel}
                         </span>
                       )}
                     </Link>
                   );
 
                   return (
-                    <li key={item.label}>
+                    <li key={item.id}>
                       {!isExpanded ? (
                         <Tooltip>
                           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                           <TooltipContent side="right" sideOffset={10}>
-                            <p className="text-xs font-semibold">{item.label}</p>
+                            <p className="text-xs font-semibold">{itemLabel}</p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -235,31 +239,32 @@ export function AppSidebar({
               <TooltipTrigger asChild>
                 <button
                   className="flex w-full items-center justify-center rounded-xl bg-gradient-warm py-2.5 text-accent-foreground shadow-sm hover:opacity-90 cursor-pointer"
-                  title="Ask Bloom AI"
+                  title={t("nav.askBloomAi")}
                 >
                   <Sparkles className="h-[18px] w-[18px]" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={10}>
-                <p className="text-xs font-semibold">Ask Bloom AI</p>
+                <p className="text-xs font-semibold">{t("nav.askBloomAi")}</p>
               </TooltipContent>
             </Tooltip>
           ) : (
             <button
               className="flex w-full items-center gap-2.5 rounded-xl bg-gradient-warm px-3 py-2.5 text-sm font-semibold text-accent-foreground shadow-sm hover:opacity-90 transition-all cursor-pointer"
-              title="Ask Bloom AI"
+              title={t("nav.askBloomAi")}
             >
               <Sparkles className="h-[18px] w-[18px] shrink-0" />
-              <span>Ask Bloom AI</span>
+              <span>{t("nav.askBloomAi")}</span>
             </button>
           )}
 
           {/* Bottom Utility Nav */}
           {bottomNav.map((item) => {
             const active = isActive(item.to);
+            const itemLabel = t(`nav.${item.id}`, item.label);
             const navLink = (
               <Link
-                key={item.label}
+                key={item.id}
                 to={item.to}
                 onClick={handleLinkClick}
                 className={cn(
@@ -278,15 +283,15 @@ export function AppSidebar({
                       : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
                   )}
                 />
-                {isExpanded && <span className="truncate">{item.label}</span>}
+                {isExpanded && <span className="truncate">{itemLabel}</span>}
               </Link>
             );
 
             return !isExpanded ? (
-              <Tooltip key={item.label}>
+              <Tooltip key={item.id}>
                 <TooltipTrigger asChild>{navLink}</TooltipTrigger>
                 <TooltipContent side="right" sideOffset={10}>
-                  <p className="text-xs font-semibold">{item.label}</p>
+                  <p className="text-xs font-semibold">{itemLabel}</p>
                 </TooltipContent>
               </Tooltip>
             ) : (

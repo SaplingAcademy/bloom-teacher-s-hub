@@ -249,8 +249,9 @@ function SettingsPage() {
           </form>
         </TabsContent>
 
-        {/* PROFILE TAB / TEACHING LANGUAGES MANAGER */}
+        {/* PROFILE TAB / TEACHING LANGUAGES MANAGER & PLATFORM LANGUAGE */}
         <TabsContent value="profile" className="space-y-6">
+          <PlatformLanguageManager />
           <TeachingLanguagesManager />
 
           <PanelCard title="Perfil de Professor" description="Suas informações cadastrais e dados da conta.">
@@ -262,6 +263,51 @@ function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function PlatformLanguageManager() {
+  const { lang, setLang } = useLanguage();
+
+  return (
+    <PanelCard
+      title={lang === "pt" ? "Idioma da Plataforma" : "Platform Language"}
+      description={
+        lang === "pt"
+          ? "Escolha o idioma em que deseja visualizar os menus, botões e telas do Bloom."
+          : "Choose the language in which you want to view Bloom menus, buttons, and pages."
+      }
+    >
+      <div className="flex flex-wrap items-center gap-4 pt-1">
+        <button
+          type="button"
+          onClick={() => setLang("pt")}
+          className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            lang === "pt"
+              ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
+              : "bg-card text-stone-700 hover:bg-secondary/40 border-border"
+          }`}
+        >
+          <span className="text-base">🇧🇷</span>
+          <span>Português (Brasil)</span>
+          {lang === "pt" && <Check className="h-4 w-4 text-emerald-400" />}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setLang("en")}
+          className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            lang === "en"
+              ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
+              : "bg-card text-stone-700 hover:bg-secondary/40 border-border"
+          }`}
+        >
+          <span className="text-base">🇺🇸</span>
+          <span>English (US)</span>
+          {lang === "en" && <Check className="h-4 w-4 text-emerald-400" />}
+        </button>
+      </div>
+    </PanelCard>
   );
 }
 

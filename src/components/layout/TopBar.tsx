@@ -9,7 +9,7 @@ type TopBarProps = {
 };
 
 export function TopBar({ onOpenMobileNav }: TopBarProps) {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const { user, signOut } = useAuth();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -59,7 +59,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
         <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
         <input
           type="search"
-          placeholder="Search students, lessons, resources…"
+          placeholder={t("common.search", "Search students, lessons, resources…")}
           className="h-10 w-full rounded-xl border border-search-border bg-search-bg pl-9 pr-16 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-[0_1.5px_3px_rgba(34,28,24,0.03)] dark:shadow-none"
         />
         <kbd className="absolute right-3 hidden items-center gap-0.5 rounded-md border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground md:flex">
@@ -70,7 +70,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
       <div className="ml-auto flex items-center gap-2">
         <button className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-sm)] transition-colors hover:bg-primary/90">
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">New</span>
+          <span className="hidden sm:inline">{t("common.new", "New")}</span>
         </button>
 
         {/* Global Language Selector Dropdown */}

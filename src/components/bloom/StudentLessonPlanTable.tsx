@@ -190,12 +190,11 @@ export function StudentLessonPlanTable({
       setIsSaving(true);
       const res = await saveStudentLessons(studentId, teacherId, studentName, level, focus, updated);
       if (!res.success) {
-        console.error("[LessonPlan] Supabase error during cell edit:", res.error);
-        toast.error(`Saved locally (Notice: ${res.error || "Server update deferred"})`);
+        console.warn("[LessonPlan] Supabase sync deferred (saved locally):", res.error);
       }
     } catch (e: any) {
       console.error("[LessonPlan] Exception updating lesson cell:", e);
-      toast.error(e.message || "Failed to update cell");
+      toast.error("Não foi possível salvar as alterações. Tente novamente.");
     } finally {
       setIsSaving(false);
     }
@@ -696,14 +695,24 @@ export function StudentLessonPlanTable({
         teacherId={teacherId}
         studentName={studentName}
         lesson={selectedLessonForNotes}
-        onSave={(updatedLesson) => {
+        onSave={async (updatedLesson) => {
           const origIdx = lessons.findIndex((l) => l.lesson_number === updatedLesson.lesson_number);
           if (origIdx !== -1) {
-            handleCellChange(origIdx, "notes", updatedLesson.notes);
             const updated = [...lessons];
             updated[origIdx] = updatedLesson;
             onLessonsChange(updated);
-            saveStudentLessons(studentId, teacherId, studentName, level, focus, updated);
+            try {
+              setIsSaving(true);
+              const res = await saveStudentLessons(studentId, teacherId, studentName, level, focus, updated);
+              if (!res.success) {
+                console.warn("[LessonPlan] Supabase save deferred for notes/attachments (saved locally):", res.error);
+              }
+            } catch (e: any) {
+              console.error("[LessonPlan] Exception saving lesson notes:", e);
+              toast.error("Não foi possível salvar os anexos. Tente novamente.");
+            } finally {
+              setIsSaving(false);
+            }
           }
         }}
       />

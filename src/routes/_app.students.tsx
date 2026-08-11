@@ -3375,7 +3375,7 @@ function StudentsPage() {
           teacherId={user.id}
           studentName={studentToInactivate.name}
           packageName={packages.find((p) => p.id === studentToInactivate.packageId)?.name}
-          activeClassCount={classesList.filter((c) => c.memberStudentIds?.includes(studentToInactivate.id)).length}
+          activeClassCount={classesList.filter((c) => (c.members || []).some((m: any) => m.student_id === studentToInactivate.id)).length}
           onSuccess={({ inactivationDate, inactivationReason }) => {
             setStudents((prev) =>
               prev.map((s) =>

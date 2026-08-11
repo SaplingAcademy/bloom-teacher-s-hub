@@ -628,11 +628,12 @@ export async function fetchTeacherInvoices(teacherId: string): Promise<RealInvoi
         remainingBalanceCents = Math.max(0, totalCents - paidSum);
       } else if (sp && (sp.installment_count || 1) > 1) {
         isInstallment = true;
-        installmentCount = sp.installment_count;
+        const validInstallmentCount = sp.installment_count || 1;
+        installmentCount = validInstallmentCount;
         paidCount = studentPaidCounts.get(inv.student_id) || 0;
-        progressLabel = `${paidCount}/${installmentCount}`;
-        currentInstallmentLabel = `Parcela ${Math.min(paidCount + 1, installmentCount)} de ${installmentCount}`;
-        const totalCents = sp.total_amount_cents || (inv.amount_cents * installmentCount);
+        progressLabel = `${paidCount}/${validInstallmentCount}`;
+        currentInstallmentLabel = `Parcela ${Math.min(paidCount + 1, validInstallmentCount)} de ${validInstallmentCount}`;
+        const totalCents = sp.total_amount_cents || (inv.amount_cents * validInstallmentCount);
         const paidSum = studentPaidSums.get(inv.student_id) || 0;
         remainingBalanceCents = Math.max(0, totalCents - paidSum);
       }

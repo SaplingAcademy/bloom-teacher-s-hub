@@ -1007,7 +1007,7 @@ function FinancePage() {
                       R$ {pkg.price}
                       <span className="text-xs text-muted-foreground font-medium">
                         {" "}
-                        / {pkg.frequency === "total" || pkg.frequency === "Valor total do curso" ? (lang === "pt" ? "valor total" : "total value") : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
+                        / {(pkg.frequency as string) === "total" || (pkg.frequency as string) === "Valor total do curso" ? (lang === "pt" ? "valor total" : "total value") : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
                       </span>
                     </p>
                   </div>

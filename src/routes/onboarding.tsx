@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
+import { initializeAvailabilityFromOnboarding } from "@/lib/availability-engine";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -385,7 +386,7 @@ export function OnboardingPage() {
         }
       }
 
-      // 5. Update settings table
+      // 5. Update settings table & initialize working_availability from onboarding schedule
       const { error: settingsError } = await supabase.from("settings").upsert(
         {
           teacher_id: userId,
@@ -401,6 +402,12 @@ export function OnboardingPage() {
 
       if (settingsError) {
         console.warn("[Onboarding] Settings update warning:", settingsError.message);
+      }
+
+      // Initialize working availability from onboarding answers (safe: preserves existing if set)
+      const availRes = await initializeAvailabilityFromOnboarding(userId, data);
+      if (!availRes.success) {
+        console.warn("[Onboarding] Working availability initialization warning:", availRes.error);
       }
 
       // 6. Update local and AuthProvider state

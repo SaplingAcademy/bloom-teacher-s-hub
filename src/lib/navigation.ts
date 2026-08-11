@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 export type NavItem = {
+  id: string;
   label: string;
   to: string;
   icon: LucideIcon;
@@ -35,40 +36,46 @@ export const navSections: NavSection[] = [
     id: "workspace",
     label: "Workspace",
     items: [
-      { label: "Today", to: "/", icon: LayoutDashboard, description: "Your launchpad for the day" },
+      { id: "today", label: "Today", to: "/", icon: LayoutDashboard, description: "Your launchpad for the day" },
       {
+        id: "students",
         label: "Students",
         to: "/students",
         icon: Users,
         description: "Profiles, progress and history",
       },
-      { label: "Leads", to: "/leads", icon: UserPlus, description: "Turn inquiries into students" },
+      { id: "leads", label: "Leads", to: "/leads", icon: UserPlus, description: "Turn inquiries into students" },
       {
+        id: "calendar",
         label: "Calendar",
         to: "/calendar",
         icon: CalendarDays,
         description: "Classes and availability",
       },
-      { label: "Lessons", to: "/lessons", icon: BookOpen, description: "Plan and deliver lessons" },
+      { id: "lessons", label: "Lessons", to: "/lessons", icon: BookOpen, description: "Plan and deliver lessons" },
       {
+        id: "resources",
         label: "Resources",
         to: "/resources",
         icon: FolderOpen,
         description: "Your teaching library",
       },
       {
+        id: "finance",
         label: "Finance",
         to: "/finance",
         icon: Wallet,
         description: "Payments, invoices and income",
       },
       {
+        id: "messages",
         label: "Messages",
         to: "/messages",
         icon: MessagesSquare,
         description: "Student communication",
       },
       {
+        id: "growth",
         label: "Growth",
         to: "/growth",
         icon: TrendingUp,
@@ -81,6 +88,7 @@ export const navSections: NavSection[] = [
     label: "Community",
     items: [
       {
+        id: "community",
         label: "Feed",
         to: "/community",
         icon: Newspaper,
@@ -88,6 +96,7 @@ export const navSections: NavSection[] = [
         badge: "Soon",
       },
       {
+        id: "marketplace",
         label: "Marketplace",
         to: "/marketplace",
         icon: Store,
@@ -95,6 +104,7 @@ export const navSections: NavSection[] = [
         badge: "Soon",
       },
       {
+        id: "profile",
         label: "Profile",
         to: "/profile",
         icon: UserCircle,
@@ -106,10 +116,11 @@ export const navSections: NavSection[] = [
 ];
 
 export const bottomNav: NavItem[] = [
-  { label: "Settings", to: "/settings", icon: Settings, description: "Workspace preferences" },
+  { id: "settings", label: "Settings", to: "/settings", icon: Settings, description: "Workspace preferences" },
 ];
 
 export const aiNav: NavItem = {
+  id: "askBloomAi",
   label: "Ask Bloom AI",
   to: "/",
   icon: Sparkles,

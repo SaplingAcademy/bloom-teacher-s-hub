@@ -207,7 +207,7 @@ export async function createTeacherTimeOffBatch(
       return { success: true, count: fallbackMapped.length, data: fallbackMapped };
     }
 
-    const created: TeacherTimeOff[] = data.map((item: any) => ({
+    const created: TeacherTimeOff[] = (data || []).map((item: any) => ({
       id: item.id,
       teacherId: item.teacher_id,
       startDate: item.start_date,

@@ -18,6 +18,88 @@ export const WEEKDAYS_MAP: Array<{ key: string; labelPt: string; labelEn: string
 ];
 
 /**
+ * Converts onboarding schedule answers into canonical WorkingAvailability format
+ */
+export function convertOnboardingToWorkingAvailability(data: any): WorkingAvailability[] {
+  const ALL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const workingDays: string[] = data?.workingDays || data?.working_days || [];
+  const sameAll = data?.sameAvailabilityAllDays !== false && data?.same_availability_all_days !== false;
+
+  const unified = data?.unifiedAvailability || data?.unified_availability || { startTime: "09:00", endTime: "18:00" };
+  const custom = data?.customAvailability || data?.custom_availability || {};
+
+  return ALL_DAYS.map((dayKey) => {
+    const enabled = workingDays.includes(dayKey);
+    if (!enabled) {
+      return {
+        day: dayKey,
+        enabled: false,
+        startTime: "09:00",
+        endTime: "18:00",
+      };
+    }
+
+    if (sameAll) {
+      const startTime = unified?.startTime || unified?.start_time || "09:00";
+      const endTime = unified?.endTime || unified?.end_time || "18:00";
+      return { day: dayKey, enabled: true, startTime, endTime };
+    } else {
+      const dayCustom = custom[dayKey];
+      const startTime = dayCustom?.startTime || dayCustom?.start_time || unified?.startTime || unified?.start_time || "09:00";
+      const endTime = dayCustom?.endTime || dayCustom?.end_time || unified?.endTime || unified?.end_time || "18:00";
+      return { day: dayKey, enabled: true, startTime, endTime };
+    }
+  });
+}
+
+/**
+ * Initializes working availability from onboarding data ONLY if the teacher doesn't already have real working availability.
+ * Preserves existing availability if present.
+ */
+export async function initializeAvailabilityFromOnboarding(
+  teacherId: string,
+  onboardingData: any
+): Promise<{ success: boolean; initialized: boolean; error?: string }> {
+  if (!teacherId) return { success: false, initialized: false, error: "Teacher ID missing" };
+
+  try {
+    // 1. Check if teacher already has working_availability in Supabase
+    const { data: existingSettings } = await supabase
+      .from("settings")
+      .select("working_availability")
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    const existingAvail = existingSettings?.working_availability as WorkingAvailability[] | undefined;
+
+    // If existing availability is non-empty and has at least 1 enabled day, PRESERVE IT
+    if (existingAvail && Array.isArray(existingAvail) && existingAvail.length > 0) {
+      const hasEnabledDay = existingAvail.some((a) => a.enabled);
+      if (hasEnabledDay) {
+        console.log("[availability-engine] Teacher already has configured working availability. Preserving existing.");
+        return { success: true, initialized: false };
+      }
+    }
+
+    // 2. Check if onboarding data has working days
+    const workingDays = onboardingData?.workingDays || onboardingData?.working_days || [];
+    if (!workingDays || workingDays.length === 0) {
+      console.log("[availability-engine] Onboarding data has no working days. Skipping availability initialization.");
+      return { success: true, initialized: false };
+    }
+
+    // 3. Convert onboarding schedule to WorkingAvailability[] and save
+    const newAvail = convertOnboardingToWorkingAvailability(onboardingData);
+    const saveRes = await saveTeacherWorkingAvailability(teacherId, newAvail);
+
+    return { success: saveRes.success, initialized: true, error: saveRes.error };
+  } catch (err: any) {
+    console.error("[availability-engine] Error initializing working availability from onboarding:", err);
+    return { success: false, initialized: false, error: err?.message || String(err) };
+  }
+}
+
+/**
  * Fetch teacher working availability from Supabase settings (with LocalStorage fallback)
  * Returns [] if teacher has not configured working availability yet.
  */
@@ -44,12 +126,34 @@ export async function fetchTeacherWorkingAvailability(
       .eq("teacher_id", teacherId)
       .maybeSingle();
 
-    if (!error && data && data.working_availability) {
+    if (!error && data && data.working_availability && Array.isArray(data.working_availability) && data.working_availability.length > 0) {
       const serverAvail = data.working_availability as WorkingAvailability[];
       if (typeof localStorage !== "undefined") {
         localStorage.setItem(`bloom.working_availability.${teacherId}`, JSON.stringify(serverAvail));
       }
       return serverAvail;
+    }
+
+    // SAFE BACKFILL FOR EXISTING USERS WHO COMPLETED ONBOARDING:
+    // If working_availability is empty, check if onboarding table has answers
+    const { data: onboardingRes } = await supabase
+      .from("onboarding")
+      .select("answers")
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (onboardingRes?.answers) {
+      const ans = onboardingRes.answers;
+      if (ans.working_days && ans.working_days.length > 0) {
+        const backfilled = convertOnboardingToWorkingAvailability({
+          workingDays: ans.working_days,
+          sameAvailabilityAllDays: ans.same_availability_all_days,
+          unifiedAvailability: ans.unified_availability,
+          customAvailability: ans.custom_availability,
+        });
+        await saveTeacherWorkingAvailability(teacherId, backfilled);
+        return backfilled;
+      }
     }
   } catch (err) {
     console.warn("[availability-engine] Error fetching working availability from server:", err);

@@ -194,7 +194,7 @@ const translations = {
 };
 
 function ProfilePage() {
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
   const { user, profile: authProfile, retryProfileSync } = useAuth();
   const [localProfile, setLocalProfile] = useState<ProfileData>(() => {
     const saved = localStorage.getItem("bloom.profile.data");
@@ -319,26 +319,32 @@ function ProfilePage() {
     localStorage.setItem("bloom.profile.data", JSON.stringify(updated));
     setIsEditOpen(false);
 
+    // Call setLang so language context updates immediately across the whole app
+    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+    setLang(targetLang);
+
     // Sync to database if user is logged in
     if (user?.id) {
       console.log("[Profile] Syncing updated profile to Supabase database...");
-      supabase
-        .from("teacher_profiles")
-        .update({
-          full_name: editName,
-          avatar_url: editPhoto,
-          preferred_language: editLanguage,
-          timezone: editTimezone,
-        })
-        .eq("id", user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error("[Profile] Database update error:", error);
-          } else {
-            console.log("[Profile] Database update successful.");
-            retryProfileSync();
-          }
-        });
+      const payload = {
+        full_name: editName,
+        avatar_url: editPhoto,
+        preferred_language: editLanguage,
+        locale: editLanguage,
+        timezone: editTimezone,
+      };
+
+      Promise.all([
+        supabase.from("profiles").update(payload).eq("id", user.id),
+        supabase.from("teacher_profiles").update(payload).eq("id", user.id),
+      ]).then(([res1, res2]) => {
+        if (res1.error && res2.error) {
+          console.error("[Profile] Database update error:", res1.error || res2.error);
+        } else {
+          console.log("[Profile] Database update successful.");
+          retryProfileSync();
+        }
+      });
     }
   };
 

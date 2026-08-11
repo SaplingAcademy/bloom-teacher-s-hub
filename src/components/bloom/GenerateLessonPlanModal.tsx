@@ -212,8 +212,7 @@ export function GenerateLessonPlanModal({
       );
 
       if (!saveRes.success) {
-        console.error("[GenerateLessonPlanModal] Error saving lessons:", saveRes.error);
-        toast.error(`Database notice: ${saveRes.error || "Saved locally only"}`);
+        console.warn("[GenerateLessonPlanModal] Supabase save deferred (saved locally):", saveRes.error);
       }
 
       toast.success(`Successfully generated ${generated.length} lessons for ${studentName}!`);
