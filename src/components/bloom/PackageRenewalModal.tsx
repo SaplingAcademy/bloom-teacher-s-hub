@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
 import {
   formatCentsToBRL,
@@ -69,6 +70,7 @@ export function PackageRenewalModal({
   currentSummary,
   onRenewalCompleted,
 }: PackageRenewalModalProps) {
+  const { t, formatStatus } = useLanguage();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [catalogPackages, setCatalogPackages] = useState<CatalogPackage[]>([]);
@@ -239,10 +241,10 @@ export function PackageRenewalModal({
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold text-[#F4EBE1]">
-                  Renovação de Pacote — {studentName}
+                  {t("finance.renewalTitle").replace("{name}", studentName)}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#F4EBE1]/80 mt-0.5">
-                  Fluxo guiado de renovação contratual e preservação de histórico financeiro
+                  {t("finance.renewalSubtitle")}
                 </DialogDescription>
               </div>
             </div>
