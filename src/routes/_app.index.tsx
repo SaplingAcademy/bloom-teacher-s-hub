@@ -166,8 +166,14 @@ const translations = {
   en: {
     langToggle: "PT",
     planDay: "Plan my day with AI",
-    greeting: "Good morning, Maria",
-    subtitle: "Here's everything that needs you today. Bloom keeps the busywork out of your way.",
+    greetingMorning: "Good morning",
+    greetingAfternoon: "Good afternoon",
+    greetingEvening: "Good evening",
+    greeting: "Good morning",
+    subtitle: "Here's everything that needs your attention today. Bloom keeps the busywork out of your way.",
+    finishSetupTitle: "Finish personalizing your Bloom 🌱",
+    finishSetupSubtitle: "Complete a few details to get the most out of your schedule, finances, and insights.",
+    continueSetup: "Continue setup",
     prioritiesTitle: "Today's Priorities",
     prioritiesSubtitle:
       "Everything Bloom believes you should accomplish today, based on your students, classes and business.",
@@ -195,6 +201,9 @@ const translations = {
     nextAt: "Next at 09:00",
     scheduleTitle: "Today's schedule",
     scheduleSubtitle: "4 classes · 5 hours",
+    classesCount: "1 class today",
+    classesCountPlural: "{count} classes today",
+    noClassesToday: "No classes scheduled for today.",
     openCalendar: "Open calendar",
     aiTipTitle: "Bloom AI tip",
     aiTipContent:
@@ -221,9 +230,15 @@ const translations = {
   pt: {
     langToggle: "EN",
     planDay: "Planejar meu dia com IA",
-    greeting: "Bom dia, Maria",
+    greetingMorning: "Bom dia",
+    greetingAfternoon: "Boa tarde",
+    greetingEvening: "Boa noite",
+    greeting: "Bom dia",
     subtitle:
       "Aqui está tudo o que precisa de você hoje. A Bloom mantém o trabalho chato longe de você.",
+    finishSetupTitle: "Termine de personalizar sua Bloom 🌱",
+    finishSetupSubtitle: "Complete algumas informações para aproveitar melhor sua agenda, finanças e recomendações.",
+    continueSetup: "Continuar configuração",
     prioritiesTitle: "Prioridades de Hoje",
     prioritiesSubtitle:
       "Tudo o que a Bloom acredita que você deve realizar hoje, com base em seus alunos, turmas e negócios.",
@@ -251,6 +266,9 @@ const translations = {
     nextAt: "Próxima às 09:00",
     scheduleTitle: "Agenda de hoje",
     scheduleSubtitle: "4 aulas · 5 horas",
+    classesCount: "1 aula hoje",
+    classesCountPlural: "{count} aulas hoje",
+    noClassesToday: "Nenhuma aula agendada para hoje.",
     openCalendar: "Abrir calendário",
     aiTipTitle: "Dica do Bloom AI",
     aiTipContent:
@@ -373,7 +391,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
 function TodayPage() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const { lang } = useLanguage();
+  const { lang, formatStatus } = useLanguage();
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -829,11 +847,11 @@ function TodayPage() {
 
   const firstName = getTeacherFirstName(profile, user);
   const currentHour = new Date().getHours();
-  let periodText = lang === "pt" ? "Bom dia" : "Good morning";
+  let periodText = t.greetingMorning;
   if (currentHour >= 12 && currentHour < 18) {
-    periodText = lang === "pt" ? "Boa tarde" : "Good afternoon";
+    periodText = t.greetingAfternoon;
   } else if (currentHour >= 18 || currentHour < 5) {
-    periodText = lang === "pt" ? "Boa noite" : "Good evening";
+    periodText = t.greetingEvening;
   }
 
   const greetingTitle = firstName ? `${periodText}, ${firstName}` : `${periodText}!`;
@@ -867,12 +885,10 @@ function TodayPage() {
             </div>
             <div className="space-y-1">
               <h4 className="font-outfit font-extrabold text-base text-stone-900">
-                {lang === "pt" ? "Termine de personalizar sua Bloom 🌱" : "Finish personalizing your Bloom 🌱"}
+                {t.finishSetupTitle}
               </h4>
               <p className="text-xs text-stone-600 font-medium leading-relaxed">
-                {lang === "pt"
-                  ? "Complete algumas informações para aproveitar melhor sua agenda, finanças e recomendações."
-                  : "Complete a few details to get the most out of your schedule, finances, and insights."}
+                {t.finishSetupSubtitle}
               </p>
             </div>
           </div>
@@ -881,12 +897,12 @@ function TodayPage() {
             onClick={() => navigate({ to: "/onboarding" })}
             className="shrink-0 px-4 py-2.5 rounded-xl bg-[#163020] text-[#F4EBE1] hover:bg-emerald-950 font-bold text-xs shadow-sm transition-all cursor-pointer"
           >
-            {lang === "pt" ? "Continuar configuração" : "Continue setup"}
+            {t.continueSetup}
           </button>
         </div>
       )}
 
-      {/* SINGLE URGENT SECTION (Top position replacing Precisa de Atenção) */}
+      {/* SINGLE URGENT SECTION */}
       {user?.id && <UrgentWidget teacherId={user.id} />}
 
       {/* DAILY PRIORITIES SECTION */}
@@ -901,9 +917,7 @@ function TodayPage() {
           tone="primary"
           hint={
             todayEvents.length > 0
-              ? lang === "pt"
-                ? `Próxima às ${todayEvents[0].startTime}`
-                : `Next at ${todayEvents[0].startTime}`
+              ? t.nextAt.replace("{time}", todayEvents[0].startTime)
               : undefined
           }
         />
@@ -935,9 +949,9 @@ function TodayPage() {
         <PanelCard
           title={t.scheduleTitle}
           description={
-            lang === "pt"
-              ? `${todayEvents.length} aulas hoje`
-              : `${todayEvents.length} classes today`
+            todayEvents.length === 1
+              ? t.classesCount.replace("{count}", "1")
+              : t.classesCountPlural.replace("{count}", String(todayEvents.length))
           }
           icon={<CalendarClock className="h-4 w-4" />}
           action={{ label: t.openCalendar, to: "/calendar" }}
@@ -946,9 +960,7 @@ function TodayPage() {
           <ul className="divide-y divide-border/70">
             {todayEvents.length === 0 ? (
               <li className="p-5 text-center text-xs text-muted-foreground">
-                {lang === "pt"
-                  ? "Nenhuma aula agendada para hoje."
-                  : "No classes scheduled for today."}
+                {t.noClassesToday}
               </li>
             ) : (
               todayEvents.map((c) => (
@@ -966,12 +978,12 @@ function TodayPage() {
                       {c.studentName}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {c.level} · {c.focus} ({c.status})
+                      {c.level} · {c.focus} ({formatStatus(c.status)})
                     </p>
                   </div>
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
                     {c.deliveryMode === "Online" && <Video className="h-3 w-3" />}
-                    {c.deliveryMode}
+                    {formatStatus(c.deliveryMode)}
                   </span>
                 </li>
               ))

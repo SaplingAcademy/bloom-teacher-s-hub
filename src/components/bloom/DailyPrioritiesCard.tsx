@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/use-language";
 import {
   CheckCircle2,
   Circle,
@@ -29,6 +30,7 @@ interface DailyPrioritiesCardProps {
 
 export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [activePriorities, setActivePriorities] = useState<PriorityItem[]>([]);
   const [completedPriorities, setCompletedPriorities] = useState<PriorityItem[]>([]);
@@ -72,17 +74,17 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     e.stopPropagation();
 
     if (item.completionType === "MANUAL_ACTION") {
-      // Type B: Manual action completion (e.g. Lembrar cobrança)
+      // Type B: Manual action completion
       const newStatus = !item.isManuallyCompleted;
       await saveManualPriorityCompletion(teacherId, item.id, newStatus);
       if (newStatus) {
-        toast.success("Lembrete marcado como concluído!");
+        toast.success(t("today.toastManualCompleted"));
       }
       await loadPriorities();
     } else {
-      // Type A: Source-Resolved (e.g. Tarefa, Presença, Pagamento, Renovação)
-      toast.info("Conclusão na Origem", {
-        description: "Esta prioridade é concluída automaticamente ao realizar a ação. Clique para abrir.",
+      // Type A: Source-Resolved
+      toast.info(t("today.toastSourceTitle"), {
+        description: t("today.toastSourceDesc"),
       });
       handleItemClick(item);
     }
@@ -93,7 +95,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     e.stopPropagation();
     if (item.completionType === "MANUAL_ACTION") {
       await undoManualPriorityCompletion(teacherId, item.id);
-      toast.success("Prioridade restaurada para o dia!");
+      toast.success(t("today.toastRestored"));
       await loadPriorities();
     }
   };
@@ -143,16 +145,16 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="font-outfit text-xl font-extrabold text-[#163020]">
-              Prioridades do dia
+              {t("today.prioritiesTitle")}
             </h2>
             {is100Percent && (
               <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                Tudo em dia 🌱
+                {t("today.allCaughtUp")}
               </Badge>
             )}
           </div>
           <p className="text-xs text-stone-500 font-medium mt-0.5">
-            Ações normais descobertas automaticamente nos dados dos seus alunos e aulas.
+            {t("today.prioritiesSubtitle")}
           </p>
         </div>
       </div>
@@ -162,9 +164,13 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-between text-xs font-bold text-stone-600">
             <span>
-              {completedCount} de {totalCount} concluídas
+              {t("today.completedProgress")
+                .replace("{completed}", String(completedCount))
+                .replace("{total}", String(totalCount))}
             </span>
-            <span className="text-emerald-800 font-extrabold">{progressPercentage}% concluído</span>
+            <span className="text-emerald-800 font-extrabold">
+              {t("today.percentageCompleted").replace("{percent}", String(progressPercentage))}
+            </span>
           </div>
           <div className="h-2.5 w-full rounded-full bg-stone-100 overflow-hidden p-0.5 border border-stone-200/50">
             <div
@@ -183,10 +189,10 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           </div>
           <div className="space-y-0.5">
             <h4 className="font-outfit font-extrabold text-sm text-emerald-950">
-              Tudo em dia 🌱
+              {t("today.allCaughtUp")}
             </h4>
             <p className="text-xs text-emerald-700 font-medium leading-relaxed">
-              Você não tem pendências normais para hoje. Excelente trabalho!
+              {t("today.allCaughtUpSubtitle")}
             </p>
           </div>
         </div>
@@ -206,7 +212,11 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                 type="button"
                 onClick={(e) => handleToggleCheckbox(e, item)}
                 className="mt-0.5 text-stone-400 hover:text-emerald-700 transition-colors shrink-0 cursor-pointer"
-                title={item.completionType === "MANUAL_ACTION" ? "Marcar como feito" : "Concluir na origem"}
+                title={
+                  item.completionType === "MANUAL_ACTION"
+                    ? t("today.markAsDone")
+                    : t("today.completeAtSource")
+                }
               >
                 {item.isManuallyCompleted || item.isResolved ? (
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
@@ -264,7 +274,12 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           >
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              Ver {completedPriorities.length} concluída{completedPriorities.length > 1 ? "s" : ""} hoje
+              {completedPriorities.length === 1
+                ? t("today.viewCompletedToday").replace("{count}", "1")
+                : t("today.viewCompletedTodayPlural").replace(
+                    "{count}",
+                    String(completedPriorities.length)
+                  )}
             </span>
             {showCompletedDrawer ? (
               <ChevronUp className="h-4 w-4 text-stone-400" />
@@ -276,7 +291,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           {showCompletedDrawer && (
             <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
               <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider px-1">
-                Concluídas Hoje
+                {t("today.completedToday")}
               </p>
               <ul className="divide-y divide-stone-100 bg-stone-50/60 rounded-xl border border-stone-200/60 px-3">
                 {completedPriorities.map((item) => (
@@ -297,9 +312,11 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                       </div>
                       <p className="text-[10px] text-stone-400">
                         {item.completionType === "SOURCE_RESOLVED" ? (
-                          <span className="text-emerald-700 font-semibold">✓ Concluído na origem</span>
+                          <span className="text-emerald-700 font-semibold">
+                            {t("today.completedAtSourceTag")}
+                          </span>
                         ) : (
-                          <span>✓ Concluído manualmente</span>
+                          <span>{t("today.completedManuallyTag")}</span>
                         )}
                       </p>
                     </div>
@@ -311,10 +328,10 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                           type="button"
                           onClick={(e) => handleUndo(e, item)}
                           className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-md transition-colors cursor-pointer border border-amber-200/60"
-                          title="Restaurar prioridade para o dia"
+                          title={t("today.restoreTooltip")}
                         >
                           <RotateCcw className="h-3 w-3" />
-                          Desfazer
+                          {t("today.undo")}
                         </button>
                       ) : (
                         <button
@@ -322,7 +339,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                           onClick={() => handleItemClick(item)}
                           className="inline-flex items-center gap-1 text-[11px] font-semibold text-stone-500 hover:text-stone-800 px-2 py-1 rounded-md hover:bg-stone-200/60 transition-colors cursor-pointer"
                         >
-                          Ver origem
+                          {t("today.viewSource")}
                         </button>
                       )}
                     </div>

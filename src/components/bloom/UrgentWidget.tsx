@@ -3,6 +3,7 @@ import { fetchAttentionQueue, AttentionItem } from "@/lib/attention-queue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
+import { useLanguage } from "@/hooks/use-language";
 import { ShieldAlert, CheckCircle2, AlertTriangle, ArrowUpRight, RefreshCw } from "lucide-react";
 
 interface UrgentWidgetProps {
@@ -11,6 +12,7 @@ interface UrgentWidgetProps {
 
 export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [urgentItems, setUrgentItems] = useState<AttentionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +55,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-outfit text-lg font-extrabold text-foreground tracking-tight">
-                Urgente
+                {t("today.urgentTitle")}
               </h2>
               <Badge
                 variant="outline"
@@ -63,11 +65,13 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
                     : "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-800 dark:text-stone-300"
                 }`}
               >
-                {urgentItems.length} {urgentItems.length === 1 ? "item" : "itens"}
+                {urgentItems.length === 1
+                  ? t("today.urgentItemCount").replace("{count}", "1")
+                  : t("today.urgentItemCountPlural").replace("{count}", String(urgentItems.length))}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground font-medium mt-0.5">
-              Exceções e problemas que exigem intervenção imediata.
+              {t("today.urgentSubtitle")}
             </p>
           </div>
         </div>
@@ -79,7 +83,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
           onClick={loadUrgentItems}
           disabled={loading}
           className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-          title="Atualizar urgências"
+          title={t("today.refreshUrgent")}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
         </Button>
@@ -88,15 +92,15 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
       {/* Content area */}
       <div className="mt-4">
         {urgentItems.length === 0 ? (
-          /* Compact Empty State (Requirement 11) */
+          /* Compact Empty State */
           <div className="py-4 px-5 rounded-xl border border-dashed border-stone-200/80 bg-stone-50/50 dark:bg-stone-900/20 dark:border-stone-800 flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-foreground">
-                Tudo tranquilo por aqui.
+                {t("today.allClearTitle")}
               </p>
               <p className="text-[11px] text-muted-foreground truncate">
-                Nenhuma situação urgente no momento.
+                {t("today.allClearSubtitle")}
               </p>
             </div>
           </div>
@@ -126,7 +130,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
                   onClick={() => handleAction(item.targetUrl)}
                   className="h-8 px-3 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shrink-0 gap-1 cursor-pointer"
                 >
-                  <span>Resolver</span>
+                  <span>{t("today.resolveAction")}</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </Button>
               </div>
