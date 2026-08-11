@@ -1,6 +1,17 @@
 import { supabase } from "@/lib/supabase";
 import { formatTimeHHMMSS, calculateEndTime, CEFRLevel, CourseFocus } from "./calendar-sync";
 
+export interface LessonAttachment {
+  id: string;
+  type: "file" | "link";
+  title?: string;
+  file_path?: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number; // in bytes
+  created_at?: string;
+}
+
 export interface StudentLesson {
   id?: string;
   teacher_id: string;
@@ -17,6 +28,7 @@ export interface StudentLesson {
   attendance_status: "Present" | "Absent" | "Cancelled" | "Rescheduled" | null;
   completed: boolean;
   notes: string;
+  attachments?: LessonAttachment[];
   created_at?: string;
   updated_at?: string;
 }
@@ -175,7 +187,11 @@ export async function fetchStudentLessons(
     if (error) {
       console.warn("[lesson-plan-sync] Error fetching from Supabase:", error.message, error);
     } else if (data && data.length > 0) {
-      return data as StudentLesson[];
+      const normalized = data.map((item: any) => ({
+        ...item,
+        attachments: Array.isArray(item.attachments) ? item.attachments : [],
+      }));
+      return normalized as StudentLesson[];
     }
   } catch (err) {
     console.warn("[lesson-plan-sync] Unexpected fetch exception:", err);
@@ -277,22 +293,37 @@ export async function saveStudentLessons(
   localStorage.setItem(cacheKey, JSON.stringify(lessons));
 
   try {
-    const payload = lessons.map((l) => ({
-      teacher_id: teacherId,
-      student_id: studentId,
-      schedule_id: l.schedule_id || null,
-      lesson_number: l.lesson_number,
-      scheduled_date: l.scheduled_date,
-      start_time: formatTimeHHMMSS(l.start_time),
-      end_time: formatTimeHHMMSS(l.end_time),
-      duration: l.duration || 60,
-      content: l.content || "",
-      homework: l.homework || "",
-      homework_posted: typeof l.homework_posted === "boolean" ? l.homework_posted : null,
-      attendance_status: l.attendance_status || null,
-      completed: Boolean(l.completed),
-      notes: l.notes || "",
-    }));
+    const payload = lessons.map((l) => {
+      const canonicalAttachments = Array.isArray(l.attachments)
+        ? l.attachments.map((att) => ({
+            id: att.id || crypto.randomUUID(),
+            type: att.type,
+            title: att.title || "",
+            file_name: att.file_name || "",
+            file_path: att.file_path || "",
+            file_size: att.file_size || 0,
+            created_at: att.created_at || new Date().toISOString(),
+          }))
+        : [];
+
+      return {
+        teacher_id: teacherId,
+        student_id: studentId,
+        schedule_id: l.schedule_id || null,
+        lesson_number: l.lesson_number,
+        scheduled_date: l.scheduled_date,
+        start_time: formatTimeHHMMSS(l.start_time),
+        end_time: formatTimeHHMMSS(l.end_time),
+        duration: l.duration || 60,
+        content: l.content || "",
+        homework: l.homework || "",
+        homework_posted: typeof l.homework_posted === "boolean" ? l.homework_posted : null,
+        attendance_status: l.attendance_status || null,
+        completed: Boolean(l.completed),
+        notes: l.notes || "",
+        attachments: canonicalAttachments,
+      };
+    });
 
     const { data, error } = await supabase
       .from("student_lessons")
