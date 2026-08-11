@@ -33,6 +33,14 @@ import {
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+function formatReaisToBRL(value: number | string | undefined | null): string {
+  if (value === undefined || value === null || isNaN(Number(value))) return "R$ 0,00";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value));
+}
 import {
   Dialog,
   DialogContent,
@@ -494,7 +502,7 @@ function LeadsPage() {
                           </h4>
                           {lead.potential_value && lead.potential_value > 0 && (
                             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                              R$ {Number(lead.potential_value).toFixed(0)}
+                              {formatReaisToBRL(lead.potential_value)}
                             </span>
                           )}
                         </div>
@@ -571,7 +579,7 @@ function LeadsPage() {
                       {lead.language_studied || "Inglês"} ({lead.level || "A1"})
                     </td>
                     <td className="p-3.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {lead.potential_value ? `R$ ${Number(lead.potential_value).toFixed(2)}` : "-"}
+                      {lead.potential_value ? formatReaisToBRL(lead.potential_value) : "-"}
                     </td>
                     <td className="p-3.5 text-xs capitalize">{lead.source || "-"}</td>
                     <td className="p-3.5 text-right">
@@ -733,7 +741,7 @@ function LeadsPage() {
                 <div>
                   <span className="text-muted-foreground block">Valor Potencial</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    {selectedLead.potential_value ? `R$ ${Number(selectedLead.potential_value).toFixed(2)}` : "Pendente"}
+                    {selectedLead.potential_value ? formatReaisToBRL(selectedLead.potential_value) : "Pendente"}
                   </span>
                 </div>
                 <div>
@@ -896,32 +904,44 @@ function LeadsPage() {
                   const pkg = packages.find((p) => p.id === val);
                   setProposalForm({
                     package_id: val,
-                    potential_value: pkg ? (pkg.price / 100).toString() : proposalForm.potential_value,
+                    potential_value: pkg ? pkg.price.toString() : proposalForm.potential_value,
                   });
                 }}
               >
                 <SelectTrigger><SelectValue placeholder="Selecione um pacote..." /></SelectTrigger>
                 <SelectContent>
-                  {packages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.name} — R$ {(pkg.price / 100).toFixed(2)}
-                    </SelectItem>
-                  ))}
+                  {packages.map((pkg) => {
+                    const isTotal = pkg.frequency === "total" || pkg.frequency === "Valor total do curso" || (pkg.frequency && pkg.frequency.toLowerCase().includes("total"));
+                    const priceFormatted = formatReaisToBRL(pkg.price);
+                    const suffix = isTotal ? " (valor total)" : "/mês";
+                    return (
+                      <SelectItem key={pkg.id} value={pkg.id}>
+                        {pkg.name} — {priceFormatted}{suffix}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="potential_value">Valor Mensal (R$)</Label>
-              <Input
-                id="potential_value"
-                type="number"
-                step="0.01"
-                placeholder="Ex: 350.00"
-                value={proposalForm.potential_value}
-                onChange={(e) => setProposalForm({ ...proposalForm, potential_value: e.target.value })}
-              />
-            </div>
+            {(() => {
+              const selectedPkg = packages.find((p) => p.id === proposalForm.package_id);
+              const isTotal = selectedPkg && (selectedPkg.frequency === "total" || selectedPkg.frequency === "Valor total do curso" || (selectedPkg.frequency && selectedPkg.frequency.toLowerCase().includes("total")));
+              const inputLabel = isTotal ? "Valor total da proposta (R$)" : "Valor mensal (R$)";
+              return (
+                <div className="space-y-1.5">
+                  <Label htmlFor="potential_value">{inputLabel}</Label>
+                  <Input
+                    id="potential_value"
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 350.00"
+                    value={proposalForm.potential_value}
+                    onChange={(e) => setProposalForm({ ...proposalForm, potential_value: e.target.value })}
+                  />
+                </div>
+              );
+            })()}
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsProposalOpen(false)}>
@@ -948,30 +968,21 @@ function LeadsPage() {
           </DialogHeader>
 
           <form onSubmit={handleConvertLead} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="conv_full_name">Nome do Aluno *</Label>
-              <Input
-                id="conv_full_name"
-                required
-                value={convertForm.full_name}
-                onChange={(e) => setConvertForm({ ...convertForm, full_name: e.target.value })}
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="conv_phone">WhatsApp</Label>
+                <Label htmlFor="convert_name">Nome Completo *</Label>
                 <Input
-                  id="conv_phone"
-                  value={convertForm.phone}
-                  onChange={(e) => setConvertForm({ ...convertForm, phone: e.target.value })}
+                  id="convert_name"
+                  required
+                  value={convertForm.full_name}
+                  onChange={(e) => setConvertForm({ ...convertForm, full_name: e.target.value })}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="conv_email">E-mail</Label>
+                <Label htmlFor="convert_email">E-mail</Label>
                 <Input
-                  id="conv_email"
+                  id="convert_email"
                   type="email"
                   value={convertForm.email}
                   onChange={(e) => setConvertForm({ ...convertForm, email: e.target.value })}
@@ -981,30 +992,68 @@ function LeadsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Dia da Semana da Aula</Label>
+                <Label htmlFor="convert_phone">Telefone / WhatsApp</Label>
+                <Input
+                  id="convert_phone"
+                  value={convertForm.phone}
+                  onChange={(e) => setConvertForm({ ...convertForm, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="convert_language">Idioma Estudado</Label>
                 <Select
-                  value={convertForm.schedule_weekday}
-                  onValueChange={(val) => setConvertForm({ ...convertForm, schedule_weekday: val })}
+                  value={convertForm.language_studied}
+                  onValueChange={(val) => setConvertForm({ ...convertForm, language_studied: val })}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Monday">Segunda-feira</SelectItem>
-                    <SelectItem value="Tuesday">Terça-feira</SelectItem>
-                    <SelectItem value="Wednesday">Quarta-feira</SelectItem>
-                    <SelectItem value="Thursday">Quinta-feira</SelectItem>
-                    <SelectItem value="Friday">Sexta-feira</SelectItem>
-                    <SelectItem value="Saturday">Sábado</SelectItem>
+                    <SelectItem value="English">Inglês (English)</SelectItem>
+                    <SelectItem value="Spanish">Espanhol (Español)</SelectItem>
+                    <SelectItem value="French">Francês (Français)</SelectItem>
+                    <SelectItem value="German">Alemão (Deutsch)</SelectItem>
+                    <SelectItem value="Italian">Italiano</SelectItem>
+                    <SelectItem value="Portuguese">Português (para estrangeiros)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="convert_level">Nível (CEFR)</Label>
+                <Select
+                  value={convertForm.level}
+                  onValueChange={(val) => setConvertForm({ ...convertForm, level: val })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A1">A1 - Iniciante</SelectItem>
+                    <SelectItem value="A2">A2 - Básico</SelectItem>
+                    <SelectItem value="B1">B1 - Intermediário</SelectItem>
+                    <SelectItem value="B2">B2 - Usuário Independente</SelectItem>
+                    <SelectItem value="C1">C1 - Avançado</SelectItem>
+                    <SelectItem value="C2">C2 - Proficiente</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label>Horário da Aula</Label>
-                <Input
-                  type="time"
-                  value={convertForm.schedule_start_time}
-                  onChange={(e) => setConvertForm({ ...convertForm, schedule_start_time: e.target.value })}
-                />
+                <Label htmlFor="convert_focus">Foco do Curso</Label>
+                <Select
+                  value={convertForm.focus}
+                  onValueChange={(val) => setConvertForm({ ...convertForm, focus: val })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General English">Inglês Geral</SelectItem>
+                    <SelectItem value="Business">Business / Profissional</SelectItem>
+                    <SelectItem value="Conversation">Conversação</SelectItem>
+                    <SelectItem value="Exam Prep">Preparatório para Exames</SelectItem>
+                    <SelectItem value="Travel">Viagens</SelectItem>
+                    <SelectItem value="Kids / Teens">Kids & Teens</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1016,11 +1065,16 @@ function LeadsPage() {
               >
                 <SelectTrigger><SelectValue placeholder="Selecione um pacote..." /></SelectTrigger>
                 <SelectContent>
-                  {packages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.name} (R$ {(pkg.price / 100).toFixed(2)})
-                    </SelectItem>
-                  ))}
+                  {packages.map((pkg) => {
+                    const isTotal = pkg.frequency === "total" || pkg.frequency === "Valor total do curso" || (pkg.frequency && pkg.frequency.toLowerCase().includes("total"));
+                    const priceFormatted = formatReaisToBRL(pkg.price);
+                    const suffix = isTotal ? " (valor total)" : "/mês";
+                    return (
+                      <SelectItem key={pkg.id} value={pkg.id}>
+                        {pkg.name} ({priceFormatted}{suffix})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

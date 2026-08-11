@@ -589,7 +589,7 @@ export async function processProposalRecordedAutomation(
         .maybeSingle();
 
       if (pkg && pkg.price) {
-        finalValue = pkg.price / 100; // stored in cents
+        finalValue = pkg.price;
       }
     }
 
