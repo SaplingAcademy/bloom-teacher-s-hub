@@ -12,4 +12,14 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Target Vercel serverless functions instead of Cloudflare Workers.
+  // The lovable plugin reads options.nitro at the TOP level (not inside tanstackStart).
+  // It only force-applies cloudflare-module when LOVABLE_SANDBOX=1; an explicit preset
+  // here is preserved in all other environments (local build, Vercel CI).
+  nitro: { preset: "vercel" },
+  vite: {
+    server: {
+      port: 8080,
+    },
+  },
 });

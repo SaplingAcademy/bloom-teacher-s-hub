@@ -20,7 +20,14 @@ type StatCardProps = {
   hint?: string;
 };
 
-export function StatCard({ label, value, icon: Icon, tone = "primary", trend, hint }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone = "primary",
+  trend,
+  hint,
+}: StatCardProps) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
       <div className="flex items-center justify-between">
@@ -31,9 +38,7 @@ export function StatCard({ label, value, icon: Icon, tone = "primary", trend, hi
           <span
             className={cn(
               "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold",
-              trend.positive
-                ? "bg-primary-soft text-primary"
-                : "bg-accent-soft text-accent",
+              trend.positive ? "bg-primary-soft text-primary" : "bg-accent-soft text-accent",
             )}
           >
             {trend.positive ? (

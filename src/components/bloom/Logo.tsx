@@ -13,7 +13,13 @@ export function BloomMark({ className }: { className?: string }) {
   );
 }
 
-export function BloomLogo({ className, showWord = true }: { className?: string; showWord?: boolean }) {
+export function BloomLogo({
+  className,
+  showWord = true,
+}: {
+  className?: string;
+  showWord?: boolean;
+}) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <BloomMark className="text-sidebar-primary" />

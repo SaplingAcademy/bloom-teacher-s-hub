@@ -16,9 +16,21 @@ dist-ssr
 .nitro
 *.local
 
+# Vercel build output (generated artifact — do not commit)
+.vercel/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# Environment variables — never commit secrets
+.env
+.env.*
+!.env.example
+
+# AI agent session data (not project source)
+.agents/brain/
+scratch/
 
 # Editor directories and files
 .vscode/*
@@ -30,3 +42,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+

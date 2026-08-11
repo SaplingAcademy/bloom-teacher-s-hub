@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
@@ -20,7 +22,7 @@ import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppMarketplaceRouteImport } from './routes/_app.marketplace'
 import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
-import { Route as AppInsightsRouteImport } from './routes/_app.insights'
+import { Route as AppGrowthRouteImport } from './routes/_app.growth'
 import { Route as AppFinanceRouteImport } from './routes/_app.finance'
 import { Route as AppCommunityRouteImport } from './routes/_app.community'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
@@ -28,6 +30,16 @@ import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -79,9 +91,9 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
-const AppInsightsRoute = AppInsightsRouteImport.update({
-  id: '/insights',
-  path: '/insights',
+const AppGrowthRoute = AppGrowthRouteImport.update({
+  id: '/growth',
+  path: '/growth',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFinanceRoute = AppFinanceRouteImport.update({
@@ -102,11 +114,13 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/auth': typeof AuthRoute
+  '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/calendar': typeof AppCalendarRoute
   '/community': typeof AppCommunityRoute
   '/finance': typeof AppFinanceRoute
-  '/insights': typeof AppInsightsRoute
+  '/growth': typeof AppGrowthRoute
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
@@ -117,11 +131,13 @@ export interface FileRoutesByFullPath {
   '/students': typeof AppStudentsRoute
 }
 export interface FileRoutesByTo {
+  '/auth': typeof AuthRoute
+  '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/calendar': typeof AppCalendarRoute
   '/community': typeof AppCommunityRoute
   '/finance': typeof AppFinanceRoute
-  '/insights': typeof AppInsightsRoute
+  '/growth': typeof AppGrowthRoute
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
@@ -135,11 +151,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/community': typeof AppCommunityRoute
   '/_app/finance': typeof AppFinanceRoute
-  '/_app/insights': typeof AppInsightsRoute
+  '/_app/growth': typeof AppGrowthRoute
   '/_app/leads': typeof AppLeadsRoute
   '/_app/lessons': typeof AppLessonsRoute
   '/_app/marketplace': typeof AppMarketplaceRoute
@@ -154,11 +172,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
+    | '/onboarding'
     | '/sitemap.xml'
     | '/calendar'
     | '/community'
     | '/finance'
-    | '/insights'
+    | '/growth'
     | '/leads'
     | '/lessons'
     | '/marketplace'
@@ -169,11 +189,13 @@ export interface FileRouteTypes {
     | '/students'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/auth'
+    | '/onboarding'
     | '/sitemap.xml'
     | '/calendar'
     | '/community'
     | '/finance'
-    | '/insights'
+    | '/growth'
     | '/leads'
     | '/lessons'
     | '/marketplace'
@@ -186,11 +208,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/auth'
+    | '/onboarding'
     | '/sitemap.xml'
     | '/_app/calendar'
     | '/_app/community'
     | '/_app/finance'
-    | '/_app/insights'
+    | '/_app/growth'
     | '/_app/leads'
     | '/_app/lessons'
     | '/_app/marketplace'
@@ -204,6 +228,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  OnboardingRoute: typeof OnboardingRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
 
@@ -214,6 +240,20 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -286,11 +326,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/insights': {
-      id: '/_app/insights'
-      path: '/insights'
-      fullPath: '/insights'
-      preLoaderRoute: typeof AppInsightsRouteImport
+    '/_app/growth': {
+      id: '/_app/growth'
+      path: '/growth'
+      fullPath: '/growth'
+      preLoaderRoute: typeof AppGrowthRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/finance': {
@@ -321,7 +361,7 @@ interface AppRouteChildren {
   AppCalendarRoute: typeof AppCalendarRoute
   AppCommunityRoute: typeof AppCommunityRoute
   AppFinanceRoute: typeof AppFinanceRoute
-  AppInsightsRoute: typeof AppInsightsRoute
+  AppGrowthRoute: typeof AppGrowthRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppLessonsRoute: typeof AppLessonsRoute
   AppMarketplaceRoute: typeof AppMarketplaceRoute
@@ -337,7 +377,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCalendarRoute: AppCalendarRoute,
   AppCommunityRoute: AppCommunityRoute,
   AppFinanceRoute: AppFinanceRoute,
-  AppInsightsRoute: AppInsightsRoute,
+  AppGrowthRoute: AppGrowthRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppLessonsRoute: AppLessonsRoute,
   AppMarketplaceRoute: AppMarketplaceRoute,
@@ -353,6 +393,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRoute,
+  OnboardingRoute: OnboardingRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
 export const routeTree = rootRouteImport

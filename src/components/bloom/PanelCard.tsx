@@ -38,7 +38,9 @@ export function PanelCard({
               </span>
             )}
             <div className="min-w-0">
-              {title && <h3 className="truncate text-sm font-semibold text-card-foreground">{title}</h3>}
+              {title && (
+                <h3 className="truncate text-sm font-semibold text-card-foreground">{title}</h3>
+              )}
               {description && (
                 <p className="truncate text-xs text-muted-foreground">{description}</p>
               )}

@@ -3,7 +3,12 @@ import { MessagesSquare } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
 
 export const Route = createFileRoute("/_app/messages")({
-  head: () => ({ meta: [{ title: "Messages · Bloom" }, { name: "description", content: "Async student communication and announcements." }] }),
+  head: () => ({
+    meta: [
+      { title: "Messages · Bloom" },
+      { name: "description", content: "Async student communication and announcements." },
+    ],
+  }),
   component: () => (
     <ModulePlaceholder
       eyebrow="Workspace"

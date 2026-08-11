@@ -19,7 +19,9 @@ export function PageHeader({ title, description, actions, eyebrow, className }: 
     >
       <div className="min-w-0">
         {eyebrow && (
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">{eyebrow}</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">
+            {eyebrow}
+          </p>
         )}
         <h1 className="truncate font-display text-2xl font-bold text-foreground sm:text-[28px]">
           {title}

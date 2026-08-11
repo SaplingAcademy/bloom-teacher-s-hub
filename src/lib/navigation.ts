@@ -7,7 +7,7 @@ import {
   FolderOpen,
   Wallet,
   MessagesSquare,
-  BarChart3,
+  TrendingUp,
   Sparkles,
   Newspaper,
   Store,
@@ -36,23 +36,71 @@ export const navSections: NavSection[] = [
     label: "Workspace",
     items: [
       { label: "Today", to: "/", icon: LayoutDashboard, description: "Your launchpad for the day" },
-      { label: "Students", to: "/students", icon: Users, description: "Profiles, progress and history" },
+      {
+        label: "Students",
+        to: "/students",
+        icon: Users,
+        description: "Profiles, progress and history",
+      },
       { label: "Leads", to: "/leads", icon: UserPlus, description: "Turn inquiries into students" },
-      { label: "Calendar", to: "/calendar", icon: CalendarDays, description: "Classes and availability" },
+      {
+        label: "Calendar",
+        to: "/calendar",
+        icon: CalendarDays,
+        description: "Classes and availability",
+      },
       { label: "Lessons", to: "/lessons", icon: BookOpen, description: "Plan and deliver lessons" },
-      { label: "Resources", to: "/resources", icon: FolderOpen, description: "Your teaching library" },
-      { label: "Finance", to: "/finance", icon: Wallet, description: "Payments, invoices and income" },
-      { label: "Messages", to: "/messages", icon: MessagesSquare, description: "Student communication" },
-      { label: "Insights", to: "/insights", icon: BarChart3, description: "Understand your business" },
+      {
+        label: "Resources",
+        to: "/resources",
+        icon: FolderOpen,
+        description: "Your teaching library",
+      },
+      {
+        label: "Finance",
+        to: "/finance",
+        icon: Wallet,
+        description: "Payments, invoices and income",
+      },
+      {
+        label: "Messages",
+        to: "/messages",
+        icon: MessagesSquare,
+        description: "Student communication",
+      },
+      {
+        label: "Growth",
+        to: "/growth",
+        icon: TrendingUp,
+        description: "Scale and optimize your school",
+      },
     ],
   },
   {
     id: "community",
     label: "Community",
     items: [
-      { label: "Feed", to: "/community", icon: Newspaper, description: "Ideas and discussion", badge: "Soon" },
-      { label: "Marketplace", to: "/marketplace", icon: Store, description: "Buy and sell resources", badge: "Soon" },
-      { label: "Profile", to: "/profile", icon: UserCircle, description: "Your teacher reputation", badge: "Soon" },
+      {
+        label: "Feed",
+        to: "/community",
+        icon: Newspaper,
+        description: "Ideas and discussion",
+        badge: "Soon",
+      },
+      {
+        label: "Marketplace",
+        to: "/marketplace",
+        icon: Store,
+        description: "Buy and sell resources",
+        badge: "Soon",
+      },
+      {
+        label: "Profile",
+        to: "/profile",
+        icon: UserCircle,
+        description: "Your teacher reputation",
+        badge: "Soon",
+      },
     ],
   },
 ];
@@ -68,7 +116,4 @@ export const aiNav: NavItem = {
   description: "Your teaching assistant",
 };
 
-export const allNavItems: NavItem[] = [
-  ...navSections.flatMap((s) => s.items),
-  ...bottomNav,
-];
+export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav];

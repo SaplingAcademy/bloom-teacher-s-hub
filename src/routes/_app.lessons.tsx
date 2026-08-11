@@ -3,7 +3,12 @@ import { BookOpen } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
 
 export const Route = createFileRoute("/_app/lessons")({
-  head: () => ({ meta: [{ title: "Lessons · Bloom" }, { name: "description", content: "Plan, structure and deliver your lessons with AI help." }] }),
+  head: () => ({
+    meta: [
+      { title: "Lessons · Bloom" },
+      { name: "description", content: "Plan, structure and deliver your lessons with AI help." },
+    ],
+  }),
   component: () => (
     <ModulePlaceholder
       eyebrow="Workspace"

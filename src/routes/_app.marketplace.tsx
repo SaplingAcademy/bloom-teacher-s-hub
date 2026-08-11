@@ -3,7 +3,12 @@ import { Store } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
 
 export const Route = createFileRoute("/_app/marketplace")({
-  head: () => ({ meta: [{ title: "Marketplace · Bloom" }, { name: "description", content: "Buy and sell high-quality teaching resources." }] }),
+  head: () => ({
+    meta: [
+      { title: "Marketplace · Bloom" },
+      { name: "description", content: "Buy and sell high-quality teaching resources." },
+    ],
+  }),
   component: () => (
     <ModulePlaceholder
       eyebrow="Community"

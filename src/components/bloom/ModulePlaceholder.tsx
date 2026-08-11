@@ -48,7 +48,9 @@ export function ModulePlaceholder({
 
         <section className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-gradient-primary p-6 text-primary-foreground shadow-[var(--shadow-md)]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide opacity-80">Why it matters</p>
+            <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+              Why it matters
+            </p>
             <p className="mt-2 font-display text-lg font-semibold leading-snug">{goal}</p>
           </div>
           <p className="text-sm opacity-90">
