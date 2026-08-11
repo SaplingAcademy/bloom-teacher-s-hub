@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Calendar, ShieldAlert } from "lucide-react";
+import { useLanguage } from "@/hooks/use-language";
 
 interface SchedulingConflictDialogProps {
   isOpen: boolean;
@@ -25,13 +26,14 @@ export function SchedulingConflictDialog({
   targetDate,
   onConfirmOverride,
 }: SchedulingConflictDialogProps) {
+  const { t } = useLanguage();
   if (!timeOffBlock) return null;
 
   const dateFormatted = targetDate.split("-").reverse().join("/");
   const rangeFormatted =
     timeOffBlock.startDate === timeOffBlock.endDate
       ? timeOffBlock.startDate.split("-").reverse().join("/")
-      : `${timeOffBlock.startDate.split("-").reverse().join("/")} a ${timeOffBlock.endDate.split("-").reverse().join("/")}`;
+      : `${timeOffBlock.startDate.split("-").reverse().join("/")} - ${timeOffBlock.endDate.split("-").reverse().join("/")}`;
 
   const blockType = timeOffBlock.type || "Férias";
   const blockTitle = timeOffBlock.title ? ` (${timeOffBlock.title})` : "";
@@ -46,10 +48,10 @@ export function SchedulingConflictDialog({
           </div>
           <div>
             <DialogTitle className="text-base font-bold text-amber-900 dark:text-amber-200">
-              Conflito de Agenda Detectado
+              {t("calendar.conflictTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-              A data selecionada coincide com um período marcado como sem aula.
+              {t("calendar.conflictSubtitle")}
             </DialogDescription>
           </div>
         </div>
@@ -58,15 +60,15 @@ export function SchedulingConflictDialog({
         <div className="p-5 space-y-3 text-xs text-stone-700 dark:text-stone-300">
           <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 space-y-1">
             <p className="font-semibold text-stone-900 dark:text-stone-100">
-              Este dia ({dateFormatted}) está marcado como <strong>{blockType}</strong>{blockTitle}.
+              {t("calendar.conflictDayNotice").replace("{date}", dateFormatted).replace("{type}", blockType).replace("{title}", blockTitle)}
             </p>
             <p className="text-muted-foreground text-[11px]">
-              Período bloqueado: <strong>{rangeFormatted}</strong>
+              {t("calendar.conflictPeriod").replace("{period}", rangeFormatted)}
             </p>
           </div>
 
           <p className="text-muted-foreground leading-relaxed">
-            Deseja realizar o agendamento nesta data mesmo assim?
+            {t("calendar.conflictQuestion")}
           </p>
         </div>
 
@@ -74,11 +76,11 @@ export function SchedulingConflictDialog({
         <DialogFooter className="p-4 bg-muted/30 border-t border-border flex flex-col sm:flex-row gap-2 sm:justify-end">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             onClick={onClose}
             className="w-full sm:w-auto text-xs font-semibold"
           >
-            Cancelar
+            {t("calendar.cancel")}
           </Button>
 
           <Button
@@ -87,9 +89,10 @@ export function SchedulingConflictDialog({
               onConfirmOverride();
               onClose();
             }}
-            className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 cursor-pointer shadow-sm"
+            className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold gap-1.5 cursor-pointer shadow-md"
           >
-            Agendar mesmo assim
+            <ShieldAlert className="w-4 h-4" />
+            {t("calendar.confirmScheduleAnyway")}
           </Button>
         </DialogFooter>
       </DialogContent>

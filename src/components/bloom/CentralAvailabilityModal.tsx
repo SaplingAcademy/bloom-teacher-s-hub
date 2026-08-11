@@ -48,6 +48,7 @@ import {
   formatLocalDateStr,
 } from "@/lib/time-off-engine";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/use-language";
 
 interface CentralAvailabilityModalProps {
   isOpen: boolean;
@@ -64,6 +65,7 @@ export function CentralAvailabilityModal({
   initialTab = "working_hours",
   onSaved,
 }: CentralAvailabilityModalProps) {
+  const { t, formatWeekday } = useLanguage();
   const [activeTab, setActiveTab] = useState<"working_hours" | "rest_blocks" | "days_off">(initialTab);
 
   // Tab 1: Horários de trabalho state
@@ -453,10 +455,10 @@ export function CentralAvailabilityModal({
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground font-display">
-                Configurar Disponibilidade
+                {t("calendar.settingsAvailability")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Gerencie seus horários semanais de trabalho, horários de descanso e exceções no calendário.
+                {t("calendar.subtitle")}
               </DialogDescription>
             </div>
           </div>
@@ -473,10 +475,10 @@ export function CentralAvailabilityModal({
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>Horários de trabalho</span>
+              <span>{t("calendar.workingHours")}</span>
               {selectedWeekdays.size > 0 && (
                 <Badge variant="outline" className="text-[10px] bg-white/10 text-white border-white/20 px-1.5 py-0">
-                  {selectedWeekdays.size} dias
+                  {selectedWeekdays.size}
                 </Badge>
               )}
             </button>
@@ -491,7 +493,7 @@ export function CentralAvailabilityModal({
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>Horários de descanso</span>
+              <span>{t("calendar.restBlocks")}</span>
               {restBlocksList.length > 0 && (
                 <Badge variant="outline" className="text-[10px] bg-white/10 text-white border-white/20 px-1.5 py-0">
                   {restBlocksList.length}
@@ -509,7 +511,7 @@ export function CentralAvailabilityModal({
               }`}
             >
               <CalendarOff className="w-3.5 h-3.5" />
-              <span>Dias sem aula</span>
+              <span>{t("calendar.daysOff")}</span>
               {timeOffList.length > 0 && (
                 <Badge variant="outline" className="text-[10px] bg-white/10 text-white border-white/20 px-1.5 py-0">
                   {timeOffList.length}
