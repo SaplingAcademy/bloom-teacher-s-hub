@@ -12,12 +12,12 @@ import { DailyPrioritiesCard } from "@/components/bloom/DailyPrioritiesCard";
  */
 export function getTeacherFirstName(profile: any, user: any): string | null {
   const rawName =
-    profile?.display_name ||
-    profile?.name ||
     profile?.full_name ||
+    profile?.name ||
+    profile?.display_name ||
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
-    user?.user_metadata?.display_name;
+    (user?.user_metadata?.display_name && !user.user_metadata.display_name.includes("@") ? user.user_metadata.display_name : null);
 
   if (!rawName || typeof rawName !== "string") return null;
 
@@ -28,7 +28,8 @@ export function getTeacherFirstName(profile: any, user: any): string | null {
     trimmed === "Teacher" ||
     trimmed === "Professor" ||
     trimmed === "undefined" ||
-    trimmed === "null"
+    trimmed === "null" ||
+    trimmed.includes("@")
   ) {
     return null;
   }

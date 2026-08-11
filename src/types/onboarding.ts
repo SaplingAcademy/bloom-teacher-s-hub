@@ -2,8 +2,10 @@ export interface OnboardingPackage {
   id: string;
   name: string;
   lessons: number;
-  price: number; // in currency units (e.g., 2400 for R$2.400)
+  price: number; // stored in REAIS (e.g., 500 for R$ 500,00)
   duration?: number; // in minutes (default 60)
+  frequency?: "Monthly" | "total"; // "Monthly" (Mensalidade) or "total" (Valor total do curso)
+  defaultInstallmentCount?: number; // default suggested installment count for total value package
 }
 
 export interface DayAvailability {

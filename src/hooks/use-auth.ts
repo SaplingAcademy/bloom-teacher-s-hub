@@ -97,12 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               userId,
             );
 
-            const fullName =
+            const rawMetadataName =
               userMetadata?.full_name ||
               userMetadata?.name ||
-              userMetadata?.display_name ||
-              userEmail?.split("@")[0] ||
-              "Educator";
+              (userMetadata?.display_name && !userMetadata.display_name.includes("@") ? userMetadata.display_name : "");
+            const fullName = rawMetadataName || "";
             const avatarUrl = userMetadata?.avatar_url || userMetadata?.picture || "";
 
             const targetTable = isTableMissing ? "profiles" : "teacher_profiles";
@@ -208,17 +207,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("[useAuth] Profile loaded/fetched from database:", profileData);
           const savedProfileStr = localStorage.getItem("bloom.profile.data");
           const currentProfile = savedProfileStr ? JSON.parse(savedProfileStr) : {};
-
-          const fallbackName =
+          const rawMetadataName =
             userMetadata?.full_name ||
             userMetadata?.name ||
-            userMetadata?.display_name ||
-            userEmail?.split("@")[0] ||
-            "Educator";
+            (userMetadata?.display_name && !userMetadata.display_name.includes("@") ? userMetadata.display_name : "");
+
+          const cleanProfileName =
+            profileData.full_name && !profileData.full_name.includes("@") && profileData.full_name !== "Educator"
+              ? profileData.full_name
+              : currentProfile.name && !currentProfile.name.includes("@")
+              ? currentProfile.name
+              : rawMetadataName || "";
+
           const updatedProfile = {
             ...defaultProfile,
             ...currentProfile,
-            name: profileData.full_name || currentProfile.name || fallbackName,
+            name: cleanProfileName,
             photo: profileData.avatar_url || currentProfile.photo || "",
             preferred_language: profileData.preferred_language || "pt-BR",
             timezone: profileData.timezone || "America/Sao_Paulo",

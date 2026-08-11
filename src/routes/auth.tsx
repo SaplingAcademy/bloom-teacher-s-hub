@@ -636,7 +636,7 @@ function AuthPage() {
           password,
           options: {
             data: {
-              display_name: name || email.split("@")[0],
+              display_name: name.trim() || undefined,
             },
             emailRedirectTo: `${window.location.origin}/auth`,
           },
@@ -654,7 +654,7 @@ function AuthPage() {
           // Initialize user profile data in localStorage
           const defaultProfile = {
             photo: "",
-            name: name || email.split("@")[0],
+            name: name.trim() || "",
             headline: "ESL Teacher / Language Coach",
             bio:
               lang === "pt"

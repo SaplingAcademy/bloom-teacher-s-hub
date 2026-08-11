@@ -92,9 +92,9 @@ const LESSON_TYPE_OPTIONS = [
 ];
 
 const PACKAGE_TEMPLATES: OnboardingPackage[] = [
-  { id: "tpl-1", name: "Premium", lessons: 40, price: 2400, duration: 60 },
-  { id: "tpl-2", name: "VIP", lessons: 20, price: 1400, duration: 60 },
-  { id: "tpl-3", name: "Starter", lessons: 10, price: 850, duration: 60 },
+  { id: "tpl-1", name: "Mensal Básico", lessons: 4, price: 350, duration: 60, frequency: "Monthly" },
+  { id: "tpl-2", name: "Mensal VIP", lessons: 8, price: 650, duration: 60, frequency: "Monthly" },
+  { id: "tpl-3", name: "Curso Completo", lessons: 24, price: 2400, duration: 60, frequency: "total", defaultInstallmentCount: 6 },
 ];
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -124,8 +124,8 @@ const INITIAL_DATA: OnboardingData = {
   },
   lessonTypes: ["Individual"],
   packages: [
-    { id: "pkg-1", name: "Starter", lessons: 10, price: 850, duration: 60 },
-    { id: "pkg-2", name: "VIP", lessons: 20, price: 1400, duration: 60 },
+    { id: "pkg-1", name: "Mensal Básico", lessons: 4, price: 350, duration: 60, frequency: "Monthly" },
+    { id: "pkg-2", name: "Curso Completo", lessons: 24, price: 2400, duration: 60, frequency: "total", defaultInstallmentCount: 6 },
   ],
   monthlyGoal: "12000",
   monthlyExpense: "",
@@ -358,11 +358,12 @@ export function OnboardingPage() {
         const pkgRows = data.packages.map((pkg) => ({
           teacher_id: userId,
           name: pkg.name,
-          price: Math.round(Number(pkg.price || 0) * 100), // convert to cents
-          lessons: pkg.lessons,
+          price: Number(pkg.price || 0), // STORED DIRECTLY IN REAIS (NOT CENTS)
+          lessons: pkg.lessons || 4,
           duration: pkg.duration || 60,
-          frequency: "monthly",
-          method: "online",
+          frequency: pkg.frequency || "Monthly",
+          default_installment_count: pkg.defaultInstallmentCount || 1,
+          method: "Pix",
         }));
 
         const { error: pkgError } = await supabase.from("packages").insert(pkgRows);
@@ -1185,8 +1186,10 @@ function Step4PlansPackages({
   isPt: boolean;
 }) {
   const [pkgName, setPkgName] = useState("");
-  const [pkgLessons, setPkgLessons] = useState<number>(10);
+  const [pkgLessons, setPkgLessons] = useState<number>(4);
   const [pkgPrice, setPkgPrice] = useState<string>("");
+  const [pkgFreq, setPkgFreq] = useState<"Monthly" | "total">("Monthly");
+  const [pkgInstallments, setPkgInstallments] = useState<number>(6);
 
   const toggleLessonType = (typeId: string) => {
     let next: string[];
@@ -1212,6 +1215,8 @@ function Step4PlansPackages({
       lessons: pkgLessons || 1,
       price: priceNum,
       duration: 60,
+      frequency: pkgFreq,
+      defaultInstallmentCount: pkgFreq === "total" ? (pkgInstallments || 1) : 1,
     };
     updateData("packages", [...data.packages, newPkg]);
     setPkgName("");
@@ -1269,8 +1274,8 @@ function Step4PlansPackages({
           </h3>
           <p className="text-xs text-stone-500">
             {isPt
-              ? "Esses pacotes irão popular o módulo de Planos e Pacotes do seu Bloom."
-              : "These will immediately populate your Packages module."}
+              ? "Esses pacotes irão popular o catálogo de pacotes do seu Bloom."
+              : "These will immediately populate your Packages catalog."}
           </p>
         </div>
 
@@ -1296,7 +1301,7 @@ function Step4PlansPackages({
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>
-                    {tpl.name} ({tpl.lessons} {isPt ? "aulas" : "lessons"} • R${tpl.price})
+                    {tpl.name} ({tpl.lessons} {isPt ? "aulas" : "lessons"} • R$ {tpl.price}{tpl.frequency === "total" ? (isPt ? " total" : " total") : "/mês"})
                   </span>
                 </button>
               );
@@ -1311,10 +1316,22 @@ function Step4PlansPackages({
               key={pkg.id}
               className="flex items-center justify-between p-4 bg-white rounded-2xl border border-stone-200 shadow-sm"
             >
-              <div className="space-y-0.5">
-                <span className="font-bold text-stone-900 text-base">{pkg.name}</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-stone-900 text-base">{pkg.name}</span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                    {pkg.frequency === "total" ? (isPt ? "Valor Total" : "Total Value") : (isPt ? "Mensalidade" : "Monthly")}
+                  </span>
+                </div>
                 <div className="text-xs text-stone-500 font-semibold">
                   {pkg.lessons} {isPt ? "aulas" : "lessons"} • R$ {pkg.price.toLocaleString("pt-BR")}
+                  {pkg.frequency === "total" ? (
+                    pkg.defaultInstallmentCount && pkg.defaultInstallmentCount > 1
+                      ? ` (${isPt ? "sugestão de até" : "suggested up to"} ${pkg.defaultInstallmentCount}x)`
+                      : ` (${isPt ? "valor total" : "total value"})`
+                  ) : (
+                    isPt ? " /mês" : " /mo"
+                  )}
                 </div>
               </div>
               <button
@@ -1330,13 +1347,41 @@ function Step4PlansPackages({
 
         {/* Add Custom Package form */}
         <div className="p-4 bg-stone-100/70 rounded-2xl border border-stone-200/80 space-y-3">
-          <span className="text-xs font-bold text-stone-700 uppercase">
-            {isPt ? "Adicionar pacote personalizado:" : "Add custom package:"}
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-stone-700 uppercase">
+              {isPt ? "Adicionar pacote personalizado:" : "Add custom package:"}
+            </span>
+            {/* Frequency Selector Toggle */}
+            <div className="flex gap-1.5 bg-white p-1 rounded-xl border border-stone-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setPkgFreq("Monthly")}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  pkgFreq === "Monthly"
+                    ? "bg-[#163020] text-white shadow-xs"
+                    : "text-stone-600 hover:bg-stone-100"
+                }`}
+              >
+                {isPt ? "Mensalidade" : "Monthly"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPkgFreq("total")}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  pkgFreq === "total"
+                    ? "bg-[#163020] text-white shadow-xs"
+                    : "text-stone-600 hover:bg-stone-100"
+                }`}
+              >
+                {isPt ? "Valor Total" : "Total Course"}
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <input
               type="text"
-              placeholder={isPt ? "Nome (ex: Starter)" : "Name (e.g. Starter)"}
+              placeholder={isPt ? "Nome (ex: Mensal Básico)" : "Name (e.g. Monthly Basic)"}
               value={pkgName}
               onChange={(e) => setPkgName(e.target.value)}
               className="h-10 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
@@ -1350,12 +1395,32 @@ function Step4PlansPackages({
             />
             <input
               type="text"
-              placeholder={isPt ? "Preço (ex: 850)" : "Price (e.g. 850)"}
+              placeholder={pkgFreq === "total" ? (isPt ? "Valor total (R$ 2.400)" : "Total value (2400)") : (isPt ? "Preço mensal (R$ 350)" : "Monthly price (350)")}
               value={pkgPrice}
               onChange={(e) => setPkgPrice(e.target.value)}
               className="h-10 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
             />
           </div>
+
+          {pkgFreq === "total" && (
+            <div className="flex items-center gap-3 pt-1">
+              <label className="text-xs font-semibold text-stone-600">
+                {isPt ? "Sugestão de parcelamento padrão:" : "Suggested default installments:"}
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={24}
+                value={pkgInstallments}
+                onChange={(e) => setPkgInstallments(parseInt(e.target.value) || 1)}
+                className="w-20 h-9 px-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 text-center"
+              />
+              <span className="text-xs text-stone-400 font-medium">
+                {isPt ? "parcelas (definido por aluno)" : "installments (chosen per student)"}
+              </span>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleAddCustomPackage}

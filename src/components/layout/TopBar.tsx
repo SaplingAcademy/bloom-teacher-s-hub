@@ -10,7 +10,7 @@ type TopBarProps = {
 
 export function TopBar({ onOpenMobileNav }: TopBarProps) {
   const { lang, setLang, t } = useLanguage();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -34,15 +34,19 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const teacherName =
+    (profile?.full_name && !profile.full_name.includes("@") && profile.full_name !== "Educator" ? profile.full_name : null) ||
+    (profile?.name && !profile.name.includes("@") ? profile.name : null) ||
+    (user?.user_metadata?.full_name && !user.user_metadata.full_name.includes("@") ? user.user_metadata.full_name : null) ||
+    (user?.user_metadata?.name && !user.user_metadata.name.includes("@") ? user.user_metadata.name : null);
+
   const getInitials = () => {
-    if (!user) return "U";
-    const name = user.user_metadata?.display_name || user.email || "";
-    if (!name) return "U";
-    const parts = name.split(" ");
+    if (!teacherName) return lang === "pt" ? "PB" : "BT";
+    const parts = teacherName.trim().split(/\s+/);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return teacherName.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -187,8 +191,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
               {/* User details */}
               <div className="px-3 py-2 border-b border-border/40 mb-1.5">
                 <p className="text-xs font-bold text-foreground truncate">
-                  {user?.user_metadata?.display_name ||
-                    (lang === "pt" ? "Professor Bloom" : "Bloom Teacher")}
+                  {teacherName || (lang === "pt" ? "Professor Bloom" : "Bloom Teacher")}
                 </p>
                 <p className="text-[10px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
               </div>
