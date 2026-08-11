@@ -73,11 +73,36 @@ export function LessonNotesModal({
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
 
-  // Sync state when lesson changes
+  // Sync state and refresh signed URLs when lesson changes
   useEffect(() => {
     if (lesson) {
       setNotesText(lesson.notes || "");
-      setAttachments((lesson as any).attachments || []);
+      const rawList: LessonAttachment[] = (lesson as any).attachments || [];
+      setAttachments(rawList);
+
+      // Asynchronously refresh signed URLs for all file attachments
+      const hasFileAttachments = rawList.some((att) => att.type === "file" && att.file_path);
+      if (hasFileAttachments) {
+        Promise.all(
+          rawList.map(async (att) => {
+            if (att.type === "file" && att.file_path) {
+              try {
+                const { data } = await supabase.storage
+                  .from("resources")
+                  .createSignedUrl(att.file_path, 3600);
+                if (data?.signedUrl) {
+                  return { ...att, file_url: data.signedUrl };
+                }
+              } catch (err) {
+                console.warn("[LessonNotesModal] Failed to refresh signed URL:", err);
+              }
+            }
+            return att;
+          })
+        ).then((refreshed) => {
+          setAttachments(refreshed);
+        });
+      }
     }
   }, [lesson]);
 
@@ -144,7 +169,7 @@ export function LessonNotesModal({
       const storagePath = `${teacherId}/${studentId}_L${lesson.lesson_number}/${safeName}`;
       const bucketName = "resources";
 
-      let publicOrSignedUrl = "";
+      let signedViewingUrl = "";
 
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadErr } = await supabase.storage
@@ -156,10 +181,14 @@ export function LessonNotesModal({
 
       if (uploadErr) {
         console.warn("[LessonNotesModal] Supabase Storage upload failed, creating object URL fallback:", uploadErr.message);
-        publicOrSignedUrl = URL.createObjectURL(file);
+        signedViewingUrl = URL.createObjectURL(file);
       } else if (uploadData) {
-        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(storagePath);
-        publicOrSignedUrl = urlData?.publicUrl || URL.createObjectURL(file);
+        // Request 1-hour signed URL for private bucket
+        const { data: signedData } = await supabase.storage
+          .from(bucketName)
+          .createSignedUrl(storagePath, 3600);
+
+        signedViewingUrl = signedData?.signedUrl || URL.createObjectURL(file);
       }
 
       const newAttachment: LessonAttachment = {
@@ -168,7 +197,7 @@ export function LessonNotesModal({
         title: file.name,
         file_name: file.name,
         file_path: storagePath,
-        file_url: publicOrSignedUrl,
+        file_url: signedViewingUrl,
         file_size: file.size,
         created_at: new Date().toISOString(),
       };
