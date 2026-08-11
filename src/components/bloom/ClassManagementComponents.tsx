@@ -70,20 +70,17 @@ export function AddTypeSelectionModal({
   onSelectPair,
   onSelectGroup,
 }: AddTypeSelectionModalProps) {
-  const { lang } = useLanguage();
-  const isPt = lang === "pt";
+  const { t } = useLanguage();
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md rounded-3xl p-6 bg-[#FAF7F2] border border-stone-200 shadow-2xl text-center space-y-6 select-none font-figtree">
         <div className="space-y-2">
           <DialogTitle className="font-outfit text-2xl font-extrabold text-[#163020] tracking-tight">
-            {isPt ? "O que você deseja adicionar?" : "What would you like to add?"}
+            {t("classes.whatToAddTitle")}
           </DialogTitle>
           <p className="text-sm text-stone-600 font-medium">
-            {isPt
-              ? "Escolha o formato das suas aulas para configurar o perfil correto."
-              : "Choose the lesson format to set up the correct profile."}
+            {t("classes.whatToAddSubtitle")}
           </p>
         </div>
 
@@ -101,10 +98,10 @@ export function AddTypeSelectionModal({
             </div>
             <div className="space-y-0.5">
               <span className="font-bold text-stone-900 text-base font-outfit block">
-                {isPt ? "Aluno Individual" : "Individual Student"}
+                {t("classes.individualStudentTitle")}
               </span>
               <p className="text-xs text-stone-500 font-medium">
-                {isPt ? "Perfil de aluno VIP com agenda própria" : "Single VIP student profile with individual schedule"}
+                {t("classes.individualStudentDesc")}
               </p>
             </div>
           </button>
@@ -122,10 +119,10 @@ export function AddTypeSelectionModal({
             </div>
             <div className="space-y-0.5">
               <span className="font-bold text-stone-900 text-base font-outfit block">
-                {isPt ? "Aulas em Dupla" : "Pair Class"}
+                {t("classes.pairClassTitle")}
               </span>
               <p className="text-xs text-stone-500 font-medium">
-                {isPt ? "Turma de 2 alunos compartilhando horário" : "Class of 2 students sharing a schedule"}
+                {t("classes.pairClassDesc")}
               </p>
             </div>
           </button>
@@ -143,10 +140,10 @@ export function AddTypeSelectionModal({
             </div>
             <div className="space-y-0.5">
               <span className="font-bold text-stone-900 text-base font-outfit block">
-                {isPt ? "Turma / Grupo" : "Class / Group"}
+                {t("classes.groupClassTitle")}
               </span>
               <p className="text-xs text-stone-500 font-medium">
-                {isPt ? "Grupo com múltiplos alunos e chamada individual" : "Group with multiple students & per-student attendance"}
+                {t("classes.groupClassDesc")}
               </p>
             </div>
           </button>
@@ -721,6 +718,7 @@ export function ClassCard({
   onSelectClass?: () => void;
   isPt: boolean;
 }) {
+  const { t, formatWeekday } = useLanguage();
   const colorMeta = getBrandColorMeta(cls.color_key);
 
   return (
@@ -747,11 +745,11 @@ export function ClassCard({
                   : "bg-emerald-100 text-emerald-900"
               }`}
             >
-              {cls.type === "pair" ? (isPt ? "Dupla" : "Pair") : isPt ? "Grupo" : "Group"}
+              {cls.type === "pair" ? t("classes.pairBadge") : t("classes.groupBadge")}
             </span>
           </div>
           <span className="text-xs text-stone-500 font-semibold block">
-            {cls.language} • Nível {cls.level}
+            {cls.language} • {t("students.fieldLevel")} {cls.level}
           </span>
         </div>
 
@@ -761,7 +759,7 @@ export function ClassCard({
             onEdit();
           }}
           className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer"
-          title={isPt ? "Editar turma" : "Edit class"}
+          title={t("classes.editClass")}
         >
           <Edit2 className="h-4 w-4" />
         </button>
@@ -770,7 +768,7 @@ export function ClassCard({
       {/* Members list */}
       <div className="space-y-1 pt-2 border-t border-stone-100">
         <span className="text-xs font-bold text-stone-400 uppercase font-outfit">
-          {isPt ? `Alunos Integrantes (${cls.members.length})` : `Members (${cls.members.length})`}
+          {t("classes.classMembersLabel").replace("{count}", String(cls.members.length))}
         </span>
         <div className="flex flex-wrap gap-1.5">
           {cls.members.map((m) => (
@@ -789,7 +787,7 @@ export function ClassCard({
         <div className="flex items-center gap-2 text-xs text-stone-600 font-semibold pt-1">
           <Clock className="h-3.5 w-3.5 text-emerald-800" />
           <span>
-            {cls.schedules.map((s) => `${s.weekday} ${s.start_time?.substring(0, 5)}`).join(", ")}
+            {cls.schedules.map((s) => `${formatWeekday(s.weekday)} ${s.start_time?.substring(0, 5)}`).join(", ")}
           </span>
         </div>
       )}
@@ -804,7 +802,7 @@ export function ClassCard({
           className="flex-1 h-10 rounded-2xl bg-[#163020] text-[#F4EBE1] font-bold text-xs hover:bg-[#1a3825] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
         >
           <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          <span>{isPt ? "Fazer Chamada" : "Take Attendance"}</span>
+          <span>{t("classes.takeAttendanceBtn")}</span>
         </button>
       </div>
     </div>
@@ -991,7 +989,7 @@ export function ClassDetailsView({
   onOpenAttendance: (cls: ClassWithDetails) => void;
   isPt: boolean;
 }) {
-  const { user } = useAuth();
+  const { t, formatStatus, formatWeekday } = useLanguage();
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [isRegisterLessonOpen, setIsRegisterLessonOpen] = useState(false);
@@ -1105,13 +1103,13 @@ export function ClassDetailsView({
               {cls.schedules.map((sch) => (
                 <div key={sch.id} className="p-3 bg-stone-50 rounded-2xl border border-stone-100 space-y-1 text-xs">
                   <div className="flex items-center justify-between font-bold text-stone-800">
-                    <span>{sch.weekday}</span>
+                    <span>{formatWeekday(sch.weekday)}</span>
                     <span>
                       {sch.start_time?.substring(0, 5)} - {sch.end_time?.substring(0, 5)}
                     </span>
                   </div>
                   <div className="text-stone-500 font-medium flex items-center justify-between">
-                    <span>Modalidade: {sch.delivery_mode}</span>
+                    <span>{formatStatus(sch.delivery_mode)}</span>
                     <span>{sch.duration} min</span>
                   </div>
                   {sch.location_link && (
