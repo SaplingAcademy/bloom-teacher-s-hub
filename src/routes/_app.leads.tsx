@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/hooks/use-language";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -96,6 +97,7 @@ const KANBAN_STAGES = [
 
 function LeadsPage() {
   const { user } = useAuth();
+  const { t, formatStatus } = useLanguage();
   const { languages: teacherLanguages, hasConfiguredLanguages, formatLanguageLabel } = useTeacherLanguages();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
