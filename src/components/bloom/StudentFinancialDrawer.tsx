@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/hooks/use-language";
 import {
   getStudentPaymentHistory,
   getStudentPackageHistory,
@@ -65,6 +66,7 @@ export function StudentFinancialDrawer({
   financialSummary,
   onOpenRenewalModal,
 }: StudentFinancialDrawerProps) {
+  const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<"history" | "agreements" | "timeline">("history");
   const [loading, setLoading] = useState<boolean>(true);
   const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
@@ -115,10 +117,12 @@ export function StudentFinancialDrawer({
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold text-[#F4EBE1]">
-                  Histórico Financeiro — {studentName}
+                  {lang === "pt" ? "Histórico Financeiro" : "Financial History"} — {studentName}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#F4EBE1]/80 mt-0.5">
-                  Registro contínuo de pagamentos, pacotes contratados e linha do tempo financeira
+                  {lang === "pt"
+                    ? "Registro contínuo de pagamentos, pacotes contratados e linha do tempo financeira"
+                    : "Continuous ledger of payments, package agreements, and financial timeline"}
                 </DialogDescription>
               </div>
             </div>
@@ -132,7 +136,7 @@ export function StudentFinancialDrawer({
                 }}
                 className="bg-emerald-500 hover:bg-emerald-600 text-stone-950 text-xs font-bold gap-1.5 cursor-pointer shadow-md"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Renovar pacote
+                <RefreshCw className="w-3.5 h-3.5" /> {lang === "pt" ? "Renovar pacote" : "Renew package"}
               </Button>
             )}
           </div>
@@ -151,7 +155,7 @@ export function StudentFinancialDrawer({
                 }}
                 className="underline font-bold text-white hover:text-emerald-300 text-[11px] cursor-pointer shrink-0"
               >
-                Renovar agora →
+                {lang === "pt" ? "Renovar agora →" : "Renew now →"}
               </button>
             </div>
           )}
@@ -166,7 +170,7 @@ export function StudentFinancialDrawer({
                   : "text-[#F4EBE1]/80 hover:bg-white/10"
               }`}
             >
-              Histórico de Pagamentos ({payments.length})
+              {lang === "pt" ? "Histórico de Pagamentos" : "Payment History"} ({payments.length})
             </button>
 
             <button
@@ -177,7 +181,7 @@ export function StudentFinancialDrawer({
                   : "text-[#F4EBE1]/80 hover:bg-white/10"
               }`}
             >
-              Histórico de Pacotes ({agreements.length})
+              {lang === "pt" ? "Histórico de Pacotes" : "Package Agreements"} ({agreements.length})
             </button>
 
             <button
@@ -188,7 +192,7 @@ export function StudentFinancialDrawer({
                   : "text-[#F4EBE1]/80 hover:bg-white/10"
               }`}
             >
-              Linha do Tempo ({timeline.length})
+              {lang === "pt" ? "Linha do Tempo" : "Financial Timeline"} ({timeline.length})
             </button>
           </div>
         </div>

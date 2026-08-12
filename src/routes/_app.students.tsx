@@ -244,6 +244,10 @@ const translations = {
     financeOverdue: "Overdue",
     lessonsCount: "lessons",
     durationMonths: "months",
+    markInactive: "Mark as inactive",
+    reactivateStudent: "Reactivate student",
+    detailsTitle: "Student Details",
+    privateNotesTitle: "Private Student Notes",
   },
   pt: {
     langToggle: "EN",
@@ -312,6 +316,10 @@ const translations = {
     financeOverdue: "Atrasado",
     lessonsCount: "aulas",
     durationMonths: "meses",
+    markInactive: "Marcar como inativo",
+    reactivateStudent: "Reativar aluno",
+    detailsTitle: "Detalhes do Aluno",
+    privateNotesTitle: "Notas Privadas do Aluno",
   },
 };
 
@@ -1759,7 +1767,7 @@ function StudentsPage() {
                   onClick={() => handleReactivateStudent(selectedStudent.id)}
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  Reativar aluno
+                  {t.reactivateStudent}
                 </Button>
               ) : (
                 <Button
@@ -1772,7 +1780,7 @@ function StudentsPage() {
                   }}
                 >
                   <UserX className="h-3.5 w-3.5" />
-                  Marcar como inativo
+                  {t.markInactive}
                 </Button>
               )}
 
@@ -1824,7 +1832,7 @@ function StudentsPage() {
               <div className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
                 <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" />
-                  {lang === "pt" ? "Detalhes do Aluno" : "Student Details"}
+                  {t.detailsTitle}
                 </h3>
                 <div className="space-y-3 text-xs">
                   <div>
@@ -1873,7 +1881,7 @@ function StudentsPage() {
               <div className="md:col-span-2 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
                 <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <FileText className="h-4 w-4 text-primary" />
-                  {i18nT("students.privateNotesTitle", lang)}
+                  {t.privateNotesTitle}
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {lang === "pt"
