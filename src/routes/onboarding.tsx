@@ -25,9 +25,11 @@ import {
   TrendingUp,
   ShieldCheck,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 
 import { OnboardingData, OnboardingPackage, DayAvailability } from "@/types/onboarding";
+import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -91,12 +93,6 @@ const LESSON_TYPE_OPTIONS = [
   { id: "Group", label: { en: "Group", pt: "Em grupo" } },
 ];
 
-const PACKAGE_TEMPLATES: OnboardingPackage[] = [
-  { id: "tpl-1", name: "Mensal Básico", lessons: 4, price: 350, duration: 60, frequency: "Monthly" },
-  { id: "tpl-2", name: "Mensal VIP", lessons: 8, price: 650, duration: 60, frequency: "Monthly" },
-  { id: "tpl-3", name: "Curso Completo", lessons: 24, price: 2400, duration: 60, frequency: "total", defaultInstallmentCount: 6 },
-];
-
 const PAYMENT_METHOD_OPTIONS = [
   { id: "PIX", label: { en: "PIX", pt: "PIX" } },
   { id: "Bank transfer", label: { en: "Bank transfer", pt: "Transferência Bancária" } },
@@ -126,10 +122,7 @@ const INITIAL_DATA: OnboardingData = {
     Friday: { startTime: "09:00", endTime: "18:00" },
   },
   lessonTypes: ["Individual"],
-  packages: [
-    { id: "pkg-1", name: "Mensal Básico", lessons: 4, price: 350, duration: 60, frequency: "Monthly" },
-    { id: "pkg-2", name: "Curso Completo", lessons: 24, price: 2400, duration: 60, frequency: "total", defaultInstallmentCount: 6 },
-  ],
+  packages: [],
   monthlyGoal: "12000",
   monthlyExpense: "",
   knowsHourlyRate: null,
@@ -1283,42 +1276,28 @@ function Step4PlansPackages({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const [pkgName, setPkgName] = useState("");
-  const [pkgLessons, setPkgLessons] = useState<number>(4);
-  const [pkgPrice, setPkgPrice] = useState<string>("");
-  const [pkgFreq, setPkgFreq] = useState<"Monthly" | "total">("Monthly");
-  const [pkgInstallments, setPkgInstallments] = useState<number>(6);
+  const { t } = useLanguage();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPkg, setEditingPkg] = useState<OnboardingPackage | null>(null);
 
   const toggleLessonType = (typeId: string) => {
     let next: string[];
     if (data.lessonTypes.includes(typeId)) {
-      next = data.lessonTypes.filter((t) => t !== typeId);
+      next = data.lessonTypes.filter((tItem) => tItem !== typeId);
     } else {
       next = [...data.lessonTypes, typeId];
     }
     updateData("lessonTypes", next);
   };
 
-  const handleAddTemplate = (tpl: OnboardingPackage) => {
-    if (data.packages.some((p) => p.name === tpl.name)) return;
-    updateData("packages", [...data.packages, { ...tpl, id: `pkg-${Date.now()}` }]);
+  const handleOpenCreate = () => {
+    setEditingPkg(null);
+    setIsModalOpen(true);
   };
 
-  const handleAddCustomPackage = () => {
-    if (!pkgName.trim()) return;
-    const priceNum = parseFloat(pkgPrice.replace(/[^0-9.]/g, "")) || 0;
-    const newPkg: OnboardingPackage = {
-      id: `pkg-${Date.now()}`,
-      name: pkgName.trim(),
-      lessons: pkgLessons || 1,
-      price: priceNum,
-      duration: 60,
-      frequency: pkgFreq,
-      defaultInstallmentCount: pkgFreq === "total" ? (pkgInstallments || 1) : 1,
-    };
-    updateData("packages", [...data.packages, newPkg]);
-    setPkgName("");
-    setPkgPrice("");
+  const handleOpenEdit = (pkg: OnboardingPackage) => {
+    setEditingPkg(pkg);
+    setIsModalOpen(true);
   };
 
   const handleRemovePackage = (pkgId: string) => {
@@ -1326,6 +1305,40 @@ function Step4PlansPackages({
       "packages",
       data.packages.filter((p) => p.id !== pkgId)
     );
+  };
+
+  const handleSavePackageModal = (formData: PackageFormData) => {
+    if (formData.id) {
+      // Edit existing package (prevents duplicate creation!)
+      const updated = data.packages.map((p) =>
+        p.id === formData.id
+          ? {
+              ...p,
+              name: formData.name,
+              price: formData.price,
+              frequency: formData.frequency,
+              duration: formData.duration,
+              lessons: formData.lessons,
+              method: formData.method,
+              defaultInstallmentCount: formData.defaultInstallmentCount,
+            }
+          : p
+      );
+      updateData("packages", updated);
+    } else {
+      // Create new package
+      const newPkg: OnboardingPackage = {
+        id: `pkg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: formData.name,
+        price: formData.price,
+        frequency: formData.frequency,
+        duration: formData.duration,
+        lessons: formData.lessons,
+        method: formData.method,
+        defaultInstallmentCount: formData.defaultInstallmentCount,
+      };
+      updateData("packages", [...data.packages, newPkg]);
+    }
   };
 
   return (
@@ -1366,169 +1379,115 @@ function Step4PlansPackages({
 
       {/* Packages Builder */}
       <div className="space-y-5 pt-4 border-t border-stone-200/70">
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold font-outfit text-stone-900">
-            {isPt ? "Crie seus pacotes de aulas" : "Create your lesson packages"}
-          </h3>
-          <p className="text-xs text-stone-500">
-            {isPt
-              ? "Esses pacotes irão popular o catálogo de pacotes do seu Bloom."
-              : "These will immediately populate your Packages catalog."}
-          </p>
-        </div>
-
-        {/* Quick add templates */}
-        <div className="space-y-2">
-          <span className="text-xs font-bold text-stone-500 uppercase">
-            {isPt ? "Sugestões de pacotes rápidos:" : "Quick package templates:"}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {PACKAGE_TEMPLATES.map((tpl) => {
-              const exists = data.packages.some((p) => p.name === tpl.name);
-              return (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => handleAddTemplate(tpl)}
-                  disabled={exists}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    exists
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-300 opacity-80 cursor-default"
-                      : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
-                  }`}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>
-                    {tpl.name} ({tpl.lessons} {isPt ? "aulas" : "lessons"} • R$ {tpl.price}{tpl.frequency === "total" ? (isPt ? " total" : " total") : "/mês"})
-                  </span>
-                </button>
-              );
-            })}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold font-outfit text-stone-900">
+              {t("onboarding.packagesStepTitle")}
+            </h3>
+            <p className="text-xs text-stone-500">
+              {t("onboarding.packagesStepSubtitle")}
+            </p>
           </div>
-        </div>
-
-        {/* Active Packages List */}
-        <div className="space-y-2.5">
-          {data.packages.map((pkg) => (
-            <div
-              key={pkg.id}
-              className="flex items-center justify-between p-4 bg-white rounded-2xl border border-stone-200 shadow-sm"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-stone-900 text-base">{pkg.name}</span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                    {pkg.frequency === "total" ? (isPt ? "Valor Total" : "Total Value") : (isPt ? "Mensalidade" : "Monthly")}
-                  </span>
-                </div>
-                <div className="text-xs text-stone-500 font-semibold">
-                  {pkg.lessons} {isPt ? "aulas" : "lessons"} • R$ {pkg.price.toLocaleString("pt-BR")}
-                  {pkg.frequency === "total" ? (
-                    pkg.defaultInstallmentCount && pkg.defaultInstallmentCount > 1
-                      ? ` (${isPt ? "sugestão de até" : "suggested up to"} ${pkg.defaultInstallmentCount}x)`
-                      : ` (${isPt ? "valor total" : "total value"})`
-                  ) : (
-                    isPt ? " /mês" : " /mo"
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleRemovePackage(pkg.id)}
-                className="p-2 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Add Custom Package form */}
-        <div className="p-4 bg-stone-100/70 rounded-2xl border border-stone-200/80 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-stone-700 uppercase">
-              {isPt ? "Adicionar pacote personalizado:" : "Add custom package:"}
-            </span>
-            {/* Frequency Selector Toggle */}
-            <div className="flex gap-1.5 bg-white p-1 rounded-xl border border-stone-200 text-xs">
-              <button
-                type="button"
-                onClick={() => setPkgFreq("Monthly")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  pkgFreq === "Monthly"
-                    ? "bg-[#163020] text-white shadow-xs"
-                    : "text-stone-600 hover:bg-stone-100"
-                }`}
-              >
-                {isPt ? "Mensalidade" : "Monthly"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPkgFreq("total")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  pkgFreq === "total"
-                    ? "bg-[#163020] text-white shadow-xs"
-                    : "text-stone-600 hover:bg-stone-100"
-                }`}
-              >
-                {isPt ? "Valor Total" : "Total Course"}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <input
-              type="text"
-              placeholder={isPt ? "Nome (ex: Mensal Básico)" : "Name (e.g. Monthly Basic)"}
-              value={pkgName}
-              onChange={(e) => setPkgName(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-            />
-            <input
-              type="number"
-              placeholder={isPt ? "Nº de aulas" : "No. of lessons"}
-              value={pkgLessons}
-              onChange={(e) => setPkgLessons(parseInt(e.target.value) || 0)}
-              className="h-10 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-            />
-            <input
-              type="text"
-              placeholder={pkgFreq === "total" ? (isPt ? "Valor total (R$ 2.400)" : "Total value (2400)") : (isPt ? "Preço mensal (R$ 350)" : "Monthly price (350)")}
-              value={pkgPrice}
-              onChange={(e) => setPkgPrice(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-            />
-          </div>
-
-          {pkgFreq === "total" && (
-            <div className="flex items-center gap-3 pt-1">
-              <label className="text-xs font-semibold text-stone-600">
-                {isPt ? "Sugestão de parcelamento padrão:" : "Suggested default installments:"}
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={24}
-                value={pkgInstallments}
-                onChange={(e) => setPkgInstallments(parseInt(e.target.value) || 1)}
-                className="w-20 h-9 px-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 text-center"
-              />
-              <span className="text-xs text-stone-400 font-medium">
-                {isPt ? "parcelas (definido por aluno)" : "installments (chosen per student)"}
-              </span>
-            </div>
-          )}
 
           <button
             type="button"
-            onClick={handleAddCustomPackage}
-            className="w-full h-10 rounded-xl bg-[#163020] text-[#F4EBE1] font-bold text-xs hover:bg-[#1a3825] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            onClick={handleOpenCreate}
+            className="h-10 px-4 rounded-xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
           >
             <Plus className="h-4 w-4" />
-            <span>{isPt ? "Adicionar Pacote" : "Add Package"}</span>
+            <span>{isPt ? "Criar Pacote" : "Create Package"}</span>
           </button>
         </div>
+
+        {/* Active Packages List Catalog */}
+        <div className="space-y-3">
+          {data.packages.length === 0 ? (
+            <div className="p-6 text-center rounded-2xl border border-dashed border-stone-300 bg-stone-50/50 space-y-2">
+              <p className="text-sm font-medium text-stone-600">
+                {isPt
+                  ? "Nenhum pacote cadastrado por enquanto."
+                  : "No packages created yet."}
+              </p>
+              <p className="text-xs text-stone-400">
+                {isPt
+                  ? "Você pode criar seus pacotes agora clicando no botão acima ou pular e criar mais tarde na plataforma."
+                  : "You can create packages now using the button above or skip and add them later."}
+              </p>
+            </div>
+          ) : (
+            data.packages.map((pkg) => {
+              const freqLabel =
+                pkg.frequency === "total"
+                  ? isPt ? "Valor Total" : "Total Course"
+                  : pkg.frequency === "One-time"
+                  ? isPt ? "Aula Avulsa" : "One-time"
+                  : isPt ? "Mensalidade" : "Monthly";
+
+              return (
+                <div
+                  key={pkg.id}
+                  className="flex items-center justify-between p-4 bg-white rounded-2xl border border-stone-200 shadow-xs hover:border-stone-300 transition-all"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-stone-900 text-base">{pkg.name}</span>
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                        {freqLabel}
+                      </span>
+                    </div>
+                    <div className="text-xs text-stone-500 font-semibold flex items-center gap-2 flex-wrap">
+                      <span>{pkg.lessons} {isPt ? "aulas" : "lessons"}</span>
+                      <span>•</span>
+                      <span>R$ {pkg.price.toLocaleString("pt-BR")}</span>
+                      <span>•</span>
+                      <span>{pkg.duration || 60} min</span>
+                      {pkg.frequency === "total" && pkg.defaultInstallmentCount && pkg.defaultInstallmentCount > 1 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-emerald-700">
+                            {isPt ? `sugestão até ${pkg.defaultInstallmentCount}x` : `up to ${pkg.defaultInstallmentCount}x`}
+                          </span>
+                        </>
+                      )}
+                      <span>•</span>
+                      <span className="bg-stone-100 px-2 py-0.5 rounded text-[11px] text-stone-600 font-bold">
+                        {pkg.method || "Pix"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(pkg)}
+                      className="p-2 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
+                      title={isPt ? "Editar pacote" : "Edit package"}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePackage(pkg.id)}
+                      className="p-2 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                      title={isPt ? "Excluir pacote" : "Delete package"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
+
+      {/* Package Creation & Edition Shared Modal */}
+      <PackageFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSavePackageModal}
+        initialData={editingPkg}
+      />
     </div>
   );
 }
