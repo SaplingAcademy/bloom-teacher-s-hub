@@ -1638,3 +1638,154 @@ export async function renewStudentPackage(
     return { success: false, message: `Falha na renovação: ${err?.message || err}` };
   }
 }
+
+export interface RemoteExpensePayload {
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+  method?: string;
+  notes?: string;
+  recurrenceType?: "one_time" | "fixed" | "period";
+  recurrenceMonths?: number;
+  endDate?: string;
+}
+
+/**
+ * Fetch all expenses for a teacher from public.expenses with category join
+ */
+export async function fetchTeacherExpensesList(teacherId: string) {
+  if (!teacherId) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("*, expense_categories(id, name)")
+      .eq("teacher_id", teacherId)
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("[FinanceEngine] Error fetching expenses:", error);
+      return [];
+    }
+
+    if (!data) return [];
+
+    return data.map((row: any) => {
+      const recType = row.recurrence_type || (row.recurring ? "fixed" : "one_time");
+      return {
+        id: row.id,
+        description: row.description,
+        category: row.expense_categories?.name || row.category || "Software",
+        amount: Math.round(((row.amount_cents || 0) / 100) * 100) / 100,
+        date: row.date,
+        method: row.method || "Card",
+        notes: row.notes || undefined,
+        recurrenceType: recType as "one_time" | "fixed" | "period",
+        recurrenceMonths: row.recurrence_months || undefined,
+        endDate: row.end_date || undefined,
+      };
+    });
+  } catch (err) {
+    console.error("[FinanceEngine] Exception fetching expenses:", err);
+    return [];
+  }
+}
+
+/**
+ * Create a new expense in public.expenses with full recurrence and metadata persistence
+ */
+export async function createTeacherExpenseRemote(teacherId: string, payload: RemoteExpensePayload) {
+  if (!teacherId) throw new Error("ID de professor inválido.");
+
+  // 1. Resolve or create category_id from public.expense_categories
+  let categoryId: string | null = null;
+  if (payload.category) {
+    const { data: existingCat } = await supabase
+      .from("expense_categories")
+      .select("id")
+      .eq("teacher_id", teacherId)
+      .eq("name", payload.category)
+      .maybeSingle();
+
+    if (existingCat) {
+      categoryId = existingCat.id;
+    } else {
+      const { data: newCat } = await supabase
+        .from("expense_categories")
+        .insert({
+          teacher_id: teacherId,
+          name: payload.category,
+        })
+        .select("id")
+        .single();
+
+      if (newCat) {
+        categoryId = newCat.id;
+      }
+    }
+  }
+
+  const recType = payload.recurrenceType || "one_time";
+  const isRecurring = recType !== "one_time";
+  const amountCents = Math.round((Number(payload.amount) || 0) * 100);
+
+  // 2. Insert into public.expenses
+  const { data, error } = await supabase
+    .from("expenses")
+    .insert({
+      teacher_id: teacherId,
+      description: payload.description.trim(),
+      amount_cents: amountCents,
+      currency: "BRL",
+      date: payload.date || new Date().toISOString().split("T")[0],
+      category_id: categoryId,
+      method: payload.method || "Card",
+      notes: payload.notes?.trim() || null,
+      recurrence_type: recType,
+      recurrence_months: recType === "period" ? payload.recurrenceMonths || null : null,
+      end_date: recType === "period" ? payload.endDate || null : null,
+      recurring: isRecurring,
+    })
+    .select("*, expense_categories(id, name)")
+    .single();
+
+  if (error || !data) {
+    console.error("[FinanceEngine] Error inserting expense:", error);
+    throw new Error(error?.message || "Erro ao salvar despesa no banco de dados.");
+  }
+
+  return {
+    id: data.id,
+    description: data.description,
+    category: data.expense_categories?.name || payload.category || "Software",
+    amount: Math.round(((data.amount_cents || 0) / 100) * 100) / 100,
+    date: data.date,
+    method: data.method || "Card",
+    notes: data.notes || undefined,
+    recurrenceType: (data.recurrence_type || recType) as "one_time" | "fixed" | "period",
+    recurrenceMonths: data.recurrence_months || undefined,
+    endDate: data.end_date || undefined,
+  };
+}
+
+/**
+ * Delete an expense from public.expenses
+ */
+export async function deleteTeacherExpenseRemote(teacherId: string, expenseId: string) {
+  if (!teacherId || !expenseId) return false;
+
+  const { error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", expenseId)
+    .eq("teacher_id", teacherId);
+
+  if (error) {
+    console.error("[FinanceEngine] Error deleting expense:", error);
+    throw new Error(error.message);
+  }
+
+  return true;
+}
+

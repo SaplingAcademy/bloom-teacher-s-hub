@@ -11,6 +11,9 @@ import {
   checkPackageExpirationAlerts,
   PackageRenewalAlert,
   RealInvoice,
+  fetchTeacherExpensesList,
+  createTeacherExpenseRemote,
+  deleteTeacherExpenseRemote,
 } from "@/lib/finance-engine";
 import { toast } from "sonner";
 import {
@@ -30,6 +33,7 @@ import {
   RefreshCw,
   AlertTriangle,
   History,
+  Repeat,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
@@ -156,6 +160,10 @@ interface Expense {
   date: string;
   method: string;
   notes?: string;
+  recurrenceType?: "one_time" | "fixed" | "period";
+  recurrenceMonths?: number;
+  endDate?: string;
+  parentExpenseId?: string;
 }
 
 interface Transaction {
@@ -181,7 +189,6 @@ const translations = {
     kpiOutstanding: "Outstanding",
     kpiExpenses: "Expenses",
     kpiNetProfit: "Net Profit",
-    // Packages Tab
     createPkgBtn: "Create Package",
     packageName: "Package Name",
     price: "Monthly Fee Price ($)",
@@ -195,7 +202,6 @@ const translations = {
     billingCycle: "cycle",
     pkgListTitle: "Active Packages Catalog",
     pkgListSubtitle: "Packages created here will be available to assign to students.",
-    // Expenses Tab
     addExpenseBtn: "Log Expense",
     expenseDesc: "Description",
     expenseCat: "Category",
@@ -205,7 +211,14 @@ const translations = {
     placeholderDesc: "e.g., Zoom Monthly Subscription",
     expenseListTitle: "Logged Expenses",
     expenseListSubtitle: "Track your operational software, marketing and classroom costs.",
-    // Ledger Tab
+    recurrenceType: "Recurrence Type",
+    recurrenceOneTime: "One-time expense",
+    recurrenceFixed: "Fixed expense (Ongoing monthly)",
+    recurrencePeriod: "Recurring for a period",
+    recurrenceMonths: "Duration (Months)",
+    recurrenceBadgeOneTime: "One-time",
+    recurrenceBadgeFixed: "Fixed",
+    recurrenceBadgePeriod: "Recurring — {months} months",
     ledgerTitle: "Expected Payments Ledger",
     ledgerSubtitle: "Automatically generated monthly invoices for all assigned packages.",
     btnPaid: "Mark Paid",
@@ -215,7 +228,6 @@ const translations = {
     statusPending: "Pending",
     statusOverdue: "Overdue",
     studentLabel: "Student",
-    // Dialog Actions
     btnSave: "Save",
     btnCancel: "Cancel",
     confirmDelete: "Are you sure you want to delete this?",
@@ -235,7 +247,6 @@ const translations = {
     kpiOutstanding: "Saldo Pendente",
     kpiExpenses: "Despesas Totais",
     kpiNetProfit: "Lucro Líquido",
-    // Packages Tab
     createPkgBtn: "Criar Pacote",
     packageName: "Nome do Pacote",
     price: "Valor do Pacote ($)",
@@ -249,7 +260,6 @@ const translations = {
     billingCycle: "ciclo",
     pkgListTitle: "Catálogo de Pacotes Ativos",
     pkgListSubtitle: "Pacotes criados aqui estarão disponíveis no cadastro dos alunos.",
-    // Expenses Tab
     addExpenseBtn: "Registrar Despesa",
     expenseDesc: "Descrição",
     expenseCat: "Categoria",
@@ -259,7 +269,14 @@ const translations = {
     placeholderDesc: "ex: Assinatura Mensal do Zoom",
     expenseListTitle: "Despesas Lançadas",
     expenseListSubtitle: "Acompanhe seus custos de software, marketing e materiais.",
-    // Ledger Tab
+    recurrenceType: "Tipo de Recorrência",
+    recurrenceOneTime: "Conta única",
+    recurrenceFixed: "Conta fixa (Mensal sem fim)",
+    recurrencePeriod: "Recorrente por período",
+    recurrenceMonths: "Duração (Meses)",
+    recurrenceBadgeOneTime: "Única",
+    recurrenceBadgeFixed: "Fixa",
+    recurrenceBadgePeriod: "Recorrente — {months} meses",
     ledgerTitle: "Livro Caixa de Recebíveis",
     ledgerSubtitle: "Faturas geradas mensalmente de forma automática com base no plano do aluno.",
     btnPaid: "Marcar Pago",
@@ -269,7 +286,6 @@ const translations = {
     statusPending: "Pendente",
     statusOverdue: "Atrasado",
     studentLabel: "Aluno",
-    // Dialog Actions
     btnSave: "Salvar",
     btnCancel: "Cancelar",
     confirmDelete: "Tem certeza que deseja excluir?",
@@ -277,65 +293,6 @@ const translations = {
     month: "mês",
   },
 };
-
-// Default packages
-const defaultPackages: Package[] = [
-  {
-    id: "p1",
-    name: "Premium Business",
-    price: 420,
-    frequency: "Monthly",
-    duration: 12,
-    lessons: 4,
-    method: "Bank Transfer",
-  },
-  {
-    id: "p2",
-    name: "General VIP",
-    price: 320,
-    frequency: "Monthly",
-    duration: 6,
-    lessons: 4,
-    method: "Pix",
-  },
-  {
-    id: "p3",
-    name: "Conversation Group",
-    price: 180,
-    frequency: "Monthly",
-    duration: 3,
-    lessons: 4,
-    method: "Card",
-  },
-];
-
-// Default expenses
-const defaultExpenses: Expense[] = [
-  {
-    id: "e1",
-    description: "Zoom Pro Subscription",
-    category: "Software",
-    amount: 15.99,
-    date: "2026-07-05",
-    method: "Card",
-  },
-  {
-    id: "e2",
-    description: "Instagram Ads - July",
-    category: "Marketing",
-    amount: 50.0,
-    date: "2026-07-01",
-    method: "Card",
-  },
-  {
-    id: "e3",
-    description: "ESL Grammar Workbooks",
-    category: "Books",
-    amount: 32.5,
-    date: "2026-07-10",
-    method: "Pix",
-  },
-];
 
 // Helper styles for status
 const getStatusStyles = (status: string) => {
@@ -354,6 +311,7 @@ const getStatusStyles = (status: string) => {
 function FinancePage() {
   const { user } = useAuth();
   const { lang } = useLanguage();
+  const t = translations[lang];
   const [activeTab, setActiveTab] = useState<"Ledger" | "Packages" | "Expenses">("Ledger");
 
   // State Lists
@@ -381,6 +339,8 @@ function FinancePage() {
   const [expDate, setExpDate] = useState("");
   const [expMethod, setExpMethod] = useState("Card");
   const [expNotes, setExpNotes] = useState("");
+  const [expRecurrenceType, setExpRecurrenceType] = useState<"one_time" | "fixed" | "period">("one_time");
+  const [expRecurrenceMonths, setExpRecurrenceMonths] = useState<number>(6);
 
   // Renewal & Payment History Drawer States
   const [expirationAlerts, setExpirationAlerts] = useState<PackageRenewalAlert[]>([]);
@@ -437,18 +397,28 @@ function FinancePage() {
 
     fetchPackages();
 
-    // Load Expenses
-    const savedExps = localStorage.getItem("bloom.expenses.list");
-    if (savedExps) {
+    // Load Expenses from Supabase (canonical source of truth)
+    const fetchExpenses = async () => {
+      if (!user) return;
       try {
-        setExpenses(JSON.parse(savedExps));
+        const remoteExps = await fetchTeacherExpensesList(user.id);
+        setExpenses(remoteExps);
+        localStorage.setItem("bloom.expenses.list", JSON.stringify(remoteExps));
       } catch (e) {
-        setExpenses(defaultExpenses);
+        console.error("[Finance] Error fetching remote expenses:", e);
+        const savedExps = localStorage.getItem("bloom.expenses.list");
+        if (savedExps) {
+          try {
+            const parsed: Expense[] = JSON.parse(savedExps);
+            setExpenses(parsed.filter((item) => !["e1", "e2", "e3"].includes(item.id)));
+          } catch (err) {
+            setExpenses([]);
+          }
+        }
       }
-    } else {
-      setExpenses(defaultExpenses);
-      localStorage.setItem("bloom.expenses.list", JSON.stringify(defaultExpenses));
-    }
+    };
+
+    fetchExpenses();
 
     // Load Real Invoices / Receivables directly connected to real students & student_packages
     const fetchInvoices = async () => {
@@ -507,25 +477,51 @@ function FinancePage() {
     }
   };
 
-  // Helper Save Expense
-  const handleCreateExpense = (e: React.FormEvent) => {
+  // Helper Save Expense with Supabase remote persistence
+  const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!expDesc.trim()) return;
+    if (!expDesc.trim() || !user) return;
 
-    const newExp: Expense = {
-      id: crypto.randomUUID(),
-      description: expDesc,
-      category: expCat,
-      amount: expAmount,
-      date: expDate || new Date().toISOString().split("T")[0],
-      method: expMethod,
-      notes: expNotes.trim() || undefined,
-    };
+    const startDateStr = expDate || new Date().toISOString().split("T")[0];
+    let computedEndDate: string | undefined = undefined;
 
-    const newExps = [...expenses, newExp];
-    setExpenses(newExps);
-    localStorage.setItem("bloom.expenses.list", JSON.stringify(newExps));
-    setIsExpOpen(false);
+    if (expRecurrenceType === "period" && expRecurrenceMonths) {
+      const parts = startDateStr.split("-").map(Number);
+      const year = parts[0] || new Date().getFullYear();
+      const month = (parts[1] || 1) - 1;
+      const day = parts[2] || 1;
+
+      const endDateObj = new Date(year, month + expRecurrenceMonths, day);
+      const ey = endDateObj.getFullYear();
+      const em = String(endDateObj.getMonth() + 1).padStart(2, "0");
+      const ed = String(endDateObj.getDate()).padStart(2, "0");
+      computedEndDate = `${ey}-${em}-${ed}`;
+    }
+
+    try {
+      const created = await createTeacherExpenseRemote(user.id, {
+        description: expDesc.trim(),
+        category: expCat,
+        amount: Number(expAmount) || 0,
+        date: startDateStr,
+        method: expMethod,
+        notes: expNotes.trim() || undefined,
+        recurrenceType: expRecurrenceType,
+        recurrenceMonths: expRecurrenceType === "period" ? expRecurrenceMonths : undefined,
+        endDate: computedEndDate,
+      });
+
+      const updated = [created, ...expenses];
+      setExpenses(updated);
+      localStorage.setItem("bloom.expenses.list", JSON.stringify(updated));
+      setIsExpOpen(false);
+      setExpDesc("");
+      setExpNotes("");
+      toast.success(lang === "pt" ? "Despesa salva com sucesso!" : "Expense saved successfully!");
+    } catch (err: any) {
+      console.error("[Finance] Error saving expense:", err);
+      toast.error((lang === "pt" ? "Erro ao salvar despesa: " : "Error saving expense: ") + (err?.message || String(err)));
+    }
   };
 
   // Helper Change invoice payment status
@@ -583,10 +579,18 @@ function FinancePage() {
     }
   };
 
-  const handleDeleteExpense = (id: string) => {
-    const newExps = expenses.filter((e) => e.id !== id);
-    setExpenses(newExps);
-    localStorage.setItem("bloom.expenses.list", JSON.stringify(newExps));
+  const handleDeleteExpense = async (id: string) => {
+    if (!user) return;
+    try {
+      await deleteTeacherExpenseRemote(user.id, id);
+      const updated = expenses.filter((e) => e.id !== id);
+      setExpenses(updated);
+      localStorage.setItem("bloom.expenses.list", JSON.stringify(updated));
+      toast.success(lang === "pt" ? "Despesa excluída com sucesso!" : "Expense deleted successfully!");
+    } catch (err: any) {
+      console.error("[Finance] Error deleting expense:", err);
+      toast.error((lang === "pt" ? "Erro ao excluir despesa: " : "Error deleting expense: ") + (err?.message || String(err)));
+    }
   };
 
   // Computed KPIs directly from real invoices and expenses
@@ -598,8 +602,6 @@ function FinancePage() {
   const totalExpensesCents = Math.round(expenses.reduce((sum, current) => sum + current.amount, 0) * 100);
   const totalExpenses = totalExpensesCents / 100;
   const netProfitCents = totalReceivedCents - totalExpensesCents;
-
-  const t = translations[lang];
 
   return (
     <div className="space-y-6">
@@ -1133,18 +1135,76 @@ function FinancePage() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="exp-notes" className="text-xs font-semibold text-emerald-100/90">
-                    {t.expenseNotes}
-                  </Label>
-                  <Input
-                    id="exp-notes"
-                    value={expNotes}
-                    onChange={(e) => setExpNotes(e.target.value)}
-                    placeholder="Notes..."
-                    className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="exp-recurrence" className="text-xs font-semibold text-emerald-100/90">
+                      {t.recurrenceType}
+                    </Label>
+                    <Select
+                      value={expRecurrenceType}
+                      onValueChange={(val: "one_time" | "fixed" | "period") =>
+                        setExpRecurrenceType(val)
+                      }
+                    >
+                      <SelectTrigger
+                        id="exp-recurrence"
+                        className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 focus:ring-white focus:ring-offset-emerald-900"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="one_time">{t.recurrenceOneTime}</SelectItem>
+                        <SelectItem value="fixed">{t.recurrenceFixed}</SelectItem>
+                        <SelectItem value="period">{t.recurrencePeriod}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {expRecurrenceType === "period" ? (
+                    <div className="space-y-1">
+                      <Label htmlFor="exp-months" className="text-xs font-semibold text-emerald-100/90">
+                        {t.recurrenceMonths}
+                      </Label>
+                      <SafeNumberInput
+                        id="exp-months"
+                        value={expRecurrenceMonths}
+                        onChange={setExpRecurrenceMonths}
+                        min={1}
+                        max={60}
+                        required
+                        className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Label htmlFor="exp-notes" className="text-xs font-semibold text-emerald-100/90">
+                        {t.expenseNotes}
+                      </Label>
+                      <Input
+                        id="exp-notes"
+                        value={expNotes}
+                        onChange={(e) => setExpNotes(e.target.value)}
+                        placeholder="Notes..."
+                        className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                {expRecurrenceType === "period" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="exp-notes" className="text-xs font-semibold text-emerald-100/90">
+                      {t.expenseNotes}
+                    </Label>
+                    <Input
+                      id="exp-notes"
+                      value={expNotes}
+                      onChange={(e) => setExpNotes(e.target.value)}
+                      placeholder="Notes..."
+                      className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -1175,36 +1235,66 @@ function FinancePage() {
               </div>
 
               <ul className="mt-5 divide-y divide-border/60">
-                {expenses.map((exp) => (
-                  <li key={exp.id} className="flex items-center justify-between py-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-foreground">
-                          {exp.description}
-                        </span>
-                        <Badge variant="outline" className="text-[8px] py-0 px-1 font-bold">
-                          {exp.category}
-                        </Badge>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {exp.date} • {exp.method} {exp.notes ? `• ${exp.notes}` : ""}
-                      </p>
-                    </div>
+                {expenses.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-muted-foreground font-medium">
+                    {lang === "pt"
+                      ? "Nenhuma despesa lançada ainda. Registre seus custos operacionais ao lado."
+                      : "No expenses logged yet. Log your operational expenses on the left."}
+                  </div>
+                ) : (
+                  expenses.map((exp) => {
+                    const recType = exp.recurrenceType || "one_time";
+                    const isFixed = recType === "fixed";
+                    const isPeriod = recType === "period";
 
-                    <div className="flex items-center gap-3">
-                      <span className="font-display font-bold text-sm text-destructive">
-                        -${exp.amount}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteExpense(exp.id)}
-                        className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors cursor-pointer"
-                        title={t.confirmDelete}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                    return (
+                      <li key={exp.id} className="flex items-center justify-between py-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-foreground">
+                              {exp.description}
+                            </span>
+                            <Badge variant="outline" className="text-[8px] py-0 px-1 font-bold">
+                              {exp.category}
+                            </Badge>
+                            {isFixed && (
+                              <Badge variant="secondary" className="text-[8px] py-0 px-1.5 font-bold text-amber-700 bg-amber-100 border-amber-300">
+                                {t.recurrenceBadgeFixed}
+                              </Badge>
+                            )}
+                            {isPeriod && (
+                              <Badge variant="secondary" className="text-[8px] py-0 px-1.5 font-bold text-blue-700 bg-blue-100 border-blue-300">
+                                {t.recurrenceBadgePeriod.replace("{months}", String(exp.recurrenceMonths || 6))}
+                              </Badge>
+                            )}
+                            {!isFixed && !isPeriod && (
+                              <Badge variant="outline" className="text-[8px] py-0 px-1 font-bold text-stone-600 bg-stone-50 border-stone-200">
+                                {t.recurrenceBadgeOneTime}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {exp.date} • {exp.method} {exp.notes ? `• ${exp.notes}` : ""}
+                            {isPeriod && exp.endDate ? ` • até ${exp.endDate}` : ""}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="font-display font-bold text-sm text-destructive">
+                            -R$ {exp.amount}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteExpense(exp.id)}
+                            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors cursor-pointer"
+                            title={t.confirmDelete}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
               </ul>
             </div>
           </div>
