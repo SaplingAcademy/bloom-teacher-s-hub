@@ -50,6 +50,7 @@ export const Route = createFileRoute("/_app/settings")({
 
 function SettingsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -84,7 +85,7 @@ function SettingsPage() {
     setSaving(false);
 
     if (res.success) {
-      toast.success("Configurações de automação salvas com sucesso!");
+      toast.success(t("settings.savedSuccessfully"));
     } else {
       toast.error(`Erro ao salvar: ${res.error}`);
     }
@@ -93,18 +94,18 @@ function SettingsPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        eyebrow="Configurações"
-        title="Configurações do Workspace"
-        description="Ajuste suas preferências, perfil de professor e regras de automação interna do Bloom."
+        eyebrow={t("settings.title")}
+        title={t("settings.title")}
+        description={t("settings.subtitle")}
       />
 
       <Tabs defaultValue="automations" className="space-y-6">
         <TabsList className="bg-card border border-border p-1 rounded-xl">
           <TabsTrigger value="automations" className="gap-2 text-xs font-semibold">
-            <Sparkles className="w-4 h-4 text-primary" /> Automações Internas
+            <Sparkles className="w-4 h-4 text-primary" /> {t("settings.tabAutomations")}
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-2 text-xs font-semibold">
-            <User className="w-4 h-4" /> Perfil & Preferências
+            <User className="w-4 h-4" /> {t("settings.tabProfilePreferences")}
           </TabsTrigger>
         </TabsList>
 
@@ -112,8 +113,8 @@ function SettingsPage() {
         <TabsContent value="automations">
           <form onSubmit={handleSaveAutomationSettings} className="space-y-6">
             <PanelCard
-              title="Regras da Automação Interna (Fase 1 Alpha)"
-              description="Defina prazos e comportamentos automáticos para leads, tarefas, agenda e conversão."
+              title={t("settings.automationRulesTitle")}
+              description={t("settings.automationRulesSubtitle")}
             >
               {loading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
@@ -125,9 +126,9 @@ function SettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b border-border">
                     <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
                       <div className="space-y-0.5">
-                        <Label className="text-sm font-semibold">Mudança Automática de Estágio</Label>
+                        <Label className="text-sm font-semibold">{t("settings.autoStageTitle")}</Label>
                         <p className="text-xs text-muted-foreground">
-                          Avança leads de 'Novo contato' para 'Em conversa' na primeira interação.
+                          {t("settings.autoStageSubtitle")}
                         </p>
                       </div>
                       <Switch
@@ -140,9 +141,9 @@ function SettingsPage() {
 
                     <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
                       <div className="space-y-0.5">
-                        <Label className="text-sm font-semibold">Criação Automática de Tarefas</Label>
+                        <Label className="text-sm font-semibold">{t("settings.autoTaskTitle")}</Label>
                         <p className="text-xs text-muted-foreground">
-                          Gera tarefas de primeiro contato, acompanhamento de proposta e pós-aula experimental.
+                          {t("settings.autoTaskSubtitle")}
                         </p>
                       </div>
                       <Switch
