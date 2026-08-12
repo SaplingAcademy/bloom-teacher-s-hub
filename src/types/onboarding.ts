@@ -17,7 +17,10 @@ export interface OnboardingData {
   // Step 1 - About You
   languages: string[];
   otherLanguage?: string;
-  managementTool: string;
+  managementTool?: string; // Legacy string for backward compatibility
+  managementTools: string[];
+  otherPlatformText?: string;
+  otherManagementText?: string;
 
   // Step 2 - Your Business
   studentRange: string;

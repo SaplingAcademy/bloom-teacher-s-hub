@@ -111,6 +111,9 @@ const INITIAL_DATA: OnboardingData = {
   languages: ["English"],
   otherLanguage: "",
   managementTool: "none",
+  managementTools: ["none"],
+  otherPlatformText: "",
+  otherManagementText: "",
   studentRange: "1-5",
   workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
   sameAvailabilityAllDays: true,
@@ -135,9 +138,43 @@ const INITIAL_DATA: OnboardingData = {
   contractsPreference: "YES",
 };
 
+export function normalizeOnboardingData(raw: any): OnboardingData {
+  const base = { ...INITIAL_DATA };
+  if (!raw) return base;
+
+  let tools: string[] = [];
+  if (Array.isArray(raw.managementTools)) {
+    tools = raw.managementTools;
+  } else if (Array.isArray(raw.management_tools)) {
+    tools = raw.management_tools;
+  } else if (typeof raw.managementTool === "string" && raw.managementTool.trim() !== "") {
+    tools = [raw.managementTool.trim()];
+  } else if (typeof raw.management_tool === "string" && raw.management_tool.trim() !== "") {
+    tools = [raw.management_tool.trim()];
+  }
+
+  if (tools.length === 0) {
+    tools = ["none"];
+  }
+
+  // Rule 2: "none" is exclusive. If selected with other tools, filter out "none"
+  if (tools.includes("none") && tools.length > 1) {
+    tools = tools.filter((t) => t !== "none");
+  }
+
+  return {
+    ...base,
+    ...raw,
+    managementTools: tools,
+    managementTool: tools[0] || "none",
+    otherPlatformText: raw.otherPlatformText || raw.other_platform_text || "",
+    otherManagementText: raw.otherManagementText || raw.other_management_text || "",
+  };
+}
+
 export function OnboardingPage() {
   const { user, session, loading: authLoading, signOut, updateProfileState } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState<number>(() => {
@@ -155,7 +192,7 @@ export function OnboardingPage() {
     try {
       const savedDraft = localStorage.getItem("bloom.onboarding.draft");
       if (savedDraft) {
-        return JSON.parse(savedDraft);
+        return normalizeOnboardingData(JSON.parse(savedDraft));
       }
     } catch (e) {
       console.warn("Could not restore draft onboarding state", e);
@@ -194,7 +231,7 @@ export function OnboardingPage() {
         if (record?.answers && isMounted) {
           const { status, current_step, updated_at, ...savedAnswers } = record.answers;
           if (savedAnswers && Object.keys(savedAnswers).length > 0) {
-            setData((prev) => ({ ...prev, ...savedAnswers }));
+            setData((prev) => normalizeOnboardingData({ ...prev, ...savedAnswers }));
           }
           if (typeof current_step === "number" && current_step >= 0 && current_step <= 8) {
             const localStep = localStorage.getItem("bloom.onboarding.step");
@@ -242,6 +279,10 @@ export function OnboardingPage() {
           teacher_id: userId,
           answers: {
             ...data,
+            management_tool: data.managementTools?.[0] || data.managementTool || "none",
+            management_tools: data.managementTools || ["none"],
+            other_platform_text: data.otherPlatformText || "",
+            other_management_text: data.otherManagementText || "",
             status,
             current_step: stepNum,
             updated_at: new Date().toISOString(),
@@ -328,7 +369,10 @@ export function OnboardingPage() {
           teacher_id: userId,
           answers: {
             languages: finalLanguages,
-            management_tool: data.managementTool,
+            management_tool: data.managementTools?.[0] || data.managementTool || "none",
+            management_tools: data.managementTools || ["none"],
+            other_platform_text: data.otherPlatformText || "",
+            other_management_text: data.otherManagementText || "",
             student_range: data.studentRange,
             working_days: data.workingDays,
             same_availability_all_days: data.sameAvailabilityAllDays,
@@ -805,6 +849,7 @@ function Step1AboutYou({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { t } = useLanguage();
   const toggleLanguage = (langId: string) => {
     let next: string[];
     if (data.languages.includes(langId)) {
@@ -876,45 +921,98 @@ function Step1AboutYou({
         </div>
       )}
 
-      {/* Second Question */}
+      {/* Second Question: Management Tools Multi-Selection */}
       <div className="space-y-4 pt-4 border-t border-stone-200/70">
         <div className="space-y-1">
           <h3 className="text-lg font-bold font-outfit text-stone-900">
-            {isPt
-              ? "Como você gerencia seu negócio de aulas atualmente?"
-              : "How do you currently manage your teaching business?"}
+            {t("onboarding.managementToolTitle")}
           </h3>
           <p className="text-xs text-stone-500">
-            {isPt ? "Usado para personalizar suas integrações e analytics." : "Used for analytics and setup customization."}
+            {t("onboarding.managementToolSubtitle")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {MANAGEMENT_OPTIONS.map((opt) => {
-            const selected = data.managementTool === opt.id;
+            const currentTools = data.managementTools || [];
+            const selected = currentTools.includes(opt.id);
+
+            const toggleTool = (toolId: string) => {
+              let nextTools: string[];
+              if (toolId === "none") {
+                // Rule 2: "Não uso nenhum sistema" is exclusive
+                nextTools = ["none"];
+              } else {
+                if (currentTools.includes(toolId)) {
+                  nextTools = currentTools.filter((tItem) => tItem !== toolId);
+                  if (nextTools.length === 0) {
+                    nextTools = ["none"];
+                  }
+                } else {
+                  // Add toolId and deselect "none"
+                  nextTools = [...currentTools.filter((tItem) => tItem !== "none"), toolId];
+                }
+              }
+
+              updateData("managementTools", nextTools);
+              updateData("managementTool", nextTools[0] || "none");
+            };
+
             return (
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => updateData("managementTool", opt.id)}
-                className={`flex items-center gap-3 p-3.5 rounded-2xl border text-sm font-semibold transition-all text-left cursor-pointer ${
+                onClick={() => toggleTool(opt.id)}
+                className={`flex items-center justify-between p-3.5 rounded-2xl border text-sm font-semibold transition-all text-left cursor-pointer ${
                   selected
                     ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                     : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
                 }`}
               >
+                <span className="text-xs sm:text-sm">{isPt ? opt.label.pt : opt.label.en}</span>
                 <div
-                  className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ${
-                    selected ? "border-emerald-400 bg-emerald-500" : "border-stone-400"
+                  className={`h-5 w-5 rounded-md flex items-center justify-center text-xs transition-colors shrink-0 ${
+                    selected ? "bg-emerald-500 text-white" : "border border-stone-300"
                   }`}
                 >
-                  {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                  {selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                 </div>
-                <span className="text-xs sm:text-sm">{isPt ? opt.label.pt : opt.label.en}</span>
               </button>
             );
           })}
         </div>
+
+        {/* Conditional Field 1: "Outra plataforma" (another_platform) */}
+        {(data.managementTools || []).includes("another_platform") && (
+          <div className="pt-2 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+            <label className="block text-xs font-bold text-stone-700 font-outfit">
+              {t("onboarding.otherPlatformLabel")}
+            </label>
+            <input
+              type="text"
+              value={data.otherPlatformText || ""}
+              onChange={(e) => updateData("otherPlatformText", e.target.value)}
+              placeholder={t("onboarding.otherPlatformPlaceholder")}
+              className="w-full h-11 px-4 rounded-xl border border-stone-300 bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 text-sm shadow-xs"
+            />
+          </div>
+        )}
+
+        {/* Conditional Field 2: "Outro" (other) */}
+        {(data.managementTools || []).includes("other") && (
+          <div className="pt-2 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+            <label className="block text-xs font-bold text-stone-700 font-outfit">
+              {t("onboarding.otherManagementLabel")}
+            </label>
+            <textarea
+              rows={3}
+              value={data.otherManagementText || ""}
+              onChange={(e) => updateData("otherManagementText", e.target.value)}
+              placeholder={t("onboarding.otherManagementPlaceholder")}
+              className="w-full p-3.5 rounded-xl border border-stone-300 bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 text-sm shadow-xs resize-none"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1773,6 +1871,27 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
           </span>
           <p className="font-bold text-stone-800 text-sm">
             R$ {data.monthlyGoal || "0"}
+          </p>
+        </div>
+
+        {/* Management Tools */}
+        <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
+          <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
+            <Briefcase className="h-3.5 w-3.5 text-emerald-700" />
+            {isPt ? "Ferramentas de Gestão" : "Management Tools"}
+          </span>
+          <p className="font-bold text-stone-800 text-sm">
+            {(data.managementTools || []).map((toolId) => {
+              const opt = MANAGEMENT_OPTIONS.find((m) => m.id === toolId);
+              const label = opt ? opt.label[isPt ? "pt" : "en"] : toolId;
+              if (toolId === "another_platform" && data.otherPlatformText) {
+                return `${label} (${data.otherPlatformText})`;
+              }
+              if (toolId === "other" && data.otherManagementText) {
+                return `${label} (${data.otherManagementText})`;
+              }
+              return label;
+            }).join(", ") || "-"}
           </p>
         </div>
 
