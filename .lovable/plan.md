@@ -1,50 +1,45 @@
-# Connect Bloom to Existing Supabase Backend
+# Conectar o Bloom ao projeto Supabase existente (OAuth)
 
-## Goal
-Wire this Lovable project to the existing Supabase project that the codebase already references, without creating a new Supabase project, modifying any tables, schemas, RLS policies, auth providers, Edge Functions, or existing data.
+## Objetivo
+Ligar este projeto Lovable ao projeto Supabase que o código já usa — sem criar projeto novo e sem tocar em banco, schema, RLS, Auth, Edge Functions ou dados.
 
-## Current State
-- The codebase already uses Supabase (`src/lib/supabase.ts`, `src/hooks/use-auth.ts`, `src/routes/auth.tsx`).
-- Runtime errors show `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are missing from the environment.
-- The project has no active Supabase connector (no connections listed via `standard_connectors--list_connections`).
-- Lovable supports an external Supabase integration via OAuth in Project Settings → Integrations, which securely injects the required keys without exposing them in chat.
+## Estado atual (verificado)
+- O código já usa Supabase: `src/lib/supabase.ts`, `src/hooks/use-auth.ts`, `src/routes/auth.tsx`.
+- O Preview quebra com: `Missing Supabase environment variables` — faltam `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+- Não há nenhuma conexão de conector ativa neste workspace.
+- A integração Supabase externa existe e é ativada por OAuth em Project Settings → Integrations. Não existe ferramenta de agente para disparar esse fluxo: só você pode concluí-lo na interface.
 
-## Connection Method
-OAuth via Project Settings → Supabase Integration (chosen by user). This is the only way to connect an existing Supabase project without creating a new one through Lovable Cloud.
+## Passos
 
-## Plan Steps
+### 1. Você conecta via OAuth (única ação manual)
+Project Settings → Integrations → Supabase → autorizar e selecionar o projeto Supabase **já existente**. Não criar projeto novo.
 
-1. **User completes the OAuth connection**
-   - Go to **Project Settings → Integrations → Supabase** in the Lovable UI.
-   - Select the existing Supabase project and authorize access.
-   - Lovable will automatically retrieve and inject the required keys as environment variables (URL, anon/publishable key, and service role key for server functions).
+Ao concluir, o Lovable injeta as variáveis de ambiente do projeto conectado.
 
-2. **Verify environment variables are injected**
-   - After OAuth success, confirm the following variables are available via `secrets--fetch_secrets` or Lovable Cloud settings:
-     - `VITE_SUPABASE_URL`
-     - `VITE_SUPABASE_ANON_KEY` (or `VITE_SUPABASE_PUBLISHABLE_KEY`)
-     - `SUPABASE_URL`
-     - `SUPABASE_PUBLISHABLE_KEY`
-     - `SUPABASE_SERVICE_ROLE_KEY`
-   - These must match the existing Supabase project the user wants to reuse.
+### 2. Conferir o mínimo necessário para o Preview
+Requisito mínimo, e apenas isso:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY` (ou `VITE_SUPABASE_PUBLISHABLE_KEY`, conforme o nome injetado)
 
-3. **Verify the runtime connection without changing the database**
-   - Re-run the dev server / build and confirm the missing-environment-variable error is gone.
-   - Confirm the auth page loads and the Supabase client initializes correctly.
-   - No migrations, schema changes, or data operations will be performed.
+Se a integração injetar a chave com o nome publishable e o código esperar `VITE_SUPABASE_ANON_KEY`, o ajuste será feito **apenas** em `src/lib/supabase.ts`, aceitando ambos os nomes no fallback de leitura. Nenhuma outra mudança de código.
 
-4. **Audit / safety check**
-   - Confirm that the only files modified are the plan file and any environment/secrets metadata handled by Lovable.
-   - Confirm that no database tables, RLS policies, auth settings, or Edge Functions are touched.
+### 3. Regra de segurança da service role
+- `SUPABASE_SERVICE_ROLE_KEY` fica exclusivamente como segredo de servidor.
+- Nunca em variável `VITE_*`, nunca importada em componente, hook ou rota do cliente.
+- Não será usada nesta etapa: não há necessidade real, pois todo o acesso atual passa pelo cliente do browser com a anon key e RLS.
 
-## Out of Scope
-- Creating a new Supabase project.
-- Running any migrations or SQL schema changes.
-- Changing RLS policies, auth providers, or Edge Functions.
-- Modifying existing data in the connected Supabase project.
-- Refactoring the auth flow or UI beyond making it functional with the connected backend.
+### 4. Verificação (somente leitura)
+- Recarregar o Preview e confirmar que o erro de variáveis sumiu.
+- Confirmar que o cliente Supabase inicializa e que `/auth` renderiza.
+- Confirmar no console que não há erro de inicialização.
 
-## Testing Success Criteria
-- `src/lib/supabase.ts` resolves successfully with real Supabase credentials.
-- The `/auth` route renders without the missing-env error.
-- No 401/403 from initial config indicates the keys are valid and the project is reachable.
+Nada além disso: sem migrations, sem SQL, sem alteração de RLS, Auth, Edge Functions ou dados.
+
+## Fora de escopo
+- Criar projeto Supabase novo.
+- Qualquer migration, DDL ou escrita em dados existentes.
+- Alterar políticas RLS, provedores de Auth ou Edge Functions.
+- Refatorar o fluxo de autenticação ou a UI.
+
+## Critério de sucesso
+`src/lib/supabase.ts` inicializa com credenciais reais, o app carrega sem o erro de variáveis de ambiente e a rota `/auth` renderiza normalmente.
