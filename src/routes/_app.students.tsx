@@ -3268,8 +3268,8 @@ function StudentsPage() {
                 localStorage.setItem("bloom.students_welcome_dismissed", "true");
                 toast.info(
                   lang === "pt"
-                    ? "Para importar alunos, você pode cadastrá-los um a um ou vincular à sua agenda."
-                    : "To import students, you can register them or connect your schedule."
+                    ? "A funcionalidade de importação em lote via planilha estará disponível em breve. Cadastre os alunos manualmente a seguir."
+                    : "Bulk spreadsheet import will be available soon. Register students manually below."
                 );
                 setEditingStudentIdForModal(null);
                 setIsModalOpen(true);
@@ -3277,7 +3277,7 @@ function StudentsPage() {
               className="w-full h-11 flex items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 font-bold text-sm shadow-sm transition-all cursor-pointer"
             >
               <Users className="h-4 w-4 text-emerald-800" />
-              <span>{lang === "pt" ? "Importar Alunos" : "Import Students"}</span>
+              <span>{lang === "pt" ? "Importar Alunos (Em breve)" : "Import Students (Coming soon)"}</span>
             </button>
 
             <button
