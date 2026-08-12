@@ -303,8 +303,51 @@ const getStatusStyles = (status: string) => {
       return "bg-warning/15 text-warning-foreground border-warning/20";
     case "Overdue":
       return "bg-destructive/15 text-destructive border-destructive/20";
+  }
+};
+
+const formatCategoryDisplay = (catStr?: string, lang: "en" | "pt" = "pt"): string => {
+  if (!catStr) return lang === "pt" ? "Outros" : "Other";
+  const c = catStr.trim();
+  if (lang === "pt") {
+    switch (c) {
+      case "Software": return "Software";
+      case "Marketing": return "Marketing";
+      case "Rent": return "Aluguel";
+      case "Equipment": return "Equipamentos";
+      case "Internet": return "Internet";
+      case "Books": return "Livros / Materiais";
+      case "Taxes": return "Impostos";
+      case "Other": return "Outros";
+      default: return c;
+    }
+  }
+  return c;
+};
+
+const formatMethodDisplay = (methodStr?: string, lang: "en" | "pt" = "pt"): string => {
+  if (!methodStr) return lang === "pt" ? "Cartão" : "Card";
+  const m = methodStr.trim();
+  if (lang === "pt") {
+    switch (m) {
+      case "Card":
+      case "Credit Card":
+        return "Cartão de crédito";
+      case "Pix":
+        return "Pix";
+      case "Bank Transfer":
+        return "Transferência bancária";
+      case "Cash":
+        return "Dinheiro";
+      default:
+        return m;
+    }
+  }
+  switch (m) {
+    case "Card":
+      return "Credit Card";
     default:
-      return "";
+      return m;
   }
 };
 
@@ -410,7 +453,17 @@ function FinancePage() {
         if (savedExps) {
           try {
             const parsed: Expense[] = JSON.parse(savedExps);
-            setExpenses(parsed.filter((item) => !["e1", "e2", "e3"].includes(item.id)));
+            const DEMO_DESCRIPTIONS = [
+              "zoom pro subscription",
+              "instagram ads - july",
+              "esl grammar workbooks",
+            ];
+            setExpenses(
+              parsed.filter((item) => {
+                const desc = (item.description || "").trim().toLowerCase();
+                return !["e1", "e2", "e3"].includes(item.id) && !DEMO_DESCRIPTIONS.includes(desc);
+              })
+            );
           } catch (err) {
             setExpenses([]);
           }
@@ -1084,14 +1137,14 @@ function FinancePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Software">Software</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Rent">Rent</SelectItem>
-                        <SelectItem value="Equipment">Equipment</SelectItem>
-                        <SelectItem value="Internet">Internet</SelectItem>
-                        <SelectItem value="Books">Books</SelectItem>
-                        <SelectItem value="Taxes">Taxes</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Software">{lang === "pt" ? "Software" : "Software"}</SelectItem>
+                        <SelectItem value="Marketing">{lang === "pt" ? "Marketing" : "Marketing"}</SelectItem>
+                        <SelectItem value="Rent">{lang === "pt" ? "Aluguel" : "Rent"}</SelectItem>
+                        <SelectItem value="Equipment">{lang === "pt" ? "Equipamentos" : "Equipment"}</SelectItem>
+                        <SelectItem value="Internet">{lang === "pt" ? "Internet" : "Internet"}</SelectItem>
+                        <SelectItem value="Books">{lang === "pt" ? "Livros / Materiais" : "Books"}</SelectItem>
+                        <SelectItem value="Taxes">{lang === "pt" ? "Impostos" : "Taxes"}</SelectItem>
+                        <SelectItem value="Other">{lang === "pt" ? "Outros" : "Other"}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1126,10 +1179,10 @@ function FinancePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Card">Credit Card</SelectItem>
+                        <SelectItem value="Card">{lang === "pt" ? "Cartão de Crédito" : "Credit Card"}</SelectItem>
                         <SelectItem value="Pix">Pix</SelectItem>
-                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="Bank Transfer">{lang === "pt" ? "Transferência Bancária" : "Bank Transfer"}</SelectItem>
+                        <SelectItem value="Cash">{lang === "pt" ? "Dinheiro" : "Cash"}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1184,7 +1237,7 @@ function FinancePage() {
                         id="exp-notes"
                         value={expNotes}
                         onChange={(e) => setExpNotes(e.target.value)}
-                        placeholder="Notes..."
+                        placeholder={lang === "pt" ? "Anotações..." : "Notes..."}
                         className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
                       />
                     </div>
@@ -1200,7 +1253,7 @@ function FinancePage() {
                       id="exp-notes"
                       value={expNotes}
                       onChange={(e) => setExpNotes(e.target.value)}
-                      placeholder="Notes..."
+                      placeholder={lang === "pt" ? "Anotações..." : "Notes..."}
                       className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
                     />
                   </div>
@@ -1255,7 +1308,7 @@ function FinancePage() {
                               {exp.description}
                             </span>
                             <Badge variant="outline" className="text-[8px] py-0 px-1 font-bold">
-                              {exp.category}
+                              {formatCategoryDisplay(exp.category, lang)}
                             </Badge>
                             {isFixed && (
                               <Badge variant="secondary" className="text-[8px] py-0 px-1.5 font-bold text-amber-700 bg-amber-100 border-amber-300">
@@ -1274,8 +1327,8 @@ function FinancePage() {
                             )}
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {exp.date} • {exp.method} {exp.notes ? `• ${exp.notes}` : ""}
-                            {isPeriod && exp.endDate ? ` • até ${exp.endDate}` : ""}
+                            {exp.date} • {formatMethodDisplay(exp.method, lang)} {exp.notes ? `• ${exp.notes}` : ""}
+                            {isPeriod && exp.endDate ? ` • ${lang === "pt" ? "até" : "until"} ${exp.endDate}` : ""}
                           </p>
                         </div>
 

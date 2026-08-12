@@ -1671,21 +1671,32 @@ export async function fetchTeacherExpensesList(teacherId: string) {
 
     if (!data) return [];
 
-    return data.map((row: any) => {
-      const recType = row.recurrence_type || (row.recurring ? "fixed" : "one_time");
-      return {
-        id: row.id,
-        description: row.description,
-        category: row.expense_categories?.name || row.category || "Software",
-        amount: Math.round(((row.amount_cents || 0) / 100) * 100) / 100,
-        date: row.date,
-        method: row.method || "Card",
-        notes: row.notes || undefined,
-        recurrenceType: recType as "one_time" | "fixed" | "period",
-        recurrenceMonths: row.recurrence_months || undefined,
-        endDate: row.end_date || undefined,
-      };
-    });
+    const DEMO_DESCRIPTIONS = [
+      "zoom pro subscription",
+      "instagram ads - july",
+      "esl grammar workbooks",
+    ];
+
+    return data
+      .filter((row: any) => {
+        const desc = (row.description || "").trim().toLowerCase();
+        return !DEMO_DESCRIPTIONS.includes(desc);
+      })
+      .map((row: any) => {
+        const recType = row.recurrence_type || (row.recurring ? "fixed" : "one_time");
+        return {
+          id: row.id,
+          description: row.description,
+          category: row.expense_categories?.name || row.category || "Software",
+          amount: Math.round(((row.amount_cents || 0) / 100) * 100) / 100,
+          date: row.date,
+          method: row.method || "Card",
+          notes: row.notes || undefined,
+          recurrenceType: recType as "one_time" | "fixed" | "period",
+          recurrenceMonths: row.recurrence_months || undefined,
+          endDate: row.end_date || undefined,
+        };
+      });
   } catch (err) {
     console.error("[FinanceEngine] Exception fetching expenses:", err);
     return [];
