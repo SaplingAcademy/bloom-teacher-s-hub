@@ -230,9 +230,9 @@ export function StudentLessonPlanTable({
             <Sparkles className="w-7 h-7" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-xl font-bold text-foreground tracking-tight">Create lesson plan</h3>
+            <h3 className="text-xl font-bold text-foreground tracking-tight">{t("students.createLessonPlanTitle")}</h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Generate the student's lessons automatically using their current schedule.
+              {t("students.createLessonPlanSubtitle")}
             </p>
           </div>
           <div className="pt-2">
@@ -241,7 +241,7 @@ export function StudentLessonPlanTable({
               className="h-11 px-6 text-sm font-semibold rounded-xl gap-2 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              Generate lesson plan
+              {t("students.generateLessonPlan")}
             </Button>
           </div>
         </div>
@@ -280,14 +280,14 @@ export function StudentLessonPlanTable({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                  Lesson Plan & Progress
+                  {t("students.lessonPlanTitle")}
                 </h3>
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-xs">
-                  {completedCount} / {totalLessons} Completed
+                  {t("students.completedCount").replace("{completed}", String(completedCount)).replace("{total}", String(totalLessons))}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                The authoritative sequence of all scheduled lessons, dates, content, and attendance.
+                {t("students.lessonPlanSubtitle")}
               </p>
             </div>
           </div>
@@ -300,7 +300,7 @@ export function StudentLessonPlanTable({
               className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Regenerate Plan
+              {t("students.regeneratePlan")}
             </Button>
           </div>
         </div>
@@ -308,7 +308,7 @@ export function StudentLessonPlanTable({
         {/* Progress Bar & Percentage Indicator */}
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Course Completion Progress</span>
+            <span>{t("students.courseProgress")}</span>
             <span className="text-foreground font-semibold">{progressPercent}%</span>
           </div>
           <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 border border-border/50">
@@ -402,7 +402,7 @@ export function StudentLessonPlanTable({
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search topic, homework, date, or lesson #..."
+            placeholder={t("students.searchLessonPlaceholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 h-9 text-sm bg-card border-border"
@@ -417,16 +417,16 @@ export function StudentLessonPlanTable({
             <SelectTrigger className="w-[170px] h-9 text-xs bg-card border-border">
               <div className="flex items-center gap-1.5">
                 <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t("students.filterByStatus")} />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Lessons ({lessons.length})</SelectItem>
-              <SelectItem value="completed">Completed ({completedCount})</SelectItem>
-              <SelectItem value="pending">Pending ({totalLessons - completedCount})</SelectItem>
-              <SelectItem value="present">Present</SelectItem>
-              <SelectItem value="absent">Absent</SelectItem>
-              <SelectItem value="rescheduled">Rescheduled</SelectItem>
+              <SelectItem value="all">{t("students.allLessonsCount").replace("{count}", String(lessons.length))}</SelectItem>
+              <SelectItem value="completed">{t("students.completedLessonsCount").replace("{count}", String(completedCount))}</SelectItem>
+              <SelectItem value="pending">{t("students.pendingLessonsCount").replace("{count}", String(totalLessons - completedCount))}</SelectItem>
+              <SelectItem value="present">{t("status.present")}</SelectItem>
+              <SelectItem value="absent">{t("status.absent")}</SelectItem>
+              <SelectItem value="rescheduled">{t("status.rescheduled")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -440,13 +440,13 @@ export function StudentLessonPlanTable({
             <thead className="sticky top-0 z-10 bg-[#163020] text-white text-xs font-bold uppercase tracking-wider shadow-xs border-b border-[#163020]">
               <tr>
                 <th className="py-3 px-3 w-12 text-center border-r border-white/10">#</th>
-                <th className="py-3 px-4 w-14 text-center border-r border-white/10">Done</th>
-                <th className="py-3 px-4 w-36 border-r border-white/10">Date</th>
-                <th className="py-3 px-3 w-28 border-r border-white/10">Time</th>
-                <th className="py-3 px-4 w-56 border-r border-white/10">Content / Topic</th>
-                <th className="py-3 px-4 w-36 border-r border-white/10">Homework</th>
-                <th className="py-3 px-4 w-36 border-r border-white/10">Attendance</th>
-                <th className="py-3 px-4 border-r border-white/10">Notes</th>
+                <th className="py-3 px-4 w-14 text-center border-r border-white/10">{t("students.headerDone")}</th>
+                <th className="py-3 px-4 w-36 border-r border-white/10">{t("students.headerDate")}</th>
+                <th className="py-3 px-3 w-28 border-r border-white/10">{t("students.headerTime")}</th>
+                <th className="py-3 px-4 w-56 border-r border-white/10">{t("students.headerContentTopic")}</th>
+                <th className="py-3 px-4 w-36 border-r border-white/10">{t("students.headerHomework")}</th>
+                <th className="py-3 px-4 w-36 border-r border-white/10">{t("students.headerAttendance")}</th>
+                <th className="py-3 px-4 border-r border-white/10">{t("students.headerNotes")}</th>
               </tr>
             </thead>
 
@@ -457,7 +457,7 @@ export function StudentLessonPlanTable({
                   <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FileText className="w-8 h-8 text-muted-foreground/60" />
-                      <p className="text-sm font-medium">No lessons found matching your search filters.</p>
+                      <p className="text-sm font-medium">{t("students.noLessonsFound")}</p>
                     </div>
                   </td>
                 </tr>
@@ -526,7 +526,7 @@ export function StudentLessonPlanTable({
                       {/* Content / Topic (Editable Input) */}
                       <td className="py-1.5 px-3 border-r border-border/40">
                         <Input
-                          placeholder="Lesson topic & grammar focus..."
+                          placeholder={t("students.topicPlaceholder")}
                           value={lesson.content || ""}
                           onChange={(e) =>
                             handleCellChange(originalIndex, "content", e.target.value)
@@ -589,14 +589,14 @@ export function StudentLessonPlanTable({
                               lesson.attendance_status
                             )}`}
                           >
-                            <SelectValue placeholder="Select..." />
+                            <SelectValue placeholder={t("students.selectAttendance")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">-- Unrecorded --</SelectItem>
-                            <SelectItem value="Present">Present</SelectItem>
-                            <SelectItem value="Absent">Absent</SelectItem>
-                            <SelectItem value="Rescheduled">Rescheduled</SelectItem>
-                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                            <SelectItem value="none">{t("students.unrecordedAttendance")}</SelectItem>
+                            <SelectItem value="Present">{t("status.present")}</SelectItem>
+                            <SelectItem value="Absent">{t("status.absent")}</SelectItem>
+                            <SelectItem value="Rescheduled">{t("status.rescheduled")}</SelectItem>
+                            <SelectItem value="Cancelled">{t("status.cancelled")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>

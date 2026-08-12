@@ -38,6 +38,7 @@ import {
 import { fetchTeacherTimeOff, TeacherTimeOff } from "@/lib/time-off-engine";
 import { CEFRLevel, CourseFocus } from "@/lib/calendar-sync";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/use-language";
 
 interface Props {
   isOpen: boolean;
@@ -68,6 +69,7 @@ export function GenerateLessonPlanModal({
   existingLessonsCount = 0,
   onSuccess,
 }: Props) {
+  const { t } = useLanguage();
   // Form State
   const [quantityType, setQuantityType] = useState<"package" | "20" | "23" | "40" | "custom">(
     packageLessonCount ? "package" : "23"
@@ -238,10 +240,10 @@ export function GenerateLessonPlanModal({
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground">
-                Generate Lesson Plan
+                {t("students.modalGenerateTitle")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Automatically generate all lesson dates and times for {studentName}.
+                {t("students.modalGenerateSubtitle").replace("{studentName}", studentName)}
               </DialogDescription>
             </div>
           </div>
@@ -251,7 +253,7 @@ export function GenerateLessonPlanModal({
           <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Generation Error</p>
+              <p className="font-semibold">{t("students.generationErrorTitle")}</p>
               <p>{errorMessage}</p>
             </div>
           </div>
@@ -261,8 +263,8 @@ export function GenerateLessonPlanModal({
           {/* STEP 1: NUMBER OF LESSONS */}
           <div className="space-y-3">
             <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
-              <span>1. Number of Lessons</span>
-              <span className="text-muted-foreground font-normal">Target: {targetCount} lessons</span>
+              <span>{t("students.modalStepLessons")}</span>
+              <span className="text-muted-foreground font-normal">{t("students.modalTargetLessons").replace("{count}", String(targetCount))}</span>
             </Label>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -276,8 +278,8 @@ export function GenerateLessonPlanModal({
                       : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
                   }`}
                 >
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Package Count</span>
-                  <span className="text-sm font-bold text-foreground mt-1">{packageLessonCount} lessons</span>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalPkgCount")}</span>
+                  <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", String(packageLessonCount))}</span>
                 </button>
               )}
 
@@ -290,8 +292,8 @@ export function GenerateLessonPlanModal({
                     : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
                 }`}
               >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Standard</span>
-                <span className="text-sm font-bold text-foreground mt-1">20 lessons</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalStandard")}</span>
+                <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", "20")}</span>
               </button>
 
               <button
@@ -303,8 +305,8 @@ export function GenerateLessonPlanModal({
                     : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
                 }`}
               >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Recommended</span>
-                <span className="text-sm font-bold text-foreground mt-1">23 lessons</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalRecommended")}</span>
+                <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", "23")}</span>
               </button>
 
               <button
@@ -316,8 +318,8 @@ export function GenerateLessonPlanModal({
                     : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
                 }`}
               >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Extended</span>
-                <span className="text-sm font-bold text-foreground mt-1">40 lessons</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalExtended")}</span>
+                <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", "40")}</span>
               </button>
 
               <button
@@ -329,15 +331,15 @@ export function GenerateLessonPlanModal({
                     : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
                 }`}
               >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Custom</span>
-                <span className="text-sm font-bold text-foreground mt-1">Specify...</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalCustom")}</span>
+                <span className="text-sm font-bold text-foreground mt-1">{t("students.modalSpecify")}</span>
               </button>
             </div>
 
             {quantityType === "custom" && (
               <div className="pt-2">
                 <Label htmlFor="custom-qty" className="text-xs text-muted-foreground mb-1 block">
-                  Enter custom lesson quantity:
+                  {t("students.modalEnterCustomQty")}
                 </Label>
                 <Input
                   id="custom-qty"
@@ -355,8 +357,8 @@ export function GenerateLessonPlanModal({
           {/* STEP 2: START DATE */}
           <div className="space-y-2">
             <Label htmlFor="start-date" className="text-xs font-semibold text-foreground flex items-center justify-between">
-              <span>2. Course Start Date</span>
-              <span className="text-muted-foreground font-normal text-[11px]">First lesson date</span>
+              <span>{t("students.modalStepStartDate")}</span>
+              <span className="text-muted-foreground font-normal text-[11px]">{t("students.modalFirstLessonDate")}</span>
             </Label>
             <Input
               id="start-date"
@@ -371,7 +373,7 @@ export function GenerateLessonPlanModal({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold text-foreground">
-                3. Weekly Schedule
+                {t("students.modalStepSchedule")}
               </Label>
               <Button
                 type="button"
@@ -381,7 +383,7 @@ export function GenerateLessonPlanModal({
                 className="h-7 text-xs text-primary hover:bg-primary/10 gap-1"
               >
                 <Plus className="w-3 h-3" />
-                Add Schedule Row
+                {t("students.modalAddScheduleRow")}
               </Button>
             </div>
 
@@ -397,16 +399,16 @@ export function GenerateLessonPlanModal({
                     onValueChange={(val) => handleUpdateScheduleRow(idx, "weekday", val)}
                   >
                     <SelectTrigger className="h-9 text-xs flex-1 bg-background border-border">
-                      <SelectValue placeholder="Weekday" />
+                      <SelectValue placeholder={t("students.modalWeekday")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Monday">Monday</SelectItem>
-                      <SelectItem value="Tuesday">Tuesday</SelectItem>
-                      <SelectItem value="Wednesday">Wednesday</SelectItem>
-                      <SelectItem value="Thursday">Thursday</SelectItem>
-                      <SelectItem value="Friday">Friday</SelectItem>
-                      <SelectItem value="Saturday">Saturday</SelectItem>
-                      <SelectItem value="Sunday">Sunday</SelectItem>
+                      <SelectItem value="Monday">{t("weekdays.Monday")}</SelectItem>
+                      <SelectItem value="Tuesday">{t("weekdays.Tuesday")}</SelectItem>
+                      <SelectItem value="Wednesday">{t("weekdays.Wednesday")}</SelectItem>
+                      <SelectItem value="Thursday">{t("weekdays.Thursday")}</SelectItem>
+                      <SelectItem value="Friday">{t("weekdays.Friday")}</SelectItem>
+                      <SelectItem value="Saturday">{t("weekdays.Saturday")}</SelectItem>
+                      <SelectItem value="Sunday">{t("weekdays.Sunday")}</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -417,7 +419,7 @@ export function GenerateLessonPlanModal({
                       value={row.startTime}
                       onChange={(e) => handleUpdateScheduleRow(idx, "startTime", e.target.value)}
                       className="h-9 text-xs font-mono bg-background border-border"
-                      placeholder="Start Time"
+                      placeholder={t("students.modalStartTime")}
                     />
                   </div>
 
@@ -428,7 +430,7 @@ export function GenerateLessonPlanModal({
                       value={row.endTime || "11:00"}
                       onChange={(e) => handleUpdateScheduleRow(idx, "endTime", e.target.value)}
                       className="h-9 text-xs font-mono bg-background border-border"
-                      placeholder="End Time"
+                      placeholder={t("students.modalEndTime")}
                     />
                   </div>
 
@@ -437,7 +439,7 @@ export function GenerateLessonPlanModal({
                     type="button"
                     onClick={() => handleRemoveScheduleRow(idx)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Remove schedule row"
+                    title={t("students.modalRemoveRow")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -450,21 +452,21 @@ export function GenerateLessonPlanModal({
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2 text-xs">
             <div className="flex items-center gap-2 font-semibold text-primary">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Generation Review</span>
+              <span>{t("students.modalReviewTitle")}</span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-foreground/90 pt-1">
               <div>
-                <span className="text-muted-foreground">Student:</span> <span className="font-semibold">{studentName}</span>
+                <span className="text-muted-foreground">{t("students.modalReviewStudent")}</span> <span className="font-semibold">{studentName}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Total Lessons:</span> <span className="font-semibold">{targetCount} lessons</span>
+                <span className="text-muted-foreground">{t("students.modalReviewTotal")}</span> <span className="font-semibold">{t("students.lessonsCountPlural").replace("{count}", String(targetCount))}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Start Date:</span> <span className="font-mono font-semibold">{startDate}</span>
+                <span className="text-muted-foreground">{t("students.modalReviewStartDate")}</span> <span className="font-mono font-semibold">{startDate}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Expected End Date:</span>{" "}
-                <span className="font-mono font-semibold text-primary">{expectedEndDate || "Calculating..."}</span>
+                <span className="text-muted-foreground">{t("students.modalReviewEndDate")}</span>{" "}
+                <span className="font-mono font-semibold text-primary">{expectedEndDate || t("students.modalCalculating")}</span>
               </div>
             </div>
           </div>
@@ -478,7 +480,7 @@ export function GenerateLessonPlanModal({
             disabled={isGenerating}
             className="h-10 text-xs"
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -489,12 +491,12 @@ export function GenerateLessonPlanModal({
             {isGenerating ? (
               <>
                 <Sparkles className="w-4 h-4 animate-spin" />
-                Generating Lessons...
+                {t("students.modalGenerating")}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Generate {targetCount} Lessons
+                {t("students.modalGenerateBtn").replace("{count}", String(targetCount))}
               </>
             )}
           </Button>
