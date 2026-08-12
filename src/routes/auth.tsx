@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/hooks/use-language";
+import { t as i18nT } from "@/lib/i18n";
 import { Mail, Lock, User, ArrowRight, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -116,6 +117,34 @@ type AuthView =
   | "unconfirmed"
   | "confirmed_success"
   | "confirmed_error";
+
+function mapSupabaseAuthError(err: any, lang: "pt" | "en"): string {
+  if (!err) return "";
+  const msg = err.message?.toLowerCase() || "";
+  const status = err.status;
+
+  if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
+    return lang === "pt" ? "E-mail ou senha incorretos." : "Invalid email or password.";
+  }
+  if (msg.includes("email not confirmed")) {
+    return lang === "pt" ? "E-mail ainda não confirmado. Verifique sua caixa de entrada." : "Email not verified yet. Please check your inbox.";
+  }
+  if (msg.includes("signup is disabled") || msg.includes("signups not allowed")) {
+    return lang === "pt"
+      ? "O cadastro público está desativado. O Bloom está em fase de Closed Alpha para convidados."
+      : "Public registration is disabled. Bloom is currently in Closed Alpha for invited teachers.";
+  }
+  if (status === 429 || msg.includes("rate limit") || msg.includes("too many requests")) {
+    return lang === "pt" ? "Muitas solicitações em sequência. Por favor, aguarde." : "Too many requests. Please wait before trying again.";
+  }
+  if (msg.includes("token has expired") || msg.includes("invalid token") || msg.includes("link is invalid")) {
+    return lang === "pt" ? "O link de confirmação expirou ou é inválido." : "The link has expired or is invalid.";
+  }
+  if (msg.includes("user already registered") || msg.includes("already registered")) {
+    return lang === "pt" ? "Este e-mail já está cadastrado. Tente fazer login." : "This email is already registered. Please try logging in.";
+  }
+  return err.message || (lang === "pt" ? "Erro ao processar autenticação." : "Authentication error.");
+}
 
 function AuthPage() {
   const { user, loading: authLoading, profile, setLocalUser } = useAuth();
@@ -306,7 +335,58 @@ function AuthPage() {
   const emailInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const t = translations[lang === "pt" ? "pt" : "en"];
+  const isInviteFlow = Boolean(
+    urlType === "invite" ||
+    urlType === "recovery" ||
+    (typeof window !== "undefined" &&
+      (window.location.hash.includes("type=invite") || window.location.hash.includes("type=recovery")))
+  );
+
+  const t = {
+    titleSignIn: i18nT("auth.titleSignIn", lang),
+    subtitleSignIn: i18nT("auth.subtitleSignIn", lang),
+    titleSignUp: isInviteFlow ? i18nT("auth.titleInvite", lang) : i18nT("auth.titleSignUp", lang),
+    subtitleSignUp: isInviteFlow ? i18nT("auth.subtitleInvite", lang) : i18nT("auth.subtitleSignUp", lang),
+    titleReset: i18nT("auth.titleReset", lang),
+    subtitleReset: i18nT("auth.subtitleReset", lang),
+    emailLabel: i18nT("auth.emailLabel", lang),
+    emailPlaceholder: i18nT("auth.emailPlaceholder", lang),
+    passwordLabel: i18nT("auth.passwordLabel", lang),
+    passwordPlaceholder: i18nT("auth.passwordPlaceholder", lang),
+    nameLabel: i18nT("auth.nameLabel", lang),
+    namePlaceholder: i18nT("auth.namePlaceholder", lang),
+    btnSignIn: i18nT("auth.btnSignIn", lang),
+    btnSignUp: isInviteFlow ? i18nT("auth.btnAcceptInvite", lang) : i18nT("auth.btnSignUp", lang),
+    btnReset: i18nT("auth.btnReset", lang),
+    haveAccount: i18nT("auth.haveAccount", lang),
+    noAccount: isInviteFlow ? "" : i18nT("auth.noAccount", lang),
+    closedAlphaTag: i18nT("auth.closedAlphaTag", lang),
+    closedAlphaNotice: i18nT("auth.closedAlphaNotice", lang),
+    forgotPassword: i18nT("auth.forgotPassword", lang),
+    backToLogin: i18nT("auth.backToLogin", lang),
+    errorHeader: i18nT("common.error", lang),
+    signUpSuccess: i18nT("auth.signUpSuccess", lang, "Account created! Check your email to confirm registration."),
+    signInSuccess: i18nT("auth.signInSuccess", lang, "Welcome back to Bloom!"),
+    resetSuccess: i18nT("auth.resetSuccess", lang, "Password reset link sent to your email."),
+    loadingText: i18nT("common.loading", lang),
+    brandingTitle: "Bloom",
+    brandingSubtitle: lang === "pt"
+      ? "O espaço de trabalho completo criado para professores de idiomas independentes."
+      : "The all-in-one workspace built for independent language teachers.",
+    brandingStatTeachers: lang === "pt" ? "Mais de 500 professores" : "500+ educators",
+    brandingStatClasses: lang === "pt" ? "Mais de 10.000 aulas dadas" : "10,000+ classes taught",
+    confirmPasswordLabel: i18nT("auth.confirmPasswordLabel", lang),
+    confirmPasswordPlaceholder: i18nT("auth.confirmPasswordPlaceholder", lang),
+    passwordsDontMatch: i18nT("auth.reqMatch", lang),
+    reqLength: i18nT("auth.reqLength", lang),
+    reqUppercase: i18nT("auth.reqUppercase", lang),
+    reqLowercase: i18nT("auth.reqLowercase", lang),
+    reqNumber: i18nT("auth.reqNumber", lang),
+    reqSpecial: i18nT("auth.reqSpecial", lang),
+    reqMatch: i18nT("auth.reqMatch", lang),
+    googleBtn: i18nT("auth.googleBtn", lang),
+    orDivider: i18nT("auth.orDivider", lang),
+  };
 
   // Real-time password criteria validations
   const isLengthValid = password.length >= 8;
@@ -711,24 +791,7 @@ function AuthPage() {
       }
     } catch (err: any) {
       console.error("[Auth] Auth error caught in form handler:", err);
-      let userMsg = err?.message || t.errorHeader;
-
-      if (
-        err?.code === "over_email_send_rate_limit" ||
-        err?.status === 429 ||
-        err?.message?.includes("rate limit")
-      ) {
-        userMsg =
-          lang === "pt"
-            ? "Limite de envio de e-mails do Supabase atingido (Email Rate Limit). Por favor, aguarde alguns minutos antes de tentar novamente."
-            : "Supabase email send rate limit exceeded. Please wait a few minutes before trying again.";
-      } else if (err?.code === "user_already_exists" || err?.message?.includes("already registered")) {
-        userMsg =
-          lang === "pt"
-            ? "Este e-mail já está cadastrado. Por favor, faça login."
-            : "This email is already registered. Please sign in.";
-      }
-
+      const userMsg = mapSupabaseAuthError(err, lang === "pt" ? "pt" : "en");
       toast.error(userMsg);
     } finally {
       console.log("Auth process completed (finally block triggered). Setting loading to false.");
@@ -996,6 +1059,31 @@ function AuthPage() {
                   </span>
                 </button>
               </div>
+            </div>
+          ) : view === "signup" && !isInviteFlow ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 space-y-4 shadow-sm text-center">
+                <div className="h-14 w-14 mx-auto rounded-full bg-amber-100 flex items-center justify-center text-amber-800 shadow-inner">
+                  <ShieldCheck className="h-7 w-7 text-amber-800" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-outfit font-extrabold text-xl text-foreground">
+                    {t.closedAlphaTag}
+                  </h3>
+                  <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-sm mx-auto">
+                    {t.closedAlphaNotice}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setView("signin")}
+                className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163020] text-white hover:bg-emerald-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+              >
+                <span>{t.backToLogin}</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           ) : view !== "unconfirmed" ? (
             <form onSubmit={handleSubmit} className="space-y-5">
