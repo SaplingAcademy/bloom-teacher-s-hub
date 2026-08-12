@@ -87,7 +87,8 @@ function SettingsPage() {
     if (res.success) {
       toast.success(t("settings.savedSuccessfully"));
     } else {
-      toast.error(`Erro ao salvar: ${res.error}`);
+      console.error("[Settings] Save error:", res.error);
+      toast.error(t("settings.saveError"));
     }
   };
 

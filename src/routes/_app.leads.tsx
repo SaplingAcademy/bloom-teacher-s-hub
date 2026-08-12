@@ -227,14 +227,14 @@ function LeadsPage() {
         .single();
 
       if (error || !insertedLead) {
-        toast.error("Erro ao criar lead: " + (error?.message || ""));
+        toast.error(t("leads.toastCreateError"));
         setSubmitting(false);
         return;
       }
 
       // Execute Rule A Automation
       await processNewLeadAutomation(insertedLead as Lead);
-      toast.success("Lead criado com sucesso! Automações Bloom ativadas.");
+      toast.success(t("leads.toastCreateSuccess"));
 
       setIsCreateOpen(false);
       setNewLeadForm({
@@ -250,7 +250,8 @@ function LeadsPage() {
       });
       loadData();
     } catch (err: any) {
-      toast.error("Falha ao criar lead: " + err.message);
+      console.error("[Leads] Create error:", err);
+      toast.error(t("leads.toastCreateError"));
     } finally {
       setSubmitting(false);
     }
@@ -262,14 +263,16 @@ function LeadsPage() {
     try {
       const res = await processLeadInteractionAutomation(lead);
       if (res.success) {
-        toast.success("Interação registrada! Stage atualizado.");
+        toast.success(t("leads.toastInteractionSuccess"));
         loadData();
         setSelectedLead((prev) => (prev ? { ...prev, stage: "Em conversa" } : null));
       } else {
-        toast.error("Erro: " + res.error);
+        console.error("[Leads] Interaction error:", res.error);
+        toast.error(t("leads.toastInteractionError"));
       }
     } catch (err: any) {
-      toast.error("Falha ao registrar interação.");
+      console.error("[Leads] Interaction catch:", err);
+      toast.error(t("leads.toastInteractionError"));
     }
   };
 
@@ -288,17 +291,19 @@ function LeadsPage() {
       );
 
       if (res.success) {
-        toast.success("Aula experimental agendada! Criado evento na Agenda e tarefas de acompanhamento.");
+        toast.success(t("leads.toastTrialSuccess"));
         setIsTrialOpen(false);
         loadData();
         setSelectedLead((prev) =>
           prev ? { ...prev, stage: "Aula experimental agendada", trial_scheduled_at: `${trialForm.date}T${trialForm.time}` } : null
         );
       } else {
-        toast.error("Erro ao agendar aula experimental: " + res.error);
+        console.error("[Leads] Trial schedule error:", res.error);
+        toast.error(t("leads.toastTrialError"));
       }
     } catch (err: any) {
-      toast.error("Falha ao agendar aula experimental.");
+      console.error("[Leads] Trial schedule catch:", err);
+      toast.error(t("leads.toastTrialError"));
     } finally {
       setSubmitting(false);
     }
@@ -315,17 +320,19 @@ function LeadsPage() {
       const res = await processProposalRecordedAutomation(selectedLead, proposalForm.package_id || undefined, valueNum);
 
       if (res.success) {
-        toast.success("Proposta registrada! Stage atualizado para 'Proposta enviada'.");
+        toast.success(t("leads.toastProposalSuccess"));
         setIsProposalOpen(false);
         loadData();
         setSelectedLead((prev) =>
           prev ? { ...prev, stage: "Proposta enviada", potential_value: valueNum } : null
         );
       } else {
-        toast.error("Erro ao registrar proposta: " + res.error);
+        console.error("[Leads] Proposal error:", res.error);
+        toast.error(t("leads.toastProposalError"));
       }
     } catch (err: any) {
-      toast.error("Falha ao registrar proposta.");
+      console.error("[Leads] Proposal catch:", err);
+      toast.error(t("leads.toastProposalError"));
     } finally {
       setSubmitting(false);
     }
@@ -380,15 +387,17 @@ function LeadsPage() {
       });
 
       if (res.success) {
-        toast.success("Lead convertido em aluno com sucesso! Aluno, horários e Agenda gerados.");
+        toast.success(t("leads.toastConvertSuccess"));
         setIsConvertOpen(false);
         setSelectedLead(null);
         loadData();
       } else {
-        toast.error("Erro na conversão: " + res.error);
+        console.error("[Leads] Conversion error:", res.error);
+        toast.error(t("leads.toastConvertError"));
       }
     } catch (err: any) {
-      toast.error("Falha na conversão do lead: " + err.message);
+      console.error("[Leads] Conversion catch:", err);
+      toast.error(t("leads.toastConvertError"));
     } finally {
       setSubmitting(false);
     }

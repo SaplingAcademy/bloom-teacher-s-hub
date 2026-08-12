@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
+import { t as i18nT } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import {
@@ -966,7 +967,7 @@ function StudentsPage() {
     if (!selectedStudentId || !editName.trim() || !user) return;
 
     if (!editWhatsApp.trim()) {
-      toast.error(lang === "pt" ? "O número do WhatsApp é obrigatório." : "WhatsApp number is required.");
+      toast.error(i18nT("students.toastWhatsAppRequired", lang));
       return;
     }
 
@@ -1039,9 +1040,7 @@ function StudentsPage() {
         console.error("Local calendar sync error:", calErr);
       }
 
-      toast.success(
-        lang === "pt" ? "Alterações salvas com sucesso!" : "Changes saved successfully!",
-      );
+      toast.success(i18nT("students.toastSaveSuccess", lang));
 
       // Update state
       setStudents((prev) =>
@@ -1079,11 +1078,7 @@ function StudentsPage() {
       );
     } catch (error: any) {
       console.error("[Students] Error saving inline student settings:", error);
-      toast.error(
-        lang === "pt"
-          ? "Não foi possível salvar o aluno. Revise as informações e tente novamente."
-          : "Failed to save student. Please review the details and try again."
-      );
+      toast.error(i18nT("students.toastSaveError", lang));
     }
   };
 
@@ -1107,14 +1102,10 @@ function StudentsPage() {
         )
       );
 
-      toast.success(
-        lang === "pt"
-          ? "Aluno reativado com sucesso! Configure os novos horários e pacote atual, se necessário."
-          : "Student reactivated successfully! Configure new schedules and package if needed."
-      );
+      toast.success(i18nT("students.toastReactivateSuccess", lang));
     } catch (err: any) {
       console.error("[Students] Error reactivating student:", err);
-      toast.error(err.message || "Falha ao reativar aluno.");
+      toast.error(i18nT("students.toastReactivateError", lang));
     }
   };
 
@@ -1481,7 +1472,7 @@ function StudentsPage() {
     if (!formName.trim() || !user) return;
 
     if (!formWhatsApp.trim()) {
-      toast.error(lang === "pt" ? "O número do WhatsApp é obrigatório." : "WhatsApp number is required.");
+      toast.error(i18nT("students.toastWhatsAppRequired", lang));
       return;
     }
 
@@ -1591,9 +1582,7 @@ function StudentsPage() {
       };
 
       if (editingStudentIdForModal) {
-        toast.success(
-          lang === "pt" ? "Alterações salvas com sucesso!" : "Changes saved successfully!",
-        );
+        toast.success(i18nT("students.toastSaveSuccess", lang));
         setStudents((prev) =>
           prev.map((s) => (s.id === editingStudentIdForModal ? mappedStudent : s)),
         );
@@ -1610,20 +1599,14 @@ function StudentsPage() {
           setEditSchedulesList(formSchedulesList);
         }
       } else {
-        toast.success(
-          lang === "pt" ? "Aluno cadastrado com sucesso!" : "Student registered successfully!",
-        );
+        toast.success(i18nT("students.toastSaveSuccess", lang));
         setStudents((prev) => [...prev, mappedStudent]);
       }
 
       setIsModalOpen(false);
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
-      toast.error(
-        lang === "pt"
-          ? "Não foi possível salvar o aluno. Revise as informações e tente novamente."
-          : "Failed to save student. Please review the details and try again."
-      );
+      toast.error(i18nT("students.toastSaveError", lang));
     } finally {
       setIsSaving(false);
     }
@@ -1645,14 +1628,13 @@ function StudentsPage() {
 
       if (error) throw error;
 
-      toast.success(
-        lang === "pt" ? "Aluno excluído com sucesso!" : "Student deleted successfully!",
-      );
+      toast.success(i18nT("students.toastDeleteSuccess", lang));
 
       setStudents((prev) => prev.filter((s) => s.id !== id));
       setSelectedStudentId(null);
     } catch (error: any) {
-      toast.error("Erro ao excluir aluno: " + error.message);
+      console.error("[Students] Error deleting student:", error);
+      toast.error(i18nT("students.toastDeleteError", lang));
     }
   };
 
@@ -1891,7 +1873,7 @@ function StudentsPage() {
               <div className="md:col-span-2 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
                 <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <FileText className="h-4 w-4 text-primary" />
-                  {lang === "pt" ? "Notas Privadas do Aluno" : "Private Student Notes"}
+                  {i18nT("students.privateNotesTitle", lang)}
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {lang === "pt"

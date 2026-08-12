@@ -251,11 +251,11 @@ function CommunityEcosystemPage() {
             content: draft.content || "",
             category: "Tip",
           });
-          toast.info("Rascunho restaurado!");
+          toast.info(t("community.toastDraftRestored"));
         }
       });
     }
-  }, [isNewIdeaOpen, teacherId]);
+  }, [isNewIdeaOpen, teacherId, t]);
 
   // Debounced Draft Autosave
   useEffect(() => {
@@ -285,19 +285,17 @@ function CommunityEcosystemPage() {
   // Handle 🌱 Water Idea (Regar)
   const handleWaterPost = async (post: GardenPost) => {
     if (!teacherId) {
-      toast.error("Por favor, faça login para regar esta ideia.");
+      toast.error(t("community.toastLoginRequired"));
       return;
     }
 
     if (post.wateredByUser) {
-      toast.info("Você já regou esta ideia!");
+      toast.info(t("community.toastAlreadyWatered"));
       return;
     }
 
     if (wateringStatus.remainingToday <= 0) {
-      toast.warning("Você usou suas 5 regadas de hoje!", {
-        description: "Volte amanhã para cultivar mais ideias no ecossistema.",
-      });
+      toast.warning(t("community.toastWaterLimit"));
       return;
     }
 
@@ -307,9 +305,7 @@ function CommunityEcosystemPage() {
       const newCount = res.waterCount ?? post.waterCount + 1;
       const newStage = res.growthStage ?? getStageMeta(newCount).id;
 
-      toast.success("🌱 Ideia regada com sucesso!", {
-        description: `Esta ideia agora possui ${newCount} regadas. Suas regadas hoje: ${res.usedToday}/5.`,
-      });
+      toast.success(t("community.toastWaterSuccess"));
 
       setWateringStatus((prev) => ({
         ...prev,
@@ -323,9 +319,10 @@ function CommunityEcosystemPage() {
         )
       );
     } else if (res.limitReached) {
-      toast.warning("Limite diário de regadas atingido!", { description: res.error });
+      toast.warning(t("community.toastWaterLimitReached"));
     } else {
-      toast.error(res.error || "Erro ao regar ideia.");
+      console.error("[Community] Water error:", res.error);
+      toast.error(t("community.toastWaterError"));
     }
   };
 
@@ -336,10 +333,11 @@ function CommunityEcosystemPage() {
     const res = await toggleCultivateItem(teacherId, post.id, post.cultivatedByUser || false);
 
     if (res.success) {
-      toast.success(nextState ? "🌻 Guardado em 'Meu Jardim'!" : "Removido de 'Meu Jardim'.");
+      toast.success(nextState ? t("community.toastCultivateAdded") : t("community.toastCultivateRemoved"));
       setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, cultivatedByUser: nextState } : p)));
     } else {
-      toast.error("Erro ao atualizar Meu Jardim.");
+      console.error("[Community] Cultivate error:", res.error);
+      toast.error(t("community.toastCultivateError"));
     }
   };
 

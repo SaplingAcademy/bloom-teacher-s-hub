@@ -54,7 +54,7 @@ export function InactivateStudentModal({
   const [inactivationDate, setInactivationDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
-  const [inactivationReason, setInactivationReason] = useState<string>("Pausou as aulas");
+  const [inactivationReason, setInactivationReason] = useState<string>(t("students.defaultInactivationReason"));
   const [stopBilling, setStopBilling] = useState<boolean>(true);
   const [cancelFutureEvents, setCancelFutureEvents] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -62,11 +62,11 @@ export function InactivateStudentModal({
   useEffect(() => {
     if (isOpen) {
       setInactivationDate(new Date().toISOString().split("T")[0]);
-      setInactivationReason(lang === "pt" ? "Pausou as aulas" : "Paused lessons");
+      setInactivationReason(t("students.defaultInactivationReason"));
       setStopBilling(true);
       setCancelFutureEvents(true);
     }
-  }, [isOpen, lang]);
+  }, [isOpen, t]);
 
   const handleConfirmInactivation = async () => {
     if (!studentId || !teacherId) return;

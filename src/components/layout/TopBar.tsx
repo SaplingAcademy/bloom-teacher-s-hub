@@ -191,7 +191,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
               {/* User details */}
               <div className="px-3 py-2 border-b border-border/40 mb-1.5">
                 <p className="text-xs font-bold text-foreground truncate">
-                  {teacherName || (lang === "pt" ? "Professor Bloom" : "Bloom Teacher")}
+                  {teacherName || t("common.defaultTeacherName")}
                 </p>
                 <p className="text-[10px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
               </div>
@@ -203,7 +203,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
               >
                 <span>👤</span>
-                <span>{lang === "pt" ? "Meu Perfil" : "My Profile"}</span>
+                <span>{t("nav.profile")}</span>
               </Link>
               <Link
                 to="/settings"
@@ -211,7 +211,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
               >
                 <span>⚙️</span>
-                <span>{lang === "pt" ? "Configurações" : "Settings"}</span>
+                <span>{t("nav.settings")}</span>
               </Link>
 
               <div className="border-t border-border/40 my-1"></div>
@@ -224,7 +224,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
               >
                 <span>🚪</span>
-                <span>{lang === "pt" ? "Sair" : "Log Out"}</span>
+                <span>{t("common.logout")}</span>
               </button>
             </div>
           )}
