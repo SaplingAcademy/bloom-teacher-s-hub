@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
@@ -139,6 +140,7 @@ const DEFAULT_POSTS: GardenPost[] = [
 
 function CommunityEcosystemPage() {
   const { user } = useAuth();
+  const { t, formatStatus } = useLanguage();
   const teacherId = user?.id;
 
   const [subjectGardens, setSubjectGardens] = useState<SubjectGarden[]>(DEFAULT_SUBJECT_GARDENS);
