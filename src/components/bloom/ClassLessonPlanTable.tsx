@@ -172,16 +172,21 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
 
   if (plans.length === 0) {
     return (
-      <div className="p-10 rounded-2xl bg-card border border-dashed border-border text-center space-y-2">
+      <div className="p-10 rounded-2xl bg-card border border-dashed border-border text-center space-y-3">
         <BookOpen className="h-8 w-8 mx-auto text-muted-foreground/60" />
         <p className="text-sm font-semibold text-foreground">
           {isPt ? "Nenhuma aula gerada para esta turma." : "No lessons generated for this class."}
         </p>
         <p className="text-xs text-muted-foreground">
           {isPt
-            ? "Cadastre horários recorrentes na turma para gerar as aulas automaticamente."
-            : "Add recurring schedules to this class to generate lessons automatically."}
+            ? "Gere o plano de aulas usando os horários recorrentes da turma e a sua disponibilidade."
+            : "Generate the lesson plan using the class recurring schedule and your availability."}
         </p>
+        <Button onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+          <Sparkles className="w-3.5 h-3.5" />
+          {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
+        </Button>
+        {generatorModal}
       </div>
     );
   }
@@ -212,10 +217,16 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
             </div>
           </div>
 
-          <Button variant="outline" size="sm" onClick={load} className="gap-2 text-xs h-9 font-semibold">
-            <RefreshCw className="w-3.5 h-3.5" />
-            {isPt ? "Atualizar aulas" : "Refresh lessons"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={load} className="gap-2 text-xs h-9 font-semibold">
+              <RefreshCw className="w-3.5 h-3.5" />
+              {isPt ? "Atualizar aulas" : "Refresh lessons"}
+            </Button>
+            <Button size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-2 pt-2">
