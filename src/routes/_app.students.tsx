@@ -2341,7 +2341,7 @@ function StudentsPage() {
                       {formatLanguageLabel(langItem, lang)}
                     </SelectItem>
                   ))
-                ) : (
+                ) : languagesLoading ? null : (
                   <SelectItem value="CONFIGURE_LANGUAGES" className="text-amber-700 font-semibold">
                     {lang === "pt" ? "⚠️ Configurar idiomas" : "⚠️ Configure languages"}
                   </SelectItem>
