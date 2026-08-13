@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { resolveTeacherName, sanitizeTeacherName, getMetadataName } from "@/lib/teacher-name";
 
 interface AuthContextType {
   user: User | null;
@@ -207,17 +208,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("[useAuth] Profile loaded/fetched from database:", profileData);
           const savedProfileStr = localStorage.getItem("bloom.profile.data");
           const currentProfile = savedProfileStr ? JSON.parse(savedProfileStr) : {};
-          const rawMetadataName =
-            userMetadata?.full_name ||
-            userMetadata?.name ||
-            (userMetadata?.display_name && !userMetadata.display_name.includes("@") ? userMetadata.display_name : "");
-
+          const metadataName = getMetadataName({ email: userEmail, user_metadata: userMetadata });
+          // Priority: profile record → auth metadata → cached local value. Never derived from e-mail.
           const cleanProfileName =
-            profileData.full_name && !profileData.full_name.includes("@") && profileData.full_name !== "Educator"
-              ? profileData.full_name
-              : currentProfile.name && !currentProfile.name.includes("@")
-              ? currentProfile.name
-              : rawMetadataName || "";
+            sanitizeTeacherName(profileData.full_name, userEmail) ||
+            metadataName ||
+            sanitizeTeacherName(currentProfile.name, userEmail) ||
+            "";
+
+          // Heal records whose stored name is empty or was derived from the e-mail.
+          if (
+            cleanProfileName &&
+            sanitizeTeacherName(profileData.full_name, userEmail) === null &&
+            profileData.id
+          ) {
+            const tableToHeal = usedLegacyFallback ? "profiles" : "teacher_profiles";
+            const { error: healError } = await supabase
+              .from(tableToHeal)
+              .update({ full_name: cleanProfileName })
+              .eq("id", profileData.id);
+            if (healError) {
+              console.warn("[useAuth] Could not persist canonical full_name:", healError.message);
+            } else {
+              profileData = { ...profileData, full_name: cleanProfileName };
+            }
+          }
 
           const updatedProfile = {
             ...defaultProfile,

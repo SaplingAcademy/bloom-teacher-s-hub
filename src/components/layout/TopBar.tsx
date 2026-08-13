@@ -34,20 +34,9 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const teacherName =
-    (profile?.full_name && !profile.full_name.includes("@") && profile.full_name !== "Educator" ? profile.full_name : null) ||
-    (profile?.name && !profile.name.includes("@") ? profile.name : null) ||
-    (user?.user_metadata?.full_name && !user.user_metadata.full_name.includes("@") ? user.user_metadata.full_name : null) ||
-    (user?.user_metadata?.name && !user.user_metadata.name.includes("@") ? user.user_metadata.name : null);
+  const teacherName = resolveTeacherName(profile, user);
 
-  const getInitials = () => {
-    if (!teacherName) return lang === "pt" ? "PB" : "BT";
-    const parts = teacherName.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return teacherName.substring(0, 2).toUpperCase();
-  };
+  const getInitials = () => teacherInitials(teacherName, lang);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-header-border bg-header-bg/95 px-4 shadow-[0_2px_8px_rgba(34,28,24,0.035)] dark:shadow-none backdrop-blur-md sm:px-6">
