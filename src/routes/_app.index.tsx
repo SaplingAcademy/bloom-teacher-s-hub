@@ -364,8 +364,10 @@ function TodayPage() {
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
-  const [activeStudentsCount, setActiveStudentsCount] = useState(28);
+  const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_DASHBOARD_METRICS);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const todayEvents = metrics.todayEvents;
 
   // Dynamic tags hook
   const { tags, addTag, updateTag, deleteTag } = useTags(lang);
@@ -401,29 +403,45 @@ function TodayPage() {
   const [tagFormColor, setTagFormColor] = useState("green");
   const [tagFormIcon, setTagFormIcon] = useState("");
 
-  const refreshEventsAndTasks = () => {
-    const allEvents = getCalendarEvents();
-    const todayStr = formatDateString(new Date());
-    const filteredEvents = allEvents
-      .filter((e) => e.date === todayStr && e.status !== "Closed")
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    setTodayEvents(filteredEvents);
-  };
+  const refreshEventsAndTasks = () => setRefreshKey((k) => k + 1);
 
-  // Load tasks and active students count from localStorage
+  // Load real, teacher-scoped metrics from Supabase
   useEffect(() => {
-    const savedStudents = localStorage.getItem("bloom.students.list");
-    if (savedStudents) {
-      try {
-        const parsed = JSON.parse(savedStudents);
-        setActiveStudentsCount(
-          parsed.filter((s: any) => s.status === "Active" || s.status === "Trial").length,
-        );
-      } catch (e) {
-        console.error(e);
-      }
+    let cancelled = false;
+    if (!user?.id) {
+      setMetrics(EMPTY_DASHBOARD_METRICS);
+      setMetricsLoading(false);
+      return;
     }
+    setMetricsLoading(true);
+    fetchDashboardMetrics(user.id)
+      .then((res) => {
+        if (!cancelled) setMetrics(res);
+      })
+      .catch((err) => console.error("[Today] Error loading metrics:", err))
+      .finally(() => {
+        if (!cancelled) setMetricsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, refreshKey]);
 
+  // Auto-refresh when the teacher returns to the dashboard after editing other modules
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, []);
+
+  // Load manual tasks from localStorage
+  useEffect(() => {
     const savedTasks = localStorage.getItem("bloom.dashboard.tasks");
     if (savedTasks) {
       try {
