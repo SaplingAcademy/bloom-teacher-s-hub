@@ -6,6 +6,7 @@ import {
   formatLocalDateStr,
   TeacherTimeOff,
 } from "./time-off-engine";
+import { TeacherAvailabilitySnapshot, isSlotAvailable } from "./teacher-availability";
 
 /* =============================================================================
    Unified lesson plans & attendance (individual, pair and group)
@@ -89,7 +90,8 @@ export function generateOccurrences(
   startDateStr: string,
   slots: OccurrenceSlot[],
   totalOccurrences: number,
-  timeOffList: TeacherTimeOff[] = []
+  timeOffList: TeacherTimeOff[] = [],
+  availability?: TeacherAvailabilitySnapshot | null
 ): GeneratedOccurrence[] {
   if (!slots || slots.length === 0 || totalOccurrences <= 0) return [];
 
@@ -108,10 +110,20 @@ export function generateOccurrences(
       for (const slot of ordered.filter((s) => s.dayIdx === curr.getDay())) {
         if (out.length >= totalOccurrences) break;
         const duration = slot.duration || 60;
+        const startHHMM = slot.startTime;
+        const endHHMM = calculateEndTime(startHHMM, duration);
+
+        // Working availability, recurring rest blocks and time off block the date
+        // without consuming a lesson slot.
+        if (availability && availability.isConfigured) {
+          const check = isSlotAvailable(availability, dateStr, startHHMM, endHHMM);
+          if (!check.available) continue;
+        }
+
         out.push({
           date: dateStr,
-          start_time: formatTimeHHMMSS(slot.startTime),
-          end_time: formatTimeHHMMSS(calculateEndTime(slot.startTime, duration)),
+          start_time: formatTimeHHMMSS(startHHMM),
+          end_time: formatTimeHHMMSS(endHHMM),
           duration,
           schedule_id: slot.scheduleId || null,
           delivery_mode: slot.deliveryMode || "Online",
@@ -124,6 +136,110 @@ export function generateOccurrences(
   }
 
   return out;
+}
+
+/** Last date of the generated series — used by the review box before generating. */
+export function calculateClassExpectedEndDate(
+  startDateStr: string,
+  slots: OccurrenceSlot[],
+  totalOccurrences: number,
+  timeOffList: TeacherTimeOff[] = [],
+  availability?: TeacherAvailabilitySnapshot | null
+): string {
+  const list = generateOccurrences(startDateStr, slots, totalOccurrences, timeOffList, availability);
+  return list.length > 0 ? list[list.length - 1].date : "";
+}
+
+/**
+ * Explicit generation of a class lesson plan (pair or group) on the unified
+ * architecture: calendar_events -> lesson_plans. Attendance stays per student.
+ */
+export async function generateClassLessonPlan(
+  teacherId: string,
+  cls: { id: string; name: string; level?: string },
+  params: {
+    startDate: string;
+    slots: OccurrenceSlot[];
+    totalOccurrences: number;
+    timeOff?: TeacherTimeOff[];
+    availability?: TeacherAvailabilitySnapshot | null;
+  }
+): Promise<LessonPlan[]> {
+  const occurrences = generateOccurrences(
+    params.startDate,
+    params.slots,
+    params.totalOccurrences,
+    params.timeOff || [],
+    params.availability
+  );
+
+  if (occurrences.length === 0) {
+    throw new Error(
+      "Nenhuma aula pôde ser gerada. Revise os dias/horários e a sua disponibilidade."
+    );
+  }
+
+  const rows = occurrences.map((o) => ({
+    teacher_id: teacherId,
+    class_id: cls.id,
+    class_schedule_id: o.schedule_id,
+    event_type: "class",
+    student_name: cls.name,
+    level: cls.level || "B1",
+    focus: "General",
+    date: o.date,
+    start_time: o.start_time,
+    end_time: o.end_time,
+    duration: o.duration,
+    type: "Group",
+    delivery_mode: o.delivery_mode,
+    location_link: o.location_link || "",
+    status: "Scheduled",
+  }));
+
+  const { error } = await supabase
+    .from("calendar_events")
+    .upsert(rows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
+  if (error) console.warn("[lesson-plans] class generation upsert warning:", error.message);
+
+  const { data: events } = await supabase
+    .from("calendar_events")
+    .select("id, date, start_time, end_time, duration, status")
+    .eq("teacher_id", teacherId)
+    .eq("class_id", cls.id)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
+
+  const existing = await fetchLessonPlans({ classId: cls.id });
+  const byEvent = new Map(existing.map((p) => [p.event_id, p]));
+  const missing = (events || []).filter((e: any) => !byEvent.has(e.id));
+
+  if (missing.length > 0) {
+    let nextNumber = existing.reduce((max, p) => Math.max(max, p.lesson_number || 0), 0);
+    await saveLessonPlans(
+      teacherId,
+      missing.map((e: any) => ({
+        teacher_id: teacherId,
+        event_id: e.id,
+        class_id: cls.id,
+        student_id: null,
+        lesson_number: ++nextNumber,
+        scheduled_date: e.date,
+        start_time: e.start_time,
+        end_time: e.end_time || calculateEndTime((e.start_time || "09:00").slice(0, 5), e.duration || 60),
+        duration: e.duration || 60,
+        content: "",
+        homework: "",
+        homework_posted: null,
+        notes: "",
+        attachments: [],
+        completed: false,
+      }))
+    );
+  }
+
+  const plans = await fetchLessonPlans({ classId: cls.id });
+  return plans.map((p, idx) => ({ ...p, lesson_number: p.lesson_number || idx + 1 }));
 }
 
 function normalizeAttachments(raw: any): LessonPlanAttachment[] {

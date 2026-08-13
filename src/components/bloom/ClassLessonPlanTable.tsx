@@ -26,15 +26,17 @@ import {
   Users,
   Ban,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import { LessonNotesModal } from "./LessonNotesModal";
+import { GenerateClassLessonPlanModal } from "./GenerateClassLessonPlanModal";
 import { ClassWithDetails } from "@/lib/class-sync";
 import {
   AttendanceRecordRow,
   AttendanceStatus,
   ATTENDANCE_STATUSES,
   LessonPlan,
-  ensureClassOccurrences,
+  fetchLessonPlans,
   fetchAttendanceForEvents,
   saveAttendanceRecords,
   saveLessonPlans,
@@ -62,6 +64,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "cancelled">("all");
   const [notesPlan, setNotesPlan] = useState<LessonPlan | null>(null);
   const [attendancePlan, setAttendancePlan] = useState<LessonPlan | null>(null);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
 
   const activeMembers = useMemo(
     () => (cls.members || []).filter((m) => m.status === "active" && !m.left_at),
@@ -72,13 +75,10 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
     if (!teacherId || !cls?.id) return;
     setLoading(true);
     try {
-      const list = await ensureClassOccurrences(teacherId, {
-        id: cls.id,
-        name: cls.name,
-        level: cls.level,
-        start_date: cls.start_date,
-        schedules: cls.schedules || [],
-      });
+      const list = (await fetchLessonPlans({ classId: cls.id })).map((p, idx) => ({
+        ...p,
+        lesson_number: p.lesson_number || idx + 1,
+      }));
       setPlans(list);
       setAttendance(await fetchAttendanceForEvents(list.map((p) => p.event_id)));
     } catch (err: any) {
@@ -87,7 +87,23 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [teacherId, cls.id, cls.name, cls.level, cls.start_date, cls.schedules, isPt]);
+  }, [teacherId, cls.id, isPt]);
+
+  const applyGenerated = async (generated: LessonPlan[]) => {
+    setPlans(generated);
+    setAttendance(await fetchAttendanceForEvents(generated.map((p) => p.event_id)));
+  };
+
+  const generatorModal = (
+    <GenerateClassLessonPlanModal
+      isOpen={generatorOpen}
+      onClose={() => setGeneratorOpen(false)}
+      cls={cls}
+      teacherId={teacherId}
+      isPt={isPt}
+      onSuccess={applyGenerated}
+    />
+  );
 
   useEffect(() => {
     load();
@@ -156,16 +172,21 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
 
   if (plans.length === 0) {
     return (
-      <div className="p-10 rounded-2xl bg-card border border-dashed border-border text-center space-y-2">
+      <div className="p-10 rounded-2xl bg-card border border-dashed border-border text-center space-y-3">
         <BookOpen className="h-8 w-8 mx-auto text-muted-foreground/60" />
         <p className="text-sm font-semibold text-foreground">
           {isPt ? "Nenhuma aula gerada para esta turma." : "No lessons generated for this class."}
         </p>
         <p className="text-xs text-muted-foreground">
           {isPt
-            ? "Cadastre horários recorrentes na turma para gerar as aulas automaticamente."
-            : "Add recurring schedules to this class to generate lessons automatically."}
+            ? "Gere o plano de aulas usando os horários recorrentes da turma e a sua disponibilidade."
+            : "Generate the lesson plan using the class recurring schedule and your availability."}
         </p>
+        <Button onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+          <Sparkles className="w-3.5 h-3.5" />
+          {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
+        </Button>
+        {generatorModal}
       </div>
     );
   }
@@ -196,10 +217,16 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
             </div>
           </div>
 
-          <Button variant="outline" size="sm" onClick={load} className="gap-2 text-xs h-9 font-semibold">
-            <RefreshCw className="w-3.5 h-3.5" />
-            {isPt ? "Atualizar aulas" : "Refresh lessons"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={load} className="gap-2 text-xs h-9 font-semibold">
+              <RefreshCw className="w-3.5 h-3.5" />
+              {isPt ? "Atualizar aulas" : "Refresh lessons"}
+            </Button>
+            <Button size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-2 pt-2">
@@ -532,6 +559,8 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
           setNotesPlan(null);
         }}
       />
+
+      {generatorModal}
     </div>
   );
 }
