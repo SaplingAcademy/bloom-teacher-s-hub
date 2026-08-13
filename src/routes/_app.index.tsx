@@ -871,10 +871,10 @@ function TodayPage() {
       )}
 
       {/* SINGLE URGENT SECTION */}
-      {user?.id && <UrgentWidget teacherId={user.id} />}
+      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
 
       {/* DAILY PRIORITIES SECTION */}
-      {user?.id && <DailyPrioritiesCard teacherId={user.id} />}
+      {user?.id && <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />}
 
       {/* STATS CARDS */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
