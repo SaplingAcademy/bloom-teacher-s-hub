@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { ClassEntity, ClassMember, ClassSchedule } from "@/types/classes";
 import { formatTimeHHMMSS, calculateEndTime } from "./calendar-sync";
-import { generateOccurrences } from "./lesson-plans";
+import { generateOccurrences, insertClassEvents } from "./lesson-plans";
 import { fetchTeacherTimeOff, formatLocalDateStr } from "./time-off-engine";
 
 export interface ClassWithDetails extends ClassEntity {
