@@ -181,9 +181,8 @@ const translations = {
     activeStudents: "Active students",
     newLeads: "New leads",
     thisMonth: "This month",
-    nextAt: "Next at 09:00",
+    nextAt: "Next at {time}",
     scheduleTitle: "Today's schedule",
-    scheduleSubtitle: "4 classes · 5 hours",
     classesCount: "1 class today",
     classesCountPlural: "{count} classes today",
     noClassesToday: "No classes scheduled for today.",
@@ -246,9 +245,8 @@ const translations = {
     activeStudents: "Alunos ativos",
     newLeads: "Novos contatos",
     thisMonth: "Este mês",
-    nextAt: "Próxima às 09:00",
+    nextAt: "Próxima às {time}",
     scheduleTitle: "Agenda de hoje",
-    scheduleSubtitle: "4 aulas · 5 horas",
     classesCount: "1 aula hoje",
     classesCountPlural: "{count} aulas hoje",
     noClassesToday: "Nenhuma aula agendada para hoje.",
@@ -905,7 +903,7 @@ function TodayPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={t.classesToday}
-          value={String(todayEvents.length)}
+          value={metricsLoading ? "—" : String(todayEvents.length)}
           icon={CalendarClock}
           tone="primary"
           hint={
@@ -916,24 +914,28 @@ function TodayPage() {
         />
         <StatCard
           label={t.activeStudents}
-          value={String(activeStudentsCount)}
+          value={metricsLoading ? "—" : String(metrics.activeStudents)}
           icon={Users}
           tone="lilac"
-          trend={{ value: "+3", positive: true }}
+          trend={metrics.activeStudentsTrend ?? undefined}
         />
         <StatCard
           label={t.newLeads}
-          value="5"
+          value={metricsLoading ? "—" : String(metrics.newLeads)}
           icon={UserPlus}
           tone="accent"
-          trend={{ value: "+2", positive: true }}
+          trend={metrics.newLeadsTrend ?? undefined}
         />
         <StatCard
           label={t.thisMonth}
-          value="$3,240"
+          value={
+            metricsLoading || !metrics.hasRevenueSource
+              ? "—"
+              : formatCentsToBRL(metrics.monthRevenueCents)
+          }
           icon={Wallet}
           tone="warning"
-          trend={{ value: "+12%", positive: true }}
+          trend={metrics.monthRevenueTrend ?? undefined}
         />
       </div>
 
