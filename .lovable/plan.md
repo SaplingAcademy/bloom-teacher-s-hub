@@ -37,12 +37,177 @@ Regra: `calendar_events` é a **única** tabela de ocorrência. `student_lessons
 
 Confirmação de unicidade de `settings`: `supabase_schema.sql` já declara `teacher_id uuid references public.profiles(id) on delete cascade unique not null` — a relação 1:1 professor↔settings já está protegida. A migration apenas revalida esse índice de forma idempotente.
 
-## 3. Migration SQL revisada (NÃO será executada sem nova aprovação)
+## 3. Migration SQL final (revisada — NÃO executada)
 
-Aditiva e idempotente. Nenhuma tabela dropada, nenhum dado destruído, nenhuma policy RLS enfraquecida. Timezone **não** é duplicado.
+Ordem obrigatória: **(0) função → (1) simulação read-only → (2) sua aprovação → (3) DDL + backfill**.
+
+### 3.0 Função de conversão (espelha `convertOnboardingToWorkingAvailability`, sem fallback silencioso)
 
 ```sql
--- A. settings: apenas a disponibilidade-base (SEM timezone — fonte é teacher_profiles.timezone)
+-- Normaliza "9:00", "09:00:00", " 09:00 " → "09:00"; devolve NULL se não for hora válida
+create or replace function public.bloom_norm_time(v text)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when v is null then null
+    when btrim(v) ~ '^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$'
+      then lpad(split_part(btrim(v), ':', 1), 2, '0') || ':' || split_part(btrim(v), ':', 2)
+    else null
+  end;
+$$;
+
+-- Extrai {start,end} de um objeto de disponibilidade aceitando camelCase e snake_case.
+-- Só devolve um par quando AMBOS existem, são válidos e start < end. Caso contrário, NULL.
+create or replace function public.bloom_avail_pair(obj jsonb)
+returns jsonb
+language sql
+immutable
+as $$
+  select case
+    when obj is null or jsonb_typeof(obj) <> 'object' then null
+    else (
+      select case
+        when st is not null and en is not null and st < en
+          then jsonb_build_object('startTime', st, 'endTime', en)
+        else null
+      end
+      from (
+        select
+          public.bloom_norm_time(coalesce(obj->>'startTime', obj->>'start_time')) as st,
+          public.bloom_norm_time(coalesce(obj->>'endTime',   obj->>'end_time'))   as en
+      ) x
+    )
+  end;
+$$;
+
+-- Converte onboarding.answers → working_availability[] (7 dias).
+-- Devolve NULL quando não há informação suficiente para determinar QUALQUER dia trabalhado.
+create or replace function public.bloom_availability_from_onboarding(answers jsonb)
+returns jsonb
+language sql
+stable
+as $$
+with cfg as (
+  select
+    coalesce(answers->'working_days', answers->'workingDays', '[]'::jsonb)            as working_days,
+    -- default TRUE, igual ao TS (só é false quando explicitamente false)
+    coalesce(
+      nullif(coalesce(answers->>'same_availability_all_days', answers->>'sameAvailabilityAllDays'), '')::boolean,
+      true
+    )                                                                                  as same_all,
+    public.bloom_avail_pair(coalesce(answers->'unified_availability', answers->'unifiedAvailability'))  as unified,
+    coalesce(answers->'custom_availability', answers->'customAvailability', '{}'::jsonb) as custom
+),
+days as (
+  select d.day_key, d.ord
+  from (values
+    ('Monday',1),('Tuesday',2),('Wednesday',3),('Thursday',4),
+    ('Friday',5),('Saturday',6),('Sunday',7)
+  ) as d(day_key, ord)
+),
+resolved as (
+  select
+    days.day_key,
+    days.ord,
+    -- dia só é candidato se estiver listado em working_days
+    (select exists (
+       select 1 from jsonb_array_elements_text(cfg.working_days) wd
+       where lower(btrim(wd)) = lower(days.day_key)
+     )) as selected,
+    case
+      when cfg.same_all then cfg.unified
+      else coalesce(
+             public.bloom_avail_pair(cfg.custom->days.day_key),
+             cfg.unified              -- só como herança explícita do onboarding, nunca inventado
+           )
+    end as pair
+  from days cross join cfg
+)
+select case
+  -- nenhum dia com horário determinável → não grava nada, professor é reportado como "insuficiente"
+  when not exists (select 1 from resolved where selected and pair is not null) then null
+  else (
+    select jsonb_agg(
+      jsonb_build_object(
+        'day',       r.day_key,
+        'enabled',   (r.selected and r.pair is not null),
+        'startTime', case when r.selected and r.pair is not null then r.pair->>'startTime' end,
+        'endTime',   case when r.selected and r.pair is not null then r.pair->>'endTime'   end
+      )
+      order by r.ord
+    )
+    from resolved r
+  )
+end;
+$$;
+```
+
+**Como isso espelha (e corrige) o TS:**
+
+| Caso | `convertOnboardingToWorkingAvailability` (hoje) | Função SQL (proposta) |
+|---|---|---|
+| `working_days` ausente/vazio | devolve 7 dias desabilitados com `09:00–18:00` | devolve `NULL` → linha ignorada e reportada |
+| dia não selecionado | `enabled:false` + `09:00–18:00` | `enabled:false` + `startTime/endTime = null` |
+| `same_availability_all_days` ausente | tratado como `true` | tratado como `true` (idêntico) |
+| `unified_availability` presente e válido | usado em todos os dias selecionados | idêntico |
+| `unified_availability` ausente/incompleto e `same_all = true` | vira `09:00–18:00` (**inventa disponibilidade**) | dia fica `enabled:false`; se nenhum dia sobrar, retorna `NULL` |
+| `custom_availability[dia]` válido | usado | idêntico |
+| `custom_availability[dia]` ausente | cai no unified, senão `09:00–18:00` | cai no unified **se válido**; senão `enabled:false` |
+| horário malformado (`"9h"`, `"25:00"`, start ≥ end) | aceito como string | rejeitado → dia `enabled:false` |
+| chaves camelCase vs snake_case | ambas aceitas | ambas aceitas |
+
+Nenhum `09:00–18:00` sobrevive: ausência de informação nunca vira disponibilidade real.
+
+### 3.1 Simulação read-only (rodar ANTES do backfill, não grava nada)
+
+Sem acesso direto ao Postgres nesta sessão (a conexão do app é só REST com a chave publishable, e RLS bloqueia leitura administrativa), então este bloco precisa rodar no SQL Editor do seu projeto. Ele só faz `SELECT` — e depende apenas das funções da seção 3.0, que também não alteram dados.
+
+```sql
+-- Contagens
+with conv as (
+  select
+    o.teacher_id,
+    o.answers,
+    public.bloom_availability_from_onboarding(o.answers) as computed,
+    s.teacher_id is not null                             as has_settings,
+    coalesce(jsonb_array_length(coalesce(s.working_availability, '[]'::jsonb)), 0) > 0 as already_configured
+  from public.onboarding o
+  left join public.settings s on s.teacher_id = o.teacher_id
+)
+select
+  count(*)                                                                as total_onboarding,
+  count(*) filter (where already_configured)                              as preservados,
+  count(*) filter (where computed is null and not already_configured)     as ignorados_dados_insuficientes,
+  count(*) filter (where computed is not null and not already_configured and has_settings)     as serao_atualizados,
+  count(*) filter (where computed is not null and not already_configured and not has_settings) as serao_inseridos
+from conv;
+
+-- Amostra da transformação para validação visual (10 casos que seriam gravados)
+select o.teacher_id,
+       o.answers->'working_days'               as working_days,
+       o.answers->'same_availability_all_days' as same_all,
+       o.answers->'unified_availability'       as unified,
+       o.answers->'custom_availability'        as custom,
+       public.bloom_availability_from_onboarding(o.answers) as resultado
+from public.onboarding o
+where public.bloom_availability_from_onboarding(o.answers) is not null
+limit 10;
+
+-- Casos que serão IGNORADOS (para você revisar antes)
+select o.teacher_id, o.answers
+from public.onboarding o
+where public.bloom_availability_from_onboarding(o.answers) is null
+limit 10;
+```
+
+### 3.2 DDL + backfill (executar só após você validar a simulação)
+
+Aditiva e idempotente. Nenhuma tabela dropada, nenhum dado destruído, nenhuma policy RLS criada/alterada/removida. Timezone **não** é duplicado (fonte: `teacher_profiles.timezone`).
+
+```sql
+-- A. settings: apenas a disponibilidade-base
 alter table public.settings
   add column if not exists working_availability jsonb default '[]'::jsonb;
 
@@ -59,14 +224,14 @@ alter table public.student_schedules
 create unique index if not exists student_schedules_unique_slot
   on public.student_schedules (student_id, weekday, start_time);
 
--- C. student_lessons: ancorar o plano na ocorrência real, no máximo 1 plano por ocorrência
+-- C. student_lessons: ancorar o plano na ocorrência, no máximo 1 plano por ocorrência
 alter table public.student_lessons
   add column if not exists event_id uuid references public.calendar_events(id) on delete set null;
 create unique index if not exists student_lessons_event_id_unique
   on public.student_lessons (event_id)
   where event_id is not null;
 
--- D. calendar_events: linhagem real de remarcação + origem da ocorrência
+-- D. calendar_events: origem + linhagem real de remarcação
 alter table public.calendar_events
   add column if not exists origin text default 'recurring';  -- recurring | manual | makeup
 do $$
@@ -84,20 +249,19 @@ end $$;
 create index if not exists idx_calendar_events_rescheduled_from
   on public.calendar_events (rescheduled_from_event_id);
 
--- E. Backfill da disponibilidade a partir do onboarding já respondido (ver seção 3.1)
+-- E. Backfill: só onde não há disponibilidade configurada e a conversão produziu resultado
 update public.settings s
 set working_availability = public.bloom_availability_from_onboarding(o.answers)
 from public.onboarding o
 where o.teacher_id = s.teacher_id
-  and (s.working_availability is null
-       or jsonb_array_length(coalesce(s.working_availability,'[]'::jsonb)) = 0)
-  and coalesce(jsonb_array_length(o.answers->'working_days'), 0) > 0;
+  and coalesce(jsonb_array_length(coalesce(s.working_availability, '[]'::jsonb)), 0) = 0
+  and public.bloom_availability_from_onboarding(o.answers) is not null;
 
 -- E.1 professores com onboarding mas sem linha em settings
 insert into public.settings (teacher_id, working_availability)
 select o.teacher_id, public.bloom_availability_from_onboarding(o.answers)
 from public.onboarding o
-where coalesce(jsonb_array_length(o.answers->'working_days'), 0) > 0
+where public.bloom_availability_from_onboarding(o.answers) is not null
   and not exists (select 1 from public.settings s where s.teacher_id = o.teacher_id)
 on conflict (teacher_id) do nothing;
 
@@ -105,20 +269,10 @@ notify pgrst, 'reload schema';
 ```
 
 Pontos de atenção:
-- O `drop constraint` em (B) é a única mudança estrutural removida — é exatamente o que hoje impede "2 aulas na segunda". O índice novo é mais permissivo, nada existente quebra.
-- `duration_minutes` é coluna **nova**; nenhuma coluna `duration` existe hoje em `student_schedules`, então não há rename destrutivo nem perda de dados.
-- RLS: nenhuma policy criada, alterada ou removida. Colunas novas herdam as policies existentes (ownership via `students.teacher_id` e `teacher_id = auth.uid()`).
-
-### 3.1 Estratégia de backfill da disponibilidade
-
-Hoje o app faz esse backfill **em runtime**, no `fetchTeacherWorkingAvailability` (lê `onboarding.answers` e grava em `settings`). Isso só roda quando o professor abre o app e depende do cliente. A proposta é replicar a mesma conversão no banco, uma vez, para ninguém perder dados:
-
-1. Antes de rodar, gerar um **relatório de contagem** (somente leitura):
-   `select count(*) from public.onboarding where coalesce(jsonb_array_length(answers->'working_days'),0) > 0;` — quantos professores têm disponibilidade a recuperar; e quantos desses já têm `settings.working_availability` não vazio (esses são **preservados**, nunca sobrescritos).
-2. Criar a função auxiliar `public.bloom_availability_from_onboarding(answers jsonb)` (SQL puro, `stable`), espelhando `convertOnboardingToWorkingAvailability`: usa `working_days`, `same_availability_all_days`, `unified_availability`, `custom_availability`, com fallback `09:00–18:00`; retorna o array jsonb dos 7 dias com `enabled`.
-3. O `UPDATE` só toca linhas com `working_availability` nulo ou vazio — quem já configurou manualmente fica intacto.
-4. O `INSERT` cobre professores com onboarding mas sem linha em `settings`.
-5. Após a migration, o backfill em runtime dentro de `availability-engine.ts` continua como rede de segurança para onboardings novos, mas deixa de ser o caminho principal.
+- O `drop constraint` em (B) é a única estrutura removida — é exatamente o que impede "2 aulas na segunda". O índice novo é mais permissivo, nada existente quebra.
+- `duration_minutes` é coluna **nova**; `student_schedules` não tem coluna `duration` hoje, então não há rename destrutivo.
+- Colunas novas herdam as policies RLS existentes (ownership via `students.teacher_id` e `teacher_id = auth.uid()`).
+- O backfill em runtime dentro de `availability-engine.ts` continua como rede de segurança para onboardings novos, mas será alinhado à mesma regra (sem inventar `09:00–18:00`).
 
 ## 4. Alterações de código (após aprovação da migration)
 
@@ -168,4 +322,4 @@ Executados com **dois professores reais distintos** (A e B), autenticados via se
 Resultado esperado: SELECT retorna 0 linhas; INSERT/UPDATE/DELETE cruzados falham por RLS (ou afetam 0 linhas). Relatório com o resultado de cada célula será apresentado ao final. Se algum cruzamento passar, a implementação para e o gap é reportado antes de qualquer outra mudança.
 
 ## 7. Aguardando sua aprovação
-Aprovar a migration revisada da seção 3 (incluindo o backfill 3.1) libera a implementação da seção 4 e os testes da seção 6. Nada será executado no banco antes disso.
+Sequência proposta: você aprova a função 3.0 + roda a simulação 3.1 → validamos os números e os exemplos → só então executo o DDL + backfill 3.2, seguido da implementação da seção 4 e dos testes de isolamento da seção 6. Nada foi executado no banco.
