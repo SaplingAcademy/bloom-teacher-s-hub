@@ -21,6 +21,12 @@ import {
   saveCalendarEvents,
 } from "@/lib/calendar-sync";
 import {
+  fetchDashboardMetrics,
+  EMPTY_DASHBOARD_METRICS,
+  type DashboardMetrics,
+} from "@/lib/dashboard-metrics";
+import { formatCentsToBRL } from "@/lib/finance-engine";
+import {
   Users,
   Wallet,
   UserPlus,
@@ -28,7 +34,6 @@ import {
   Clock,
   Video,
   Sparkles,
-  ArrowUpRight,
   CheckCircle2,
   Circle,
   Plus,
@@ -175,17 +180,12 @@ const translations = {
     activeStudents: "Active students",
     newLeads: "New leads",
     thisMonth: "This month",
-    nextAt: "Next at 09:00",
+    nextAt: "Next at {time}",
     scheduleTitle: "Today's schedule",
-    scheduleSubtitle: "4 classes · 5 hours",
     classesCount: "1 class today",
     classesCountPlural: "{count} classes today",
     noClassesToday: "No classes scheduled for today.",
     openCalendar: "Open calendar",
-    aiTipTitle: "Bloom AI tip",
-    aiTipContent:
-      "Yuki's IELTS test is in 3 weeks. Want me to draft a focused writing plan for your 16:30 class?",
-    aiTipAction: "Draft the plan",
     online: "Online",
     inPerson: "In person",
     classDuration: "60m",
@@ -240,17 +240,12 @@ const translations = {
     activeStudents: "Alunos ativos",
     newLeads: "Novos contatos",
     thisMonth: "Este mês",
-    nextAt: "Próxima às 09:00",
+    nextAt: "Próxima às {time}",
     scheduleTitle: "Agenda de hoje",
-    scheduleSubtitle: "4 aulas · 5 horas",
     classesCount: "1 aula hoje",
     classesCountPlural: "{count} aulas hoje",
     noClassesToday: "Nenhuma aula agendada para hoje.",
     openCalendar: "Abrir calendário",
-    aiTipTitle: "Dica do Bloom AI",
-    aiTipContent:
-      "O teste de IELTS do Yuki é em 3 semanas. Quer que eu elabore um plano de redação focado para a sua aula das 16:30?",
-    aiTipAction: "Rascunhar plano",
     online: "Online",
     inPerson: "Presencial",
     classDuration: "60m",
@@ -270,14 +265,6 @@ const translations = {
     tagPlaceholder: "ex: Urgente",
   },
 };
-
-// Static Classes Mock data
-const classes = [
-  { time: "09:00", student: "Sofia Almeida", topic: "Business English · B2", mode: "Online" },
-  { time: "11:30", student: "Group A2 (4)", topic: "Past tenses review", mode: "Online" },
-  { time: "14:00", student: "Lucas Meyer", topic: "Conversation · C1", mode: "In person" },
-  { time: "16:30", student: "Yuki Tanaka", topic: "IELTS prep · Writing", mode: "Online" },
-];
 
 // Priority badge colors helper
 const getPriorityStyles = (priority: Priority) => {
@@ -372,8 +359,10 @@ function TodayPage() {
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
-  const [activeStudentsCount, setActiveStudentsCount] = useState(28);
+  const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_DASHBOARD_METRICS);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const todayEvents = metrics.todayEvents;
 
   // Dynamic tags hook
   const { tags, addTag, updateTag, deleteTag } = useTags(lang);
@@ -409,29 +398,45 @@ function TodayPage() {
   const [tagFormColor, setTagFormColor] = useState("green");
   const [tagFormIcon, setTagFormIcon] = useState("");
 
-  const refreshEventsAndTasks = () => {
-    const allEvents = getCalendarEvents();
-    const todayStr = formatDateString(new Date());
-    const filteredEvents = allEvents
-      .filter((e) => e.date === todayStr && e.status !== "Closed")
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    setTodayEvents(filteredEvents);
-  };
+  const refreshEventsAndTasks = () => setRefreshKey((k) => k + 1);
 
-  // Load tasks and active students count from localStorage
+  // Load real, teacher-scoped metrics from Supabase
   useEffect(() => {
-    const savedStudents = localStorage.getItem("bloom.students.list");
-    if (savedStudents) {
-      try {
-        const parsed = JSON.parse(savedStudents);
-        setActiveStudentsCount(
-          parsed.filter((s: any) => s.status === "Active" || s.status === "Trial").length,
-        );
-      } catch (e) {
-        console.error(e);
-      }
+    let cancelled = false;
+    if (!user?.id) {
+      setMetrics(EMPTY_DASHBOARD_METRICS);
+      setMetricsLoading(false);
+      return;
     }
+    setMetricsLoading(true);
+    fetchDashboardMetrics(user.id)
+      .then((res) => {
+        if (!cancelled) setMetrics(res);
+      })
+      .catch((err) => console.error("[Today] Error loading metrics:", err))
+      .finally(() => {
+        if (!cancelled) setMetricsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, refreshKey]);
 
+  // Auto-refresh when the teacher returns to the dashboard after editing other modules
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, []);
+
+  // Load manual tasks from localStorage
+  useEffect(() => {
     const savedTasks = localStorage.getItem("bloom.dashboard.tasks");
     if (savedTasks) {
       try {
@@ -479,29 +484,6 @@ function TodayPage() {
       } catch (e) {
         console.error("Failed to parse tasks", e);
       }
-    } else {
-      // Default Initial Tasks (Manual only)
-      const initialTasks = [
-        {
-          id: "m1",
-          title: "Renew Emily's contract",
-          tagIds: ["tag-admin"],
-          student: "Emily Jones",
-          priority: "High",
-          date: formatDateString(new Date()),
-          completed: false,
-        },
-        {
-          id: "m2",
-          title: "Follow up with new Instagram lead",
-          tagIds: ["tag-marketing"],
-          priority: "High",
-          date: formatDateString(new Date()),
-          completed: false,
-        },
-      ];
-      setManualTasks(initialTasks as any);
-      localStorage.setItem("bloom.dashboard.tasks", JSON.stringify(initialTasks));
     }
 
     refreshEventsAndTasks();
@@ -880,16 +862,16 @@ function TodayPage() {
       )}
 
       {/* SINGLE URGENT SECTION */}
-      {user?.id && <UrgentWidget teacherId={user.id} />}
+      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
 
       {/* DAILY PRIORITIES SECTION */}
-      {user?.id && <DailyPrioritiesCard teacherId={user.id} />}
+      {user?.id && <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />}
 
       {/* STATS CARDS */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={t.classesToday}
-          value={String(todayEvents.length)}
+          value={metricsLoading ? "—" : String(todayEvents.length)}
           icon={CalendarClock}
           tone="primary"
           hint={
@@ -900,29 +882,33 @@ function TodayPage() {
         />
         <StatCard
           label={t.activeStudents}
-          value={String(activeStudentsCount)}
+          value={metricsLoading ? "—" : String(metrics.activeStudents)}
           icon={Users}
           tone="lilac"
-          trend={{ value: "+3", positive: true }}
+          trend={metrics.activeStudentsTrend ?? undefined}
         />
         <StatCard
           label={t.newLeads}
-          value="5"
+          value={metricsLoading ? "—" : String(metrics.newLeads)}
           icon={UserPlus}
           tone="accent"
-          trend={{ value: "+2", positive: true }}
+          trend={metrics.newLeadsTrend ?? undefined}
         />
         <StatCard
           label={t.thisMonth}
-          value="$3,240"
+          value={
+            metricsLoading || !metrics.hasRevenueSource
+              ? "—"
+              : formatCentsToBRL(metrics.monthRevenueCents)
+          }
           icon={Wallet}
           tone="warning"
-          trend={{ value: "+12%", positive: true }}
+          trend={metrics.monthRevenueTrend ?? undefined}
         />
       </div>
 
-      {/* SCHEDULE & AI TIPS */}
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      {/* TODAY'S SCHEDULE (real calendar_events) */}
+      <div className="grid gap-5">
         <PanelCard
           title={t.scheduleTitle}
           description={
@@ -935,7 +921,9 @@ function TodayPage() {
           contentClassName="p-0"
         >
           <ul className="divide-y divide-border/70">
-            {todayEvents.length === 0 ? (
+            {metricsLoading ? (
+              <li className="p-5 text-center text-xs text-muted-foreground">…</li>
+            ) : todayEvents.length === 0 ? (
               <li className="p-5 text-center text-xs text-muted-foreground">
                 {t.noClassesToday}
               </li>
@@ -967,21 +955,6 @@ function TodayPage() {
             )}
           </ul>
         </PanelCard>
-
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-border bg-gradient-lilac p-5 text-lilac-foreground shadow-[var(--shadow-md)]">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide opacity-90">
-                {t.aiTipTitle}
-              </p>
-            </div>
-            <p className="mt-2 text-sm font-medium leading-snug">{t.aiTipContent}</p>
-            <button className="mt-3 inline-flex items-center gap-1 rounded-lg bg-lilac-foreground/15 px-3 py-1.5 text-xs font-semibold backdrop-blur transition-colors hover:bg-lilac-foreground/25 cursor-pointer">
-              {t.aiTipAction} <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* ADD/EDIT TASK MODAL */}
