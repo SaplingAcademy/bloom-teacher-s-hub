@@ -1,3 +1,4 @@
+import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
 import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
