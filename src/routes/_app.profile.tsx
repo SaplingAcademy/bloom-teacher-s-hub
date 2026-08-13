@@ -203,7 +203,7 @@ function ProfilePage() {
 
   const profile = {
     ...localProfile,
-    name: (authProfile?.full_name as string) || localProfile.name,
+    name: resolveTeacherName(authProfile, user) || sanitizeTeacherName(localProfile.name, user?.email) || "",
     photo: (authProfile?.avatar_url as string) || localProfile.photo,
     preferred_language: (authProfile?.preferred_language as string) || "pt-BR",
     timezone: (authProfile?.timezone as string) || "America/Sao_Paulo",
