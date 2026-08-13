@@ -512,7 +512,12 @@ function StudentsPage() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const { languages: teacherLanguages, hasConfiguredLanguages, formatLanguageLabel } = useTeacherLanguages();
+  const {
+    languages: teacherLanguages,
+    hasConfiguredLanguages,
+    loading: languagesLoading,
+    formatLanguageLabel,
+  } = useTeacherLanguages();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -2612,7 +2617,13 @@ function StudentsPage() {
                     </Label>
                     <Select value={formFocus} onValueChange={(val) => setFormFocus(val)}>
                       <SelectTrigger id="std-focus" className="h-11 rounded-xl border-border bg-white">
-                        <SelectValue />
+                        <SelectValue
+                          placeholder={
+                            languagesLoading
+                              ? lang === "pt" ? "Carregando..." : "Loading..."
+                              : lang === "pt" ? "Selecione o idioma" : "Select the language"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {hasConfiguredLanguages ? (
@@ -2621,14 +2632,14 @@ function StudentsPage() {
                               {formatLanguageLabel(langItem, lang)}
                             </SelectItem>
                           ))
-                        ) : (
-                          <SelectItem value={formFocus || "English"}>
-                            {formatLanguageLabel(formFocus || "English", lang)}
+                        ) : formFocus ? (
+                          <SelectItem value={formFocus}>
+                            {formatLanguageLabel(formFocus, lang)}
                           </SelectItem>
-                        )}
+                        ) : null}
                       </SelectContent>
                     </Select>
-                    {!hasConfiguredLanguages && (
+                    {!hasConfiguredLanguages && !languagesLoading && (
                       <p className="text-[11px] text-amber-700 font-medium pt-1">
                         {lang === "pt"
                           ? "Você ainda não informou quais idiomas ensina. "
