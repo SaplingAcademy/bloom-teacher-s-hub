@@ -551,7 +551,23 @@ function GrowthPage() {
         console.error(e);
       }
     }
-  }, []);
+    };
+
+    if (user?.id) {
+      getTeacherAvailability(user.id)
+        .then((snap) => run(snap.days))
+        .catch((err) => {
+          console.warn("[Growth] Could not load teacher availability:", err);
+          run([]);
+        });
+    } else {
+      run([]);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const handleSaveGoal = () => {
     const goalData = {
