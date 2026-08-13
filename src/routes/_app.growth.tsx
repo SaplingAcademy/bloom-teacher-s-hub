@@ -895,8 +895,8 @@ function GrowthPage() {
       </div>
 
       {/* HOURLY RATE SIMULATOR SECTION */}
-      <section className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-6">
-        <div>
+      <section className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-[var(--shadow-sm)]">
+        <div className="mb-6">
           <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
             {lang === "pt" ? "Simulador de Valor Hora" : "Hourly Rate Simulator"}
@@ -908,11 +908,11 @@ function GrowthPage() {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
           {/* Left Column: Input Form */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-5">
             {/* Income Goal Row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 items-start">
               <div className="space-y-1.5">
                 <Label
                   htmlFor="sim-income"
@@ -951,7 +951,7 @@ function GrowthPage() {
             </div>
 
             {/* Working Capacity & Workload Breakdown Row */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-4 items-start">
               <div className="space-y-1.5">
                 <Label
                   htmlFor="sim-workhrs"
@@ -1040,7 +1040,7 @@ function GrowthPage() {
             </div>
 
             {/* Visual Workload Split & Slider */}
-            <div className="space-y-2 p-3.5 rounded-xl bg-secondary/35 border border-border/50">
+            <div className="space-y-2 p-4 rounded-xl bg-secondary/35 border border-border/50">
               <div className="flex justify-between items-center text-xs font-semibold text-foreground">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/90">
                   {lang === "pt" ? "Proporção da Jornada Destinada a Aulas" : "Workload Split for Lessons"}
@@ -1091,7 +1091,7 @@ function GrowthPage() {
               </button>
 
               {advancedExpanded && (
-                <div className="p-3.5 pt-0 border-t border-border/40 space-y-4 animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="p-4 pt-0 border-t border-border/40 space-y-4 animate-in fade-in slide-in-from-top-1 duration-150">
                   {/* Estimated Expenses */}
                   <div className="space-y-1 pt-3">
                     <Label
@@ -1119,7 +1119,7 @@ function GrowthPage() {
                   </div>
 
                   {/* Taxes & Margin Row */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 items-start">
                     <div className="space-y-1">
                       <Label htmlFor="sim-tax" className="text-xs font-semibold text-foreground">
                         {lang === "pt" ? "Reserva Fiscal & Taxas" : "Tax & Payment Fees %"}
@@ -1163,7 +1163,7 @@ function GrowthPage() {
             </div>
 
             {/* Suggestions Banner */}
-            <div className="rounded-xl border border-border/80 bg-primary-soft/30 p-3.5 space-y-1.5">
+            <div className="rounded-xl border border-border/80 bg-primary-soft/30 p-4 space-y-1.5">
               <h5 className="text-[10px] font-bold uppercase tracking-wider text-primary">
                 {lang === "pt" ? "Dados Atuais Sugeridos" : "Current Business Data"}
               </h5>
@@ -1202,7 +1202,7 @@ function GrowthPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={async () => {
@@ -1259,7 +1259,7 @@ function GrowthPage() {
           </div>
 
           {/* Right Column: Prominent Results Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-gradient-lilac p-6 shadow-sm text-lilac-foreground">
+          <div className="flex flex-col rounded-2xl border border-border bg-gradient-lilac p-6 shadow-sm text-lilac-foreground self-start h-full">
             {(() => {
               const monthlyBillableHours = Math.max(1, Math.round(teachHoursPerWeek * weeksPerMonth));
               const grossNeeded = Math.round(
@@ -1287,7 +1287,7 @@ function GrowthPage() {
               const groupsNeeded = Math.ceil(weeklyVIPsNeeded / 5);
 
               return (
-                <div className="space-y-6 flex-1 flex flex-col justify-between">
+                <div className="flex flex-col gap-5">
                   {/* Recommended rate badge */}
                   <div className="text-center py-4 border-b border-lilac-foreground/20 space-y-1">
                     <span className="text-[10px] uppercase font-extrabold tracking-widest opacity-80 block">
@@ -1362,7 +1362,7 @@ function GrowthPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
                         {lang === "pt" ? "Média Atual" : "Current Rate"}
                       </span>
@@ -1371,7 +1371,7 @@ function GrowthPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
                         {lang === "pt" ? "Diferença Necessária" : "Required Difference"}
                       </span>
@@ -1506,13 +1506,13 @@ function GrowthPage() {
           ];
 
           return (
-            <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm space-y-3">
+            <div className="mt-6 rounded-xl border border-border bg-card p-5 md:p-6 shadow-sm space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
                 {lang === "pt"
                   ? "Comparativo de Cenários de Precificação"
                   : "Pricing Scenarios Comparison"}
               </h4>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3 items-stretch">
                 {scenarios.map((sc, index) => (
                   <div
                     key={index}
@@ -1553,9 +1553,9 @@ function GrowthPage() {
       </section>
 
       {/* REVENUE POTENTIAL & AI INSIGHTS OPPORTUNITIES */}
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.5fr]">
+      <div className="grid gap-5 lg:grid-cols-[1fr_1.5fr] items-stretch">
         {/* REVENUE POTENTIAL CARD */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] flex flex-col justify-between">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] flex flex-col justify-between h-full">
           <div>
             <div className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
@@ -1587,7 +1587,7 @@ function GrowthPage() {
         </div>
 
         {/* GROWTH OPPORTUNITIES SECTION */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] h-full flex flex-col">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-lilac" />
             <h3 className="font-display text-lg font-bold text-foreground">
