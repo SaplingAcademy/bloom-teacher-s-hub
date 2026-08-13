@@ -416,10 +416,30 @@ export function GenerateClassLessonPlanModal({
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 {isPt
-                  ? "Sua disponibilidade de trabalho, pausas recorrentes, folgas, férias e feriados são respeitados: datas bloqueadas são puladas sem consumir número de aula."
-                  : "Your working availability, recurring breaks, time off, vacations and holidays are respected: blocked dates are skipped without consuming a lesson number."}
+                  ? "Folgas, férias e feriados bloqueiam datas: elas são puladas sem consumir número de aula. Seu horário habitual e pausas recorrentes servem apenas como orientação — você pode abrir a turma em qualquer dia e horário."
+                  : "Time off, vacations and holidays block dates: they are skipped without consuming a lesson number. Your usual working hours and recurring breaks are only guidance — you can schedule the class on any day or time."}
               </span>
             </div>
+
+            {(advisoryWarnings.length > 0 || conflictWarnings.length > 0) && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] space-y-1.5">
+                <div className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{isPt ? "Avisos (não impedem a geração)" : "Warnings (generation is still allowed)"}</span>
+                </div>
+                <ul className="list-disc pl-5 space-y-0.5 text-amber-800/90 dark:text-amber-300/90">
+                  {advisoryWarnings.map((w, i) => (
+                    <li key={`adv-${i}`}>{w}</li>
+                  ))}
+                  {conflictWarnings.map((w, i) => (
+                    <li key={`conf-${i}`}>
+                      {isPt ? "Conflito com " : "Conflict with "}
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* STEP 4 — REVIEW */}
