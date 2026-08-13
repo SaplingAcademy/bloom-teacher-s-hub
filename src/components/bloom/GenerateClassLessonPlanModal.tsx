@@ -25,10 +25,12 @@ import {
   OccurrenceSlot,
   calculateClassExpectedEndDate,
   generateClassLessonPlan,
+  getScheduleAdvisoryWarnings,
 } from "@/lib/lesson-plans";
 import {
   TeacherAvailabilitySnapshot,
   getTeacherAvailability,
+  findRecurringConflicts,
 } from "@/lib/teacher-availability";
 import { calculateEndTime } from "@/lib/calendar-sync";
 
@@ -86,6 +88,7 @@ export function GenerateClassLessonPlanModal({
   const [availability, setAvailability] = useState<TeacherAvailabilitySnapshot | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [conflictWarnings, setConflictWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -147,6 +150,36 @@ export function GenerateClassLessonPlanModal({
       availability
     );
   }, [startDate, slots, targetCount, availability]);
+
+  const advisoryWarnings = useMemo(
+    () => getScheduleAdvisoryWarnings(startDate, slots, availability),
+    [startDate, slots, availability]
+  );
+
+  useEffect(() => {
+    if (!isOpen || !teacherId || slots.length === 0) {
+      setConflictWarnings([]);
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      const found: string[] = [];
+      for (const slot of slots) {
+        const end = calculateEndTime(slot.startTime, slot.duration || 60);
+        const list = await findRecurringConflicts(teacherId, slot.weekday, slot.startTime, end);
+        for (const c of list) {
+          if (c.name.includes(cls.name)) continue;
+          found.push(`${slot.weekday} ${slot.startTime}–${end}: ${c.name} (${c.timeRange})`);
+        }
+      }
+      if (!cancelled) setConflictWarnings(found);
+    };
+    const timer = setTimeout(run, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isOpen, teacherId, slots, cls.name]);
 
   const addRow = () =>
     setRows((prev) => [...prev, { weekday: "Friday", startTime: "19:00", endTime: "20:00" }]);
@@ -383,10 +416,30 @@ export function GenerateClassLessonPlanModal({
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 {isPt
-                  ? "Sua disponibilidade de trabalho, pausas recorrentes, folgas, férias e feriados são respeitados: datas bloqueadas são puladas sem consumir número de aula."
-                  : "Your working availability, recurring breaks, time off, vacations and holidays are respected: blocked dates are skipped without consuming a lesson number."}
+                  ? "Folgas, férias e feriados bloqueiam datas: elas são puladas sem consumir número de aula. Seu horário habitual e pausas recorrentes servem apenas como orientação — você pode abrir a turma em qualquer dia e horário."
+                  : "Time off, vacations and holidays block dates: they are skipped without consuming a lesson number. Your usual working hours and recurring breaks are only guidance — you can schedule the class on any day or time."}
               </span>
             </div>
+
+            {(advisoryWarnings.length > 0 || conflictWarnings.length > 0) && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] space-y-1.5">
+                <div className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{isPt ? "Avisos (não impedem a geração)" : "Warnings (generation is still allowed)"}</span>
+                </div>
+                <ul className="list-disc pl-5 space-y-0.5 text-amber-800/90 dark:text-amber-300/90">
+                  {advisoryWarnings.map((w, i) => (
+                    <li key={`adv-${i}`}>{w}</li>
+                  ))}
+                  {conflictWarnings.map((w, i) => (
+                    <li key={`conf-${i}`}>
+                      {isPt ? "Conflito com " : "Conflict with "}
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* STEP 4 — REVIEW */}

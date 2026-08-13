@@ -113,11 +113,12 @@ export function generateOccurrences(
         const startHHMM = slot.startTime;
         const endHHMM = calculateEndTime(startHHMM, duration);
 
-        // Working availability, recurring rest blocks and time off block the date
-        // without consuming a lesson slot.
+        // Only real absences (time off, vacations, holidays) block a date, and they
+        // are skipped without consuming a lesson number. Working availability and
+        // recurring rest blocks are advisory only — they never block generation.
         if (availability && availability.isConfigured) {
           const check = isSlotAvailable(availability, dateStr, startHHMM, endHHMM);
-          if (!check.available) continue;
+          if (!check.available && check.reason?.kind === "time_off") continue;
         }
 
         out.push({
@@ -148,6 +149,40 @@ export function calculateClassExpectedEndDate(
 ): string {
   const list = generateOccurrences(startDateStr, slots, totalOccurrences, timeOffList, availability);
   return list.length > 0 ? list[list.length - 1].date : "";
+}
+
+/**
+ * Advisory checks: slots that fall outside the teacher's usual working hours or
+ * inside a recurring rest block. These are warnings, never blockers.
+ */
+export function getScheduleAdvisoryWarnings(
+  startDateStr: string,
+  slots: OccurrenceSlot[],
+  availability?: TeacherAvailabilitySnapshot | null
+): string[] {
+  if (!availability || !availability.isConfigured || !slots?.length || !startDateStr) return [];
+
+  const warnings: string[] = [];
+  const base = new Date((startDateStr || formatLocalDateStr(new Date())) + "T00:00:00");
+
+  for (const slot of slots) {
+    const dayIdx = getDayIndex(slot.weekday);
+    const probe = new Date(base);
+    let guard = 0;
+    while (probe.getDay() !== dayIdx && guard < 7) {
+      probe.setDate(probe.getDate() + 1);
+      guard++;
+    }
+    const dateStr = formatLocalDateStr(probe);
+    const startHHMM = slot.startTime || "09:00";
+    const endHHMM = calculateEndTime(startHHMM, slot.duration || 60);
+    const check = isSlotAvailable(availability, dateStr, startHHMM, endHHMM);
+    if (!check.available && check.reason && check.reason.kind !== "time_off") {
+      warnings.push(`${slot.weekday} ${startHHMM}–${endHHMM}: ${check.reason.message}`);
+    }
+  }
+
+  return warnings;
 }
 
 /**
