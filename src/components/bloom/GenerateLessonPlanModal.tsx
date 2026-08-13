@@ -34,6 +34,7 @@ import {
   calculateExpectedEndDate,
   StudentLesson,
   saveStudentLessons,
+  fetchStudentScheduleInputs,
 } from "@/lib/lesson-plan-sync";
 import { fetchTeacherTimeOff, TeacherTimeOff } from "@/lib/time-off-engine";
 import { CEFRLevel, CourseFocus } from "@/lib/calendar-sync";
@@ -80,33 +81,56 @@ export function GenerateLessonPlanModal({
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+  const [scheduleSource, setScheduleSource] = useState<"student" | "manual" | "empty">("empty");
 
-  // Initialize schedule rows & load teacher non-working days when modal opens
+  // Initialize schedule rows from the student's saved recurring schedule
+  // (`student_schedules` = source of truth) & load teacher non-working days.
   useEffect(() => {
-    if (isOpen) {
-      setStartDate(initialStartDate || new Date().toISOString().split("T")[0]);
-      if (initialSchedules && initialSchedules.length > 0) {
-        setSchedules(
-          initialSchedules.map((s) => ({
-            id: s.id,
-            weekday: s.weekday || "Monday",
-            startTime: s.startTime || "10:00",
-            endTime: s.endTime || "11:00",
-            duration: s.duration || 60,
-          }))
-        );
-      } else {
-        setSchedules([
-          { weekday: "Monday", startTime: "10:00", endTime: "11:00", duration: 60 },
-          { weekday: "Wednesday", startTime: "10:00", endTime: "11:00", duration: 60 },
-        ]);
-      }
+    if (!isOpen) return;
+    let cancelled = false;
 
-      if (teacherId) {
-        fetchTeacherTimeOff(teacherId).then(setTimeOffList);
-      }
+    setStartDate(initialStartDate || new Date().toISOString().split("T")[0]);
+
+    if (teacherId) {
+      fetchTeacherTimeOff(teacherId).then((list) => {
+        if (!cancelled) setTimeOffList(list);
+      });
     }
-  }, [isOpen, initialSchedules, initialStartDate, teacherId]);
+
+    const normalize = (list: LessonScheduleInput[]) =>
+      list.map((s) => ({
+        id: s.id,
+        weekday: s.weekday || "Monday",
+        startTime: (s.startTime || "10:00").slice(0, 5),
+        endTime: (s.endTime || "11:00").slice(0, 5),
+        duration: s.duration || 60,
+      }));
+
+    setIsLoadingSchedules(true);
+    fetchStudentScheduleInputs(studentId)
+      .then((saved) => {
+        if (cancelled) return;
+        if (saved.length > 0) {
+          setSchedules(normalize(saved));
+          setScheduleSource("student");
+        } else if (initialSchedules && initialSchedules.length > 0) {
+          setSchedules(normalize(initialSchedules));
+          setScheduleSource("student");
+        } else {
+          setSchedules([]);
+          setScheduleSource("empty");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSchedules(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, studentId, initialStartDate, teacherId]);
 
   // Determine total lesson count to generate
   const getTargetLessonCount = (): number => {
@@ -140,23 +164,30 @@ export function GenerateLessonPlanModal({
       ...prev,
       { weekday: "Friday", startTime: "10:00", endTime: "11:00", duration: 60 },
     ]);
+    setScheduleSource("manual");
   };
 
   const handleRemoveScheduleRow = (index: number) => {
-    if (schedules.length <= 1) {
-      toast.error("At least one weekly schedule slot is required.");
-      return;
-    }
     setSchedules((prev) => prev.filter((_, i) => i !== index));
+    setScheduleSource("manual");
   };
 
   const handleUpdateScheduleRow = (index: number, field: keyof LessonScheduleInput, value: any) => {
+    setScheduleSource("manual");
     setSchedules((prev) => {
       const updated = [...prev];
       updated[index] = {
         ...updated[index],
         [field]: value,
       };
+      if (field === "startTime" || field === "endTime") {
+        const start = String(updated[index].startTime || "");
+        const end = String(updated[index].endTime || "");
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        const diff = eh * 60 + em - (sh * 60 + sm);
+        if (Number.isFinite(diff) && diff > 0) updated[index].duration = diff;
+      }
       return updated;
     });
   };
