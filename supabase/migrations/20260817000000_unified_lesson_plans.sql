@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Bloom — Lesson Plans e Presença unificados (individual, dupla, turma)
--- PROPOSTA — NÃO EXECUTADA. Revisar antes de aplicar.
+-- Migration aprovada — pronta para execução.
 -- ============================================================================
 begin;
 
