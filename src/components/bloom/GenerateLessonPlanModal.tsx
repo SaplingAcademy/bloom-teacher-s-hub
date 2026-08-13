@@ -403,9 +403,17 @@ export function GenerateLessonPlanModal({
           {/* STEP 3: WEEKLY SCHEDULE ROWS */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold text-foreground">
-                {t("students.modalStepSchedule")}
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-semibold text-foreground">
+                  {t("students.modalStepSchedule")}
+                </Label>
+                {scheduleSource === "student" && schedules.length > 0 && (
+                  <Badge variant="secondary" className="text-[10px] font-semibold gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Horários do aluno
+                  </Badge>
+                )}
+              </div>
               <Button
                 type="button"
                 variant="ghost"
