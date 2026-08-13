@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -41,20 +41,26 @@ export function useTeacherLanguages() {
   const { user, profile, updateProfileState, loading: authLoading } = useAuth();
   const [languages, setLanguages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const updateProfileStateRef = useRef(updateProfileState);
+  updateProfileStateRef.current = updateProfileState;
+  const profileLanguages: string[] = Array.isArray(profile?.languages_taught)
+    ? profile.languages_taught
+    : [];
+  const profileLanguagesKey = profileLanguages.join("|");
+  const userId = user?.id;
 
   // Source of truth: teacher profile (languages_taught) with onboarding answers as origin.
   useEffect(() => {
     let cancelled = false;
 
-    if (Array.isArray(profile?.languages_taught) && profile.languages_taught.length > 0) {
-      setLanguages(profile.languages_taught);
+    if (profileLanguagesKey.length > 0) {
+      setLanguages(profileLanguagesKey.split("|"));
       setLoading(false);
       return;
     }
 
     if (authLoading) return;
 
-    const userId = user?.id;
     if (!userId) {
       setLanguages([]);
       setLoading(false);
@@ -92,7 +98,7 @@ export function useTeacherLanguages() {
         if (cancelled) return;
         setLanguages(resolved);
         if (resolved.length > 0) {
-          updateProfileState({ languages_taught: resolved });
+          updateProfileStateRef.current({ languages_taught: resolved });
         }
       } catch (err) {
         console.warn("[useTeacherLanguages] Could not resolve teaching languages:", err);
@@ -105,7 +111,7 @@ export function useTeacherLanguages() {
     return () => {
       cancelled = true;
     };
-  }, [profile, authLoading, user, updateProfileState]);
+  }, [profileLanguagesKey, authLoading, userId]);
 
   // Format helper for display
   const formatLanguageLabel = useCallback((langId: string, uiLang: "en" | "pt" = "pt") => {
