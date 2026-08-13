@@ -965,6 +965,16 @@ function CalendarPage() {
   const currentTranslation = t[lang];
 
   // Hours for grid display in week/day view (08:00 to 21:00)
+  // Grid shading source: teacher availability snapshot (single source of truth)
+  const isHourAvailable = useCallback(
+    (dateStr: string, hour: string) => {
+      if (!availabilitySnapshot || !availabilitySnapshot.isConfigured) return true;
+      const endHour = String(Number(hour.slice(0, 2)) + 1).padStart(2, "0") + ":00";
+      return isSlotAvailable(availabilitySnapshot, dateStr, hour, endHour).available;
+    },
+    [availabilitySnapshot]
+  );
+
   const gridHours = [
     "08:00",
     "09:00",
@@ -1304,10 +1314,17 @@ function CalendarPage() {
                           evt.date === dateStr && evt.startTime.startsWith(hour.substring(0, 3)),
                       );
 
+                      const unavailable = !isHourAvailable(dateStr, hour);
+
                       return (
                         <div
                           key={dayIdx}
-                          className="p-1 border-r border-border/60 relative bg-card hover:bg-secondary/10 transition-colors flex flex-col gap-1 min-h-[64px]"
+                          title={unavailable ? (lang === "pt" ? "Fora da disponibilidade" : "Outside availability") : undefined}
+                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] ${
+                            unavailable
+                              ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
+                              : "bg-card hover:bg-secondary/10"
+                          }`}
                         >
                           {cellEvents.map((evt) => {
                             const colorMeta = resolveEventColorMeta(
@@ -1373,10 +1390,12 @@ function CalendarPage() {
                   (evt) => evt.date === dateStr && evt.startTime.startsWith(hour.substring(0, 3)),
                 );
 
+                const unavailable = !isHourAvailable(dateStr, hour);
+
                 return (
                   <div
                     key={hour}
-                    className="grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center"
+                    className={`grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center ${unavailable ? "bg-muted/50" : ""}`}
                   >
                     <div className="text-right pr-4 text-xs font-bold text-muted-foreground">
                       {hour}
@@ -1384,7 +1403,13 @@ function CalendarPage() {
                     <div className="flex flex-col gap-2">
                       {cellEvents.length === 0 ? (
                         <span className="text-[11px] text-muted-foreground/40 italic ml-2">
-                          Empty
+                          {unavailable
+                            ? lang === "pt"
+                              ? "Indisponível"
+                              : "Unavailable"
+                            : lang === "pt"
+                              ? "Livre"
+                              : "Free"}
                         </span>
                       ) : (
                         cellEvents.map((evt) => {
