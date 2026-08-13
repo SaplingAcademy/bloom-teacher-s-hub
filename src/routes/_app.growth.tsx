@@ -18,6 +18,11 @@ import {
   EffectiveHourlyResult,
 } from "@/lib/growth-engine";
 import { calculateRealCapacity, RealCapacityResult } from "@/lib/capacity-engine";
+import {
+  fetchGrowthMetrics,
+  EMPTY_GROWTH_METRICS,
+  RealGrowthMetrics,
+} from "@/lib/growth-metrics";
 import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailabilityModal";
 import {
   TrendingUp,
@@ -308,6 +313,10 @@ function GrowthPage() {
   const [availableWeeklySlots, setAvailableWeeklySlots] = useState(0);
   const [currentMRR, setCurrentMRR] = useState(0);
 
+  // Real, teacher-scoped growth performance metrics
+  const [growthMetrics, setGrowthMetrics] = useState<RealGrowthMetrics>(EMPTY_GROWTH_METRICS);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
   // Load real monthly goal, active MRR data, real capacity, expenses, and effective hourly rate from Supabase
   const loadGrowthData = useCallback(async () => {
     if (!user) {
@@ -316,13 +325,17 @@ function GrowthPage() {
     }
     setLoadingGrowth(true);
     try {
-      const [goalRes, mrrRes, capacityRes, expRes, hourlyRes] = await Promise.all([
+      const [goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes] = await Promise.all([
         fetchMonthlyGoal(user.id),
         fetchCurrentMRR(user.id),
         calculateRealCapacity(user.id),
         fetchTeacherExpenses(user.id),
         fetchEffectiveHourlyRate(user.id),
+        fetchGrowthMetrics(user.id),
       ]);
+
+      setGrowthMetrics(metricsRes);
+      setLoadingMetrics(false);
 
       if (goalRes) {
         setMonthlyGoal(goalRes.targetValue);
@@ -362,6 +375,7 @@ function GrowthPage() {
       }
     } catch (err) {
       console.error("[GrowthPage] Error loading growth data:", err);
+      setLoadingMetrics(false);
     } finally {
       setLoadingGrowth(false);
     }
@@ -604,6 +618,21 @@ function GrowthPage() {
 
   // Real Growth Metrics calculations
   const metrics = computeGrowthMetrics(monthlyGoal || 0, mrrData);
+  // Real-metric formatters — never fabricate values; show em dash when data is missing
+  const NO_DATA = "—";
+  const metricCount = (v: number | null) =>
+    loadingMetrics || v === null ? NO_DATA : String(v);
+  const metricPercent = (v: number | null) =>
+    loadingMetrics || v === null ? NO_DATA : `${v}%`;
+  const metricSignedPercent = (v: number | null) =>
+    loadingMetrics || v === null ? NO_DATA : `${v > 0 ? "+" : ""}${v}%`;
+  const metricMoney = (v: number | null) =>
+    loadingMetrics || v === null ? NO_DATA : formatBRL(v);
+  const metricTrend = (change: number | null) =>
+    !loadingMetrics && change !== null
+      ? { value: `${change > 0 ? "+" : ""}${change}%`, positive: change >= 0 }
+      : undefined;
+
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
   const ringProgress = Math.min(100, metrics.progressPct);
@@ -893,6 +922,55 @@ function GrowthPage() {
           </div>
         )}
       </div>
+
+      {/* METRICS DASHBOARD SECTION — 100% real, teacher-scoped data */}
+      <section className="space-y-4">
+        <h3 className="font-display text-lg font-bold text-foreground">{t.metricsTitle}</h3>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <StatCard
+            label={t.metricNewStudents}
+            value={metricCount(growthMetrics.newStudentsThisMonth.value)}
+            icon={Users}
+            tone="primary"
+            trend={metricTrend(growthMetrics.newStudentsThisMonth.change)}
+          />
+          <StatCard
+            label={t.metricRetention}
+            value={metricPercent(growthMetrics.retentionRate.value)}
+            icon={Percent}
+            tone="lilac"
+            trend={metricTrend(growthMetrics.retentionRate.change)}
+          />
+          <StatCard
+            label={t.metricRenewal}
+            value={metricPercent(growthMetrics.renewalRate.value)}
+            icon={Target}
+            tone="accent"
+            trend={metricTrend(growthMetrics.renewalRate.change)}
+          />
+          <StatCard
+            label={t.metricAvgPackage}
+            value={metricMoney(growthMetrics.avgPackageValue.value)}
+            icon={Briefcase}
+            tone="warning"
+            trend={metricTrend(growthMetrics.avgPackageValue.change)}
+          />
+          <StatCard
+            label={t.metricAvgRevenue}
+            value={metricMoney(growthMetrics.avgRevenuePerStudent.value)}
+            icon={DollarSign}
+            tone="primary"
+            trend={metricTrend(growthMetrics.avgRevenuePerStudent.change)}
+          />
+          <StatCard
+            label={t.metricGrowthRate}
+            value={metricSignedPercent(growthMetrics.monthlyGrowthRate.value)}
+            icon={TrendingUp}
+            tone="accent"
+            trend={metricTrend(growthMetrics.monthlyGrowthRate.change)}
+          />
+        </div>
+      </section>
 
       {/* HOURLY RATE SIMULATOR SECTION */}
       <section className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-[var(--shadow-sm)]">
@@ -1687,55 +1765,6 @@ function GrowthPage() {
             </div>
             <span className="text-xs font-bold">40%</span>
           </div>
-        </div>
-      </section>
-
-      {/* METRICS DASHBOARD SECTION */}
-      <section className="space-y-4">
-        <h3 className="font-display text-lg font-bold text-foreground">{t.metricsTitle}</h3>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <StatCard
-            label={t.metricNewStudents}
-            value="3"
-            icon={Users}
-            tone="primary"
-            trend={{ value: "+50%", positive: true }}
-          />
-          <StatCard
-            label={t.metricRetention}
-            value="96%"
-            icon={Percent}
-            tone="lilac"
-            trend={{ value: "+2%", positive: true }}
-          />
-          <StatCard
-            label={t.metricRenewal}
-            value="92%"
-            icon={Target}
-            tone="accent"
-            trend={{ value: "+4%", positive: true }}
-          />
-          <StatCard
-            label={t.metricAvgPackage}
-            value="$320"
-            icon={Briefcase}
-            tone="warning"
-            trend={{ value: "+10%", positive: true }}
-          />
-          <StatCard
-            label={t.metricAvgRevenue}
-            value="$300"
-            icon={DollarSign}
-            tone="primary"
-            trend={{ value: "+8%", positive: true }}
-          />
-          <StatCard
-            label={t.metricGrowthRate}
-            value="+8.5%"
-            icon={TrendingUp}
-            tone="accent"
-            trend={{ value: "Target: 10%", positive: true }}
-          />
         </div>
       </section>
 
