@@ -449,7 +449,11 @@ export function OnboardingPage() {
       }
 
       // 6. Update local and AuthProvider state
-      updateProfileState({ onboarding_completed: true, onboarding_status: "completed" });
+      updateProfileState({
+        onboarding_completed: true,
+        onboarding_status: "completed",
+        languages_taught: finalLanguages,
+      });
       if (typeof window !== "undefined") {
         localStorage.setItem("bloom.onboarding.completed", "true");
         localStorage.removeItem("bloom.onboarding.draft");
