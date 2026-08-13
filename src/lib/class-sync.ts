@@ -1,13 +1,8 @@
 import { supabase } from "@/lib/supabase";
-import {
-  ClassEntity,
-  ClassMember,
-  ClassSchedule,
-  ClassSession,
-  ClassAttendance,
-  AttendanceStatusType,
-} from "@/types/classes";
-import { formatTimeHHMMSS, calculateEndTime, generateOccurrenceDates } from "./calendar-sync";
+import { ClassEntity, ClassMember, ClassSchedule } from "@/types/classes";
+import { formatTimeHHMMSS, calculateEndTime } from "./calendar-sync";
+import { generateOccurrences } from "./lesson-plans";
+import { fetchTeacherTimeOff, formatLocalDateStr } from "./time-off-engine";
 
 export interface ClassWithDetails extends ClassEntity {
   members: ClassMember[];
@@ -200,160 +195,57 @@ export async function saveClassAndRelations(
 }
 
 /**
- * Projects recurring class schedule occurrences to calendar_events with event_type = 'class'
+ * Projects recurring class schedule occurrences to calendar_events.
+ * Uses the single shared occurrence generator (teacher time off aware).
  */
 export async function projectClassSchedulesToCalendar(
   teacherId: string,
   classId: string,
   className: string,
   level: string,
-  schedules: Array<{ weekday: string; startTime: string; duration: number; deliveryMode: "Online" | "In person"; locationLink?: string }>
+  schedules: Array<{ weekday: string; startTime: string; duration: number; deliveryMode: "Online" | "In person"; locationLink?: string }>,
+  totalOccurrences = 12
 ) {
   if (!teacherId || !classId || !schedules || schedules.length === 0) return;
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const timeOff = await fetchTeacherTimeOff(teacherId);
+  const occurrences = generateOccurrences(
+    formatLocalDateStr(new Date()),
+    schedules.map((s) => ({
+      weekday: s.weekday,
+      startTime: s.startTime,
+      duration: s.duration || 60,
+      deliveryMode: s.deliveryMode || "Online",
+      locationLink: s.locationLink || null,
+    })),
+    totalOccurrences,
+    timeOff
+  );
 
-  const calendarRows: any[] = [];
-  schedules.forEach((sch) => {
-    const dates = generateOccurrenceDates(todayStr, sch.weekday, "Weekly", 8);
-    dates.forEach((dateStr) => {
-      calendarRows.push({
-        teacher_id: teacherId,
-        class_id: classId,
-        event_type: "class",
-        student_name: className,
-        level: level,
-        focus: "General",
-        date: dateStr,
-        start_time: formatTimeHHMMSS(sch.startTime),
-        end_time: formatTimeHHMMSS(calculateEndTime(sch.startTime, sch.duration || 60)),
-        duration: sch.duration || 60,
-        type: "Group",
-        delivery_mode: sch.deliveryMode || "Online",
-        location_link: sch.locationLink || "",
-        status: "Scheduled",
-      });
-    });
-  });
+  if (occurrences.length === 0) return;
 
-  if (calendarRows.length > 0) {
-    const { error } = await supabase
-      .from("calendar_events")
-      .upsert(calendarRows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-
-    if (error) console.warn("[class-sync] Calendar projection warning:", error.message);
-  }
-}
-
-/**
- * Fetches or initializes class session attendance for a specific session/date
- */
-export async function fetchOrCreateClassSessionAttendance(
-  teacherId: string,
-  classId: string,
-  dateStr: string,
-  startTime: string = "19:00"
-): Promise<{ session: ClassSession; attendance: ClassAttendance[] }> {
-  // 1. Fetch or create class session
-  let sessionData: any;
-  const { data: existingSession } = await supabase
-    .from("class_sessions")
-    .select("*")
-    .eq("class_id", classId)
-    .eq("date", dateStr)
-    .maybeSingle();
-
-  if (existingSession) {
-    sessionData = existingSession;
-  } else {
-    const { data: newSession, error: createErr } = await supabase
-      .from("class_sessions")
-      .insert({
-        class_id: classId,
-        teacher_id: teacherId,
-        date: dateStr,
-        start_time: formatTimeHHMMSS(startTime),
-        end_time: formatTimeHHMMSS(calculateEndTime(startTime, 60)),
-        duration: 60,
-        status: "scheduled",
-      })
-      .select()
-      .single();
-
-    if (createErr) throw createErr;
-    sessionData = newSession;
-  }
-
-  // 2. Fetch active class members
-  const { data: members } = await supabase
-    .from("class_members")
-    .select("student_id, students(full_name)")
-    .eq("class_id", classId)
-    .eq("status", "active");
-
-  // 3. Fetch attendance records
-  const { data: existingAttendance } = await supabase
-    .from("class_attendance")
-    .select("*, students(full_name)")
-    .eq("class_session_id", sessionData.id);
-
-  const attendanceMap: Record<string, ClassAttendance> = {};
-  (existingAttendance || []).forEach((a: any) => {
-    attendanceMap[a.student_id] = {
-      id: a.id,
-      class_session_id: a.class_session_id,
-      student_id: a.student_id,
-      teacher_id: a.teacher_id,
-      status: a.status as AttendanceStatusType,
-      notes: a.notes,
-      student_name: a.students?.full_name || "Student",
-    };
-  });
-
-  // Combine members with attendance
-  const attendanceList: ClassAttendance[] = (members || []).map((m: any) => {
-    if (attendanceMap[m.student_id]) {
-      return attendanceMap[m.student_id];
-    }
-    return {
-      id: "",
-      class_session_id: sessionData.id,
-      student_id: m.student_id,
-      teacher_id: teacherId,
-      status: "present",
-      student_name: m.students?.full_name || "Student",
-    };
-  });
-
-  return {
-    session: sessionData as ClassSession,
-    attendance: attendanceList,
-  };
-}
-
-/**
- * Saves/upserts per-student attendance list for a class session
- */
-export async function saveClassSessionAttendance(
-  teacherId: string,
-  sessionId: string,
-  attendanceList: Array<{ student_id: string; status: AttendanceStatusType; notes?: string }>
-) {
-  if (!teacherId || !sessionId || !attendanceList) return;
-
-  const rows = attendanceList.map((a) => ({
-    class_session_id: sessionId,
-    student_id: a.student_id,
+  const calendarRows = occurrences.map((o) => ({
     teacher_id: teacherId,
-    status: a.status,
-    notes: a.notes || "",
+    class_id: classId,
+    event_type: "class",
+    student_name: className,
+    level,
+    focus: "General",
+    date: o.date,
+    start_time: o.start_time,
+    end_time: o.end_time,
+    duration: o.duration,
+    type: "Group",
+    delivery_mode: o.delivery_mode,
+    location_link: o.location_link || "",
+    status: "Scheduled",
   }));
 
   const { error } = await supabase
-    .from("class_attendance")
-    .upsert(rows, { onConflict: "class_session_id,student_id" });
+    .from("calendar_events")
+    .upsert(calendarRows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
 
-  if (error) throw error;
+  if (error) console.warn("[class-sync] Calendar projection warning:", error.message);
 }
 
 /**
@@ -386,79 +278,4 @@ export async function fetchActiveClassMemberStudentIds(teacherId: string): Promi
   }
 
   return activeStudentIds;
-}
-
-/**
- * Fetches all shared lesson sessions for a class ordered by date desc
- */
-export async function fetchClassSessions(classId: string): Promise<ClassSession[]> {
-  if (!classId) return [];
-
-  try {
-    const { data, error } = await supabase
-      .from("class_sessions")
-      .select("*")
-      .eq("class_id", classId)
-      .order("date", { ascending: false });
-
-    if (error) {
-      console.warn("[class-sync] Error fetching class sessions:", error.message);
-      return [];
-    }
-
-    return (data || []) as ClassSession[];
-  } catch (err) {
-    console.error("[class-sync] Unexpected error fetching class sessions:", err);
-    return [];
-  }
-}
-
-/**
- * Creates a new shared class session record
- */
-export async function createClassSession(
-  teacherId: string,
-  classId: string,
-  sessionData: {
-    date: string;
-    start_time: string;
-    end_time?: string;
-    duration?: number;
-    topic?: string;
-    content?: string;
-    homework?: string;
-    materials_url?: string;
-    notes?: string;
-    status?: "scheduled" | "completed" | "cancelled";
-  }
-): Promise<ClassSession> {
-  if (!teacherId || !classId || !sessionData.date) {
-    throw new Error("Missing required session fields");
-  }
-
-  const duration = sessionData.duration || 60;
-  const rawStart = sessionData.start_time || "19:00";
-  const rawEnd = sessionData.end_time || calculateEndTime(rawStart, duration);
-
-  const { data, error } = await supabase
-    .from("class_sessions")
-    .insert({
-      class_id: classId,
-      teacher_id: teacherId,
-      date: sessionData.date,
-      start_time: formatTimeHHMMSS(rawStart),
-      end_time: formatTimeHHMMSS(rawEnd),
-      duration: duration,
-      topic: sessionData.topic || "",
-      content: sessionData.content || "",
-      homework: sessionData.homework || "",
-      materials_url: sessionData.materials_url || "",
-      notes: sessionData.notes || "",
-      status: sessionData.status || "completed",
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as ClassSession;
 }
