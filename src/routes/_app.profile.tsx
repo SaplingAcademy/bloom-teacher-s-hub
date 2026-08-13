@@ -232,7 +232,7 @@ function ProfilePage() {
   // Sync form states with database profile
   useEffect(() => {
     if (authProfile) {
-      setEditName(authProfile.full_name || "");
+      setEditName(resolveTeacherName(authProfile, user) || "");
       setEditPhoto(authProfile.avatar_url || "");
       setEditLanguage(authProfile.preferred_language || "pt-BR");
       setEditTimezone(authProfile.timezone || "America/Sao_Paulo");
