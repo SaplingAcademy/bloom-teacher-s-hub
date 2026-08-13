@@ -97,6 +97,7 @@ import {
   syncStudentSchedulesToSupabaseEvents,
 } from "@/lib/calendar-sync";
 import { StudentLessonPlanTable } from "@/components/bloom/StudentLessonPlanTable";
+import { StudentClassLessonsHistory } from "@/components/bloom/StudentClassLessonsHistory";
 import {
   StudentLesson,
   fetchStudentLessons,
@@ -109,7 +110,6 @@ import {
   ClassSessionAttendanceModal,
   ClassCard,
   ClassDetailsView,
-  RegisterClassLessonModal,
 } from "@/components/bloom/ClassManagementComponents";
 import {
   ClassWithDetails,
@@ -1918,6 +1918,7 @@ function StudentsPage() {
           )}
 
           {hubTab === "Lessons" && (
+            <div className="space-y-6">
             <StudentLessonPlanTable
               studentId={selectedStudent.id}
               studentName={selectedStudent.name}
@@ -1925,6 +1926,8 @@ function StudentsPage() {
               lessons={currentStudentLessons}
               onLessonsChange={(updated) => setCurrentStudentLessons(updated)}
             />
+            <StudentClassLessonsHistory studentId={selectedStudent.id} isPt={lang === "pt"} />
+            </div>
           )}
 
           {hubTab === "Finance" && (

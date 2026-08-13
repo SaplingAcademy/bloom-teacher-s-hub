@@ -1,5 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import { formatTimeHHMMSS, calculateEndTime, CEFRLevel, CourseFocus } from "./calendar-sync";
+import {
+  fetchLessonPlans,
+  saveLessonPlans,
+  fetchAttendanceForEvents,
+  saveAttendanceRecords,
+  clearAttendanceRecord,
+  LessonPlan,
+} from "./lesson-plans";
 
 export interface LessonAttachment {
   id: string;
@@ -14,6 +22,8 @@ export interface LessonAttachment {
 
 export interface StudentLesson {
   id?: string;
+  /** occurrence in calendar_events this plan belongs to (1:1) */
+  event_id?: string;
   teacher_id: string;
   student_id: string;
   schedule_id?: string | null;
@@ -171,35 +181,58 @@ export function calculateExpectedEndDate(
 }
 
 /**
- * Fetches student lessons from Supabase (with LocalStorage fallback).
+ * Fetches the student's lesson plans from the unified `lesson_plans` table,
+ * mapping event status + attendance_records back to the legacy display shape.
  */
 export async function fetchStudentLessons(
   studentId: string,
   teacherId?: string
 ): Promise<StudentLesson[]> {
   try {
-    const { data, error } = await supabase
-      .from("student_lessons")
-      .select("*")
-      .eq("student_id", studentId)
-      .order("lesson_number", { ascending: true });
+    const plans = await fetchLessonPlans({ studentId });
 
-    if (error) {
-      console.warn("[lesson-plan-sync] Error fetching from Supabase:", error.message, error);
-    } else if (data && data.length > 0) {
-      const normalized = data.map((item: any) => ({
-        ...item,
-        attachments: Array.isArray(item.attachments) ? item.attachments : [],
-      }));
-      return normalized as StudentLesson[];
+    if (plans.length > 0) {
+      const attendanceMap = await fetchAttendanceForEvents(plans.map((p) => p.event_id));
+
+      const mapped: StudentLesson[] = plans
+        .map((p, idx) => {
+          const att = (attendanceMap[p.event_id] || []).find((a) => a.student_id === studentId);
+          let attendance_status: StudentLesson["attendance_status"] = null;
+          if (p.event_status === "Cancelled") attendance_status = "Cancelled";
+          else if (p.event_status === "Rescheduled") attendance_status = "Rescheduled";
+          else if (att?.status === "present" || att?.status === "late") attendance_status = "Present";
+          else if (att?.status === "absent" || att?.status === "excused") attendance_status = "Absent";
+
+          return {
+            id: p.id,
+            event_id: p.event_id,
+            teacher_id: p.teacher_id,
+            student_id: studentId,
+            schedule_id: null,
+            lesson_number: p.lesson_number || idx + 1,
+            scheduled_date: p.scheduled_date,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            duration: p.duration,
+            content: p.content,
+            homework: p.homework,
+            homework_posted: p.homework_posted ?? null,
+            attendance_status,
+            completed: p.completed,
+            notes: p.notes,
+            attachments: p.attachments as LessonAttachment[],
+          } as StudentLesson;
+        })
+        .sort((a, b) => a.lesson_number - b.lesson_number);
+
+      localStorage.setItem(`bloom.student_lessons.${studentId}`, JSON.stringify(mapped));
+      return mapped;
     }
   } catch (err) {
     console.warn("[lesson-plan-sync] Unexpected fetch exception:", err);
   }
 
-  // LocalStorage Fallback
-  const cacheKey = `bloom.student_lessons.${studentId}`;
-  const cached = localStorage.getItem(cacheKey);
+  const cached = localStorage.getItem(`bloom.student_lessons.${studentId}`);
   if (cached) {
     try {
       return JSON.parse(cached);
@@ -212,73 +245,74 @@ export async function fetchStudentLessons(
 }
 
 /**
- * Projects / syncs student_lessons records to calendar_events table.
- * Each student lesson becomes a calendar event projection.
+ * Makes sure every lesson has a backing occurrence in calendar_events and
+ * returns the resolved event id per lesson (index aligned).
  */
-export async function projectLessonsToCalendarEvents(
+async function ensureStudentEvents(
   studentId: string,
   teacherId: string,
   studentName: string,
-  level: CEFRLevel = "B2",
-  focus: CourseFocus = "General English",
+  level: CEFRLevel,
+  focus: CourseFocus,
   lessons: StudentLesson[]
-): Promise<void> {
-  if (!studentId || !teacherId || !lessons || lessons.length === 0) return;
+): Promise<Array<string | null>> {
+  const { data: existingEvents } = await supabase
+    .from("calendar_events")
+    .select("id, date, start_time")
+    .eq("teacher_id", teacherId)
+    .eq("student_id", studentId);
 
-  try {
-    const calendarEventsToInsert = lessons.map((l) => {
-      let calendarStatus: string = "Scheduled";
-      if (l.completed) {
-        calendarStatus = "Completed";
-      } else if (l.attendance_status === "Cancelled") {
-        calendarStatus = "Closed";
-      } else if (l.attendance_status === "Rescheduled") {
-        calendarStatus = "Scheduled";
-      }
+  const keyOf = (date: string, time: string) => `${date}|${formatTimeHHMMSS(time).slice(0, 5)}`;
+  const byKey = new Map<string, string>();
+  (existingEvents || []).forEach((e: any) => byKey.set(keyOf(e.date, e.start_time), e.id));
 
-      return {
+  const resolved: Array<string | null> = [];
+
+  for (const l of lessons) {
+    let eventId = l.event_id || byKey.get(keyOf(l.scheduled_date, l.start_time)) || null;
+
+    if (eventId) {
+      resolved.push(eventId);
+      continue;
+    }
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .insert({
         teacher_id: teacherId,
         student_id: studentId,
         schedule_id: l.schedule_id || null,
         student_name: studentName,
-        level: level,
-        focus: focus,
+        level,
+        focus,
         date: l.scheduled_date,
         start_time: formatTimeHHMMSS(l.start_time),
-        end_time: formatTimeHHMMSS(l.end_time),
+        end_time: formatTimeHHMMSS(l.end_time || calculateEndTime(l.start_time, l.duration || 60)),
         duration: l.duration || 60,
         type: "Private",
         delivery_mode: "Online",
-        status: calendarStatus,
-        attendance_recorded: l.attendance_status !== null,
-        attendance_status: l.attendance_status === "Rescheduled" || l.attendance_status === "Cancelled" ? undefined : l.attendance_status,
-        notes: l.notes || `Lesson ${l.lesson_number}`,
-        homework_title: l.homework || "",
-        lesson_plan_url: l.content || "",
+        status: "Scheduled",
         is_recurring: true,
         recurrence_series_id: `series-lessonplan-${studentId}`,
-      };
-    });
+      })
+      .select("id")
+      .single();
 
-    const { error } = await supabase
-      .from("calendar_events")
-      .upsert(calendarEventsToInsert, {
-        onConflict: "student_id,schedule_id,date",
-        ignoreDuplicates: false,
-      });
-
-    if (error) {
-      console.warn("[lesson-plan-sync] Calendar events projection fallback insert:", error.message);
-      await supabase.from("calendar_events").insert(calendarEventsToInsert);
+    if (error || !data) {
+      console.warn("[lesson-plan-sync] Could not create occurrence:", error?.message);
+      resolved.push(null);
+    } else {
+      byKey.set(keyOf(l.scheduled_date, l.start_time), data.id);
+      resolved.push(data.id);
     }
-  } catch (err) {
-    console.error("[lesson-plan-sync] Error projecting lessons to calendar_events:", err);
   }
+
+  return resolved;
 }
 
 /**
- * Saves updated or newly generated student lessons to Supabase & LocalStorage,
- * and updates the calendar_events projection.
+ * Saves the student's lesson plan through the unified tables:
+ * calendar_events (occurrence + cancellation) -> lesson_plans -> attendance_records.
  */
 export async function saveStudentLessons(
   studentId: string,
@@ -288,81 +322,72 @@ export async function saveStudentLessons(
   focus: CourseFocus = "General English",
   lessons: StudentLesson[]
 ): Promise<{ success: boolean; data: StudentLesson[]; error?: string }> {
-  // Always update LocalStorage cache
-  const cacheKey = `bloom.student_lessons.${studentId}`;
-  localStorage.setItem(cacheKey, JSON.stringify(lessons));
+  localStorage.setItem(`bloom.student_lessons.${studentId}`, JSON.stringify(lessons));
 
   try {
-    const payload = lessons.map((l) => {
-      const canonicalAttachments = Array.isArray(l.attachments)
-        ? l.attachments.map((att) => ({
-            id: att.id || crypto.randomUUID(),
-            type: att.type,
-            title: att.title || "",
-            file_name: att.file_name || "",
-            file_path: att.file_path || "",
-            file_size: att.file_size || 0,
-            created_at: att.created_at || new Date().toISOString(),
-          }))
-        : [];
+    const eventIds = await ensureStudentEvents(studentId, teacherId, studentName, level, focus, lessons);
 
-      return {
+    const plans: LessonPlan[] = [];
+    lessons.forEach((l, idx) => {
+      const eventId = eventIds[idx];
+      if (!eventId) return;
+      plans.push({
         teacher_id: teacherId,
+        event_id: eventId,
+        class_id: null,
         student_id: studentId,
-        schedule_id: l.schedule_id || null,
         lesson_number: l.lesson_number,
         scheduled_date: l.scheduled_date,
         start_time: formatTimeHHMMSS(l.start_time),
-        end_time: formatTimeHHMMSS(l.end_time),
+        end_time: formatTimeHHMMSS(l.end_time || calculateEndTime(l.start_time, l.duration || 60)),
         duration: l.duration || 60,
         content: l.content || "",
         homework: l.homework || "",
         homework_posted: typeof l.homework_posted === "boolean" ? l.homework_posted : null,
-        attendance_status: l.attendance_status || null,
-        completed: Boolean(l.completed),
         notes: l.notes || "",
-        attachments: canonicalAttachments,
-      };
+        attachments: (l.attachments || []) as any,
+        completed: Boolean(l.completed),
+        event_status:
+          l.attendance_status === "Cancelled"
+            ? "Cancelled"
+            : l.attendance_status === "Rescheduled"
+            ? "Rescheduled"
+            : l.completed
+            ? "Completed"
+            : "Scheduled",
+      });
     });
 
-    const { data, error } = await supabase
-      .from("student_lessons")
-      .upsert(payload, {
-        onConflict: "student_id,lesson_number",
-        ignoreDuplicates: false,
+    const res = await saveLessonPlans(teacherId, plans);
+    if (!res.success) {
+      return { success: false, data: lessons, error: res.error };
+    }
+
+    // Attendance is per student/event; Cancelled & Rescheduled are event states.
+    await Promise.all(
+      lessons.map(async (l, idx) => {
+        const eventId = eventIds[idx];
+        if (!eventId) return;
+        if (l.attendance_status === "Present" || l.attendance_status === "Absent") {
+          await saveAttendanceRecords(teacherId, eventId, [
+            {
+              student_id: studentId,
+              status: l.attendance_status === "Present" ? "present" : "absent",
+            },
+          ]);
+        } else {
+          await clearAttendanceRecord(teacherId, eventId, studentId);
+        }
       })
-      .select();
+    );
 
-    if (error) {
-      console.error("[lesson-plan-sync] Supabase insert/upsert rejected:", error);
-      // Try fallback insert if upsert index fails
-      const { data: insertData, error: insertErr } = await supabase
-        .from("student_lessons")
-        .insert(payload)
-        .select();
-
-      if (!insertErr && insertData) {
-        await projectLessonsToCalendarEvents(studentId, teacherId, studentName, level, focus, insertData as StudentLesson[]);
-        return { success: true, data: insertData as StudentLesson[] };
-      } else if (insertErr) {
-        console.error("[lesson-plan-sync] Fallback insert also failed:", insertErr);
-        return { success: false, data: lessons, error: error.message || insertErr.message };
-      }
-    }
-
-    if (data) {
-      // Sync projection to calendar_events
-      await projectLessonsToCalendarEvents(studentId, teacherId, studentName, level, focus, data as StudentLesson[]);
-      return { success: true, data: data as StudentLesson[] };
-    }
+    const saved = lessons.map((l, idx) => ({ ...l, event_id: eventIds[idx] || l.event_id }));
+    localStorage.setItem(`bloom.student_lessons.${studentId}`, JSON.stringify(saved));
+    return { success: true, data: saved };
   } catch (err: any) {
     console.error("[lesson-plan-sync] Save exception:", err);
     return { success: false, data: lessons, error: err.message || "Failed to save lessons to server." };
   }
-
-  // Update calendar projection with local lessons
-  await projectLessonsToCalendarEvents(studentId, teacherId, studentName, level, focus, lessons);
-  return { success: true, data: lessons };
 }
 
 /**
@@ -379,8 +404,5 @@ export async function ensureStudentLessonPlanInitialized(
   totalPackageLessons: number = 23
 ): Promise<StudentLesson[]> {
   const existing = await fetchStudentLessons(studentId, teacherId);
-  if (existing && existing.length > 0) {
-    return existing;
-  }
-  return [];
+  return existing && existing.length > 0 ? existing : [];
 }

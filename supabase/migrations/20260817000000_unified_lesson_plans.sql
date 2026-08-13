@@ -193,7 +193,7 @@ join public.students s on s.id = sl.student_id
 where not exists (
   select 1 from public.calendar_events e
   where e.student_id = sl.student_id and e.date = sl.scheduled_date
-    and e.start_time = sl.start_time::text
+    and e.start_time::time = sl.start_time::time
 )
 on conflict do nothing;
 
@@ -209,7 +209,7 @@ select sl.teacher_id, e.id, sl.student_id, sl.lesson_number, sl.scheduled_date,
 from public.student_lessons sl
 join public.calendar_events e
   on e.student_id = sl.student_id and e.date = sl.scheduled_date
- and e.start_time = sl.start_time::text
+ and e.start_time::time = sl.start_time::time
 on conflict (event_id) do nothing;
 
 -- 6.3 presença individual (Cancelled/Rescheduled não viram presença)
