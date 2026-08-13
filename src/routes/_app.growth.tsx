@@ -910,7 +910,7 @@ function GrowthPage() {
 
         <div className="grid gap-6 lg:grid-cols-2 items-start">
           {/* Left Column: Input Form */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 pt-6">
             {/* Income Goal Row */}
             <div className="grid grid-cols-2 gap-4 items-start">
               <div className="space-y-1.5">
