@@ -53,8 +53,8 @@ const translations = {
     loadingText: "Processing...",
     brandingTitle: "Bloom",
     brandingSubtitle: "The all-in-one workspace built for independent language teachers.",
-    brandingStatTeachers: "500+ educators",
-    brandingStatClasses: "10,000+ classes taught",
+    brandingStatTeachers: "Every part of your business, all in one place.",
+    brandingStatClasses: "Students, scheduling, lessons, and finances growing together.",
     confirmPasswordLabel: "Confirm Password",
     confirmPasswordPlaceholder: "••••••••",
     passwordsDontMatch: "Passwords do not match",
@@ -95,8 +95,8 @@ const translations = {
     brandingTitle: "Bloom",
     brandingSubtitle:
       "O espaço de trabalho completo criado para professores de idiomas independentes.",
-    brandingStatTeachers: "Mais de 500 professores",
-    brandingStatClasses: "Mais de 10.000 aulas dadas",
+    brandingStatTeachers: "Todas as ramificações do seu negócio em um só lugar.",
+    brandingStatClasses: "Alunos, agenda, aulas e finanças crescendo juntas.",
     confirmPasswordLabel: "Confirmar Senha",
     confirmPasswordPlaceholder: "••••••••",
     passwordsDontMatch: "As senhas não coincidem",
@@ -373,8 +373,12 @@ function AuthPage() {
     brandingSubtitle: lang === "pt"
       ? "O espaço de trabalho completo criado para professores de idiomas independentes."
       : "The all-in-one workspace built for independent language teachers.",
-    brandingStatTeachers: lang === "pt" ? "Mais de 500 professores" : "500+ educators",
-    brandingStatClasses: lang === "pt" ? "Mais de 10.000 aulas dadas" : "10,000+ classes taught",
+    brandingStatTeachers: lang === "pt"
+      ? "Todas as ramificações do seu negócio em um só lugar."
+      : "Every part of your business, all in one place.",
+    brandingStatClasses: lang === "pt"
+      ? "Alunos, agenda, aulas e finanças crescendo juntas."
+      : "Students, scheduling, lessons, and finances growing together.",
     confirmPasswordLabel: i18nT("auth.confirmPasswordLabel", lang),
     confirmPasswordPlaceholder: i18nT("auth.confirmPasswordPlaceholder", lang),
     passwordsDontMatch: i18nT("auth.reqMatch", lang),
@@ -853,16 +857,10 @@ function AuthPage() {
               <p className="text-2xl font-bold font-outfit text-[#F4EBE1]">
                 {t.brandingStatTeachers}
               </p>
-              <p className="text-xs text-emerald-200/60 uppercase tracking-wider font-semibold mt-1">
-                {lang === "pt" ? "Conectados na comunidade" : "Active in community"}
-              </p>
             </div>
             <div>
               <p className="text-2xl font-bold font-outfit text-[#F4EBE1]">
                 {t.brandingStatClasses}
-              </p>
-              <p className="text-xs text-emerald-200/60 uppercase tracking-wider font-semibold mt-1">
-                {lang === "pt" ? "Gerenciadas pela plataforma" : "Managed successfully"}
               </p>
             </div>
           </div>
@@ -873,8 +871,8 @@ function AuthPage() {
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
           <span>
             {lang === "pt"
-              ? "Segurança garantida por criptografia de ponta"
-              : "Secured by enterprise encryption standards"}
+              ? "Seus dados protegidos com acesso individual e seguro."
+              : "Your data is protected with secure, individual access."}
           </span>
         </div>
       </div>
