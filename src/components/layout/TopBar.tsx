@@ -1,3 +1,4 @@
+import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
 import { Menu, Search, Bell, Plus, Command, Globe, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
