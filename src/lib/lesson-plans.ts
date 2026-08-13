@@ -510,3 +510,50 @@ export async function getOrCreateClassEventForDate(
   await saveLessonPlans(teacherId, [plan]);
   return plan;
 }
+
+export interface StudentClassLesson extends LessonPlan {
+  class_name: string;
+  attendance_status?: AttendanceStatus | null;
+}
+
+/**
+ * Lessons of every class (pair or group) the student takes part in,
+ * so the student profile shows one single history.
+ */
+export async function fetchStudentClassLessons(studentId: string): Promise<StudentClassLesson[]> {
+  if (!studentId) return [];
+
+  const { data: memberships } = await supabase
+    .from("class_members")
+    .select("class_id, classes(name)")
+    .eq("student_id", studentId)
+    .eq("status", "active");
+
+  const classIds = (memberships || []).map((m: any) => m.class_id);
+  if (classIds.length === 0) return [];
+
+  const nameById = new Map<string, string>(
+    (memberships || []).map((m: any) => [m.class_id, m.classes?.name || "Turma"])
+  );
+
+  const { data, error } = await supabase
+    .from("lesson_plans")
+    .select("*, calendar_events:event_id (status)")
+    .in("class_id", classIds)
+    .order("scheduled_date", { ascending: false });
+
+  if (error) {
+    console.warn("[lesson-plans] class history fetch error:", error.message);
+    return [];
+  }
+
+  const plans = (data || []).map(mapPlanRow);
+  const attendance = await fetchAttendanceForEvents(plans.map((p) => p.event_id));
+
+  return plans.map((p) => ({
+    ...p,
+    class_name: nameById.get(p.class_id || "") || "Turma",
+    attendance_status:
+      (attendance[p.event_id] || []).find((a) => a.student_id === studentId)?.status ?? null,
+  }));
+}
