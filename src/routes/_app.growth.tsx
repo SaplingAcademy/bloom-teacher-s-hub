@@ -18,6 +18,11 @@ import {
   EffectiveHourlyResult,
 } from "@/lib/growth-engine";
 import { calculateRealCapacity, RealCapacityResult } from "@/lib/capacity-engine";
+import {
+  fetchGrowthMetrics,
+  EMPTY_GROWTH_METRICS,
+  RealGrowthMetrics,
+} from "@/lib/growth-metrics";
 import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailabilityModal";
 import {
   TrendingUp,
@@ -308,6 +313,10 @@ function GrowthPage() {
   const [availableWeeklySlots, setAvailableWeeklySlots] = useState(0);
   const [currentMRR, setCurrentMRR] = useState(0);
 
+  // Real, teacher-scoped growth performance metrics
+  const [growthMetrics, setGrowthMetrics] = useState<RealGrowthMetrics>(EMPTY_GROWTH_METRICS);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
   // Load real monthly goal, active MRR data, real capacity, expenses, and effective hourly rate from Supabase
   const loadGrowthData = useCallback(async () => {
     if (!user) {
@@ -316,13 +325,17 @@ function GrowthPage() {
     }
     setLoadingGrowth(true);
     try {
-      const [goalRes, mrrRes, capacityRes, expRes, hourlyRes] = await Promise.all([
+      const [goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes] = await Promise.all([
         fetchMonthlyGoal(user.id),
         fetchCurrentMRR(user.id),
         calculateRealCapacity(user.id),
         fetchTeacherExpenses(user.id),
         fetchEffectiveHourlyRate(user.id),
+        fetchGrowthMetrics(user.id),
       ]);
+
+      setGrowthMetrics(metricsRes);
+      setLoadingMetrics(false);
 
       if (goalRes) {
         setMonthlyGoal(goalRes.targetValue);
@@ -362,6 +375,7 @@ function GrowthPage() {
       }
     } catch (err) {
       console.error("[GrowthPage] Error loading growth data:", err);
+      setLoadingMetrics(false);
     } finally {
       setLoadingGrowth(false);
     }
