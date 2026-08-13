@@ -28,7 +28,15 @@ import {
   Pencil,
 } from "lucide-react";
 
-import { OnboardingData, OnboardingPackage, DayAvailability } from "@/types/onboarding";
+import {
+  OnboardingData,
+  OnboardingPackage,
+  DayAvailability,
+  OnboardingRestBlock,
+  OnboardingTimeOff,
+} from "@/types/onboarding";
+import { saveTeacherRestBlocks } from "@/lib/availability-engine";
+import { createTeacherTimeOffBatch } from "@/lib/time-off-engine";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 
 export const Route = createFileRoute("/onboarding")({
@@ -121,6 +129,8 @@ const INITIAL_DATA: OnboardingData = {
     Thursday: { startTime: "09:00", endTime: "18:00" },
     Friday: { startTime: "09:00", endTime: "18:00" },
   },
+  restBlocks: [],
+  timeOff: [],
   lessonTypes: ["Individual"],
   packages: [],
   monthlyGoal: "12000",
@@ -160,6 +170,16 @@ export function normalizeOnboardingData(raw: any): OnboardingData {
     ...raw,
     managementTools: tools,
     managementTool: tools[0] || "none",
+    restBlocks: Array.isArray(raw.restBlocks)
+      ? raw.restBlocks
+      : Array.isArray(raw.rest_blocks)
+        ? raw.rest_blocks
+        : [],
+    timeOff: Array.isArray(raw.timeOff)
+      ? raw.timeOff
+      : Array.isArray(raw.time_off)
+        ? raw.time_off
+        : [],
     otherPlatformText: raw.otherPlatformText || raw.other_platform_text || "",
     otherManagementText: raw.otherManagementText || raw.other_management_text || "",
   };
@@ -371,6 +391,8 @@ export function OnboardingPage() {
             same_availability_all_days: data.sameAvailabilityAllDays,
             unified_availability: data.unifiedAvailability,
             custom_availability: data.customAvailability,
+            rest_blocks: data.restBlocks || [],
+            time_off: data.timeOff || [],
             lesson_types: data.lessonTypes,
             packages: data.packages,
             monthly_goal: data.monthlyGoal,
@@ -446,6 +468,45 @@ export function OnboardingPage() {
       const availRes = await initializeAvailabilityFromOnboarding(userId, data);
       if (!availRes.success) {
         console.warn("[Onboarding] Working availability initialization warning:", availRes.error);
+      }
+
+      // 5b. Recurring pauses → settings.rest_blocks (existing source of truth)
+      const validRestBlocks = (data.restBlocks || []).filter(
+        (b) => b.day && b.startTime && b.endTime && b.startTime < b.endTime
+      );
+      if (validRestBlocks.length > 0) {
+        const restRes = await saveTeacherRestBlocks(
+          userId,
+          validRestBlocks.map((b) => ({
+            id: b.id,
+            day: b.day,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            label: b.label || undefined,
+          }))
+        );
+        if (!restRes.success) {
+          console.warn("[Onboarding] Rest blocks save warning:", restRes.error);
+        }
+      }
+
+      // 5c. Vacations / days off → teacher_time_off (existing source of truth)
+      const validTimeOff = (data.timeOff || []).filter(
+        (p) => p.startDate && p.endDate && p.endDate >= p.startDate
+      );
+      if (validTimeOff.length > 0) {
+        const offRes = await createTeacherTimeOffBatch(
+          userId,
+          validTimeOff.map((p) => ({
+            startDate: p.startDate,
+            endDate: p.endDate,
+            type: "Férias" as const,
+            title: p.title?.trim() || undefined,
+          }))
+        );
+        if (!offRes.success) {
+          console.warn("[Onboarding] Time off save warning:", offRes.error);
+        }
       }
 
       // 6. Update local and AuthProvider state
@@ -1264,6 +1325,281 @@ function Step3YourSchedule({
           )}
         </div>
       )}
+
+      {/* ---- Optional section: recurring pauses (rest_blocks) ---- */}
+      <RestBlocksSection data={data} updateData={updateData} isPt={isPt} />
+
+      {/* ---- Optional section: vacations & days off (teacher_time_off) ---- */}
+      <TimeOffSection data={data} updateData={updateData} isPt={isPt} />
+    </div>
+  );
+}
+
+const OPTIONAL_SECTION_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function OptionalBadge({ isPt }: { isPt: boolean }) {
+  return (
+    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-stone-100 text-stone-500 border border-stone-200">
+      {isPt ? "Opcional" : "Optional"}
+    </span>
+  );
+}
+
+function RestBlocksSection({
+  data,
+  updateData,
+  isPt,
+}: {
+  data: OnboardingData;
+  updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
+  isPt: boolean;
+}) {
+  const blocks = data.restBlocks || [];
+
+  const addBlock = () => {
+    const day = data.workingDays[0] || "Monday";
+    const next: OnboardingRestBlock[] = [
+      ...blocks,
+      {
+        id: `rest-${Date.now()}`,
+        day,
+        startTime: "12:00",
+        endTime: "13:00",
+        label: isPt ? "Pausa" : "Break",
+      },
+    ];
+    updateData("restBlocks", next);
+  };
+
+  const updateBlock = (id: string, field: keyof OnboardingRestBlock, value: string) => {
+    updateData(
+      "restBlocks",
+      blocks.map((b) => (b.id === id ? { ...b, [field]: value } : b))
+    );
+  };
+
+  const removeBlock = (id: string) => {
+    updateData("restBlocks", blocks.filter((b) => b.id !== id));
+  };
+
+  return (
+    <div className="space-y-4 pt-6 border-t border-stone-200/70">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
+              {isPt ? "Pausas recorrentes" : "Recurring breaks"}
+            </h3>
+            <OptionalBadge isPt={isPt} />
+          </div>
+          <p className="text-sm text-stone-500">
+            {isPt
+              ? "Intervalos fixos na sua semana, como almoço ou deslocamento. Ex.: segunda 12:00–13:30."
+              : "Fixed weekly breaks, like lunch or commuting. E.g. Monday 12:00–13:30."}
+          </p>
+        </div>
+      </div>
+
+      {blocks.length > 0 && (
+        <div className="space-y-3">
+          {blocks.map((b) => {
+            const invalid = b.startTime >= b.endTime;
+            return (
+              <div
+                key={b.id}
+                className="p-3.5 bg-white rounded-2xl border border-stone-200 space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={b.day}
+                    onChange={(e) => updateBlock(b.id, "day", e.target.value)}
+                    className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 cursor-pointer"
+                  >
+                    {OPTIONAL_SECTION_DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {isPt ? DAY_LABELS[d].pt : DAY_LABELS[d].en}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="time"
+                    value={b.startTime}
+                    onChange={(e) => updateBlock(b.id, "startTime", e.target.value)}
+                    className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                  <span className="text-xs font-bold text-stone-400">–</span>
+                  <input
+                    type="time"
+                    value={b.endTime}
+                    onChange={(e) => updateBlock(b.id, "endTime", e.target.value)}
+                    className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                  <input
+                    type="text"
+                    value={b.label || ""}
+                    onChange={(e) => updateBlock(b.id, "label", e.target.value)}
+                    placeholder={isPt ? "Nome (opcional)" : "Name (optional)"}
+                    className="h-10 px-3 flex-1 min-w-[130px] rounded-xl border border-stone-300 bg-stone-50 font-medium text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeBlock(b.id)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl border border-stone-200 text-stone-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
+                    aria-label={isPt ? "Remover pausa" : "Remove break"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                {invalid && (
+                  <p className="text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {isPt
+                      ? "O horário final deve ser maior que o inicial."
+                      : "End time must be after start time."}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={addBlock}
+        className="w-full h-12 rounded-2xl border border-dashed border-stone-300 text-sm font-bold text-stone-600 hover:border-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <Plus className="w-4 h-4" />
+        {isPt ? "Adicionar pausa" : "Add break"}
+      </button>
+    </div>
+  );
+}
+
+function TimeOffSection({
+  data,
+  updateData,
+  isPt,
+}: {
+  data: OnboardingData;
+  updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
+  isPt: boolean;
+}) {
+  const periods = data.timeOff || [];
+
+  const addPeriod = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const next: OnboardingTimeOff[] = [
+      ...periods,
+      { id: `off-${Date.now()}`, startDate: today, endDate: today, title: "" },
+    ];
+    updateData("timeOff", next);
+  };
+
+  const updatePeriod = (id: string, field: keyof OnboardingTimeOff, value: string) => {
+    updateData(
+      "timeOff",
+      periods.map((p) => {
+        if (p.id !== id) return p;
+        const updated = { ...p, [field]: value };
+        if (field === "startDate" && updated.endDate < updated.startDate) {
+          updated.endDate = updated.startDate;
+        }
+        return updated;
+      })
+    );
+  };
+
+  const removePeriod = (id: string) => {
+    updateData("timeOff", periods.filter((p) => p.id !== id));
+  };
+
+  return (
+    <div className="space-y-4 pt-6 border-t border-stone-200/70">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
+            {isPt ? "Férias e folgas" : "Vacations & days off"}
+          </h3>
+          <OptionalBadge isPt={isPt} />
+        </div>
+        <p className="text-sm text-stone-500">
+          {isPt
+            ? "Períodos em que você não dará aulas. O Bloom pula essas datas na agenda e nos planos de aula."
+            : "Periods when you won't teach. Bloom skips these dates in the calendar and lesson plans."}
+        </p>
+      </div>
+
+      {periods.length > 0 && (
+        <div className="space-y-3">
+          {periods.map((p) => {
+            const invalid = p.endDate < p.startDate;
+            return (
+              <div
+                key={p.id}
+                className="p-3.5 bg-white rounded-2xl border border-stone-200 space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={p.startDate}
+                    onChange={(e) => updatePeriod(p.id, "startDate", e.target.value)}
+                    className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                  <span className="text-xs font-bold text-stone-400">–</span>
+                  <input
+                    type="date"
+                    value={p.endDate}
+                    min={p.startDate}
+                    onChange={(e) => updatePeriod(p.id, "endDate", e.target.value)}
+                    className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                  <input
+                    type="text"
+                    value={p.title || ""}
+                    onChange={(e) => updatePeriod(p.id, "title", e.target.value)}
+                    placeholder={isPt ? "Nome (ex.: Férias de julho)" : "Name (e.g. July vacation)"}
+                    className="h-10 px-3 flex-1 min-w-[150px] rounded-xl border border-stone-300 bg-stone-50 font-medium text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePeriod(p.id)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl border border-stone-200 text-stone-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
+                    aria-label={isPt ? "Remover período" : "Remove period"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                {invalid && (
+                  <p className="text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {isPt
+                      ? "A data final não pode ser anterior à inicial."
+                      : "End date can't be before start date."}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={addPeriod}
+        className="w-full h-12 rounded-2xl border border-dashed border-stone-300 text-sm font-bold text-stone-600 hover:border-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <Plus className="w-4 h-4" />
+        {isPt ? "Adicionar período" : "Add period"}
+      </button>
     </div>
   );
 }
