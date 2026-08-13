@@ -170,6 +170,16 @@ export function normalizeOnboardingData(raw: any): OnboardingData {
     ...raw,
     managementTools: tools,
     managementTool: tools[0] || "none",
+    restBlocks: Array.isArray(raw.restBlocks)
+      ? raw.restBlocks
+      : Array.isArray(raw.rest_blocks)
+        ? raw.rest_blocks
+        : [],
+    timeOff: Array.isArray(raw.timeOff)
+      ? raw.timeOff
+      : Array.isArray(raw.time_off)
+        ? raw.time_off
+        : [],
     otherPlatformText: raw.otherPlatformText || raw.other_platform_text || "",
     otherManagementText: raw.otherManagementText || raw.other_management_text || "",
   };
