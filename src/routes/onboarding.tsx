@@ -28,7 +28,15 @@ import {
   Pencil,
 } from "lucide-react";
 
-import { OnboardingData, OnboardingPackage, DayAvailability } from "@/types/onboarding";
+import {
+  OnboardingData,
+  OnboardingPackage,
+  DayAvailability,
+  OnboardingRestBlock,
+  OnboardingTimeOff,
+} from "@/types/onboarding";
+import { saveTeacherRestBlocks } from "@/lib/availability-engine";
+import { createTeacherTimeOffBatch } from "@/lib/time-off-engine";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 
 export const Route = createFileRoute("/onboarding")({
@@ -121,6 +129,8 @@ const INITIAL_DATA: OnboardingData = {
     Thursday: { startTime: "09:00", endTime: "18:00" },
     Friday: { startTime: "09:00", endTime: "18:00" },
   },
+  restBlocks: [],
+  timeOff: [],
   lessonTypes: ["Individual"],
   packages: [],
   monthlyGoal: "12000",
