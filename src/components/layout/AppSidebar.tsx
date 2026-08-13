@@ -172,42 +172,59 @@ export function AppSidebar({
 
               <ul className="space-y-1">
                 {section.items.map((item) => {
-                  const active = isActive(item.to);
+                  const active = !item.disabled && isActive(item.to);
                   const itemLabel = t(`nav.${item.id}`, item.label);
                   const badgeLabel = item.badge ? t("nav.soon", item.badge) : null;
 
-                  const linkContent = (
+                  const baseClasses = cn(
+                    "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150",
+                    !isExpanded ? "justify-center px-2 py-2.5" : "px-3 py-2.5",
+                    item.disabled
+                      ? "cursor-not-allowed text-sidebar-foreground/40 opacity-60"
+                      : active
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm font-semibold cursor-pointer"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
+                  );
+
+                  const iconClasses = cn(
+                    "h-[18px] w-[18px] shrink-0 transition-colors",
+                    active
+                      ? "text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
+                  );
+
+                  const labelSpan = isExpanded && (
+                    <span className="flex-1 truncate transition-opacity duration-200">
+                      {itemLabel}
+                    </span>
+                  );
+
+                  const badgeSpan = isExpanded && badgeLabel && (
+                    <span className="rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
+                      {badgeLabel}
+                    </span>
+                  );
+
+                  const linkContent = item.disabled ? (
+                    <span
+                      aria-disabled="true"
+                      tabIndex={-1}
+                      className={baseClasses}
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <item.icon className={iconClasses} />
+                      {labelSpan}
+                      {badgeSpan}
+                    </span>
+                  ) : (
                     <Link
                       to={item.to}
                       onClick={handleLinkClick}
-                      className={cn(
-                        "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
-                        !isExpanded ? "justify-center px-2 py-2.5" : "px-3 py-2.5",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm font-semibold"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                      )}
+                      className={baseClasses}
                     >
-                      <item.icon
-                        className={cn(
-                          "h-[18px] w-[18px] shrink-0 transition-colors",
-                          active
-                            ? "text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
-                        )}
-                      />
-
-                      {isExpanded && (
-                        <span className="flex-1 truncate transition-opacity duration-200">
-                          {itemLabel}
-                        </span>
-                      )}
-
-                      {isExpanded && badgeLabel && (
-                        <span className="rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
-                          {badgeLabel}
-                        </span>
-                      )}
+                      <item.icon className={iconClasses} />
+                      {labelSpan}
+                      {badgeSpan}
                     </Link>
                   );
 
