@@ -271,14 +271,6 @@ const translations = {
   },
 };
 
-// Static Classes Mock data
-const classes = [
-  { time: "09:00", student: "Sofia Almeida", topic: "Business English · B2", mode: "Online" },
-  { time: "11:30", student: "Group A2 (4)", topic: "Past tenses review", mode: "Online" },
-  { time: "14:00", student: "Lucas Meyer", topic: "Conversation · C1", mode: "In person" },
-  { time: "16:30", student: "Yuki Tanaka", topic: "IELTS prep · Writing", mode: "Online" },
-];
-
 // Priority badge colors helper
 const getPriorityStyles = (priority: Priority) => {
   switch (priority) {
