@@ -232,10 +232,10 @@ export async function generateClassLessonPlan(
     status: "Scheduled",
   }));
 
-  const { error } = await supabase
-    .from("calendar_events")
-    .upsert(rows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-  if (error) console.warn("[lesson-plans] class generation upsert warning:", error.message);
+  const insertResult = await insertClassEvents(teacherId, cls.id, rows);
+  if (insertResult.error) {
+    throw new Error(`Não foi possível criar as aulas no calendário: ${insertResult.error}`);
+  }
 
   const { data: events } = await supabase
     .from("calendar_events")
@@ -571,11 +571,7 @@ export async function ensureClassOccurrences(
       status: "Scheduled",
     }));
 
-    const { error } = await supabase
-      .from("calendar_events")
-      .upsert(rows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-
-    if (error) console.warn("[lesson-plans] class occurrence upsert warning:", error.message);
+    await insertClassEvents(teacherId, cls.id, rows);
   }
 
   // Load all events of the class and make sure each one has a plan row.
