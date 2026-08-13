@@ -44,11 +44,16 @@ import {
 import {
   ClassWithDetails,
   saveClassAndRelations,
-  fetchOrCreateClassSessionAttendance,
-  saveClassSessionAttendance,
-  createClassSession,
-  fetchClassSessions,
 } from "@/lib/class-sync";
+import {
+  AttendanceStatus,
+  LessonPlan,
+  fetchAttendanceForEvents,
+  getOrCreateClassEventForDate,
+  saveAttendanceRecords,
+  saveLessonPlans,
+} from "@/lib/lesson-plans";
+import { ClassLessonPlanTable } from "@/components/bloom/ClassLessonPlanTable";
 import { ColorSelector } from "@/components/bloom/ColorSelector";
 import { getBrandColorMeta } from "@/lib/brand-colors";
 
@@ -523,11 +528,11 @@ export function ClassSessionAttendanceModal({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sessionId, setSessionId] = useState("");
+  const [plan, setPlan] = useState<LessonPlan | null>(null);
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
   const [attendanceList, setAttendanceList] = useState<
-    Array<{ student_id: string; student_name: string; status: AttendanceStatusType; notes?: string }>
+    Array<{ student_id: string; student_name: string; status: AttendanceStatus; notes?: string }>
   >([]);
 
   useEffect(() => {
@@ -536,23 +541,36 @@ export function ClassSessionAttendanceModal({
     const loadData = async () => {
       setLoading(true);
       try {
-        const { session, attendance } = await fetchOrCreateClassSessionAttendance(
+        const resolved = await getOrCreateClassEventForDate(
           user.id,
-          classEntity.id,
+          { id: classEntity.id, name: classEntity.name, level: classEntity.level },
           sessionDate,
-          classEntity.schedules?.[0]?.start_time || "19:00"
+          (classEntity.schedules?.[0]?.start_time || "19:00").slice(0, 5),
+          classEntity.schedules?.[0]?.duration || 60
         );
 
-        setSessionId(session.id);
-        setTopic(session.topic || "");
-        setNotes(session.notes || "");
+        setPlan(resolved);
+        setTopic(resolved?.content || "");
+        setNotes(resolved?.notes || "");
+
+        const existing = resolved
+          ? (await fetchAttendanceForEvents([resolved.event_id]))[resolved.event_id] || []
+          : [];
+
+        const activeMembers = (classEntity.members || []).filter(
+          (m) => m.status === "active" && !m.left_at
+        );
+
         setAttendanceList(
-          attendance.map((a) => ({
-            student_id: a.student_id,
-            student_name: a.student_name || "Student",
-            status: a.status,
-            notes: a.notes || "",
-          }))
+          activeMembers.map((m) => {
+            const found = existing.find((a) => a.student_id === m.student_id);
+            return {
+              student_id: m.student_id,
+              student_name: m.student_name || "Student",
+              status: (found?.status || "present") as AttendanceStatus,
+              notes: found?.notes || "",
+            };
+          })
         );
       } catch (err) {
         console.error("Error loading session attendance:", err);
@@ -564,24 +582,25 @@ export function ClassSessionAttendanceModal({
     loadData();
   }, [open, user, classEntity, sessionDate]);
 
-  const updateStatus = (stdId: string, status: AttendanceStatusType) => {
+  const updateStatus = (stdId: string, status: AttendanceStatus) => {
     setAttendanceList((prev) =>
       prev.map((a) => (a.student_id === stdId ? { ...a, status } : a))
     );
   };
 
   const handleSave = async () => {
-    if (!user || !sessionId) return;
+    if (!user || !plan) return;
     setSaving(true);
     try {
-      // Save topic & session notes
-      await supabase
-        .from("class_sessions")
-        .update({ topic, notes, status: "completed" })
-        .eq("id", sessionId);
+      await saveLessonPlans(user.id, [
+        { ...plan, content: topic, notes, completed: true, event_status: "Completed" },
+      ]);
 
-      // Save attendance records
-      await saveClassSessionAttendance(user.id, sessionId, attendanceList);
+      await saveAttendanceRecords(
+        user.id,
+        plan.event_id,
+        attendanceList.map((a) => ({ student_id: a.student_id, status: a.status, notes: a.notes }))
+      );
 
       toast.success(isPt ? "Chamada e aula salvas com sucesso! 🌱" : "Attendance & lesson saved successfully! 🌱");
       onClose();
@@ -662,14 +681,25 @@ export function ClassSessionAttendanceModal({
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateStatus(item.student_id, "justified")}
+                          onClick={() => updateStatus(item.student_id, "late")}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            item.status === "justified"
+                            item.status === "late"
                               ? "bg-amber-600 text-white shadow-sm"
                               : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
                           }`}
                         >
-                          {isPt ? "Justificada" : "Justified"}
+                          {isPt ? "Atrasado" : "Late"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(item.student_id, "excused")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            item.status === "excused"
+                              ? "bg-sky-700 text-white shadow-sm"
+                              : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
+                          }`}
+                        >
+                          {isPt ? "Justificada" : "Excused"}
                         </button>
                       </div>
                     </div>
@@ -990,26 +1020,7 @@ export function ClassDetailsView({
   isPt: boolean;
 }) {
   const { t, formatStatus, formatWeekday } = useLanguage();
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
-  const [isRegisterLessonOpen, setIsRegisterLessonOpen] = useState(false);
-
-  const loadClassSessions = async () => {
-    if (!cls.id) return;
-    setIsLoadingSessions(true);
-    try {
-      const list = await fetchClassSessions(cls.id);
-      setSessions(list);
-    } catch (err) {
-      console.error("Failed to load class sessions:", err);
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  };
-
-  useEffect(() => {
-    loadClassSessions();
-  }, [cls.id]);
+  const { user } = useAuth();
 
   return (
     <div className="space-y-6 font-figtree select-none">
@@ -1079,13 +1090,7 @@ export function ClassDetailsView({
             <span>{isPt ? "Chamada" : "Attendance"}</span>
           </button>
 
-          <button
-            onClick={() => setIsRegisterLessonOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#163020] text-[#F4EBE1] px-5 text-xs font-extrabold hover:bg-[#1a3825] transition-all cursor-pointer shadow-md"
-          >
-            <Plus className="h-4 w-4" />
-            <span>{isPt ? "Registrar Aula da Turma" : "Register Class Lesson"}</span>
-          </button>
+
         </div>
       </div>
 
@@ -1197,101 +1202,9 @@ export function ClassDetailsView({
         </div>
       </div>
 
-      {/* Lesson History Section */}
-      <div className="p-6 bg-white rounded-3xl border border-stone-200/80 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-          <div className="flex items-center gap-2 text-stone-900 font-extrabold font-outfit text-base">
-            <FileText className="h-5 w-5 text-emerald-800" />
-            <span>{isPt ? "Histórico de Aulas da Turma" : "Class Lesson History"}</span>
-          </div>
-          <span className="text-xs text-stone-500 font-medium">
-            {sessions.length} {isPt ? "aulas registradas" : "lessons logged"}
-          </span>
-        </div>
+      {/* Unified Lesson Plan & Attendance (same system as individual students) */}
+      <ClassLessonPlanTable cls={cls} teacherId={user?.id || ""} isPt={isPt} />
 
-        {isLoadingSessions ? (
-          <div className="py-12 text-center text-xs text-stone-400">
-            {isPt ? "Carregando histórico de aulas..." : "Loading lesson history..."}
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="py-12 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 space-y-3">
-            <Calendar className="h-10 w-10 text-stone-300 mx-auto" />
-            <p className="text-xs font-medium text-stone-500">
-              {isPt ? "Nenhuma aula registrada para esta turma ainda." : "No lessons logged for this class yet."}
-            </p>
-            <button
-              onClick={() => setIsRegisterLessonOpen(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#163020] text-[#F4EBE1] px-4 text-xs font-bold hover:bg-[#1a3825] cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>{isPt ? "Registrar Primeira Aula" : "Register First Lesson"}</span>
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {sessions.map((sess) => (
-              <div key={sess.id} className="p-4 bg-stone-50 rounded-2xl border border-stone-200/70 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-stone-900 text-sm font-outfit">{sess.date}</span>
-                    <span className="text-xs text-stone-500 font-medium">
-                      ({sess.start_time?.substring(0, 5)} - {sess.end_time?.substring(0, 5)})
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        sess.status === "completed"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : sess.status === "scheduled"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-rose-100 text-rose-800"
-                      }`}
-                    >
-                      {sess.status === "completed"
-                        ? isPt
-                          ? "Concluída"
-                          : "Completed"
-                        : sess.status === "scheduled"
-                        ? isPt
-                          ? "Agendada"
-                          : "Scheduled"
-                        : isPt
-                        ? "Cancelada"
-                        : "Cancelled"}
-                    </span>
-                  </div>
-                </div>
-
-                {sess.topic && (
-                  <p className="text-xs font-extrabold text-[#163020] font-outfit">
-                    Tópico: {sess.topic}
-                  </p>
-                )}
-
-                {sess.content && (
-                  <p className="text-xs text-stone-700 leading-relaxed font-medium">
-                    {sess.content}
-                  </p>
-                )}
-
-                {sess.homework && (
-                  <div className="p-2 bg-amber-50 rounded-xl border border-amber-200/60 text-xs font-semibold text-amber-900">
-                    📚 Homework: {sess.homework}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modal: Register Class Lesson */}
-      <RegisterClassLessonModal
-        open={isRegisterLessonOpen}
-        onClose={() => setIsRegisterLessonOpen(false)}
-        classId={cls.id}
-        className={cls.name}
-        onSuccess={loadClassSessions}
-      />
     </div>
   );
 }
