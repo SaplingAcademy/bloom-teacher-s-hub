@@ -1516,7 +1516,7 @@ function GrowthPage() {
                 {scenarios.map((sc, index) => (
                   <div
                     key={index}
-                    className="p-3.5 rounded-xl border border-border/80 bg-secondary/10 space-y-2"
+                    className="p-4 rounded-xl border border-border/80 bg-secondary/10 space-y-2 flex flex-col justify-between h-full"
                   >
                     <span className="text-[10px] uppercase font-bold tracking-wide text-primary block">
                       {sc.name}
