@@ -109,7 +109,6 @@ import {
   ClassSessionAttendanceModal,
   ClassCard,
   ClassDetailsView,
-  RegisterClassLessonModal,
 } from "@/components/bloom/ClassManagementComponents";
 import {
   ClassWithDetails,
