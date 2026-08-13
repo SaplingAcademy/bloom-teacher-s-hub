@@ -21,6 +21,12 @@ import {
   saveCalendarEvents,
 } from "@/lib/calendar-sync";
 import {
+  fetchDashboardMetrics,
+  EMPTY_DASHBOARD_METRICS,
+  type DashboardMetrics,
+} from "@/lib/dashboard-metrics";
+import { formatCentsToBRL } from "@/lib/finance-engine";
+import {
   Users,
   Wallet,
   UserPlus,
