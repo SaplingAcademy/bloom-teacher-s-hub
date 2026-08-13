@@ -42,15 +42,70 @@ export function useTeacherLanguages() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Sync state from profile/auth context
+  // Source of truth: teacher profile (languages_taught) with onboarding answers as origin.
   useEffect(() => {
-    if (profile?.languages_taught && Array.isArray(profile.languages_taught)) {
+    let cancelled = false;
+
+    if (Array.isArray(profile?.languages_taught) && profile.languages_taught.length > 0) {
       setLanguages(profile.languages_taught);
       setLoading(false);
-    } else if (!authLoading) {
-      setLoading(false);
+      return;
     }
-  }, [profile, authLoading]);
+
+    if (authLoading) return;
+
+    const userId = user?.id;
+    if (!userId) {
+      setLanguages([]);
+      setLoading(false);
+      return;
+    }
+
+    // Profile state has no languages yet (e.g. profile synced before onboarding finished):
+    // re-read the same underlying data, never a separate list.
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("languages_taught")
+          .eq("id", userId)
+          .maybeSingle();
+
+        let resolved: string[] =
+          Array.isArray(profileRow?.languages_taught) ? profileRow!.languages_taught : [];
+
+        if (resolved.length === 0) {
+          const { data: onboardingRow } = await supabase
+            .from("onboarding")
+            .select("answers")
+            .eq("teacher_id", userId)
+            .maybeSingle();
+          const answers: any = onboardingRow?.answers || {};
+          if (Array.isArray(answers.languages)) {
+            resolved = answers.languages.filter(
+              (l: unknown): l is string => typeof l === "string" && l.trim().length > 0,
+            );
+          }
+        }
+
+        if (cancelled) return;
+        setLanguages(resolved);
+        if (resolved.length > 0) {
+          updateProfileState({ languages_taught: resolved });
+        }
+      } catch (err) {
+        console.warn("[useTeacherLanguages] Could not resolve teaching languages:", err);
+        if (!cancelled) setLanguages([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, authLoading, user, updateProfileState]);
 
   // Format helper for display
   const formatLanguageLabel = useCallback((langId: string, uiLang: "en" | "pt" = "pt") => {
