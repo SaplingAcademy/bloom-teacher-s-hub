@@ -493,29 +493,6 @@ function TodayPage() {
       } catch (e) {
         console.error("Failed to parse tasks", e);
       }
-    } else {
-      // Default Initial Tasks (Manual only)
-      const initialTasks = [
-        {
-          id: "m1",
-          title: "Renew Emily's contract",
-          tagIds: ["tag-admin"],
-          student: "Emily Jones",
-          priority: "High",
-          date: formatDateString(new Date()),
-          completed: false,
-        },
-        {
-          id: "m2",
-          title: "Follow up with new Instagram lead",
-          tagIds: ["tag-marketing"],
-          priority: "High",
-          date: formatDateString(new Date()),
-          completed: false,
-        },
-      ];
-      setManualTasks(initialTasks as any);
-      localStorage.setItem("bloom.dashboard.tasks", JSON.stringify(initialTasks));
     }
 
     refreshEventsAndTasks();
