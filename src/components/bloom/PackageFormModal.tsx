@@ -36,12 +36,12 @@ export function PackageFormModal({
   const isPt = lang === "pt";
 
   const [name, setName] = useState("");
-  const [price, setPrice] = useState<number>(300);
+  const [price, setPrice] = useState<string>("300");
   const [frequency, setFrequency] = useState<"total" | "Monthly" | "One-time">("Monthly");
-  const [duration, setDuration] = useState<number>(60);
-  const [lessons, setLessons] = useState<number>(4);
+  const [duration, setDuration] = useState<string>("60");
+  const [lessons, setLessons] = useState<string>("4");
   const [method, setMethod] = useState("Pix");
-  const [defaultInstallmentCount, setDefaultInstallmentCount] = useState<number>(6);
+  const [defaultInstallmentCount, setDefaultInstallmentCount] = useState<string>("6");
 
   useEffect(() => {
     if (initialData) {
