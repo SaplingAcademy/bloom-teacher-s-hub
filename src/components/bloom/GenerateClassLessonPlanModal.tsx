@@ -25,10 +25,12 @@ import {
   OccurrenceSlot,
   calculateClassExpectedEndDate,
   generateClassLessonPlan,
+  getScheduleAdvisoryWarnings,
 } from "@/lib/lesson-plans";
 import {
   TeacherAvailabilitySnapshot,
   getTeacherAvailability,
+  findRecurringConflicts,
 } from "@/lib/teacher-availability";
 import { calculateEndTime } from "@/lib/calendar-sync";
 
@@ -86,6 +88,7 @@ export function GenerateClassLessonPlanModal({
   const [availability, setAvailability] = useState<TeacherAvailabilitySnapshot | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [conflictWarnings, setConflictWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -147,6 +150,36 @@ export function GenerateClassLessonPlanModal({
       availability
     );
   }, [startDate, slots, targetCount, availability]);
+
+  const advisoryWarnings = useMemo(
+    () => getScheduleAdvisoryWarnings(startDate, slots, availability),
+    [startDate, slots, availability]
+  );
+
+  useEffect(() => {
+    if (!isOpen || !teacherId || slots.length === 0) {
+      setConflictWarnings([]);
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      const found: string[] = [];
+      for (const slot of slots) {
+        const end = calculateEndTime(slot.startTime, slot.duration || 60);
+        const list = await findRecurringConflicts(teacherId, slot.weekday, slot.startTime, end);
+        for (const c of list) {
+          if (c.name.includes(cls.name)) continue;
+          found.push(`${slot.weekday} ${slot.startTime}–${end}: ${c.name} (${c.timeRange})`);
+        }
+      }
+      if (!cancelled) setConflictWarnings(found);
+    };
+    const timer = setTimeout(run, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isOpen, teacherId, slots, cls.name]);
 
   const addRow = () =>
     setRows((prev) => [...prev, { weekday: "Friday", startTime: "19:00", endTime: "20:00" }]);
