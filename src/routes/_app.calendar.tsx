@@ -52,7 +52,6 @@ import {
   saveCalendarEvents,
   CalendarEvent,
   WorkingAvailability,
-  defaultAvailability,
   formatDateString,
   calculateEndTime,
   getDayIndex,
@@ -62,6 +61,14 @@ import {
   StudentType,
   syncStudentSchedulesToSupabaseEvents,
 } from "@/lib/calendar-sync";
+import {
+  getTeacherAvailability,
+  invalidateTeacherAvailability,
+  isSlotAvailable,
+  weekdayKeyFromDate,
+  TeacherAvailabilitySnapshot,
+} from "@/lib/teacher-availability";
+import { saveTeacherWorkingAvailability } from "@/lib/availability-engine";
 import {
   fetchTeacherTimeOff,
   checkDateIsNonWorking,
@@ -256,6 +263,8 @@ function CalendarPage() {
 
   // Non-Working Days & First-Time Setup States
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
+  const [availabilitySnapshot, setAvailabilitySnapshot] = useState<TeacherAvailabilitySnapshot | null>(null);
+  const [availabilityWarning, setAvailabilityWarning] = useState<string | null>(null);
   const [isFirstTimeSetupOpen, setIsFirstTimeSetupOpen] = useState(false);
   const [isNonWorkingModalOpen, setIsNonWorkingModalOpen] = useState(false);
   const [conflictTimeOff, setConflictTimeOff] = useState<TeacherTimeOff | null>(null);
@@ -474,8 +483,9 @@ function CalendarPage() {
 
   const loadWorkingAvailability = useCallback(async () => {
     if (!user) return;
-    const realAvail = await fetchTeacherWorkingAvailability(user.id);
-    setAvailability(realAvail);
+    const snapshot = await getTeacherAvailability(user.id, { force: true });
+    setAvailabilitySnapshot(snapshot);
+    setAvailability(snapshot.days);
   }, [user]);
 
   // Initial load
@@ -519,11 +529,16 @@ function CalendarPage() {
     setIsAvailOpen(true);
   };
 
-  const handleSaveAvail = () => {
-    setAvailability(tempAvail);
-    localStorage.setItem("bloom.working.availability", JSON.stringify(tempAvail));
+  const handleSaveAvail = async () => {
+    if (!user) return;
+    const res = await saveTeacherWorkingAvailability(user.id, tempAvail);
+    if (!res.success) {
+      toast.error(res.error || (lang === "pt" ? "Erro ao salvar disponibilidade." : "Error saving availability."));
+      return;
+    }
+    invalidateTeacherAvailability(user.id);
+    await loadWorkingAvailability();
     setIsAvailOpen(false);
-    window.dispatchEvent(new Event("storage"));
   };
 
   // Create class execution logic
@@ -639,6 +654,19 @@ function CalendarPage() {
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName.trim()) return;
+
+    // Warn (never silently block) when the slot falls outside the teacher availability
+    if (availabilitySnapshot) {
+      const check = isSlotAvailable(
+        availabilitySnapshot,
+        addDate,
+        addTime,
+        calculateEndTime(addTime, addDuration).slice(0, 5)
+      );
+      if (!check.available && check.reason?.kind !== "time_off") {
+        toast.warning(check.reason?.message || "Horário fora da sua disponibilidade.");
+      }
+    }
 
     // Check if scheduling on a non-working date
     const matchedTimeOff = checkDateIsNonWorking(addDate, timeOffList);
@@ -937,6 +965,16 @@ function CalendarPage() {
   const currentTranslation = t[lang];
 
   // Hours for grid display in week/day view (08:00 to 21:00)
+  // Grid shading source: teacher availability snapshot (single source of truth)
+  const isHourAvailable = useCallback(
+    (dateStr: string, hour: string) => {
+      if (!availabilitySnapshot || !availabilitySnapshot.isConfigured) return true;
+      const endHour = String(Number(hour.slice(0, 2)) + 1).padStart(2, "0") + ":00";
+      return isSlotAvailable(availabilitySnapshot, dateStr, hour, endHour).available;
+    },
+    [availabilitySnapshot]
+  );
+
   const gridHours = [
     "08:00",
     "09:00",
@@ -1276,10 +1314,17 @@ function CalendarPage() {
                           evt.date === dateStr && evt.startTime.startsWith(hour.substring(0, 3)),
                       );
 
+                      const unavailable = !isHourAvailable(dateStr, hour);
+
                       return (
                         <div
                           key={dayIdx}
-                          className="p-1 border-r border-border/60 relative bg-card hover:bg-secondary/10 transition-colors flex flex-col gap-1 min-h-[64px]"
+                          title={unavailable ? (lang === "pt" ? "Fora da disponibilidade" : "Outside availability") : undefined}
+                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] ${
+                            unavailable
+                              ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
+                              : "bg-card hover:bg-secondary/10"
+                          }`}
                         >
                           {cellEvents.map((evt) => {
                             const colorMeta = resolveEventColorMeta(
@@ -1345,10 +1390,12 @@ function CalendarPage() {
                   (evt) => evt.date === dateStr && evt.startTime.startsWith(hour.substring(0, 3)),
                 );
 
+                const unavailable = !isHourAvailable(dateStr, hour);
+
                 return (
                   <div
                     key={hour}
-                    className="grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center"
+                    className={`grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center ${unavailable ? "bg-muted/50" : ""}`}
                   >
                     <div className="text-right pr-4 text-xs font-bold text-muted-foreground">
                       {hour}
@@ -1356,7 +1403,13 @@ function CalendarPage() {
                     <div className="flex flex-col gap-2">
                       {cellEvents.length === 0 ? (
                         <span className="text-[11px] text-muted-foreground/40 italic ml-2">
-                          Empty
+                          {unavailable
+                            ? lang === "pt"
+                              ? "Indisponível"
+                              : "Unavailable"
+                            : lang === "pt"
+                              ? "Livre"
+                              : "Free"}
                         </span>
                       ) : (
                         cellEvents.map((evt) => {

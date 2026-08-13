@@ -64,23 +64,9 @@ export interface CalendarEvent {
   recurrenceSeriesId?: string;
 }
 
-export interface WorkingAvailability {
-  day: string; // "Monday", etc.
-  enabled: boolean;
-  startTime: string; // "HH:MM"
-  endTime: string; // "HH:MM"
-}
-
-// Default working availability (Mon-Fri 9-18, Sat 9-13, Sun closed)
-export const defaultAvailability: WorkingAvailability[] = [
-  { day: "Monday", enabled: true, startTime: "09:00", endTime: "18:00" },
-  { day: "Tuesday", enabled: true, startTime: "09:00", endTime: "18:00" },
-  { day: "Wednesday", enabled: true, startTime: "09:00", endTime: "18:00" },
-  { day: "Thursday", enabled: true, startTime: "09:00", endTime: "18:00" },
-  { day: "Friday", enabled: true, startTime: "09:00", endTime: "18:00" },
-  { day: "Saturday", enabled: true, startTime: "09:00", endTime: "13:00" },
-  { day: "Sunday", enabled: false, startTime: "09:00", endTime: "17:00" },
-];
+// Working availability type comes from the single source of truth (availability-engine).
+// No fake default availability here: "not configured" must never look like "available".
+export type { WorkingAvailability } from "@/lib/availability-engine";
 
 // Helper to convert weekday name to numeric day index (0 = Sunday, 1 = Monday, etc.)
 export function getDayIndex(day: string): number {
@@ -173,169 +159,21 @@ export function generateOccurrenceDates(
   return dates;
 }
 
-// Seeding Default Calendar Events based on defaultStudents list
-export function seedDefaultEvents(): CalendarEvent[] {
-  // Let's seed events for three weeks: past week, current week, and next week.
-  // Reference date is July 13, 2026 (Monday).
-  const refDate = new Date("2026-07-13T00:00:00");
-  const seededEvents: CalendarEvent[] = [];
-
-  // Students profiles mapping (similar to defaultStudents in _app.students)
-  const defaultScheduleSources = [
-    {
-      studentId: "s1",
-      name: "Lucas Meyer",
-      level: "C1" as CEFRLevel,
-      focus: "Business English" as CourseFocus,
-      type: "Private" as StudentType,
-      day: "Tuesday",
-      time: "19:00",
-      duration: 60,
-      mode: "In person" as const,
-      location: "Room 102 - Downtown Hub",
-    },
-    {
-      studentId: "s2",
-      name: "Sofia Almeida",
-      level: "B2" as CEFRLevel,
-      focus: "Business English" as CourseFocus,
-      type: "Private" as StudentType,
-      day: "Monday",
-      time: "09:00",
-      duration: 60,
-      mode: "Online" as const,
-      location: "https://zoom.us/j/sofiaalmeida",
-    },
-    {
-      studentId: "s3",
-      name: "Yuki Tanaka",
-      level: "C1" as CEFRLevel,
-      focus: "IELTS" as CourseFocus,
-      type: "Private" as StudentType,
-      day: "Thursday",
-      time: "16:30",
-      duration: 60,
-      mode: "Online" as const,
-      location: "https://zoom.us/j/yukitanaka",
-    },
-    {
-      studentId: "s4",
-      name: "Emily Jones",
-      level: "A2" as CEFRLevel,
-      focus: "General English" as CourseFocus,
-      type: "Private" as StudentType,
-      day: "Wednesday",
-      time: "15:00",
-      duration: 60,
-      mode: "Online" as const,
-      location: "https://zoom.us/j/emilyjones",
-    },
-    {
-      groupId: "s5",
-      name: "Tuesday A2 Group",
-      level: "A2" as CEFRLevel,
-      focus: "General English" as CourseFocus,
-      type: "Group" as StudentType,
-      day: "Tuesday",
-      time: "18:30",
-      duration: 60,
-      mode: "Online" as const,
-      location: "https://zoom.us/j/tuesdaya2",
-    },
-    {
-      groupId: "s6",
-      name: "Business English Advanced",
-      level: "C2" as CEFRLevel,
-      focus: "Business English" as CourseFocus,
-      type: "Group" as StudentType,
-      day: "Thursday",
-      time: "20:00",
-      duration: 60,
-      mode: "Online" as const,
-      location: "https://zoom.us/j/beadvanced",
-    },
-  ];
-
-  // We seed events over a 3-week window:
-  // Week -1: Jul 6 - Jul 12
-  // Week  0: Jul 13 - Jul 19 (Current)
-  // Week +1: Jul 20 - Jul 26
-  const weekOffsets = [-1, 0, 1];
-
-  weekOffsets.forEach((offset) => {
-    defaultScheduleSources.forEach((src) => {
-      // Find the specific date for this weekday in the target offset week
-      const targetDayIdx = getDayIndex(src.day);
-      const targetDate = new Date(refDate);
-      targetDate.setDate(targetDate.getDate() + offset * 7);
-
-      // Adjust date to match target weekday
-      const diff = targetDayIdx - targetDate.getDay();
-      targetDate.setDate(targetDate.getDate() + diff);
-
-      const dateStr = formatDateString(targetDate);
-      const seriesId = `series-${src.studentId || src.groupId}`;
-      const eventId = `evt-${src.studentId || src.groupId}-${dateStr}`;
-
-      // Assign initial statuses differently to make timeline feel natural
-      let status: TimelineStatus = "Scheduled";
-      if (offset === -1) {
-        status = "Completed";
-      } else if (offset === 0) {
-        // Today or upcoming this week
-        if (src.name === "Lucas Meyer") {
-          status = "Lesson Ready";
-        } else if (src.name === "Tuesday A2 Group") {
-          status = "Needs Preparation";
-        } else if (src.name === "Sofia Almeida") {
-          status = "Homework Pending";
-        } else if (src.name === "Yuki Tanaka") {
-          status = "Feedback Pending";
-        }
-      }
-
-      seededEvents.push({
-        id: eventId,
-        studentId: src.studentId,
-        groupId: src.groupId,
-        studentName: src.name,
-        level: src.level,
-        focus: src.focus,
-        date: dateStr,
-        startTime: src.time,
-        endTime: calculateEndTime(src.time, src.duration),
-        duration: src.duration,
-        type: src.type,
-        deliveryMode: src.mode,
-        locationLink: src.location,
-        status,
-        isRecurring: true,
-        recurrenceSeriesId: seriesId,
-      });
-    });
-  });
-
-  return seededEvents;
-}
-
-// Get loaded events or seed them
+// Local cache ONLY (first paint). Supabase is the operational source of truth:
+// this never seeds demo data and never overwrites fresher server data.
 export function getCalendarEvents(): CalendarEvent[] {
   if (typeof window === "undefined") return [];
   const stored = localStorage.getItem("bloom.calendar.events");
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {
-      console.error("Failed to parse calendar events", e);
-    }
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    console.error("Failed to parse cached calendar events", e);
+    return [];
   }
-
-  const seeded = seedDefaultEvents();
-  localStorage.setItem("bloom.calendar.events", JSON.stringify(seeded));
-  return seeded;
 }
 
-// Save calendar events
+// Refresh the first-paint cache with data already persisted in Supabase
 export function saveCalendarEvents(events: CalendarEvent[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem("bloom.calendar.events", JSON.stringify(events));
@@ -435,7 +273,7 @@ export async function syncStudentSchedulesToSupabaseEvents(
   level: CEFRLevel,
   focus: CourseFocus,
   type: StudentType,
-  schedules: Array<{ id?: string; weekday: string; startTime?: string; start_time?: string; endTime?: string; end_time?: string; duration?: number }>,
+  schedules: Array<{ id?: string; weekday: string; startTime?: string; start_time?: string; endTime?: string; end_time?: string; duration?: number; duration_minutes?: number }>,
   limitWeeks = 8
 ) {
   console.log("[calendar-sync] Starting sync for student:", {
@@ -488,7 +326,7 @@ export async function syncStudentSchedulesToSupabaseEvents(
       if (!sch.weekday) continue;
       const rawStartTime = sch.startTime || sch.start_time || "09:00";
       const startTime = formatTimeHHMMSS(rawStartTime);
-      const duration = sch.duration || 60;
+      const duration = sch.duration_minutes || sch.duration || 60;
       const rawEndTime = sch.endTime || sch.end_time || calculateEndTime(rawStartTime, duration);
       const endTime = formatTimeHHMMSS(rawEndTime);
 
@@ -522,6 +360,7 @@ export async function syncStudentSchedulesToSupabaseEvents(
           delivery_mode: "Online",
           status: "Scheduled",
           is_recurring: true,
+          origin: "recurring",
           recurrence_series_id: `series-${studentId}`,
         });
       }

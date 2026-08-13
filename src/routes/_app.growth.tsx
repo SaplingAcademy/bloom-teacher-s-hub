@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { getCalendarEvents, WorkingAvailability, defaultAvailability } from "@/lib/calendar-sync";
+import { getCalendarEvents } from "@/lib/calendar-sync";
+import { getTeacherAvailability, WorkingAvailability } from "@/lib/teacher-availability";
 import {
   fetchMonthlyGoal,
   saveMonthlyGoal,
@@ -402,16 +403,10 @@ function GrowthPage() {
   };
 
   useEffect(() => {
-    // Availability
-    const savedAvail = localStorage.getItem("bloom.working.availability");
-    let availList = defaultAvailability;
-    if (savedAvail) {
-      try {
-        availList = JSON.parse(savedAvail);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    let cancelled = false;
+
+    const run = async (availList: WorkingAvailability[]) => {
+    if (cancelled) return;
     setAvailability(availList);
 
     // Calculate total capacity
@@ -429,8 +424,8 @@ function GrowthPage() {
         daySlotCapacities[dayAvail.day] = 0;
       }
     });
-    setTotalCapacity(totalSlots || 40);
-    setAvailableWeeklySlots(totalSlots || 49);
+    setTotalCapacity(totalSlots);
+    setAvailableWeeklySlots(totalSlots);
 
     // Get current week's events
     const allEvents = getCalendarEvents();
@@ -556,7 +551,23 @@ function GrowthPage() {
         console.error(e);
       }
     }
-  }, []);
+    };
+
+    if (user?.id) {
+      getTeacherAvailability(user.id)
+        .then((snap) => run(snap.days))
+        .catch((err) => {
+          console.warn("[Growth] Could not load teacher availability:", err);
+          run([]);
+        });
+    } else {
+      run([]);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const handleSaveGoal = () => {
     const goalData = {
