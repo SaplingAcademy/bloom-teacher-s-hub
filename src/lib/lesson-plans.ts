@@ -251,7 +251,7 @@ export async function generateClassLessonPlan(
 
   if (missing.length > 0) {
     let nextNumber = existing.reduce((max, p) => Math.max(max, p.lesson_number || 0), 0);
-    await saveLessonPlans(
+    const saveResult = await saveLessonPlans(
       teacherId,
       missing.map((e: any) => ({
         teacher_id: teacherId,
@@ -271,9 +271,15 @@ export async function generateClassLessonPlan(
         completed: false,
       }))
     );
+    if (!saveResult.success) {
+      throw new Error(`Não foi possível salvar o plano de aulas: ${saveResult.error || ""}`);
+    }
   }
 
   const plans = await fetchLessonPlans({ classId: cls.id });
+  if (plans.length === 0) {
+    throw new Error("O plano de aulas não pôde ser salvo. Tente novamente.");
+  }
   return plans.map((p, idx) => ({ ...p, lesson_number: p.lesson_number || idx + 1 }));
 }
 
