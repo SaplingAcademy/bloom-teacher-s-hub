@@ -1,6 +1,6 @@
 import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
 import { useState, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -57,6 +57,9 @@ export const Route = createFileRoute("/_app/profile")({
       },
     ],
   }),
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
   component: ProfilePage,
 });
 

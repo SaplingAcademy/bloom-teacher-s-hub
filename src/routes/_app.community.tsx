@@ -106,6 +106,9 @@ export const Route = createFileRoute("/_app/community")({
       },
     ],
   }),
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
   component: CommunityEcosystemPage,
 });
 
