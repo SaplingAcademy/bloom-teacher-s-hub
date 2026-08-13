@@ -23,6 +23,7 @@ export type NavItem = {
   icon: LucideIcon;
   description: string;
   badge?: string;
+  disabled?: boolean;
 };
 
 export type NavSection = {
