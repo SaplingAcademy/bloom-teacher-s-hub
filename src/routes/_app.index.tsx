@@ -916,8 +916,8 @@ function TodayPage() {
         />
       </div>
 
-      {/* SCHEDULE & AI TIPS */}
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      {/* TODAY'S SCHEDULE (real calendar_events) */}
+      <div className="grid gap-5">
         <PanelCard
           title={t.scheduleTitle}
           description={
@@ -930,7 +930,9 @@ function TodayPage() {
           contentClassName="p-0"
         >
           <ul className="divide-y divide-border/70">
-            {todayEvents.length === 0 ? (
+            {metricsLoading ? (
+              <li className="p-5 text-center text-xs text-muted-foreground">…</li>
+            ) : todayEvents.length === 0 ? (
               <li className="p-5 text-center text-xs text-muted-foreground">
                 {t.noClassesToday}
               </li>
@@ -962,21 +964,6 @@ function TodayPage() {
             )}
           </ul>
         </PanelCard>
-
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-border bg-gradient-lilac p-5 text-lilac-foreground shadow-[var(--shadow-md)]">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide opacity-90">
-                {t.aiTipTitle}
-              </p>
-            </div>
-            <p className="mt-2 text-sm font-medium leading-snug">{t.aiTipContent}</p>
-            <button className="mt-3 inline-flex items-center gap-1 rounded-lg bg-lilac-foreground/15 px-3 py-1.5 text-xs font-semibold backdrop-blur transition-colors hover:bg-lilac-foreground/25 cursor-pointer">
-              {t.aiTipAction} <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* ADD/EDIT TASK MODAL */}
