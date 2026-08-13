@@ -46,22 +46,33 @@ export function PackageFormModal({
   useEffect(() => {
     if (initialData) {
       setName(initialData.name || "");
-      setPrice(initialData.price || 0);
+      setPrice(String(initialData.price ?? 300));
       setFrequency((initialData.frequency as any) || "Monthly");
-      setDuration(initialData.duration || 60);
-      setLessons(initialData.lessons || 4);
+      setDuration(String(initialData.duration ?? 60));
+      setLessons(String(initialData.lessons ?? 4));
       setMethod(initialData.method || "Pix");
-      setDefaultInstallmentCount(initialData.defaultInstallmentCount || 6);
+      setDefaultInstallmentCount(String(initialData.defaultInstallmentCount ?? 6));
     } else {
       setName("");
-      setPrice(300);
+      setPrice("300");
       setFrequency("Monthly");
-      setDuration(60);
-      setLessons(4);
+      setDuration("60");
+      setLessons("4");
       setMethod("Pix");
-      setDefaultInstallmentCount(6);
+      setDefaultInstallmentCount("6");
     }
   }, [initialData, isOpen]);
+
+  const sanitizeNumeric = (value: string) => value.replace(/[^0-9]/g, "");
+
+  const handleNumericBlur = (
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    fallback: number
+  ) => {
+    const sanitized = sanitizeNumeric(value);
+    setter(sanitized === "" ? String(fallback) : sanitized);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
