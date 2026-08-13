@@ -470,6 +470,45 @@ export function OnboardingPage() {
         console.warn("[Onboarding] Working availability initialization warning:", availRes.error);
       }
 
+      // 5b. Recurring pauses → settings.rest_blocks (existing source of truth)
+      const validRestBlocks = (data.restBlocks || []).filter(
+        (b) => b.day && b.startTime && b.endTime && b.startTime < b.endTime
+      );
+      if (validRestBlocks.length > 0) {
+        const restRes = await saveTeacherRestBlocks(
+          userId,
+          validRestBlocks.map((b) => ({
+            id: b.id,
+            day: b.day,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            label: b.label || undefined,
+          }))
+        );
+        if (!restRes.success) {
+          console.warn("[Onboarding] Rest blocks save warning:", restRes.error);
+        }
+      }
+
+      // 5c. Vacations / days off → teacher_time_off (existing source of truth)
+      const validTimeOff = (data.timeOff || []).filter(
+        (p) => p.startDate && p.endDate && p.endDate >= p.startDate
+      );
+      if (validTimeOff.length > 0) {
+        const offRes = await createTeacherTimeOffBatch(
+          userId,
+          validTimeOff.map((p) => ({
+            startDate: p.startDate,
+            endDate: p.endDate,
+            type: "Férias" as const,
+            title: p.title?.trim() || undefined,
+          }))
+        );
+        if (!offRes.success) {
+          console.warn("[Onboarding] Time off save warning:", offRes.error);
+        }
+      }
+
       // 6. Update local and AuthProvider state
       updateProfileState({
         onboarding_completed: true,
