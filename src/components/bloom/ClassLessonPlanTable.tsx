@@ -26,15 +26,17 @@ import {
   Users,
   Ban,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import { LessonNotesModal } from "./LessonNotesModal";
+import { GenerateClassLessonPlanModal } from "./GenerateClassLessonPlanModal";
 import { ClassWithDetails } from "@/lib/class-sync";
 import {
   AttendanceRecordRow,
   AttendanceStatus,
   ATTENDANCE_STATUSES,
   LessonPlan,
-  ensureClassOccurrences,
+  fetchLessonPlans,
   fetchAttendanceForEvents,
   saveAttendanceRecords,
   saveLessonPlans,
@@ -62,6 +64,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "cancelled">("all");
   const [notesPlan, setNotesPlan] = useState<LessonPlan | null>(null);
   const [attendancePlan, setAttendancePlan] = useState<LessonPlan | null>(null);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
 
   const activeMembers = useMemo(
     () => (cls.members || []).filter((m) => m.status === "active" && !m.left_at),
@@ -72,13 +75,10 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
     if (!teacherId || !cls?.id) return;
     setLoading(true);
     try {
-      const list = await ensureClassOccurrences(teacherId, {
-        id: cls.id,
-        name: cls.name,
-        level: cls.level,
-        start_date: cls.start_date,
-        schedules: cls.schedules || [],
-      });
+      const list = (await fetchLessonPlans({ classId: cls.id })).map((p, idx) => ({
+        ...p,
+        lesson_number: p.lesson_number || idx + 1,
+      }));
       setPlans(list);
       setAttendance(await fetchAttendanceForEvents(list.map((p) => p.event_id)));
     } catch (err: any) {
@@ -87,7 +87,23 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [teacherId, cls.id, cls.name, cls.level, cls.start_date, cls.schedules, isPt]);
+  }, [teacherId, cls.id, isPt]);
+
+  const applyGenerated = async (generated: LessonPlan[]) => {
+    setPlans(generated);
+    setAttendance(await fetchAttendanceForEvents(generated.map((p) => p.event_id)));
+  };
+
+  const generatorModal = (
+    <GenerateClassLessonPlanModal
+      isOpen={generatorOpen}
+      onClose={() => setGeneratorOpen(false)}
+      cls={cls}
+      teacherId={teacherId}
+      isPt={isPt}
+      onSuccess={applyGenerated}
+    />
+  );
 
   useEffect(() => {
     load();
