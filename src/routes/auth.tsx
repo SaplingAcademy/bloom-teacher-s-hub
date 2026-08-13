@@ -852,17 +852,13 @@ function AuthPage() {
             {t.brandingSubtitle}
           </p>
 
-          <div className="pt-8 border-t border-emerald-800/60 grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-2xl font-bold font-outfit text-[#F4EBE1]">
-                {t.brandingStatTeachers}
-              </p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-outfit text-[#F4EBE1]">
-                {t.brandingStatClasses}
-              </p>
-            </div>
+          <div className="pt-8 border-t border-emerald-800/60 space-y-2">
+            <p className="text-2xl font-bold font-outfit text-[#F4EBE1]">
+              {t.brandingStatTeachers}
+            </p>
+            <p className="text-sm font-medium text-emerald-300/80 tracking-wide">
+              {t.brandingStatClasses}
+            </p>
           </div>
         </div>
 
