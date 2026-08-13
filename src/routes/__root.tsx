@@ -14,6 +14,10 @@ import { AuthProvider } from "@/hooks/use-auth";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import {
+  getPublicSupabaseConfig,
+  type PublicSupabaseConfig,
+} from "../lib/public-config.functions";
 
 function NotFoundComponent() {
   return (
@@ -76,7 +80,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  loader: async (): Promise<{ supabaseConfig: PublicSupabaseConfig }> => ({
+    supabaseConfig: await getPublicSupabaseConfig(),
+  }),
+  head: ({ loaderData }) => ({
+    scripts: [
+      {
+        children: `window.__BLOOM_SUPABASE_CONFIG__=${JSON.stringify(
+          loaderData?.supabaseConfig ?? { url: null, publishableKey: null },
+        ).replace(/</g, "\\u003c")};`,
+      },
+    ],
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },

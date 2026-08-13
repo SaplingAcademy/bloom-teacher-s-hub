@@ -8,6 +8,13 @@ const nodeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<
   string | undefined
 >;
 
+// Injected into the HTML <head> by the root route from server-side env vars.
+// Nothing secret lives here: only the project URL and the publishable key.
+const injected = ((globalThis as any).__BLOOM_SUPABASE_CONFIG__ ?? {}) as {
+  url?: string | null;
+  publishableKey?: string | null;
+};
+
 const pick = (...names: string[]): string | undefined => {
   for (const name of names) {
     const value = viteEnv[name] ?? nodeEnv[name];
@@ -16,26 +23,30 @@ const pick = (...names: string[]): string | undefined => {
   return undefined;
 };
 
-const supabaseUrl = pick("VITE_SUPABASE_URL", "SUPABASE_URL");
-const supabaseKey = pick(
-  "VITE_SUPABASE_ANON_KEY",
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
-  "SUPABASE_PUBLISHABLE_KEY",
-  "SUPABASE_ANON_KEY",
-);
+const supabaseUrl =
+  injected.url || pick("VITE_SUPABASE_URL", "BLOOM_SUPABASE_URL", "SUPABASE_URL");
+const supabaseKey =
+  injected.publishableKey ||
+  pick(
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+    "VITE_SUPABASE_ANON_KEY",
+    "BLOOM_SUPABASE_PUBLISHABLE_KEY",
+    "BLOOM_SUPABASE_ANON_KEY",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+  );
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 
 if (!isSupabaseConfigured) {
   console.error(
-    "[supabase] Missing Supabase credentials. Connect the existing Supabase project " +
-      "in Project Settings → Integrations → Supabase so VITE_SUPABASE_URL and " +
-      "VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) are injected.",
+    "[supabase] Missing public Supabase credentials. Save BLOOM_SUPABASE_URL and " +
+      "BLOOM_SUPABASE_PUBLISHABLE_KEY as project environment variables.",
   );
 }
 
 // Placeholder values keep module evaluation from crashing the whole app before the
-// Supabase project is connected; every request simply fails until real keys exist.
+// credentials exist; every request simply fails until real values are provided.
 export const supabase = createClient(
   supabaseUrl ?? "https://placeholder.supabase.co",
   supabaseKey ?? "placeholder-anon-key",
