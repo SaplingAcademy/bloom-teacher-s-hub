@@ -391,6 +391,8 @@ export function OnboardingPage() {
             same_availability_all_days: data.sameAvailabilityAllDays,
             unified_availability: data.unifiedAvailability,
             custom_availability: data.customAvailability,
+            rest_blocks: data.restBlocks || [],
+            time_off: data.timeOff || [],
             lesson_types: data.lessonTypes,
             packages: data.packages,
             monthly_goal: data.monthlyGoal,
