@@ -281,6 +281,43 @@ function normalizeAttachments(raw: any): LessonPlanAttachment[] {
   return Array.isArray(raw) ? raw : [];
 }
 
+/**
+ * Inserts class calendar events, skipping rows that already exist for the same
+ * (class_id, date, start_time). Does not rely on a DB unique constraint.
+ */
+export async function insertClassEvents(
+  teacherId: string,
+  classId: string,
+  rows: Array<Record<string, any>>
+): Promise<{ inserted: number; error?: string }> {
+  if (rows.length === 0) return { inserted: 0 };
+
+  const { data: existing } = await supabase
+    .from("calendar_events")
+    .select("date, start_time")
+    .eq("teacher_id", teacherId)
+    .eq("class_id", classId);
+
+  const key = (d: string, t: string) => `${d}|${String(t).slice(0, 5)}`;
+  const seen = new Set((existing || []).map((e: any) => key(e.date, e.start_time)));
+
+  const toInsert = rows.filter((r) => {
+    const k = key(r.date, r.start_time);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  if (toInsert.length === 0) return { inserted: 0 };
+
+  const { error } = await supabase.from("calendar_events").insert(toInsert);
+  if (error) {
+    console.warn("[lesson-plans] class event insert error:", error.message);
+    return { inserted: 0, error: error.message };
+  }
+  return { inserted: toInsert.length };
+}
+
 function mapPlanRow(row: any): LessonPlan {
   return {
     id: row.id,
