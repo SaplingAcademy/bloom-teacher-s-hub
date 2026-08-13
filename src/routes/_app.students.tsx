@@ -1183,7 +1183,7 @@ function StudentsPage() {
             };
 
             const scheduleSummary = schedulesList.length > 0
-              ? schedulesList.map((s: any) => `${dayTranslation[s.weekday] || s.weekday?.substring(0, 3) || ""}${s.start_time ? ` • ${s.start_time}` : ""}`).join(", ")
+              ? schedulesList.map((s: any) => `${dayTranslation[s.weekday] || s.weekday?.substring(0, 3) || ""}${s.start_time ? ` • ${(s.start_time || "").slice(0, 5)}` : ""}`).join(", ")
               : (d.schedule || "Custom");
 
             let scheduleDetailsObj: ScheduleDetails | undefined = undefined;
