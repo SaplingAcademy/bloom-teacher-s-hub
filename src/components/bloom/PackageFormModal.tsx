@@ -146,7 +146,8 @@ export function PackageFormModal({
                 id="modal-pkg-price"
                 type="number"
                 value={price}
-                onChange={(e) => setPrice(Number(e.target.value) || 0)}
+                onChange={(e) => setPrice(sanitizeNumeric(e.target.value))}
+                onBlur={() => handleNumericBlur(price, setPrice, 300)}
                 required
                 className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
               />
@@ -159,31 +160,33 @@ export function PackageFormModal({
               <Label htmlFor="modal-pkg-lessons" className="text-xs font-bold text-stone-700">
                 {isPt ? "Nº de aulas" : "No. of lessons"}
               </Label>
-              <Input
-                id="modal-pkg-lessons"
-                type="number"
-                min={1}
-                value={lessons}
-                onChange={(e) => setLessons(Number(e.target.value) || 1)}
-                required
-                className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
-              />
+                <Input
+                  id="modal-pkg-lessons"
+                  type="number"
+                  min={1}
+                  value={lessons}
+                  onChange={(e) => setLessons(sanitizeNumeric(e.target.value))}
+                  onBlur={() => handleNumericBlur(lessons, setLessons, 4)}
+                  required
+                  className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
+                />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="modal-pkg-duration" className="text-xs font-bold text-stone-700">
                 {isPt ? "Duração da aula (min)" : "Lesson duration (min)"}
               </Label>
-              <Input
-                id="modal-pkg-duration"
-                type="number"
-                min={15}
-                step={15}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value) || 60)}
-                required
-                className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
-              />
+                <Input
+                  id="modal-pkg-duration"
+                  type="number"
+                  min={15}
+                  step={15}
+                  value={duration}
+                  onChange={(e) => setDuration(sanitizeNumeric(e.target.value))}
+                  onBlur={() => handleNumericBlur(duration, setDuration, 60)}
+                  required
+                  className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
+                />
             </div>
           </div>
 
@@ -194,15 +197,16 @@ export function PackageFormModal({
                 {isPt ? "Sugestão de parcelamento padrão" : "Suggested default installments"}
               </Label>
               <div className="flex items-center gap-2">
-                <Input
-                  id="modal-pkg-installments"
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={defaultInstallmentCount}
-                  onChange={(e) => setDefaultInstallmentCount(Number(e.target.value) || 1)}
-                  className="h-11 w-24 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold text-center"
-                />
+                  <Input
+                    id="modal-pkg-installments"
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={defaultInstallmentCount}
+                    onChange={(e) => setDefaultInstallmentCount(sanitizeNumeric(e.target.value))}
+                    onBlur={() => handleNumericBlur(defaultInstallmentCount, setDefaultInstallmentCount, 6)}
+                    className="h-11 w-24 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold text-center"
+                  />
                 <span className="text-xs text-stone-500 font-medium">
                   {isPt ? "parcelas (definido por aluno)" : "installments (chosen per student)"}
                 </span>
