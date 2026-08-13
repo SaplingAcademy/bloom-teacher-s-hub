@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { ClassEntity, ClassMember, ClassSchedule } from "@/types/classes";
 import { formatTimeHHMMSS, calculateEndTime } from "./calendar-sync";
-import { generateOccurrences } from "./lesson-plans";
+import { generateOccurrences, insertClassEvents } from "./lesson-plans";
 import { fetchTeacherTimeOff, formatLocalDateStr } from "./time-off-engine";
 
 export interface ClassWithDetails extends ClassEntity {
@@ -241,11 +241,7 @@ export async function projectClassSchedulesToCalendar(
     status: "Scheduled",
   }));
 
-  const { error } = await supabase
-    .from("calendar_events")
-    .upsert(calendarRows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-
-  if (error) console.warn("[class-sync] Calendar projection warning:", error.message);
+  await insertClassEvents(teacherId, classId, calendarRows);
 }
 
 /**

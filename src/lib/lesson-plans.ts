@@ -232,10 +232,10 @@ export async function generateClassLessonPlan(
     status: "Scheduled",
   }));
 
-  const { error } = await supabase
-    .from("calendar_events")
-    .upsert(rows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-  if (error) console.warn("[lesson-plans] class generation upsert warning:", error.message);
+  const insertResult = await insertClassEvents(teacherId, cls.id, rows);
+  if (insertResult.error) {
+    throw new Error(`Não foi possível criar as aulas no calendário: ${insertResult.error}`);
+  }
 
   const { data: events } = await supabase
     .from("calendar_events")
@@ -251,7 +251,7 @@ export async function generateClassLessonPlan(
 
   if (missing.length > 0) {
     let nextNumber = existing.reduce((max, p) => Math.max(max, p.lesson_number || 0), 0);
-    await saveLessonPlans(
+    const saveResult = await saveLessonPlans(
       teacherId,
       missing.map((e: any) => ({
         teacher_id: teacherId,
@@ -271,14 +271,57 @@ export async function generateClassLessonPlan(
         completed: false,
       }))
     );
+    if (!saveResult.success) {
+      throw new Error(`Não foi possível salvar o plano de aulas: ${saveResult.error || ""}`);
+    }
   }
 
   const plans = await fetchLessonPlans({ classId: cls.id });
+  if (plans.length === 0) {
+    throw new Error("O plano de aulas não pôde ser salvo. Tente novamente.");
+  }
   return plans.map((p, idx) => ({ ...p, lesson_number: p.lesson_number || idx + 1 }));
 }
 
 function normalizeAttachments(raw: any): LessonPlanAttachment[] {
   return Array.isArray(raw) ? raw : [];
+}
+
+/**
+ * Inserts class calendar events, skipping rows that already exist for the same
+ * (class_id, date, start_time). Does not rely on a DB unique constraint.
+ */
+export async function insertClassEvents(
+  teacherId: string,
+  classId: string,
+  rows: Array<Record<string, any>>
+): Promise<{ inserted: number; error?: string }> {
+  if (rows.length === 0) return { inserted: 0 };
+
+  const { data: existing } = await supabase
+    .from("calendar_events")
+    .select("date, start_time")
+    .eq("teacher_id", teacherId)
+    .eq("class_id", classId);
+
+  const key = (d: string, t: string) => `${d}|${String(t).slice(0, 5)}`;
+  const seen = new Set((existing || []).map((e: any) => key(e.date, e.start_time)));
+
+  const toInsert = rows.filter((r) => {
+    const k = key(r.date, r.start_time);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  if (toInsert.length === 0) return { inserted: 0 };
+
+  const { error } = await supabase.from("calendar_events").insert(toInsert);
+  if (error) {
+    console.warn("[lesson-plans] class event insert error:", error.message);
+    return { inserted: 0, error: error.message };
+  }
+  return { inserted: toInsert.length };
 }
 
 function mapPlanRow(row: any): LessonPlan {
@@ -534,11 +577,7 @@ export async function ensureClassOccurrences(
       status: "Scheduled",
     }));
 
-    const { error } = await supabase
-      .from("calendar_events")
-      .upsert(rows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-
-    if (error) console.warn("[lesson-plans] class occurrence upsert warning:", error.message);
+    await insertClassEvents(teacherId, cls.id, rows);
   }
 
   // Load all events of the class and make sure each one has a plan row.

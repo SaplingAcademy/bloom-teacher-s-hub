@@ -90,6 +90,10 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
   }, [teacherId, cls.id, isPt]);
 
   const applyGenerated = async (generated: LessonPlan[]) => {
+    if (!generated || generated.length === 0) {
+      await load();
+      return;
+    }
     setPlans(generated);
     setAttendance(await fetchAttendanceForEvents(generated.map((p) => p.event_id)));
   };
