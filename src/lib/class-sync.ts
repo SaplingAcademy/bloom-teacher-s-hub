@@ -241,11 +241,7 @@ export async function projectClassSchedulesToCalendar(
     status: "Scheduled",
   }));
 
-  const { error } = await supabase
-    .from("calendar_events")
-    .upsert(calendarRows, { onConflict: "class_id,date,start_time", ignoreDuplicates: true });
-
-  if (error) console.warn("[class-sync] Calendar projection warning:", error.message);
+  await insertClassEvents(teacherId, classId, calendarRows);
 }
 
 /**
