@@ -721,6 +721,8 @@ function AuthPage() {
           options: {
             data: {
               display_name: name.trim() || undefined,
+              full_name: name.trim() || undefined,
+              name: name.trim() || undefined,
             },
             emailRedirectTo: `${window.location.origin}/auth`,
           },

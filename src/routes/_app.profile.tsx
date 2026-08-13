@@ -1,3 +1,4 @@
+import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
 import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
@@ -203,7 +204,7 @@ function ProfilePage() {
 
   const profile = {
     ...localProfile,
-    name: (authProfile?.full_name as string) || localProfile.name,
+    name: resolveTeacherName(authProfile, user) || sanitizeTeacherName(localProfile.name, user?.email) || "",
     photo: (authProfile?.avatar_url as string) || localProfile.photo,
     preferred_language: (authProfile?.preferred_language as string) || "pt-BR",
     timezone: (authProfile?.timezone as string) || "America/Sao_Paulo",
@@ -231,7 +232,7 @@ function ProfilePage() {
   // Sync form states with database profile
   useEffect(() => {
     if (authProfile) {
-      setEditName(authProfile.full_name || "");
+      setEditName(resolveTeacherName(authProfile, user) || "");
       setEditPhoto(authProfile.avatar_url || "");
       setEditLanguage(authProfile.preferred_language || "pt-BR");
       setEditTimezone(authProfile.timezone || "America/Sao_Paulo");

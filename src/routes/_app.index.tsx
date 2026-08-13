@@ -1,3 +1,4 @@
+import { resolveTeacherFirstName } from "@/lib/teacher-name";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
@@ -11,31 +12,7 @@ import { DailyPrioritiesCard } from "@/components/bloom/DailyPrioritiesCard";
  * Returns null if name is unconfigured, empty, or default.
  */
 export function getTeacherFirstName(profile: any, user: any): string | null {
-  const rawName =
-    profile?.full_name ||
-    profile?.name ||
-    profile?.display_name ||
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    (user?.user_metadata?.display_name && !user.user_metadata.display_name.includes("@") ? user.user_metadata.display_name : null);
-
-  if (!rawName || typeof rawName !== "string") return null;
-
-  const trimmed = rawName.trim();
-  if (
-    !trimmed ||
-    trimmed === "Educator" ||
-    trimmed === "Teacher" ||
-    trimmed === "Professor" ||
-    trimmed === "undefined" ||
-    trimmed === "null" ||
-    trimmed.includes("@")
-  ) {
-    return null;
-  }
-
-  const firstName = trimmed.split(/\s+/)[0];
-  return firstName || null;
+  return resolveTeacherFirstName(profile, user);
 }
 import {
   getCalendarEvents,
