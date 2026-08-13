@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Store } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
 
@@ -9,6 +9,9 @@ export const Route = createFileRoute("/_app/marketplace")({
       { name: "description", content: "Buy and sell high-quality teaching resources." },
     ],
   }),
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
   component: () => (
     <ModulePlaceholder
       eyebrow="Community"
