@@ -44,16 +44,11 @@ import {
 import {
   ClassWithDetails,
   saveClassAndRelations,
+  fetchOrCreateClassSessionAttendance,
+  saveClassSessionAttendance,
+  createClassSession,
+  fetchClassSessions,
 } from "@/lib/class-sync";
-import {
-  AttendanceStatus,
-  LessonPlan,
-  fetchAttendanceForEvents,
-  getOrCreateClassEventForDate,
-  saveAttendanceRecords,
-  saveLessonPlans,
-} from "@/lib/lesson-plans";
-import { ClassLessonPlanTable } from "@/components/bloom/ClassLessonPlanTable";
 import { ColorSelector } from "@/components/bloom/ColorSelector";
 import { getBrandColorMeta } from "@/lib/brand-colors";
 
@@ -528,11 +523,11 @@ export function ClassSessionAttendanceModal({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [plan, setPlan] = useState<LessonPlan | null>(null);
+  const [sessionId, setSessionId] = useState("");
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
   const [attendanceList, setAttendanceList] = useState<
-    Array<{ student_id: string; student_name: string; status: AttendanceStatus; notes?: string }>
+    Array<{ student_id: string; student_name: string; status: AttendanceStatusType; notes?: string }>
   >([]);
 
   useEffect(() => {
@@ -541,571 +536,24 @@ export function ClassSessionAttendanceModal({
     const loadData = async () => {
       setLoading(true);
       try {
-        const resolved = await getOrCreateClassEventForDate(
+        const { session, attendance } = await fetchOrCreateClassSessionAttendance(
           user.id,
-          { id: classEntity.id, name: classEntity.name, level: classEntity.level },
+          classEntity.id,
           sessionDate,
-          (classEntity.schedules?.[0]?.start_time || "19:00").slice(0, 5),
-          classEntity.schedules?.[0]?.duration || 60
+          classEntity.schedules?.[0]?.start_time || "19:00"
         );
 
-        setPlan(resolved);
-        setTopic(resolved?.content || "");
-        setNotes(resolved?.notes || "");
-
-        const existing = resolved
-          ? (await fetchAttendanceForEvents([resolved.event_id]))[resolved.event_id] || []
-          : [];
-
-        const activeMembers = (classEntity.members || []).filter(
-          (m) => m.status === "active" && !m.left_at
-        );
-
+        setSessionId(session.id);
+        setTopic(session.topic || "");
+        setNotes(session.notes || "");
         setAttendanceList(
-          activeMembers.map((m) => {
-            const found = existing.find((a) => a.student_id === m.student_id);
-            return {
-              student_id: m.student_id,
-              student_name: m.student_name || "Student",
-              status: (found?.status || "present") as AttendanceStatus,
-              notes: found?.notes || "",
-            };
-          })
-        );
-      } catch (err) {
-        console.error("Error loading session attendance:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [open, user, classEntity, sessionDate]);
-
-  const updateStatus = (stdId: string, status: AttendanceStatus) => {
-    setAttendanceList((prev) =>
-      prev.map((a) => (a.student_id === stdId ? { ...a, status } : a))
-    );
-  };
-
-  const handleSave = async () => {
-    if (!user || !plan) return;
-    setSaving(true);
-    try {
-      await saveLessonPlans(user.id, [
-        { ...plan, content: topic, notes, completed: true, event_status: "Completed" },
-      ]);
-
-      await saveAttendanceRecords(
-        user.id,
-        plan.event_id,
-        attendanceList.map((a) => ({ student_id: a.student_id, status: a.status, notes: a.notes }))
-      );
-
-      toast.success(isPt ? "Chamada e aula salvas com sucesso! 🌱" : "Attendance & lesson saved successfully! 🌱");
-      onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save attendance");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md rounded-3xl p-6 bg-[#FAF7F2] border border-stone-200 shadow-2xl text-center space-y-6 select-none font-figtree">
-        <div className="space-y-2">
-          <DialogTitle className="font-outfit text-2xl font-extrabold text-[#163020] tracking-tight">
-            {t("classes.whatToAddTitle")}
-          </DialogTitle>
-          <p className="text-sm text-stone-600 font-medium">
-            {t("classes.whatToAddSubtitle")}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3">
-          {/* Individual Student */}
-          <button
-            onClick={() => {
-              onClose();
-              onSelectIndividual();
-            }}
-            className="flex items-center gap-4 p-4 rounded-2xl border border-stone-200 bg-white hover:border-[#163020] hover:bg-stone-50 transition-all text-left group cursor-pointer shadow-sm"
-          >
-            <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <User className="h-6 w-6" />
-            </div>
-            <div className="space-y-0.5">
-              <span className="font-bold text-stone-900 text-base font-outfit block">
-                {t("classes.individualStudentTitle")}
-              </span>
-              <p className="text-xs text-stone-500 font-medium">
-                {t("classes.individualStudentDesc")}
-              </p>
-            </div>
-          </button>
-
-          {/* Pair */}
-          <button
-            onClick={() => {
-              onClose();
-              onSelectPair();
-            }}
-            className="flex items-center gap-4 p-4 rounded-2xl border border-stone-200 bg-white hover:border-[#163020] hover:bg-stone-50 transition-all text-left group cursor-pointer shadow-sm"
-          >
-            <div className="h-12 w-12 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Users className="h-6 w-6" />
-            </div>
-            <div className="space-y-0.5">
-              <span className="font-bold text-stone-900 text-base font-outfit block">
-                {t("classes.pairClassTitle")}
-              </span>
-              <p className="text-xs text-stone-500 font-medium">
-                {t("classes.pairClassDesc")}
-              </p>
-            </div>
-          </button>
-
-          {/* Group */}
-          <button
-            onClick={() => {
-              onClose();
-              onSelectGroup();
-            }}
-            className="flex items-center gap-4 p-4 rounded-2xl border border-stone-200 bg-white hover:border-[#163020] hover:bg-stone-50 transition-all text-left group cursor-pointer shadow-sm"
-          >
-            <div className="h-12 w-12 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div className="space-y-0.5">
-              <span className="font-bold text-stone-900 text-base font-outfit block">
-                {t("classes.groupClassTitle")}
-              </span>
-              <p className="text-xs text-stone-500 font-medium">
-                {t("classes.groupClassDesc")}
-              </p>
-            </div>
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* =========================================================================
-   2. CLASS FORM MODAL (Create/Edit Pair or Group Class)
-   ========================================================================= */
-interface ClassFormModalProps {
-  open: boolean;
-  onClose: () => void;
-  initialType?: "pair" | "group";
-  existingClass?: ClassWithDetails | null;
-  availableStudents: Array<{ id: string; name: string }>;
-  onSuccess: () => void;
-}
-
-export function ClassFormModal({
-  open,
-  onClose,
-  initialType = "group",
-  existingClass,
-  availableStudents,
-  onSuccess,
-}: ClassFormModalProps) {
-  const { user } = useAuth();
-  const { lang } = useLanguage();
-  const isPt = lang === "pt";
-
-  const [name, setName] = useState("");
-  const [type, setType] = useState<"pair" | "group">(initialType);
-  const [language, setLanguage] = useState("English");
-  const [level, setLevel] = useState("B1");
-  const [status, setStatus] = useState<"active" | "paused" | "archived">("active");
-  const [colorKey, setColorKey] = useState<string>("default");
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-  const [schedulesList, setSchedulesList] = useState<
-    Array<{ weekday: string; startTime: string; duration: number; deliveryMode: "Online" | "In person"; locationLink?: string }>
-  >([{ weekday: "Monday", startTime: "19:00", duration: 60, deliveryMode: "Online", locationLink: "" }]);
-
-  // Inline student creation state
-  const [showInlineStudent, setShowInlineStudent] = useState(false);
-  const [inlineName, setInlineName] = useState("");
-  const [inlineWhatsApp, setInlineWhatsApp] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (existingClass) {
-      setName(existingClass.name);
-      setType(existingClass.type);
-      setLanguage(existingClass.language || "English");
-      setLevel(existingClass.level || "B1");
-      setStatus(existingClass.status);
-      setColorKey(existingClass.color_key || "default");
-      setSelectedStudentIds((existingClass.members || []).map((m) => m.student_id));
-      if (existingClass.schedules && existingClass.schedules.length > 0) {
-        setSchedulesList(
-          existingClass.schedules.map((s) => ({
-            weekday: s.weekday,
-            startTime: s.start_time ? s.start_time.substring(0, 5) : "19:00",
-            duration: s.duration || 60,
-            deliveryMode: s.delivery_mode || "Online",
-            locationLink: s.location_link || "",
+          attendance.map((a) => ({
+            student_id: a.student_id,
+            student_name: a.student_name || "Student",
+            status: a.status,
+            notes: a.notes || "",
           }))
         );
-      }
-    } else {
-      setName("");
-      setType(initialType);
-      setLanguage("English");
-      setLevel("B1");
-      setStatus("active");
-      setColorKey("default");
-      setSelectedStudentIds([]);
-      setSchedulesList([{ weekday: "Monday", startTime: "19:00", duration: 60, deliveryMode: "Online", locationLink: "" }]);
-    }
-  }, [existingClass, initialType, open]);
-
-  const toggleStudent = (stdId: string) => {
-    if (selectedStudentIds.includes(stdId)) {
-      setSelectedStudentIds(selectedStudentIds.filter((id) => id !== stdId));
-    } else {
-      setSelectedStudentIds([...selectedStudentIds, stdId]);
-    }
-  };
-
-  const handleInlineStudentCreate = async () => {
-    if (!inlineName.trim() || !user) return;
-    try {
-      const { data: newStudent, error } = await supabase
-        .from("students")
-        .insert({
-          teacher_id: user.id,
-          full_name: inlineName.trim(),
-          phone: inlineWhatsApp.trim(),
-          language_studied: language,
-          level: level,
-          type: "Private",
-          status: "Active",
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success(isPt ? `Aluno ${newStudent.full_name} criado com sucesso!` : `Student ${newStudent.full_name} created!`);
-      setSelectedStudentIds((prev) => [...prev, newStudent.id]);
-      availableStudents.push({ id: newStudent.id, name: newStudent.full_name });
-      setInlineName("");
-      setInlineWhatsApp("");
-      setShowInlineStudent(false);
-    } catch (err: any) {
-      toast.error(err.message || "Error creating student");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !user) return;
-    setIsSaving(true);
-    try {
-      await saveClassAndRelations(
-        user.id,
-        {
-          name: name.trim(),
-          type,
-          language,
-          level: level as any,
-          status,
-          color_key: colorKey,
-        },
-        selectedStudentIds,
-        schedulesList,
-        existingClass?.id
-      );
-
-      toast.success(isPt ? "Turma salva com sucesso!" : "Class saved successfully!");
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      console.error("Save class error:", err);
-      toast.error(err.message || "Failed to save class");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg rounded-3xl p-0 bg-[#FAF7F2] border border-stone-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-none font-figtree">
-        <DialogHeader className="p-6 pb-4 border-b border-stone-200 bg-white shrink-0">
-          <DialogTitle className="font-outfit text-xl font-bold text-[#163020]">
-            {existingClass
-              ? isPt ? "Editar Turma / Dupla" : "Edit Class / Pair"
-              : type === "pair"
-              ? isPt ? "Nova Aula em Dupla" : "New Pair Class"
-              : isPt ? "Nova Turma / Grupo" : "New Class / Group"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Name & Type */}
-            <div className="space-y-4 bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-stone-700">
-                  {isPt ? "Nome da Turma" : "Class Name"} <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={isPt ? "ex: Conversation B1 - Terça" : "e.g. Conversation B1 - Tuesday"}
-                  required
-                  className="h-11 rounded-xl border-stone-300 bg-stone-50 font-semibold text-stone-800"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold text-stone-700">{isPt ? "Modalidade" : "Type"}</Label>
-                  <Select value={type} onValueChange={(val: any) => setType(val)}>
-                    <SelectTrigger className="h-11 rounded-xl border-stone-300 bg-stone-50 font-semibold text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pair">{isPt ? "Dupla (2 alunos)" : "Pair (2 students)"}</SelectItem>
-                      <SelectItem value="group">{isPt ? "Grupo (3+ alunos)" : "Group (3+ students)"}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold text-stone-700">{isPt ? "Nível" : "Level"}</Label>
-                  <Select value={level} onValueChange={(val) => setLevel(val)}>
-                    <SelectTrigger className="h-11 rounded-xl border-stone-300 bg-stone-50 font-semibold text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
-                        <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <ColorSelector
-                value={colorKey}
-                onChange={(val) => setColorKey(val)}
-                label={isPt ? "Cor de Identificação da Turma (Padrão Bloom)" : "Class Brand Color"}
-              />
-            </div>
-
-            {/* Select Members */}
-            <div className="space-y-3 bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider font-outfit">
-                  {isPt ? `Alunos da Turma (${selectedStudentIds.length})` : `Class Members (${selectedStudentIds.length})`}
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setShowInlineStudent(!showInlineStudent)}
-                  className="text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>{isPt ? "Criar novo aluno" : "New student"}</span>
-                </button>
-              </div>
-
-              {/* Inline Student Form */}
-              {showInlineStudent && (
-                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200/80 space-y-2">
-                  <span className="text-xs font-bold text-emerald-900 block">
-                    {isPt ? "Cadastrar aluno e adicionar à turma:" : "Register & add student to class:"}
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Input
-                      placeholder={isPt ? "Nome completo" : "Full name"}
-                      value={inlineName}
-                      onChange={(e) => setInlineName(e.target.value)}
-                      className="h-9 text-xs bg-white"
-                    />
-                    <Input
-                      placeholder={isPt ? "WhatsApp" : "WhatsApp"}
-                      value={inlineWhatsApp}
-                      onChange={(e) => setInlineWhatsApp(e.target.value)}
-                      className="h-9 text-xs bg-white"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleInlineStudentCreate}
-                    className="w-full h-8 bg-[#163020] text-white text-xs font-bold rounded-lg hover:bg-emerald-950 cursor-pointer"
-                  >
-                    {isPt ? "Salvar e Selecionar" : "Save & Select"}
-                  </button>
-                </div>
-              )}
-
-              {/* Available Students Checkbox List */}
-              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                {availableStudents.map((std) => {
-                  const selected = selectedStudentIds.includes(std.id);
-                  return (
-                    <button
-                      key={std.id}
-                      type="button"
-                      onClick={() => toggleStudent(std.id)}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                        selected
-                          ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
-                          : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100"
-                      }`}
-                    >
-                      <span>{std.name}</span>
-                      <div
-                        className={`h-4 w-4 rounded flex items-center justify-center ${
-                          selected ? "bg-emerald-500 text-white" : "border border-stone-300"
-                        }`}
-                      >
-                        {selected && <Check className="h-3 w-3" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Schedules */}
-            <div className="space-y-3 bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
-              <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider font-outfit">
-                {isPt ? "Horários das Aulas" : "Class Schedule Slots"}
-              </Label>
-
-              {schedulesList.map((sch, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200">
-                  <Select
-                    value={sch.weekday}
-                    onValueChange={(val) => {
-                      const copy = [...schedulesList];
-                      copy[idx].weekday = val;
-                      setSchedulesList(copy);
-                    }}
-                  >
-                    <SelectTrigger className="h-9 w-28 text-xs font-bold bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Input
-                    type="time"
-                    value={sch.startTime}
-                    onChange={(e) => {
-                      const copy = [...schedulesList];
-                      copy[idx].startTime = e.target.value;
-                      setSchedulesList(copy);
-                    }}
-                    className="h-9 w-24 text-xs font-bold bg-white"
-                  />
-
-                  <span className="text-xs text-stone-400 font-bold">60 min</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-4 border-t border-stone-200 bg-stone-50 flex justify-end gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-11 px-5 rounded-xl border border-stone-300 bg-white text-stone-700 font-bold text-xs hover:bg-stone-100 cursor-pointer"
-            >
-              {isPt ? "Cancelar" : "Cancel"}
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="h-11 px-6 rounded-xl bg-[#163020] text-[#F4EBE1] font-bold text-xs hover:bg-[#1a3825] cursor-pointer disabled:opacity-50"
-            >
-              {isSaving ? (isPt ? "Salvando..." : "Saving...") : (isPt ? "Salvar Turma" : "Save Class")}
-            </button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* =========================================================================
-   3. CLASS SESSION & ATTENDANCE MODAL
-   ========================================================================= */
-interface ClassSessionAttendanceModalProps {
-  open: boolean;
-  onClose: () => void;
-  classEntity: ClassWithDetails;
-  sessionDate?: string;
-}
-
-export function ClassSessionAttendanceModal({
-  open,
-  onClose,
-  classEntity,
-  sessionDate = new Date().toISOString().split("T")[0],
-}: ClassSessionAttendanceModalProps) {
-  const { user } = useAuth();
-  const { lang } = useLanguage();
-  const isPt = lang === "pt";
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [plan, setPlan] = useState<LessonPlan | null>(null);
-  const [topic, setTopic] = useState("");
-  const [notes, setNotes] = useState("");
-  const [attendanceList, setAttendanceList] = useState<
-    Array<{ student_id: string; student_name: string; status: AttendanceStatus; notes?: string }>
-  >([]);
-
-  useEffect(() => {
-    if (!open || !user || !classEntity) return;
-
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const resolved = await getOrCreateClassEventForDate(
-          user.id,
-          { id: classEntity.id, name: classEntity.name, level: classEntity.level },
-          sessionDate,
-          (classEntity.schedules?.[0]?.start_time || "19:00").slice(0, 5),
-          classEntity.schedules?.[0]?.duration || 60
-        );
-
-        setPlan(resolved);
-        setTopic(resolved?.content || "");
-        setNotes(resolved?.notes || "");
-
-        const existing = resolved
-          ? (await fetchAttendanceForEvents([resolved.event_id]))[resolved.event_id] || []
-          : [];
-
-        const activeMembers = (classEntity.members || []).filter(
-          (m) => m.status === "active" && !m.left_at
-        );
-
-        setAttendanceList(
-          activeMembers.map((m) => {
-            const found = existing.find((a) => a.student_id === m.student_id);
-            return {
-              student_id: m.student_id,
-              student_name: m.student_name || "Student",
-              status: (found?.status || "present") as AttendanceStatus,
-              notes: found?.notes || "",
-            };
-          })
-        );
       } catch (err) {
         console.error("Error loading session attendance:", err);
       } finally {
@@ -1116,7 +564,7 @@ export function ClassSessionAttendanceModal({
     loadData();
   }, [open, user, classEntity, sessionDate]);
 
-  const updateStatus = (stdId: string, status: AttendanceStatus) => {
+  const updateStatus = (stdId: string, status: AttendanceStatusType) => {
     setAttendanceList((prev) =>
       prev.map((a) => (a.student_id === stdId ? { ...a, status } : a))
     );
@@ -1214,25 +662,14 @@ export function ClassSessionAttendanceModal({
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateStatus(item.student_id, "late")}
+                          onClick={() => updateStatus(item.student_id, "justified")}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            item.status === "late"
+                            item.status === "justified"
                               ? "bg-amber-600 text-white shadow-sm"
                               : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
                           }`}
                         >
-                          {isPt ? "Atrasado" : "Late"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateStatus(item.student_id, "excused")}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            item.status === "excused"
-                              ? "bg-sky-700 text-white shadow-sm"
-                              : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
-                          }`}
-                        >
-                          {isPt ? "Justificada" : "Excused"}
+                          {isPt ? "Justificada" : "Justified"}
                         </button>
                       </div>
                     </div>
@@ -1553,7 +990,26 @@ export function ClassDetailsView({
   isPt: boolean;
 }) {
   const { t, formatStatus, formatWeekday } = useLanguage();
-  const { user } = useAuth();
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [isRegisterLessonOpen, setIsRegisterLessonOpen] = useState(false);
+
+  const loadClassSessions = async () => {
+    if (!cls.id) return;
+    setIsLoadingSessions(true);
+    try {
+      const list = await fetchClassSessions(cls.id);
+      setSessions(list);
+    } catch (err) {
+      console.error("Failed to load class sessions:", err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  useEffect(() => {
+    loadClassSessions();
+  }, [cls.id]);
 
   return (
     <div className="space-y-6 font-figtree select-none">
@@ -1623,7 +1079,13 @@ export function ClassDetailsView({
             <span>{isPt ? "Chamada" : "Attendance"}</span>
           </button>
 
-
+          <button
+            onClick={() => setIsRegisterLessonOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#163020] text-[#F4EBE1] px-5 text-xs font-extrabold hover:bg-[#1a3825] transition-all cursor-pointer shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{isPt ? "Registrar Aula da Turma" : "Register Class Lesson"}</span>
+          </button>
         </div>
       </div>
 
@@ -1735,9 +1197,101 @@ export function ClassDetailsView({
         </div>
       </div>
 
-      {/* Unified Lesson Plan & Attendance */}
-      <ClassLessonPlanTable cls={cls} teacherId={user?.id || ""} isPt={isPt} />
+      {/* Lesson History Section */}
+      <div className="p-6 bg-white rounded-3xl border border-stone-200/80 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div className="flex items-center gap-2 text-stone-900 font-extrabold font-outfit text-base">
+            <FileText className="h-5 w-5 text-emerald-800" />
+            <span>{isPt ? "Histórico de Aulas da Turma" : "Class Lesson History"}</span>
+          </div>
+          <span className="text-xs text-stone-500 font-medium">
+            {sessions.length} {isPt ? "aulas registradas" : "lessons logged"}
+          </span>
+        </div>
 
+        {isLoadingSessions ? (
+          <div className="py-12 text-center text-xs text-stone-400">
+            {isPt ? "Carregando histórico de aulas..." : "Loading lesson history..."}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="py-12 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 space-y-3">
+            <Calendar className="h-10 w-10 text-stone-300 mx-auto" />
+            <p className="text-xs font-medium text-stone-500">
+              {isPt ? "Nenhuma aula registrada para esta turma ainda." : "No lessons logged for this class yet."}
+            </p>
+            <button
+              onClick={() => setIsRegisterLessonOpen(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#163020] text-[#F4EBE1] px-4 text-xs font-bold hover:bg-[#1a3825] cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>{isPt ? "Registrar Primeira Aula" : "Register First Lesson"}</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sessions.map((sess) => (
+              <div key={sess.id} className="p-4 bg-stone-50 rounded-2xl border border-stone-200/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-stone-900 text-sm font-outfit">{sess.date}</span>
+                    <span className="text-xs text-stone-500 font-medium">
+                      ({sess.start_time?.substring(0, 5)} - {sess.end_time?.substring(0, 5)})
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        sess.status === "completed"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : sess.status === "scheduled"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-rose-100 text-rose-800"
+                      }`}
+                    >
+                      {sess.status === "completed"
+                        ? isPt
+                          ? "Concluída"
+                          : "Completed"
+                        : sess.status === "scheduled"
+                        ? isPt
+                          ? "Agendada"
+                          : "Scheduled"
+                        : isPt
+                        ? "Cancelada"
+                        : "Cancelled"}
+                    </span>
+                  </div>
+                </div>
+
+                {sess.topic && (
+                  <p className="text-xs font-extrabold text-[#163020] font-outfit">
+                    Tópico: {sess.topic}
+                  </p>
+                )}
+
+                {sess.content && (
+                  <p className="text-xs text-stone-700 leading-relaxed font-medium">
+                    {sess.content}
+                  </p>
+                )}
+
+                {sess.homework && (
+                  <div className="p-2 bg-amber-50 rounded-xl border border-amber-200/60 text-xs font-semibold text-amber-900">
+                    📚 Homework: {sess.homework}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal: Register Class Lesson */}
+      <RegisterClassLessonModal
+        open={isRegisterLessonOpen}
+        onClose={() => setIsRegisterLessonOpen(false)}
+        classId={cls.id}
+        className={cls.name}
+        onSuccess={loadClassSessions}
+      />
     </div>
   );
 }
