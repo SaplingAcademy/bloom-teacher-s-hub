@@ -559,6 +559,8 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
           setNotesPlan(null);
         }}
       />
+
+      {generatorModal}
     </div>
   );
 }
