@@ -52,7 +52,6 @@ import {
   saveCalendarEvents,
   CalendarEvent,
   WorkingAvailability,
-  defaultAvailability,
   formatDateString,
   calculateEndTime,
   getDayIndex,
@@ -62,6 +61,14 @@ import {
   StudentType,
   syncStudentSchedulesToSupabaseEvents,
 } from "@/lib/calendar-sync";
+import {
+  getTeacherAvailability,
+  invalidateTeacherAvailability,
+  isSlotAvailable,
+  weekdayKeyFromDate,
+  TeacherAvailabilitySnapshot,
+} from "@/lib/teacher-availability";
+import { saveTeacherWorkingAvailability } from "@/lib/availability-engine";
 import {
   fetchTeacherTimeOff,
   checkDateIsNonWorking,
@@ -256,6 +263,8 @@ function CalendarPage() {
 
   // Non-Working Days & First-Time Setup States
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
+  const [availabilitySnapshot, setAvailabilitySnapshot] = useState<TeacherAvailabilitySnapshot | null>(null);
+  const [availabilityWarning, setAvailabilityWarning] = useState<string | null>(null);
   const [isFirstTimeSetupOpen, setIsFirstTimeSetupOpen] = useState(false);
   const [isNonWorkingModalOpen, setIsNonWorkingModalOpen] = useState(false);
   const [conflictTimeOff, setConflictTimeOff] = useState<TeacherTimeOff | null>(null);
@@ -474,8 +483,9 @@ function CalendarPage() {
 
   const loadWorkingAvailability = useCallback(async () => {
     if (!user) return;
-    const realAvail = await fetchTeacherWorkingAvailability(user.id);
-    setAvailability(realAvail);
+    const snapshot = await getTeacherAvailability(user.id, { force: true });
+    setAvailabilitySnapshot(snapshot);
+    setAvailability(snapshot.days);
   }, [user]);
 
   // Initial load
@@ -519,11 +529,16 @@ function CalendarPage() {
     setIsAvailOpen(true);
   };
 
-  const handleSaveAvail = () => {
-    setAvailability(tempAvail);
-    localStorage.setItem("bloom.working.availability", JSON.stringify(tempAvail));
+  const handleSaveAvail = async () => {
+    if (!user) return;
+    const res = await saveTeacherWorkingAvailability(user.id, tempAvail);
+    if (!res.success) {
+      toast.error(res.error || (lang === "pt" ? "Erro ao salvar disponibilidade." : "Error saving availability."));
+      return;
+    }
+    invalidateTeacherAvailability(user.id);
+    await loadWorkingAvailability();
     setIsAvailOpen(false);
-    window.dispatchEvent(new Event("storage"));
   };
 
   // Create class execution logic
@@ -639,6 +654,19 @@ function CalendarPage() {
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName.trim()) return;
+
+    // Warn (never silently block) when the slot falls outside the teacher availability
+    if (availabilitySnapshot) {
+      const check = isSlotAvailable(
+        availabilitySnapshot,
+        addDate,
+        addTime,
+        calculateEndTime(addTime, addDuration).slice(0, 5)
+      );
+      if (!check.available && check.reason?.kind !== "time_off") {
+        toast.warning(check.reason?.message || "Horário fora da sua disponibilidade.");
+      }
+    }
 
     // Check if scheduling on a non-working date
     const matchedTimeOff = checkDateIsNonWorking(addDate, timeOffList);
