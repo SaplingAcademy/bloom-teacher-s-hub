@@ -184,6 +184,73 @@ export function calculateExpectedEndDate(
  * Fetches the student's lesson plans from the unified `lesson_plans` table,
  * mapping event status + attendance_records back to the legacy display shape.
  */
+/**
+ * Reads the student's permanent recurring schedule (source of truth:
+ * `student_schedules`) and maps it to the generator's input shape.
+ * Read-only: never mutates the student's permanent schedule.
+ */
+export async function fetchStudentScheduleInputs(
+  studentId: string
+): Promise<LessonScheduleInput[]> {
+  if (!studentId) return [];
+  try {
+    const { data, error } = await supabase
+      .from("student_schedules")
+      .select("*")
+      .eq("student_id", studentId);
+
+    if (error || !data) {
+      if (error) console.warn("[lesson-plan-sync] fetchStudentScheduleInputs error:", error.message);
+      return [];
+    }
+
+    const weekdayOrder = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+
+    const rows: LessonScheduleInput[] = (data as any[])
+      .filter((r) => r?.weekday)
+      .map((r) => {
+        const startTime = String(r.start_time || "09:00").slice(0, 5);
+        const durationRaw = Number(r.duration_minutes) || 0;
+        let endTime = r.end_time ? String(r.end_time).slice(0, 5) : "";
+        let duration = durationRaw;
+
+        if (!endTime) {
+          endTime = calculateEndTime(startTime, duration || 60).slice(0, 5);
+        }
+        if (!duration) {
+          const [sh, sm] = startTime.split(":").map(Number);
+          const [eh, em] = endTime.split(":").map(Number);
+          const diff = eh * 60 + em - (sh * 60 + sm);
+          duration = diff > 0 ? diff : 60;
+        }
+
+        return {
+          id: r.id,
+          weekday: String(r.weekday),
+          startTime,
+          endTime,
+          duration,
+        };
+      });
+
+    return rows.sort((a, b) => {
+      const d = weekdayOrder.indexOf(a.weekday) - weekdayOrder.indexOf(b.weekday);
+      return d !== 0 ? d : a.startTime.localeCompare(b.startTime);
+    });
+  } catch (err) {
+    console.warn("[lesson-plan-sync] fetchStudentScheduleInputs exception:", err);
+    return [];
+  }
+}
+
 export async function fetchStudentLessons(
   studentId: string,
   teacherId?: string
