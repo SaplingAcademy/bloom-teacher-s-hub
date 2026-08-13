@@ -223,7 +223,7 @@ const translations = {
     fieldFocus: "Language Studied",
     fieldType: "Student Type",
     fieldStatus: "Initial Status",
-    fieldSchedule: "Weekly Schedule (e.g. Wed • 14:00)",
+    fieldSchedule: "Weekly Schedule",
     fieldGroupSize: "Group Size (if Group)",
     fieldPackage: "Assigned Finance Package",
     btnCreate: "Create Student",
@@ -295,7 +295,7 @@ const translations = {
     fieldFocus: "Idioma Estudado",
     fieldType: "Tipo de Aluno",
     fieldStatus: "Status Inicial",
-    fieldSchedule: "Horário Semanal (ex: Qua • 14:00)",
+    fieldSchedule: "Horário Semanal",
     fieldGroupSize: "Tamanho do Grupo (se Grupo)",
     fieldPackage: "Plano Financeiro Vinculado",
     btnCreate: "Criar Aluno",
@@ -1183,7 +1183,7 @@ function StudentsPage() {
             };
 
             const scheduleSummary = schedulesList.length > 0
-              ? schedulesList.map((s: any) => `${dayTranslation[s.weekday] || s.weekday?.substring(0, 3) || ""}${s.start_time ? ` • ${s.start_time}` : ""}`).join(", ")
+              ? schedulesList.map((s: any) => `${dayTranslation[s.weekday] || s.weekday?.substring(0, 3) || ""}${s.start_time ? ` • ${(s.start_time || "").slice(0, 5)}` : ""}`).join(", ")
               : (d.schedule || "Custom");
 
             let scheduleDetailsObj: ScheduleDetails | undefined = undefined;
