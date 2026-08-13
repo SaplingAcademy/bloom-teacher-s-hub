@@ -95,6 +95,7 @@ export const navSections: NavSection[] = [
         icon: Newspaper,
         description: "Ideas and discussion",
         badge: "Soon",
+        disabled: true,
       },
       {
         id: "marketplace",
@@ -103,6 +104,7 @@ export const navSections: NavSection[] = [
         icon: Store,
         description: "Buy and sell resources",
         badge: "Soon",
+        disabled: true,
       },
       {
         id: "profile",
@@ -111,6 +113,7 @@ export const navSections: NavSection[] = [
         icon: UserCircle,
         description: "Your teacher reputation",
         badge: "Soon",
+        disabled: true,
       },
     ],
   },
