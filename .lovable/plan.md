@@ -50,14 +50,18 @@ Regras:
 3. Nova `attendance_records`
    `id, teacher_id, event_id → calendar_events(id) on delete cascade, student_id → students(id) on delete cascade, status text not null default 'present', notes text, timestamps`, unique `(event_id, student_id)`.
    - CHECK status em `('present','absent','late','excused')` — sem `cancelled`.
-4. Backfill (sem perda)
+4. Salvaguardas do backfill
+   - antes de gravar qualquer linha de turma, o script detecta e **registra** em `bloom_backfill_conflicts` os casos ambíguos: sessão duplicada (mesma turma/data/horário), sessão sem evento correspondente e sessão com mais de um evento candidato;
+   - essas sessões **não** são migradas automaticamente — ficam para resolução manual e são reportadas por `reason`;
+   - todas as funções `SECURITY DEFINER` usadas no RLS declaram `set search_path = public`, são `stable`, têm `EXECUTE` revogado de `public`/`anon` e concedido só a `authenticated`.
+5. Backfill (sem perda)
    - cada `student_lessons` recebe/garante seu `calendar_events` correspondente → insere em `lesson_plans` (`lesson_number`, conteúdo, homework, notas, attachments preservados);
    - `student_lessons.attendance_status` → `attendance_records` (`Present→present`, `Absent→absent`, `Cancelled`/`Rescheduled` → não vira presença, refletem em `calendar_events.status`);
    - `class_sessions` → evento correspondente (casando `class_id` + `date` + `start_time`) → `lesson_plans`;
    - `class_attendance` → `attendance_records` via o evento resolvido.
-5. Depreciação
+6. Depreciação
    `student_lessons`, `class_sessions` e `class_attendance` ficam como **legado somente leitura** após o backfill; a remoção acontece em migration posterior, só depois de validar dados em produção. Nenhuma coluna é apagada agora.
-6. GRANTs para `authenticated` e `service_role` nas duas novas tabelas.
+7. GRANTs para `authenticated` e `service_role` nas duas novas tabelas.
 
 ## 4. Geração de datas — uma fonte de verdade
 
@@ -81,7 +85,7 @@ Um único `generateOccurrences()` compartilhado por individual e turma, usando `
 
 ## 7. Ordem de execução (após aprovação)
 
-1. SQL completo da migration (schema + backfill) apresentado antes de rodar.
+1. SQL completo em `supabase/migrations/PROPOSAL_20260813_unified_lesson_plans.sql` (não executado).
 2. Reescrita de `lesson-plan-sync.ts` e adaptação de `class-sync.ts`.
 3. Generalização da tabela de lesson plan + painel de presença.
 4. Integração em `ClassDetailsView`, calendário e histórico do aluno.
