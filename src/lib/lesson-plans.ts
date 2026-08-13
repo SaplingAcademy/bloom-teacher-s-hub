@@ -6,11 +6,7 @@ import {
   formatLocalDateStr,
   TeacherTimeOff,
 } from "./time-off-engine";
-import {
-  TeacherAvailabilitySnapshot,
-  isSlotAvailable,
-  weekdayKeyFromDate,
-} from "./teacher-availability";
+import { TeacherAvailabilitySnapshot, isSlotAvailable } from "./teacher-availability";
 
 /* =============================================================================
    Unified lesson plans & attendance (individual, pair and group)
