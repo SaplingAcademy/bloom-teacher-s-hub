@@ -419,6 +419,23 @@ export function GenerateLessonPlanModal({
             </div>
 
             <div className="space-y-2 border border-border/80 rounded-xl p-3 bg-muted/20">
+              {isLoadingSchedules && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground px-1 py-2">
+                  <Clock className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Carregando horários do aluno...</span>
+                </div>
+              )}
+
+              {!isLoadingSchedules && schedules.length === 0 && (
+                <div className="flex items-start gap-2 text-xs text-muted-foreground px-1 py-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Este aluno ainda não tem horários recorrentes salvos. Adicione ao menos um bloco
+                    para gerar o plano.
+                  </span>
+                </div>
+              )}
+
               {schedules.map((row, idx) => (
                 <div
                   key={`sched-row-${idx}`}
