@@ -1300,9 +1300,7 @@ function StudentsPage() {
     setFormWhatsApp("");
     setFormEmail("");
     setFormLevel("B2");
-    setFormFocus(
-      teacherLanguages.length > 0 ? teacherLanguages[0] : "English"
-    );
+    setFormFocus(teacherLanguages.length === 1 ? teacherLanguages[0] : "");
     setFormType("Private");
     setFormStatus("Active");
     setFormSchedule("");
