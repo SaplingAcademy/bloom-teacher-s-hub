@@ -879,142 +879,102 @@ export function CentralAvailabilityModal({
           {/* TAB 3: DIAS SEM AULA */}
           {activeTab === "days_off" && (
             <div className="space-y-6">
-              {/* Mode Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTimeOffMode("single")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                    timeOffMode === "single"
-                      ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
-                      : "bg-card text-muted-foreground border-border"
-                  }`}
-                >
-                  Data única
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimeOffMode("range")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                    timeOffMode === "range"
-                      ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
-                      : "bg-card text-muted-foreground border-border"
-                  }`}
-                >
-                  Intervalo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimeOffMode("multiple")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                    timeOffMode === "multiple"
-                      ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
-                      : "bg-card text-muted-foreground border-border"
-                  }`}
-                >
-                  Múltiplos dias
-                </button>
+              {/* Range hint + current selection */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Clique em uma data para o <strong>início</strong> e em outra para o <strong>fim</strong> do período. Um único clique registra um dia isolado.
+                </p>
+                {rangeStart && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRangeSelection();
+                      setEditingRecordId(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted transition-all cursor-pointer"
+                  >
+                    Limpar seleção
+                  </button>
+                )}
               </div>
 
-              {/* Input Forms by Mode */}
-              {timeOffMode === "single" && (
-                <div className="space-y-1.5 max-w-xs">
-                  <Label className="text-xs font-semibold text-muted-foreground">Selecione a data</Label>
-                  <Input
-                    type="date"
-                    value={singleDate}
-                    onChange={(e) => setSingleDate(e.target.value)}
-                    className="h-9 text-xs font-mono bg-background border-border"
-                  />
+              {rangeStart && (
+                <div className="px-3 py-2 rounded-xl bg-[#163020]/5 border border-[#163020]/20 text-xs font-semibold text-foreground">
+                  {rangeEnd && rangeEnd !== rangeStart
+                    ? `Período selecionado: ${formatBr(rangeStart)} → ${formatBr(rangeEnd)} (${rangeDayCount} dias)`
+                    : rangeEnd
+                      ? `Dia selecionado: ${formatBr(rangeStart)}`
+                      : `Início em ${formatBr(rangeStart)} — clique na data final ou salve para registrar apenas este dia.`}
                 </div>
               )}
 
-              {timeOffMode === "range" && (
-                <div className="grid grid-cols-2 gap-3 max-w-sm">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Data inicial</Label>
-                    <Input
-                      type="date"
-                      value={rangeStart}
-                      onChange={(e) => setRangeStart(e.target.value)}
-                      className="h-9 text-xs font-mono bg-background border-border"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Data final</Label>
-                    <Input
-                      type="date"
-                      value={rangeEnd}
-                      onChange={(e) => setRangeEnd(e.target.value)}
-                      className="h-9 text-xs font-mono bg-background border-border"
-                    />
-                  </div>
+              {/* Range Calendar */}
+              <div className="p-4 rounded-xl bg-muted/20 border border-border/60 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pickerMonth === 0) {
+                        setPickerMonth(11);
+                        setPickerYear((y) => y - 1);
+                      } else setPickerMonth((m) => m - 1);
+                    }}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="font-bold text-foreground">
+                    {new Date(pickerYear, pickerMonth).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pickerMonth === 11) {
+                        setPickerMonth(0);
+                        setPickerYear((y) => y + 1);
+                      } else setPickerMonth((m) => m + 1);
+                    }}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
 
-              {timeOffMode === "multiple" && (
-                <div className="p-4 rounded-xl bg-muted/20 border border-border/60 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (pickerMonth === 0) {
-                          setPickerMonth(11);
-                          setPickerYear((y) => y - 1);
-                        } else setPickerMonth((m) => m - 1);
-                      }}
-                      className="p-1 rounded hover:bg-muted text-muted-foreground"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <span className="font-bold text-foreground">
-                      {new Date(pickerYear, pickerMonth).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (pickerMonth === 11) {
-                          setPickerMonth(0);
-                          setPickerYear((y) => y + 1);
-                        } else setPickerMonth((m) => m + 1);
-                      }}
-                      className="p-1 rounded hover:bg-muted text-muted-foreground"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="grid grid-cols-7 text-center text-[11px] font-bold text-muted-foreground py-1">
+                  <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+                </div>
 
-                  <div className="grid grid-cols-7 text-center text-[11px] font-bold text-muted-foreground py-1">
-                    <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
-                  </div>
+                <div className="grid grid-cols-7 gap-1 text-center" onMouseLeave={() => setHoverDate("")}>
+                  {monthDaysGrid.map((item, idx) => {
+                    if (!item.isCurrentMonth) return <div key={idx} className="h-8" />;
+                    const { start, end } = effectiveRange;
+                    const inRange = !!start && item.dateStr >= start && item.dateStr <= end;
+                    const isEdge = item.dateStr === start || item.dateStr === end;
+                    const hasExisting = existingTimeOffDatesSet.has(item.dateStr);
 
-                  <div className="grid grid-cols-7 gap-1 text-center">
-                    {monthDaysGrid.map((item, idx) => {
-                      if (!item.isCurrentMonth) return <div key={idx} className="h-8" />;
-                      const isSelected = selectedDatesSet.has(item.dateStr);
-                      const hasExisting = existingTimeOffDatesSet.has(item.dateStr);
-
-                      return (
-                        <button
-                          key={item.dateStr}
-                          type="button"
-                          onClick={() => toggleMultiDate(item.dateStr)}
-                          className={`h-8 rounded-lg text-xs font-semibold transition-all relative cursor-pointer ${
-                            isSelected
-                              ? "bg-[#163020] text-[#F4EBE1] font-bold shadow-2xs"
+                    return (
+                      <button
+                        key={item.dateStr}
+                        type="button"
+                        onClick={() => handleRangeDateClick(item.dateStr)}
+                        onMouseEnter={() => setHoverDate(item.dateStr)}
+                        className={`h-8 rounded-lg text-xs font-semibold transition-all relative cursor-pointer ${
+                          inRange && isEdge
+                            ? "bg-[#163020] text-[#F4EBE1] font-bold shadow-2xs"
+                            : inRange
+                              ? "bg-[#163020]/20 text-foreground border border-[#163020]/30"
                               : "bg-card hover:bg-muted/80 border border-border/40 text-foreground"
-                          }`}
-                        >
-                          {item.dayNum}
-                          {hasExisting && !isSelected && (
-                            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-500" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        }`}
+                      >
+                        {item.dayNum}
+                        {hasExisting && !inRange && (
+                          <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-500" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               {/* Optional Category and Title */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
