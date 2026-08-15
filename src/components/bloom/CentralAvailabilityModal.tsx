@@ -1029,7 +1029,9 @@ export function CentralAvailabilityModal({
                     {filteredDaysOffRecords.map((item) => (
                       <div
                         key={item.id}
-                        className="p-2.5 rounded-xl border border-border/60 bg-card flex items-center justify-between text-xs"
+                        className={`p-2.5 rounded-xl border bg-card flex items-center justify-between text-xs ${
+                          editingRecordId === item.id ? "border-[#163020]/60 ring-1 ring-[#163020]/20" : "border-border/60"
+                        }`}
                       >
                         <div className="flex items-center gap-2">
                           <input
@@ -1051,6 +1053,14 @@ export function CentralAvailabilityModal({
                           </Badge>
                           {item.title && <span className="text-muted-foreground">({item.title})</span>}
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => loadExistingPeriod(item)}
+                          className="px-2 py-1 rounded-lg text-[11px] font-semibold border border-border text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+                          title="Mostrar este período no calendário"
+                        >
+                          Ver no calendário
+                        </button>
                       </div>
                     ))}
                   </div>
