@@ -407,6 +407,9 @@ export async function saveLessonPlans(
       created_at: att.created_at || new Date().toISOString(),
     })),
     completed: Boolean(p.completed),
+    // Um plano ativo nunca fica preso a um documento fechado; a versão
+    // concluída já está preservada no snapshot do documento.
+    archived_document_id: null,
     updated_at: new Date().toISOString(),
   }));
 
