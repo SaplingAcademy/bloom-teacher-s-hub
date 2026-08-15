@@ -700,6 +700,18 @@ export function StudentLessonPlanTable({
       />
 
       {/* LESSON NOTES & ATTACHMENTS MODAL */}
+      <StudentLessonPlanHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        studentId={studentId}
+        studentName={studentName}
+        lessons={lessons}
+        onEditLesson={(lesson) => {
+          setSelectedLessonForNotes(lesson);
+          setIsNotesModalOpen(true);
+        }}
+      />
+
       <LessonNotesModal
         isOpen={isNotesModalOpen}
         onClose={() => {
