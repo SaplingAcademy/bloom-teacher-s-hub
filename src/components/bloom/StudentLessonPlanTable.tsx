@@ -744,11 +744,7 @@ export function StudentLessonPlanTable({
         onClose={() => setIsHistoryOpen(false)}
         studentId={studentId}
         studentName={studentName}
-        lessons={lessons}
-        onEditLesson={(lesson) => {
-          setSelectedLessonForNotes(lesson);
-          setIsNotesModalOpen(true);
-        }}
+        refreshKey={historyRefreshKey}
       />
 
       <LessonNotesModal
