@@ -27,10 +27,12 @@ import {
   Plus,
   Download,
   History,
+  CheckCheck,
 } from "lucide-react";
 import { exportLessonPlanPDF } from "@/lib/pdf-export";
 import { LessonNotesModal, LessonAttachment } from "./LessonNotesModal";
 import { StudentLessonPlanHistoryModal } from "./StudentLessonPlanHistoryModal";
+import { completeStudentLessonPlan } from "@/lib/lesson-plan-documents";
 import { toast } from "sonner";
 
 import {
@@ -75,6 +77,8 @@ export function StudentLessonPlanTable({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isCompletingPlan, setIsCompletingPlan] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [selectedLessonForNotes, setSelectedLessonForNotes] = useState<StudentLesson | null>(null);
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
   const [overriddenConflictLessonNumbers, setOverriddenConflictLessonNumbers] = useState<Set<number>>(new Set());
@@ -155,6 +159,41 @@ export function StudentLessonPlanTable({
   const totalLessons = lessons.length > 0 ? lessons.length : totalPackageLessons;
   const completedCount = lessons.filter((l) => l.completed).length;
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+  // Fecha o plano atual como um documento no Histórico de Planos.
+  const handleCompletePlan = async () => {
+    if (lessons.length === 0 || isCompletingPlan) return;
+    const pending = lessons.filter((l) => !l.completed).length;
+    const confirmed = window.confirm(
+      pending > 0
+        ? `Concluir este plano de aulas? ${pending} aula(s) ainda não estão marcadas como concluídas. O plano será arquivado no Histórico de Planos e você poderá gerar um novo.`
+        : "Concluir este plano de aulas? Ele será arquivado no Histórico de Planos e você poderá gerar um novo."
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsCompletingPlan(true);
+      // Garante que a última edição esteja persistida antes de fechar a versão.
+      await saveStudentLessons(studentId, teacherId, studentName, level, focus, lessons);
+      const res = await completeStudentLessonPlan({
+        teacherId,
+        studentId,
+        studentName,
+        lessons,
+      });
+      if (!res.success) {
+        toast.error(res.error || "Não foi possível concluir o plano.");
+        return;
+      }
+      setHistoryRefreshKey((k) => k + 1);
+      onLessonsChange([]);
+      toast.success("Plano concluído e salvo no Histórico de Planos.");
+    } catch (e: any) {
+      toast.error("Erro ao concluir o plano. Tente novamente.");
+    } finally {
+      setIsCompletingPlan(false);
+    }
+  };
 
   // Filter lessons
   const filteredLessons = useMemo(() => {
@@ -247,6 +286,17 @@ export function StudentLessonPlanTable({
               {t("students.generateLessonPlan")}
             </Button>
           </div>
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsHistoryOpen(true)}
+              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+            >
+              <History className="w-3.5 h-3.5" />
+              Histórico de Planos
+            </Button>
+          </div>
         </div>
 
         {/* GENERATION MODAL */}
@@ -263,6 +313,14 @@ export function StudentLessonPlanTable({
           packageLessonCount={totalPackageLessons}
           existingLessonsCount={lessons.length}
           onSuccess={(generated) => onLessonsChange(generated)}
+        />
+
+        <StudentLessonPlanHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          studentId={studentId}
+          studentName={studentName}
+          refreshKey={historyRefreshKey}
         />
       </div>
     );
@@ -313,6 +371,15 @@ export function StudentLessonPlanTable({
             >
               <RefreshCw className="w-3.5 h-3.5" />
               {t("students.regeneratePlan")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleCompletePlan}
+              disabled={isCompletingPlan}
+              className="gap-2 text-xs h-9 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              {isCompletingPlan ? "Concluindo..." : "Concluir Plano"}
             </Button>
           </div>
         </div>
@@ -705,11 +772,7 @@ export function StudentLessonPlanTable({
         onClose={() => setIsHistoryOpen(false)}
         studentId={studentId}
         studentName={studentName}
-        lessons={lessons}
-        onEditLesson={(lesson) => {
-          setSelectedLessonForNotes(lesson);
-          setIsNotesModalOpen(true);
-        }}
+        refreshKey={historyRefreshKey}
       />
 
       <LessonNotesModal

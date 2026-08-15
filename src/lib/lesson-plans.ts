@@ -359,6 +359,8 @@ export async function fetchLessonPlans(params: {
   let query = supabase
     .from("lesson_plans")
     .select("*, calendar_events:event_id (status)")
+    // Planos concluídos viram documentos no Histórico e saem do plano ativo.
+    .is("archived_document_id", null)
     .order("scheduled_date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -405,6 +407,9 @@ export async function saveLessonPlans(
       created_at: att.created_at || new Date().toISOString(),
     })),
     completed: Boolean(p.completed),
+    // Um plano ativo nunca fica preso a um documento fechado; a versão
+    // concluída já está preservada no snapshot do documento.
+    archived_document_id: null,
     updated_at: new Date().toISOString(),
   }));
 
