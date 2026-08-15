@@ -286,6 +286,17 @@ export function StudentLessonPlanTable({
               {t("students.generateLessonPlan")}
             </Button>
           </div>
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsHistoryOpen(true)}
+              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+            >
+              <History className="w-3.5 h-3.5" />
+              Histórico de Planos
+            </Button>
+          </div>
         </div>
 
         {/* GENERATION MODAL */}
@@ -302,6 +313,14 @@ export function StudentLessonPlanTable({
           packageLessonCount={totalPackageLessons}
           existingLessonsCount={lessons.length}
           onSuccess={(generated) => onLessonsChange(generated)}
+        />
+
+        <StudentLessonPlanHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          studentId={studentId}
+          studentName={studentName}
+          refreshKey={historyRefreshKey}
         />
       </div>
     );
@@ -352,6 +371,15 @@ export function StudentLessonPlanTable({
             >
               <RefreshCw className="w-3.5 h-3.5" />
               {t("students.regeneratePlan")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleCompletePlan}
+              disabled={isCompletingPlan}
+              className="gap-2 text-xs h-9 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              {isCompletingPlan ? "Concluindo..." : "Concluir Plano"}
             </Button>
           </div>
         </div>
