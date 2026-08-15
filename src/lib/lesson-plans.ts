@@ -359,6 +359,8 @@ export async function fetchLessonPlans(params: {
   let query = supabase
     .from("lesson_plans")
     .select("*, calendar_events:event_id (status)")
+    // Planos concluídos viram documentos no Histórico e saem do plano ativo.
+    .is("archived_document_id", null)
     .order("scheduled_date", { ascending: true })
     .order("start_time", { ascending: true });
 
