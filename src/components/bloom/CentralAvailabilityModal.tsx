@@ -259,14 +259,60 @@ export function CentralAvailabilityModal({
     return set;
   }, [timeOffList]);
 
-  const toggleMultiDate = (dateStr: string) => {
+  /** Range selection: 1st click = start, 2nd click = end (auto-ordered), 3rd click restarts */
+  const handleRangeDateClick = (dateStr: string) => {
     if (!dateStr) return;
-    setSelectedDatesSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(dateStr)) next.delete(dateStr);
-      else next.add(dateStr);
-      return next;
-    });
+    if (!rangeStart || (rangeStart && rangeEnd)) {
+      setRangeStart(dateStr);
+      setRangeEnd("");
+      return;
+    }
+    if (dateStr < rangeStart) {
+      setRangeEnd(rangeStart);
+      setRangeStart(dateStr);
+    } else {
+      setRangeEnd(dateStr);
+    }
+  };
+
+  const clearRangeSelection = () => {
+    setRangeStart("");
+    setRangeEnd("");
+    setHoverDate("");
+  };
+
+  /** Effective (possibly hover-previewed) bounds of the current selection */
+  const effectiveRange = React.useMemo(() => {
+    if (!rangeStart) return { start: "", end: "" };
+    if (rangeEnd) return { start: rangeStart, end: rangeEnd };
+    if (hoverDate) {
+      return hoverDate < rangeStart
+        ? { start: hoverDate, end: rangeStart }
+        : { start: rangeStart, end: hoverDate };
+    }
+    return { start: rangeStart, end: rangeStart };
+  }, [rangeStart, rangeEnd, hoverDate]);
+
+  const formatBr = (d: string) => (d ? d.split("-").reverse().join("/") : "");
+
+  const rangeDayCount = React.useMemo(() => {
+    if (!effectiveRange.start) return 0;
+    const s = new Date(effectiveRange.start + "T00:00:00");
+    const e = new Date(effectiveRange.end + "T00:00:00");
+    return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+  }, [effectiveRange]);
+
+  /** Load an already registered period back into the calendar selection */
+  const loadExistingPeriod = (item: TeacherTimeOff) => {
+    setRangeStart(item.startDate);
+    setRangeEnd(item.endDate);
+    setHoverDate("");
+    setTimeOffCategory(item.type);
+    setTimeOffTitle(item.title || "");
+    setEditingRecordId(item.id);
+    const d = new Date(item.startDate + "T00:00:00");
+    setPickerYear(d.getFullYear());
+    setPickerMonth(d.getMonth());
   };
 
   // Save Days Off
@@ -275,33 +321,15 @@ export function CentralAvailabilityModal({
       !timeOffCategory || timeOffCategory === "Nenhuma" ? "Férias" : timeOffCategory;
     const finalTitle = timeOffTitle.trim() || undefined;
 
-    let payload: TimeOffInput[] = [];
-
-    if (timeOffMode === "single") {
-      if (!singleDate) {
-        toast.error("Selecione uma data válida.");
-        return;
-      }
-      payload = [{ startDate: singleDate, endDate: singleDate, type: finalCategory, title: finalTitle }];
-    } else if (timeOffMode === "range") {
-      if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) {
-        toast.error("A data de início deve ser anterior ou igual à data de fim.");
-        return;
-      }
-      payload = [{ startDate: rangeStart, endDate: rangeEnd, type: finalCategory, title: finalTitle }];
-    } else if (timeOffMode === "multiple") {
-      if (selectedDatesSet.size === 0) {
-        toast.error("Selecione pelo menos um dia no calendário.");
-        return;
-      }
-      const sortedDates = Array.from(selectedDatesSet).sort();
-      payload = sortedDates.map((dStr) => ({
-        startDate: dStr,
-        endDate: dStr,
-        type: finalCategory,
-        title: finalTitle,
-      }));
+    if (!rangeStart) {
+      toast.error("Selecione ao menos uma data no calendário.");
+      return;
     }
+    const startDate = rangeStart;
+    const endDate = rangeEnd || rangeStart;
+    const payload: TimeOffInput[] = [
+      { startDate, endDate, type: finalCategory, title: finalTitle },
+    ];
 
     try {
       setIsSavingDaysOff(true);
@@ -312,8 +340,13 @@ export function CentralAvailabilityModal({
         return;
       }
 
-      toast.success(`${res.count} registro(s) de dias sem aula salvo(s) com sucesso!`);
-      setSelectedDatesSet(new Set());
+      toast.success(
+        startDate === endDate
+          ? "Dia sem aula salvo com sucesso!"
+          : `Período de ${formatBr(startDate)} a ${formatBr(endDate)} salvo com sucesso!`
+      );
+      clearRangeSelection();
+      setEditingRecordId(null);
       setTimeOffTitle("");
       await loadDaysOffData();
       if (onSaved) onSaved();
