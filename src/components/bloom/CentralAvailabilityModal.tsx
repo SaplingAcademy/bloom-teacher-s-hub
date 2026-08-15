@@ -100,11 +100,9 @@ export function CentralAvailabilityModal({
 
   // Tab 3: Dias sem aula state
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
-  const [timeOffMode, setTimeOffMode] = useState<"single" | "range" | "multiple">("single");
-  const [singleDate, setSingleDate] = useState<string>(formatLocalDateStr(new Date()));
-  const [rangeStart, setRangeStart] = useState<string>(formatLocalDateStr(new Date()));
-  const [rangeEnd, setRangeEnd] = useState<string>(formatLocalDateStr(new Date()));
-  const [selectedDatesSet, setSelectedDatesSet] = useState<Set<string>>(new Set());
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
+  const [hoverDate, setHoverDate] = useState<string>("");
   const [pickerYear, setPickerYear] = useState<number>(new Date().getFullYear());
   const [pickerMonth, setPickerMonth] = useState<number>(new Date().getMonth());
   const [timeOffCategory, setTimeOffCategory] = useState<TimeOffType | "Nenhuma">("Férias");
