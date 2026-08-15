@@ -26,9 +26,11 @@ import {
   AlertCircle,
   Plus,
   Download,
+  History,
 } from "lucide-react";
 import { exportLessonPlanPDF } from "@/lib/pdf-export";
 import { LessonNotesModal, LessonAttachment } from "./LessonNotesModal";
+import { StudentLessonPlanHistoryModal } from "./StudentLessonPlanHistoryModal";
 import { toast } from "sonner";
 
 import {
@@ -72,6 +74,7 @@ export function StudentLessonPlanTable({
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedLessonForNotes, setSelectedLessonForNotes] = useState<StudentLesson | null>(null);
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
   const [overriddenConflictLessonNumbers, setOverriddenConflictLessonNumbers] = useState<Set<number>>(new Set());
@@ -293,6 +296,15 @@ export function StudentLessonPlanTable({
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsHistoryOpen(true)}
+              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+            >
+              <History className="w-3.5 h-3.5" />
+              Histórico de Planos
+            </Button>
             <Button
               variant="outline"
               size="sm"
