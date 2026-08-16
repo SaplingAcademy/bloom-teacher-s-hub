@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -251,6 +252,7 @@ function GrowthPage() {
 
   // Growth Goal & Real Data States
   const [loadingGrowth, setLoadingGrowth] = useState(true);
+  const queryClient = useQueryClient();
   const [monthlyGoal, setMonthlyGoal] = useState<number | null>(null);
   const [mrrData, setMrrData] = useState<MRRResult>({
     totalMRR: 0,
@@ -317,73 +319,77 @@ function GrowthPage() {
   const [growthMetrics, setGrowthMetrics] = useState<RealGrowthMetrics>(EMPTY_GROWTH_METRICS);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
 
-  // Load real monthly goal, active MRR data, real capacity, expenses, and effective hourly rate from Supabase
+  // Load real monthly goal, active MRR data, real capacity, expenses, and effective hourly rate.
+  // Cached per teacher, so returning to Growth renders instantly and revalidates in background.
+  const growthQuery = useQuery({
+    queryKey: ["growth-data", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const [goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes] = await Promise.all([
+        fetchMonthlyGoal(user!.id),
+        fetchCurrentMRR(user!.id),
+        calculateRealCapacity(user!.id),
+        fetchTeacherExpenses(user!.id),
+        fetchEffectiveHourlyRate(user!.id),
+        fetchGrowthMetrics(user!.id),
+      ]);
+      return { goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes };
+    },
+  });
+
   const loadGrowthData = useCallback(async () => {
+    if (!user) return;
+    await queryClient.invalidateQueries({ queryKey: ["growth-data", user.id] });
+  }, [user, queryClient]);
+
+  useEffect(() => {
     if (!user) {
       setLoadingGrowth(false);
       return;
     }
-    setLoadingGrowth(true);
-    try {
-      const [goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes] = await Promise.all([
-        fetchMonthlyGoal(user.id),
-        fetchCurrentMRR(user.id),
-        calculateRealCapacity(user.id),
-        fetchTeacherExpenses(user.id),
-        fetchEffectiveHourlyRate(user.id),
-        fetchGrowthMetrics(user.id),
-      ]);
-
-      setGrowthMetrics(metricsRes);
-      setLoadingMetrics(false);
-
-      if (goalRes) {
-        setMonthlyGoal(goalRes.targetValue);
-        setIncomeGoal(goalRes.targetValue);
-      } else {
-        setMonthlyGoal(null);
-        setIncomeGoal(5000);
-      }
-
-      setMrrData(mrrRes);
-      setCapacityData(capacityRes);
-      setEffectiveHourlyData(hourlyRes);
-      setRealExpenses(expRes);
-
-      if (expRes > 0) {
-        setExpenses(expRes);
-        setIsManualExpenses(false);
-      } else {
-        setExpenses(0);
-        setIsManualExpenses(true);
-      }
-
-      if (capacityRes.hasWorkingHours) {
-        setWorkHoursPerWeek(capacityRes.totalValidSlots);
-        setTeachHoursPerWeek(capacityRes.totalOccupiedSlots || Math.min(20, capacityRes.totalValidSlots));
-        setAvailableWeeklySlots(capacityRes.totalValidSlots);
-      }
-
-      if (mrrRes.totalMRR > 0) {
-        setCurrentMRR(mrrRes.totalMRR);
-      }
-      if (mrrRes.activeStudentCount > 0) {
-        setCurrentStudentsCount(mrrRes.activeStudentCount);
-      }
-      if (hourlyRes.hasEnoughData) {
-        setCurrentAvgHourlyRate(hourlyRes.effectiveHourlyRate);
-      }
-    } catch (err) {
-      console.error("[GrowthPage] Error loading growth data:", err);
-      setLoadingMetrics(false);
-    } finally {
-      setLoadingGrowth(false);
-    }
-  }, [user]);
+    setLoadingGrowth(growthQuery.isLoading);
+  }, [user, growthQuery.isLoading]);
 
   useEffect(() => {
-    loadGrowthData();
-  }, [loadGrowthData]);
+    const d = growthQuery.data;
+    if (!d) return;
+    const { goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes } = d;
+
+    setGrowthMetrics(metricsRes);
+    setLoadingMetrics(false);
+
+    if (goalRes) {
+      setMonthlyGoal(goalRes.targetValue);
+      setIncomeGoal(goalRes.targetValue);
+    } else {
+      setMonthlyGoal(null);
+      setIncomeGoal(5000);
+    }
+
+    setMrrData(mrrRes);
+    setCapacityData(capacityRes);
+    setEffectiveHourlyData(hourlyRes);
+    setRealExpenses(expRes);
+
+    if (expRes > 0) {
+      setExpenses(expRes);
+      setIsManualExpenses(false);
+    } else {
+      setExpenses(0);
+      setIsManualExpenses(true);
+    }
+
+    if (capacityRes.hasWorkingHours) {
+      setWorkHoursPerWeek(capacityRes.totalValidSlots);
+      setTeachHoursPerWeek(capacityRes.totalOccupiedSlots || Math.min(20, capacityRes.totalValidSlots));
+      setAvailableWeeklySlots(capacityRes.totalValidSlots);
+    }
+
+    if (mrrRes.totalMRR > 0) setCurrentMRR(mrrRes.totalMRR);
+    if (mrrRes.activeStudentCount > 0) setCurrentStudentsCount(mrrRes.activeStudentCount);
+    if (hourlyRes.hasEnoughData) setCurrentAvgHourlyRate(hourlyRes.effectiveHourlyRate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [growthQuery.data]);
 
   const handleOpenEditGoal = () => {
     setEditGoalInputValue(monthlyGoal ? String(monthlyGoal) : "10000");

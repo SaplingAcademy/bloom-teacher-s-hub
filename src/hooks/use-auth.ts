@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [authError, setAuthError] = useState<Error | null>(null);
   const syncedUserRef = useRef<string | null>(null);
+  const syncCompletedRef = useRef<string | null>(null);
 
   const syncProfile = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,18 +169,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Fetch onboarding status and teaching languages from legacy profiles table and onboarding answers table
-        const { data: legacyData } = await supabase
-          .from("profiles")
-          .select("onboarding_completed, languages_taught")
-          .eq("id", userId)
-          .maybeSingle();
-
-        const { data: onboardingRecord } = await supabase
-          .from("onboarding")
-          .select("answers")
-          .eq("teacher_id", userId)
-          .maybeSingle();
+        // Fetch onboarding status and teaching languages in parallel (they are independent).
+        const [{ data: legacyData }, { data: onboardingRecord }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("onboarding_completed, languages_taught")
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("onboarding")
+            .select("answers")
+            .eq("teacher_id", userId)
+            .maybeSingle(),
+        ]);
 
         const onboardingAnswers = onboardingRecord?.answers || {};
         const isCompleted =
@@ -259,7 +261,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log("[useAuth] Onboarding status loaded: pending");
           }
 
-          setProfile(profileData);
+        syncCompletedRef.current = userId;
+        setProfile(profileData);
           setAuthError(null);
         }
       } catch (err: unknown) {
@@ -318,16 +321,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "[useAuth] Session created/restored on auth state change. User ID:",
           session.user.id,
         );
+        const sameUserAlreadySynced = syncCompletedRef.current === session.user.id;
         setSession(session);
         setUser(session.user);
-        setLoading(true);
         if (callbackTimeout) clearTimeout(callbackTimeout);
+        if (sameUserAlreadySynced) {
+          // TOKEN_REFRESHED / INITIAL_SESSION for the same user: keep the app
+          // rendered instead of flashing the full-screen loader.
+          setLoading(false);
+          return;
+        }
+        if (syncedUserRef.current === session.user.id) {
+          // A sync for this user is already in flight; don't start a duplicate one.
+          return;
+        }
+        setLoading(true);
         syncProfile(session.user.id, session.user.email, session.user.user_metadata).finally(() => {
           setLoading(false);
         });
       } else {
         console.log("[useAuth] No session found on auth state change.");
         syncedUserRef.current = null;
+        syncCompletedRef.current = null;
         setProfile(null);
         setSession(null);
         setUser(null);

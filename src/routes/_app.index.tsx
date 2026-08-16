@@ -1,6 +1,7 @@
 import { resolveTeacherFirstName } from "@/lib/teacher-name";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -359,13 +360,20 @@ function TodayPage() {
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_DASHBOARD_METRICS);
-  const [metricsLoading, setMetricsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const metricsQuery = useQuery({
+    queryKey: ["dashboard-metrics", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: () => fetchDashboardMetrics(user!.id),
+  });
+  const metrics: DashboardMetrics = metricsQuery.data ?? EMPTY_DASHBOARD_METRICS;
+  // Only the very first load shows placeholders; revalidations keep prior data visible.
+  const metricsLoading = metricsQuery.isLoading;
   const todayEvents = metrics.todayEvents;
 
   // Dynamic tags hook
   const { tags, addTag, updateTag, deleteTag } = useTags(lang);
+  const queryClient = useQueryClient();
 
   // Form State
   const [formTitle, setFormTitle] = useState("");
@@ -400,39 +408,26 @@ function TodayPage() {
 
   const refreshEventsAndTasks = () => setRefreshKey((k) => k + 1);
 
-  // Load real, teacher-scoped metrics from Supabase
+  // Metrics revalidate through the query cache (see metricsQuery above).
   useEffect(() => {
-    let cancelled = false;
-    if (!user?.id) {
-      setMetrics(EMPTY_DASHBOARD_METRICS);
-      setMetricsLoading(false);
-      return;
+    if (refreshKey > 0 && user?.id) {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", user.id] });
     }
-    setMetricsLoading(true);
-    fetchDashboardMetrics(user.id)
-      .then((res) => {
-        if (!cancelled) setMetrics(res);
-      })
-      .catch((err) => console.error("[Today] Error loading metrics:", err))
-      .finally(() => {
-        if (!cancelled) setMetricsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, refreshKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
-  // Auto-refresh when the teacher returns to the dashboard after editing other modules
+  // Auto-refresh when returning to the dashboard — throttled and deduped
+  // (focus + visibilitychange used to fire twice on every tab switch).
   useEffect(() => {
+    let lastRefresh = Date.now();
     const onFocus = () => {
-      if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastRefresh < 60_000) return;
+      lastRefresh = Date.now();
+      setRefreshKey((k) => k + 1);
     };
-    window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
+    return () => document.removeEventListener("visibilitychange", onFocus);
   }, []);
 
   // Load manual tasks from localStorage
