@@ -321,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "[useAuth] Session created/restored on auth state change. User ID:",
           session.user.id,
         );
-        const sameUserAlreadySynced = syncedUserRef.current === session.user.id;
+        const sameUserAlreadySynced = syncCompletedRef.current === session.user.id;
         setSession(session);
         setUser(session.user);
         if (callbackTimeout) clearTimeout(callbackTimeout);
@@ -338,6 +338,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         console.log("[useAuth] No session found on auth state change.");
         syncedUserRef.current = null;
+        syncCompletedRef.current = null;
         setProfile(null);
         setSession(null);
         setUser(null);
