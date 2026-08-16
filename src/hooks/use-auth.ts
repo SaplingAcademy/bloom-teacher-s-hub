@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [authError, setAuthError] = useState<Error | null>(null);
   const syncedUserRef = useRef<string | null>(null);
+  const syncCompletedRef = useRef<string | null>(null);
 
   const syncProfile = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -260,7 +261,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log("[useAuth] Onboarding status loaded: pending");
           }
 
-          setProfile(profileData);
+        syncCompletedRef.current = userId;
+        setProfile(profileData);
           setAuthError(null);
         }
       } catch (err: unknown) {
