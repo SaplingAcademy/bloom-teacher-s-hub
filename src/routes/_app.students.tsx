@@ -1123,172 +1123,186 @@ function StudentsPage() {
     }
   };
 
-  // Load students from Supabase on mount
-  useEffect(() => {
-    if (!user) return;
+  // ---- Cached, teacher-scoped data loading (stale-while-revalidate) ----
+  const queryClient = useQueryClient();
+  const teacherId = user?.id;
 
-    const fetchStudents = async () => {
-      try {
-        // Attempt 1: Fetch with full relations (student_schedules + student_packages + packages)
-        let response = await supabase
+  const studentsQuery = useQuery({
+    queryKey: ["students", teacherId],
+    enabled: Boolean(teacherId),
+    queryFn: async () => {
+      // Attempt 1: full relations. Fallbacks only run when the relation is missing.
+      let response = await supabase
+        .from("students")
+        .select("*, student_schedules(*), student_packages(*, packages(*))")
+        .eq("teacher_id", teacherId!)
+        .order("full_name", { ascending: true });
+
+      if (response.error) {
+        console.warn("[Students] Full relation query failed, falling back:", response.error.message);
+        response = await supabase
           .from("students")
-          .select("*, student_schedules(*), student_packages(*, packages(*))")
-          .eq("teacher_id", user.id)
+          .select("*, student_schedules(*)")
+          .eq("teacher_id", teacherId!)
           .order("full_name", { ascending: true });
-
-        // Attempt 2: Fallback to student_schedules relation if student_packages relation doesn't exist in DB
-        if (response.error) {
-          console.warn("[Students] Full relation query failed, falling back to student_schedules relation:", response.error.message);
-          response = await supabase
-            .from("students")
-            .select("*, student_schedules(*)")
-            .eq("teacher_id", user.id)
-            .order("full_name", { ascending: true });
-        }
-
-        // Attempt 3: Fallback to plain students table if student_schedules relation also doesn't exist in DB
-        if (response.error) {
-          console.warn("[Students] Secondary relation query failed, falling back to plain students query:", response.error.message);
-          response = await supabase
-            .from("students")
-            .select("*")
-            .eq("teacher_id", user.id)
-            .order("full_name", { ascending: true });
-        }
-
-        if (response.error) {
-          console.error("[Students Page Load Failure]", {
-            step: "fetch_students_query",
-            code: response.error?.code,
-            message: response.error?.message,
-            details: response.error?.details,
-            hint: response.error?.hint,
-          });
-          return;
-        }
-
-        const data = response.data;
-
-        if (data) {
-          const mappedStudents: Student[] = data.map((d: any) => {
-            const schedulesList = d.student_schedules || [];
-            
-            const dayTranslation: Record<string, string> = {
-              Monday: lang === "pt" ? "Seg" : "Mon",
-              Tuesday: lang === "pt" ? "Ter" : "Tue",
-              Wednesday: lang === "pt" ? "Qua" : "Wed",
-              Thursday: lang === "pt" ? "Qui" : "Thu",
-              Friday: lang === "pt" ? "Sex" : "Fri",
-              Saturday: lang === "pt" ? "Sáb" : "Sat",
-              Sunday: lang === "pt" ? "Dom" : "Sun"
-            };
-
-            const scheduleSummary = schedulesList.length > 0
-              ? schedulesList.map((s: any) => `${dayTranslation[s.weekday] || s.weekday?.substring(0, 3) || ""}${s.start_time ? ` • ${(s.start_time || "").slice(0, 5)}` : ""}`).join(", ")
-              : (d.schedule || "Custom");
-
-            let scheduleDetailsObj: ScheduleDetails | undefined = undefined;
-            if (schedulesList.length > 0) {
-              const firstS = schedulesList[0];
-              scheduleDetailsObj = {
-                day: firstS.weekday,
-                startTime: firstS.start_time || "09:00",
-                duration: 60,
-                frequency: "Weekly",
-                startDate: "",
-                endDate: undefined,
-                timezone: "America/Sao_Paulo",
-                deliveryMode: "Online",
-                locationLink: undefined,
-              };
-            }
-
-            const activePkgAssignment = (d.student_packages || []).find((sp: any) => sp.status === "active");
-            const activePackageId = activePkgAssignment?.package_id || d.package_id || undefined;
-
-            return {
-              id: d.id,
-              name: d.full_name,
-              whatsapp: d.phone || "",
-              email: d.email || "",
-              level: (d.level as CEFRLevel) || "A1",
-              focus: d.language_studied || "English",
-              type: (d.type as StudentType) || "Private",
-              status: (d.status as StudentStatus) || "Active",
-              schedule: scheduleSummary,
-              createdAt: d.created_at,
-              lastActive: d.updated_at,
-              notes: d.notes || "",
-              color_key: d.color_key || "default",
-              groupSize: d.group_size || undefined,
-              packageId: activePackageId,
-              schedules: schedulesList.map((s: any) => ({
-                id: s.id,
-                weekday: s.weekday,
-                startTime: s.start_time || "",
-                endTime: s.end_time || "",
-                duration: 60,
-                deliveryMode: "Online" as const,
-                locationLink: "",
-              })),
-              scheduleDetails: scheduleDetailsObj,
-            };
-          });
-          setStudents(mappedStudents);
-
-          if (mappedStudents.length === 0) {
-            const dismissed = localStorage.getItem("bloom.students_welcome_dismissed");
-            if (!dismissed) {
-              setShowZeroStudentsWelcome(true);
-            }
-          }
-        }
-      } catch (error: any) {
-        console.error("[Students] Error loading students:", error);
       }
-    };
 
-    fetchStudents();
-
-    // Fetch packages catalog from Supabase
-    const fetchPackages = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from("packages")
+      if (response.error) {
+        console.warn("[Students] Secondary relation query failed, falling back:", response.error.message);
+        response = await supabase
+          .from("students")
           .select("*")
-          .eq("teacher_id", user.id)
-          .order("name", { ascending: true });
-
-        if (error) {
-          console.warn("[Students] Could not fetch packages (table might not exist in DB):", error.message);
-          return;
-        }
-
-        if (data) {
-          const mappedPkgs: Package[] = data.map((d: any) => ({
-            id: d.id,
-            name: d.name,
-            price: Number(d.price) || 0,
-            frequency: d.frequency || "Monthly",
-            duration: Number(d.duration) || 60,
-            lessons: Number(d.lessons) || 4,
-            method: d.method || "Pix",
-          }));
-          setPackages(mappedPkgs);
-        }
-      } catch (e) {
-        console.warn("[Students] Error fetching packages:", e);
+          .eq("teacher_id", teacherId!)
+          .order("full_name", { ascending: true });
       }
+
+      if (response.error) throw response.error;
+      return response.data || [];
+    },
+  });
+
+  const packagesQuery = useQuery({
+    queryKey: ["packages", teacherId],
+    enabled: Boolean(teacherId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packages")
+        .select("*")
+        .eq("teacher_id", teacherId!)
+        .order("name", { ascending: true });
+      if (error) {
+        console.warn("[Students] Could not fetch packages:", error.message);
+        return [];
+      }
+      return data || [];
+    },
+  });
+
+  const classesQuery = useQuery({
+    queryKey: ["teacher-classes", teacherId],
+    enabled: Boolean(teacherId),
+    queryFn: () => fetchTeacherClasses(teacherId!),
+  });
+
+  const classMembersQuery = useQuery({
+    queryKey: ["class-member-ids", teacherId],
+    enabled: Boolean(teacherId),
+    queryFn: () => fetchActiveClassMemberStudentIds(teacherId!),
+  });
+
+  /** Revalidate every teacher-scoped list after a write. */
+  const refreshStudentData = () => {
+    if (!teacherId) return;
+    queryClient.invalidateQueries({ queryKey: ["students", teacherId] });
+    queryClient.invalidateQueries({ queryKey: ["packages", teacherId] });
+    queryClient.invalidateQueries({ queryKey: ["teacher-classes", teacherId] });
+    queryClient.invalidateQueries({ queryKey: ["class-member-ids", teacherId] });
+  };
+
+  // Map raw rows -> UI model (re-runs on language change without refetching)
+  useEffect(() => {
+    const data = studentsQuery.data;
+    if (!data) return;
+
+    const dayTranslation: Record<string, string> = {
+      Monday: lang === "pt" ? "Seg" : "Mon",
+      Tuesday: lang === "pt" ? "Ter" : "Tue",
+      Wednesday: lang === "pt" ? "Qua" : "Wed",
+      Thursday: lang === "pt" ? "Qui" : "Thu",
+      Friday: lang === "pt" ? "Sex" : "Fri",
+      Saturday: lang === "pt" ? "Sáb" : "Sat",
+      Sunday: lang === "pt" ? "Dom" : "Sun",
     };
 
-    fetchPackages();
+    const mappedStudents: Student[] = data.map((d: any) => {
+      const schedulesList = d.student_schedules || [];
 
-    // Fetch classes & groups and active member student IDs from Supabase
-    fetchTeacherClasses(user.id).then(setClassesList);
-    fetchActiveClassMemberStudentIds(user.id).then(setActiveMemberStudentIds);
+      const scheduleSummary = schedulesList.length > 0
+        ? schedulesList.map((s: any) => `${dayTranslation[s.weekday] || s.weekday?.substring(0, 3) || ""}${s.start_time ? ` • ${(s.start_time || "").slice(0, 5)}` : ""}`).join(", ")
+        : (d.schedule || "Custom");
 
-    // Load ledger to show in Student Hub
+      let scheduleDetailsObj: ScheduleDetails | undefined = undefined;
+      if (schedulesList.length > 0) {
+        const firstS = schedulesList[0];
+        scheduleDetailsObj = {
+          day: firstS.weekday,
+          startTime: firstS.start_time || "09:00",
+          duration: 60,
+          frequency: "Weekly",
+          startDate: "",
+          endDate: undefined,
+          timezone: "America/Sao_Paulo",
+          deliveryMode: "Online",
+          locationLink: undefined,
+        };
+      }
+
+      const activePkgAssignment = (d.student_packages || []).find((sp: any) => sp.status === "active");
+      const activePackageId = activePkgAssignment?.package_id || d.package_id || undefined;
+
+      return {
+        id: d.id,
+        name: d.full_name,
+        whatsapp: d.phone || "",
+        email: d.email || "",
+        level: (d.level as CEFRLevel) || "A1",
+        focus: d.language_studied || "English",
+        type: (d.type as StudentType) || "Private",
+        status: (d.status as StudentStatus) || "Active",
+        schedule: scheduleSummary,
+        createdAt: d.created_at,
+        lastActive: d.updated_at,
+        notes: d.notes || "",
+        color_key: d.color_key || "default",
+        groupSize: d.group_size || undefined,
+        packageId: activePackageId,
+        schedules: schedulesList.map((s: any) => ({
+          id: s.id,
+          weekday: s.weekday,
+          startTime: s.start_time || "",
+          endTime: s.end_time || "",
+          duration: 60,
+          deliveryMode: "Online" as const,
+          locationLink: "",
+        })),
+        scheduleDetails: scheduleDetailsObj,
+      };
+    });
+
+    setStudents(mappedStudents);
+
+    if (mappedStudents.length === 0) {
+      const dismissed = localStorage.getItem("bloom.students_welcome_dismissed");
+      if (!dismissed) setShowZeroStudentsWelcome(true);
+    }
+  }, [studentsQuery.data, lang]);
+
+  useEffect(() => {
+    const data = packagesQuery.data;
+    if (!data) return;
+    setPackages(
+      data.map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        price: Number(d.price) || 0,
+        frequency: d.frequency || "Monthly",
+        duration: Number(d.duration) || 60,
+        lessons: Number(d.lessons) || 4,
+        method: d.method || "Pix",
+      })),
+    );
+  }, [packagesQuery.data]);
+
+  useEffect(() => {
+    if (classesQuery.data) setClassesList(classesQuery.data);
+  }, [classesQuery.data]);
+
+  useEffect(() => {
+    if (classMembersQuery.data) setActiveMemberStudentIds(classMembersQuery.data);
+  }, [classMembersQuery.data]);
+
+  // Local ledger (no network)
+  useEffect(() => {
     const savedLedger = localStorage.getItem("bloom.ledger.transactions");
     if (savedLedger) {
       try {
@@ -1297,7 +1311,18 @@ function StudentsPage() {
         console.error(e);
       }
     }
-  }, [user, isModalOpen, isClassModalOpen, selectedStudentId]);
+  }, []);
+
+  // Writes happen inside modals; revalidate once when they close.
+  useEffect(() => {
+    if (!isModalOpen) refreshStudentData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (!isClassModalOpen) refreshStudentData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClassModalOpen]);
 
   // Open modal for creating student
   const handleOpenModal = () => {
