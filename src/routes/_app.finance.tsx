@@ -86,7 +86,7 @@ function SafeNumberInput({
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = e.target.value;
+    let raw = e.target.value.replace(",", ".");
 
     if (raw === "") {
       setTempVal("");
@@ -108,7 +108,7 @@ function SafeNumberInput({
   };
 
   const handleBlur = () => {
-    let parsed = parseFloat(tempVal) || 0;
+    let parsed = parseFloat(String(tempVal).replace(",", ".")) || 0;
     if (min !== undefined && parsed < min) parsed = min;
     if (max !== undefined && parsed > max) parsed = max;
     setTempVal(String(parsed));
