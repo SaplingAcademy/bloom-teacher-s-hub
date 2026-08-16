@@ -319,10 +319,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "[useAuth] Session created/restored on auth state change. User ID:",
           session.user.id,
         );
+        const sameUserAlreadySynced = syncedUserRef.current === session.user.id;
         setSession(session);
         setUser(session.user);
-        setLoading(true);
         if (callbackTimeout) clearTimeout(callbackTimeout);
+        if (sameUserAlreadySynced) {
+          // TOKEN_REFRESHED / INITIAL_SESSION for the same user: keep the app
+          // rendered instead of flashing the full-screen loader.
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
         syncProfile(session.user.id, session.user.email, session.user.user_metadata).finally(() => {
           setLoading(false);
         });
