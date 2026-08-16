@@ -331,6 +331,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
           return;
         }
+        if (syncedUserRef.current === session.user.id) {
+          // A sync for this user is already in flight; don't start a duplicate one.
+          return;
+        }
         setLoading(true);
         syncProfile(session.user.id, session.user.email, session.user.user_metadata).finally(() => {
           setLoading(false);
