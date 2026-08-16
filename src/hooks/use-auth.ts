@@ -168,18 +168,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Fetch onboarding status and teaching languages from legacy profiles table and onboarding answers table
-        const { data: legacyData } = await supabase
-          .from("profiles")
-          .select("onboarding_completed, languages_taught")
-          .eq("id", userId)
-          .maybeSingle();
-
-        const { data: onboardingRecord } = await supabase
-          .from("onboarding")
-          .select("answers")
-          .eq("teacher_id", userId)
-          .maybeSingle();
+        // Fetch onboarding status and teaching languages in parallel (they are independent).
+        const [{ data: legacyData }, { data: onboardingRecord }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("onboarding_completed, languages_taught")
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("onboarding")
+            .select("answers")
+            .eq("teacher_id", userId)
+            .maybeSingle(),
+        ]);
 
         const onboardingAnswers = onboardingRecord?.answers || {};
         const isCompleted =
