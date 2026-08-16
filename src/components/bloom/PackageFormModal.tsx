@@ -65,6 +65,12 @@ export function PackageFormModal({
 
   const sanitizeNumeric = (value: string) => value.replace(/[^0-9]/g, "");
 
+  const sanitizeDecimal = (value: string) => {
+    const normalized = value.replace(",", ".").replace(/[^0-9.]/g, "");
+    const [intPart, ...rest] = normalized.split(".");
+    return rest.length ? `${intPart}.${rest.join("").slice(0, 2)}` : intPart;
+  };
+
   const handleNumericBlur = (
     value: string,
     setter: React.Dispatch<React.SetStateAction<string>>,
@@ -81,7 +87,7 @@ export function PackageFormModal({
     onSave({
       id: initialData?.id,
       name: name.trim(),
-      price: Number(price) || 0,
+      price: Number(sanitizeDecimal(price)) || 0,
       frequency,
       duration: Number(duration) || 60,
       lessons: Number(lessons) || 1,
@@ -144,10 +150,11 @@ export function PackageFormModal({
               </Label>
               <Input
                 id="modal-pkg-price"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={price}
-                onChange={(e) => setPrice(sanitizeNumeric(e.target.value))}
-                onBlur={() => handleNumericBlur(price, setPrice, 300)}
+                onChange={(e) => setPrice(sanitizeDecimal(e.target.value))}
+                onBlur={() => setPrice(price.trim() === "" || price === "." ? "300" : price.replace(/^0+(?=\d)/, ""))}
                 required
                 className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
               />
