@@ -270,7 +270,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       if (sp && !isMonthly && sp.installment_count && sp.installment_count >= 1) {
         // --- Installment Course Package Flow ---
         const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
-        const totalCents = sp.total_amount_cents || (pkg ? (pkg.price < 1000 ? pkg.price * 100 : pkg.price) : 240000);
+        const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
         const { schedule } = calculateInstallmentSchedule(totalCents, safeInstallmentCount);
         const firstDueDateStr = sp.first_due_date || todayStr;
         const dueDay = sp.due_day || student.due_day || 5;
@@ -306,7 +306,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         // --- Monthly Package Flow ---
         const periodKey = `student_${student.id}_${currentPeriod}`;
         if (!existingKeys.has(periodKey)) {
-          const priceCents = sp?.total_amount_cents || (pkg ? (pkg.price < 1000 ? pkg.price * 100 : pkg.price) : 30000);
+          const priceCents = sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
           const dueDay = sp?.due_day || student.due_day || 5;
           const dueDateStr = `${currentYear}-${currentMonth}-${String(Math.min(Math.max(dueDay, 1), 28)).padStart(2, "0")}`;
           const status = dueDateStr < todayStr ? "overdue" : "pending";
@@ -339,7 +339,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       if (mode === "shared_class") {
         const classKey = `class_${cls.id}_${currentPeriod}`;
         if (!existingKeys.has(classKey)) {
-          const priceCents = cls.billing_amount || (pkg ? (pkg.price < 1000 ? pkg.price * 100 : pkg.price) : 50000);
+          const priceCents = cls.billing_amount || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 50000);
           const pkgName = pkg ? pkg.name : `Turma ${cls.name}`;
           const invNumber = `INV-CLS-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
           
@@ -373,7 +373,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
 
           if (sp && !isMonthly && sp.installment_count && sp.installment_count >= 1) {
             const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
-            const totalCents = sp.total_amount_cents || (pkg ? (pkg.price < 1000 ? pkg.price * 100 : pkg.price) : 240000);
+            const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
             const { schedule } = calculateInstallmentSchedule(totalCents, safeInstallmentCount);
             const firstDueDateStr = sp.first_due_date || todayStr;
             const dueDay = sp.due_day || 5;
@@ -408,7 +408,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
           } else {
             const memberKey = `student_${mem.student_id}_${currentPeriod}`;
             if (!existingKeys.has(memberKey)) {
-              const priceCents = sp?.total_amount_cents || (pkg ? (pkg.price < 1000 ? pkg.price * 100 : pkg.price) : 30000);
+              const priceCents = sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
               const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
 
               newInvoiceRows.push({
@@ -1215,7 +1215,7 @@ export async function getStudentPackageHistory(
     return data.map((sp: any) => {
       const isCurrent = sp.status === "active";
       const packageName = sp.snapshot_package_name || sp.package?.name || "Pacote Personalizado";
-      const totalAmountCents = sp.total_amount_cents || (sp.package ? (sp.package.price < 1000 ? sp.package.price * 100 : sp.package.price) : 0);
+      const totalAmountCents = sp.total_amount_cents || (sp.package ? Math.round(Number(sp.package.price || 0) * 100) : 0);
       const installmentCount = Math.max(1, Math.min(12, sp.installment_count || 1));
       const installmentAmountCents = sp.installment_amount_cents || Math.round(totalAmountCents / installmentCount);
 
@@ -1548,8 +1548,8 @@ export async function renewStudentPackage(
     let changeType: "initial" | "renewal" | "upgrade" | "downgrade" | "lateral" = "renewal";
 
     if (!isSamePackage && currentSp) {
-      const oldPrice = currentSp.total_amount_cents || (currentSp.package ? (currentSp.package.price < 1000 ? currentSp.package.price * 100 : currentSp.package.price) : 0);
-      const newPrice = totalAmountCents || (newPkg.price < 1000 ? newPkg.price * 100 : newPkg.price);
+      const oldPrice = currentSp.total_amount_cents || (currentSp.package ? Math.round(Number(currentSp.package.price || 0) * 100) : 0);
+      const newPrice = totalAmountCents || Math.round(Number(newPkg.price || 0) * 100);
 
       if (newPrice > oldPrice) {
         changeType = "upgrade";
@@ -1580,7 +1580,7 @@ export async function renewStudentPackage(
 
     // 6. Calculate total amount & installment schedules for new agreement
     const safeInstallmentCount = Math.max(1, Math.min(12, Math.round(installmentCount || 1)));
-    const finalTotalCents = totalAmountCents || (newPkg.price < 1000 ? newPkg.price * 100 : newPkg.price);
+    const finalTotalCents = totalAmountCents || Math.round(Number(newPkg.price || 0) * 100);
     const scheduleInfo = calculateInstallmentSchedule(finalTotalCents, safeInstallmentCount);
     const lastDueDate = calculateLastDueDate(effectiveStartDate, safeInstallmentCount, dueDay);
 
