@@ -1059,7 +1059,7 @@ function FinancePage() {
                       </button>
                     </div>
                     <p className="text-xl font-extrabold text-primary mt-2">
-                      R$ {pkg.price}
+                      R$ {Number(pkg.price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       <span className="text-xs text-muted-foreground font-medium">
                         {" "}
                         / {(pkg.frequency as string) === "total" || (pkg.frequency as string) === "Valor total do curso" ? (lang === "pt" ? "valor total" : "total value") : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
