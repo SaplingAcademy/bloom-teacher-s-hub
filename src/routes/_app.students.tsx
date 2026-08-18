@@ -9,6 +9,7 @@ import {
   saveStudentEnrollmentAgreement,
   calculateLastDueDate,
   calculateInstallmentSchedule,
+  getFirstDueDateFromDay,
   getStudentFinancialSummary,
   getStudentPackageHistory,
   getStudentPaymentHistory,
@@ -570,11 +571,11 @@ function StudentsPage() {
 
   // Enrollment Agreement Form States
   const [formInstallmentCount, setFormInstallmentCount] = useState<number>(6);
+  const [formDueDay, setFormDueDay] = useState<number>(18);
   const [formFirstDueDate, setFormFirstDueDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    getFirstDueDateFromDay(18)
   );
   const [formPaymentMethod, setFormPaymentMethod] = useState<string>("Pix");
-  const [formDueDay, setFormDueDay] = useState<number>(5);
 
   // Edit Student Form State
   const [editColorKey, setEditColorKey] = useState<string>("default");
@@ -1340,6 +1341,8 @@ function StudentsPage() {
     setFormPackageId("");
     setFormNotes("");
     setFormColorKey("default");
+    setFormDueDay(18);
+    setFormFirstDueDate(getFirstDueDateFromDay(18));
 
     // Reset Schedule fields
     setFormClassFrequency(1);
@@ -2815,14 +2818,27 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Data da 1ª Parcela" : "First Due Date"}
+                                    {lang === "pt" ? "Vencimento" : "Due Date"}
                                   </Label>
-                                  <Input
-                                    type="date"
-                                    value={formFirstDueDate}
-                                    onChange={(e) => setFormFirstDueDate(e.target.value)}
-                                    className="h-10 rounded-xl border-border bg-white text-sm"
-                                  />
+                                  <Select
+                                    value={(formDueDay || 18).toString()}
+                                    onValueChange={(val) => {
+                                      const day = parseInt(val, 10) || 18;
+                                      setFormDueDay(day);
+                                      setFormFirstDueDate(getFirstDueDateFromDay(day));
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                                        <SelectItem key={day} value={day.toString()} className="font-medium">
+                                          {lang === "pt" ? `Dia ${day}` : `Day ${day}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </div>
 
                                 <div className="space-y-1">
@@ -2846,14 +2862,27 @@ function StudentsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Data do 1º Vencimento" : "First Due Date"}
+                                    {lang === "pt" ? "Vencimento" : "Due Date"}
                                   </Label>
-                                  <Input
-                                    type="date"
-                                    value={formFirstDueDate}
-                                    onChange={(e) => setFormFirstDueDate(e.target.value)}
-                                    className="h-10 rounded-xl border-border bg-white text-sm"
-                                  />
+                                  <Select
+                                    value={(formDueDay || 18).toString()}
+                                    onValueChange={(val) => {
+                                      const day = parseInt(val, 10) || 18;
+                                      setFormDueDay(day);
+                                      setFormFirstDueDate(getFirstDueDateFromDay(day));
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                                        <SelectItem key={day} value={day.toString()} className="font-medium">
+                                          {lang === "pt" ? `Dia ${day}` : `Day ${day}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </div>
 
                                 <div className="space-y-1">
@@ -2883,17 +2912,19 @@ function StudentsPage() {
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1 text-stone-700">
                                 <div>
-                                  <span className="text-stone-500 font-medium">Pacote:</span>{" "}
+                                  <span className="text-stone-500 font-medium">{lang === "pt" ? "Pacote:" : "Package:"}</span>{" "}
                                   <strong className="text-stone-900 font-bold">{selectedPkg.name}</strong>
                                 </div>
                                 <div>
-                                  <span className="text-stone-500 font-medium">{isMonthly ? "Valor Mensal:" : "Valor Total:"}</span>{" "}
+                                  <span className="text-stone-500 font-medium">
+                                    {isMonthly ? (lang === "pt" ? "Valor Mensal:" : "Monthly Price:") : (lang === "pt" ? "Valor Total:" : "Total Price:")}
+                                  </span>{" "}
                                   <strong className="text-stone-900 font-bold">{formatCentsToBRL(totalPriceCents)}</strong>
                                 </div>
                                 {!isMonthly ? (
                                   <>
                                     <div>
-                                      <span className="text-stone-500 font-medium">Condição de Pagamento:</span>{" "}
+                                      <span className="text-stone-500 font-medium">{lang === "pt" ? "Condição de Pagamento:" : "Payment Terms:"}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {scheduleInfo.isUneven
                                           ? `${installmentCount - 1}x de ${formatCentsToBRL(scheduleInfo.baseAmountCents)} + 1x de ${formatCentsToBRL(scheduleInfo.lastAmountCents)}`
@@ -2901,18 +2932,22 @@ function StudentsPage() {
                                       </strong>
                                     </div>
                                     <div>
-                                      <span className="text-stone-500 font-medium">1ª Parcela:</span>{" "}
-                                      <strong className="text-stone-900 font-bold">{formFirstDueDate}</strong>
+                                      <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
+                                      <strong className="text-stone-900 font-bold">
+                                        {lang === "pt" ? `dia ${formDueDay || 18}` : `day ${formDueDay || 18}`}
+                                      </strong>
                                     </div>
                                     <div className="sm:col-span-2">
-                                      <span className="text-stone-500 font-medium">Última Parcela:</span>{" "}
+                                      <span className="text-stone-500 font-medium">{lang === "pt" ? "Última Parcela:" : "Last Installment:"}</span>{" "}
                                       <strong className="text-stone-900 font-bold">{lastDueDate}</strong>
                                     </div>
                                   </>
                                 ) : (
                                   <div>
-                                    <span className="text-stone-500 font-medium">1º Vencimento:</span>{" "}
-                                    <strong className="text-stone-900 font-bold">{formFirstDueDate}</strong>
+                                    <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
+                                    <strong className="text-stone-900 font-bold">
+                                      {lang === "pt" ? `dia ${formDueDay || 18}` : `day ${formDueDay || 18}`}
+                                    </strong>
                                   </div>
                                 )}
                               </div>

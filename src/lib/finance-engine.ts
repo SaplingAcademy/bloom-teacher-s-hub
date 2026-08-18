@@ -161,29 +161,58 @@ export function calculateInstallmentSchedule(totalCents: number, installmentCoun
 }
 
 /**
- * Calculate due date for installment `N` (1-indexed) given firstDueDate
+ * Calculate first ISO due date (YYYY-MM-DD) from a chosen recurring day of month (1-31).
+ * If month has fewer days, caps to the last valid day of that month.
  */
-export function calculateInstallmentDueDate(firstDueDateStr: string, installmentIndexZero: number, defaultDueDay: number = 5): string {
-  if (!firstDueDateStr) {
-    const now = new Date();
-    now.setMonth(now.getMonth() + installmentIndexZero);
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(Math.min(Math.max(defaultDueDay, 1), 28)).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+export function getFirstDueDateFromDay(dueDay: number = 18): string {
+  const safeDay = Math.max(1, Math.min(31, Math.round(dueDay || 18)));
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth(); // 0-indexed
+  const currentDay = now.getDate();
+
+  if (currentDay > safeDay) {
+    month += 1;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
   }
 
-  const parts = firstDueDateStr.split("-").map(Number);
-  const startYear = parts[0] || new Date().getFullYear();
-  const startMonth = (parts[1] || 1) - 1; // 0-indexed
-  const startDay = parts[2] || defaultDueDay;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const actualDay = Math.min(safeDay, daysInMonth);
 
-  const targetDate = new Date(startYear, startMonth + installmentIndexZero, startDay);
-  const y = targetDate.getFullYear();
-  const m = String(targetDate.getMonth() + 1).padStart(2, "0");
-  const d = String(targetDate.getDate()).padStart(2, "0");
+  const mm = String(month + 1).padStart(2, "0");
+  const dd = String(actualDay).padStart(2, "0");
 
-  return `${y}-${m}-${d}`;
+  return `${year}-${mm}-${dd}`;
+}
+
+/**
+ * Calculate due date for installment `N` (0-indexed) given firstDueDate
+ */
+export function calculateInstallmentDueDate(firstDueDateStr: string, installmentIndexZero: number, defaultDueDay: number = 18): string {
+  let startYear = new Date().getFullYear();
+  let startMonth = new Date().getMonth();
+  let targetDay = defaultDueDay || 18;
+
+  if (firstDueDateStr) {
+    const parts = firstDueDateStr.split("-").map(Number);
+    if (parts[0]) startYear = parts[0];
+    if (parts[1]) startMonth = parts[1] - 1;
+    if (parts[2]) targetDay = defaultDueDay || parts[2];
+  }
+
+  const targetDateObj = new Date(startYear, startMonth + installmentIndexZero, 1);
+  const y = targetDateObj.getFullYear();
+  const m = targetDateObj.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const actualDay = Math.min(Math.max(1, targetDay), daysInMonth);
+
+  const mm = String(m + 1).padStart(2, "0");
+  const dd = String(actualDay).padStart(2, "0");
+
+  return `${y}-${mm}-${dd}`;
 }
 
 /**
