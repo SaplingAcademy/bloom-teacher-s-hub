@@ -360,7 +360,6 @@ export async function syncStudentSchedulesToSupabaseEvents(
           delivery_mode: "Online",
           status: "Scheduled",
           is_recurring: true,
-          origin: "recurring",
           recurrence_series_id: `series-${studentId}`,
         });
       }

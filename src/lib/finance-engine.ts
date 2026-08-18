@@ -78,6 +78,52 @@ export function formatCentsToBRL(cents: number): string {
 }
 
 /**
+ * Format numeric or string Reais value to BRL currency string (e.g. 359.9 -> "R$ 359,90")
+ */
+export function formatReaisToBRL(value: number | string | undefined | null): string {
+  if (value === undefined || value === null || value === "") return "R$ 0,00";
+  const num = typeof value === "number" ? value : parseFloat(String(value).replace(",", "."));
+  if (isNaN(num)) return "R$ 0,00";
+  return num.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Parse user input string or number to a valid decimal number in Reais.
+ * Replaces comma with dot, normalizes string, and converts to float with decimal precision.
+ * Examples: "359,90" -> 359.9, "359.90" -> 359.9, "" -> 0
+ */
+export function parseCurrencyToNumber(value: string | number | undefined | null): number {
+  if (value === undefined || value === null || value === "") return 0;
+  if (typeof value === "number") return isNaN(value) ? 0 : value;
+  const normalized = String(value).replace(",", ".").trim();
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Format a numeric price to an input string for form editing (e.g., 359.9 -> "359,90" in PT)
+ */
+export function formatNumberToCurrencyInput(
+  value: number | string | undefined | null,
+  lang: string = "pt"
+): string {
+  if (value === undefined || value === null || value === "") return "";
+  const num = typeof value === "number" ? value : parseFloat(String(value).replace(",", "."));
+  if (isNaN(num) || num === 0) return "";
+  const isPt = lang === "pt";
+  if (Number.isInteger(num)) {
+    return String(num);
+  }
+  return isPt ? num.toFixed(2).replace(".", ",") : num.toFixed(2);
+}
+
+
+/**
  * Calculate exact installment schedule in cents for up to 12 installments.
  * Handles uneven divisions so sum(schedule) === totalCents.
  * Example: R$ 1.000 (100000 cents) / 3 -> [33333, 33333, 33334]
@@ -187,53 +233,52 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
     const currentPeriod = `${currentYear}-${currentMonth}`;
     const todayStr = currentDate.toISOString().split("T")[0];
 
-    // 1. Fetch Teacher Packages Catalog
-    const { data: packagesData } = await supabase
-      .from("packages")
-      .select("*")
-      .eq("teacher_id", teacherId);
+    // Fetch all required tables concurrently with explicit column selection
+    const [
+      { data: packagesData },
+      { data: studentsData },
+      { data: studentPackagesData },
+      { data: classesData },
+      { data: existingInvoicesData },
+    ] = await Promise.all([
+      supabase
+        .from("packages")
+        .select("id, name, price, frequency, duration, lessons, method")
+        .eq("teacher_id", teacherId),
+      supabase
+        .from("students")
+        .select("id, full_name, status, package_id, type, due_day")
+        .eq("teacher_id", teacherId)
+        .eq("status", "Active"),
+      supabase
+        .from("student_packages")
+        .select("id, student_id, package_id, status, total_amount_cents, installment_count, default_due_day, first_due_date, due_day, created_at, snapshot_package_name, snapshot_package_price, snapshot_frequency")
+        .eq("teacher_id", teacherId)
+        .eq("status", "active"),
+      supabase
+        .from("classes")
+        .select("id, name, status, billing_mode, package_id, due_day, billing_amount, class_members(student_id)")
+        .eq("teacher_id", teacherId)
+        .eq("status", "active"),
+      supabase
+        .from("invoices")
+        .select("id, teacher_id, student_id, description, amount_cents, due_date, status, currency, created_at, updated_at, payments(id, amount_cents, received_at)")
+        .eq("teacher_id", teacherId),
+    ]);
 
     const packagesMap = new Map<string, any>();
     (packagesData || []).forEach((pkg) => {
       packagesMap.set(pkg.id, pkg);
     });
 
-    // 2. Fetch Active Students
-    const { data: studentsData } = await supabase
-      .from("students")
-      .select("*")
-      .eq("teacher_id", teacherId)
-      .eq("status", "Active");
-
     const activeStudents = studentsData || [];
-
-    // 3. Fetch Active Student Packages (Enrollment Agreements with snapshots & installment counts)
-    const { data: studentPackagesData } = await supabase
-      .from("student_packages")
-      .select("*")
-      .eq("teacher_id", teacherId)
-      .eq("status", "active");
 
     const studentPackagesMap = new Map<string, any>();
     (studentPackagesData || []).forEach((sp) => {
       studentPackagesMap.set(sp.student_id, sp);
     });
 
-    // 4. Fetch Active Classes and Class Members
-    const { data: classesData } = await supabase
-      .from("classes")
-      .select("*, class_members(*)")
-      .eq("teacher_id", teacherId)
-      .eq("status", "active");
-
     const activeClasses = classesData || [];
-
-    // 5. Fetch Existing Invoices for this teacher
-    const { data: existingInvoicesData } = await supabase
-      .from("invoices")
-      .select("*, payments(*)")
-      .eq("teacher_id", teacherId);
-
     const existingInvoices = existingInvoicesData || [];
 
     // Track existing period and installment keys
@@ -428,29 +473,139 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       }
     });
 
-    // 5. Insert New Invoices safely
+    // 5. Asynchronously persist new invoices and overdue status updates in background (non-blocking)
     if (newInvoiceRows.length > 0) {
-      const { error: insertErr } = await supabase.from("invoices").insert(newInvoiceRows);
-      if (insertErr) {
-        console.warn("[FinanceEngine] Note on invoice insert:", insertErr.message);
-      }
+      supabase.from("invoices").insert(newInvoiceRows).then(({ error }) => {
+        if (error) console.warn("[FinanceEngine] Non-blocking invoice insert note:", error.message);
+      });
     }
 
-    // 6. Update Status of Unpaid Past Invoices to 'overdue'
     const overdueUpdates = existingInvoices.filter(
       (inv) => inv.status === "pending" && inv.due_date < todayStr
     );
 
     if (overdueUpdates.length > 0) {
       const overdueIds = overdueUpdates.map((inv) => inv.id);
-      await supabase
+      supabase
         .from("invoices")
         .update({ status: "overdue", updated_at: new Date().toISOString() })
-        .in("id", overdueIds);
+        .in("id", overdueIds)
+        .then(({ error }) => {
+          if (error) console.warn("[FinanceEngine] Non-blocking overdue status update note:", error.message);
+        });
     }
 
-    // 7. Return Refetched Invoices
-    return await fetchTeacherInvoices(teacherId);
+    // 6. Directly map invoices in memory from Promise.all data (Eliminates 2nd sequential DB query waterfall)
+    const studentsMap = new Map<string, string>();
+    activeStudents.forEach((s) => studentsMap.set(s.id, s.full_name));
+
+    const studentPaidCounts = new Map<string, number>();
+    const studentPaidSums = new Map<string, number>();
+
+    const allRawInvoices = [
+      ...existingInvoices,
+      ...newInvoiceRows.map((n, idx) => ({ ...n, id: `temp-new-${idx}`, payments: [] })),
+    ];
+
+    allRawInvoices.forEach((inv: any) => {
+      if (inv.student_id && inv.status === "paid") {
+        studentPaidCounts.set(inv.student_id, (studentPaidCounts.get(inv.student_id) || 0) + 1);
+        studentPaidSums.set(inv.student_id, (studentPaidSums.get(inv.student_id) || 0) + (inv.amount_cents || 0));
+      }
+    });
+
+    const mappedInvoices: RealInvoice[] = allRawInvoices.map((inv: any) => {
+      const billingMode = extractBillingMode(inv.description);
+      const billingPeriod = extractBillingPeriod(inv);
+
+      let targetName = (inv.student_id ? studentsMap.get(inv.student_id) : null) || inv.student?.full_name || "Aluno Registrado";
+      let targetType: "Student" | "Class" = "Student";
+
+      if (billingMode === "shared_class") {
+        targetType = "Class";
+        const matchName = inv.description?.match(/Mensalidade\s+([^\[]+)/);
+        if (matchName) {
+          targetName = matchName[1].trim();
+        }
+      }
+
+      let computedStatus: "pending" | "paid" | "overdue" | "cancelled" = inv.status || "pending";
+      if (computedStatus === "pending" && inv.due_date < todayStr) {
+        computedStatus = "overdue";
+      }
+
+      const paymentMethod = inv.payments && inv.payments.length > 0 ? inv.payments[0].method : null;
+
+      let snapshotPackageName = "Plano Personalizado";
+      const pkgMatch = inv.description?.match(/(?:Mensalidade|Parcela\s+\d+\/\d+\s+-)\s+([^|(\[]+)/);
+      if (pkgMatch) {
+        snapshotPackageName = pkgMatch[1].trim();
+      }
+
+      const instMatch = inv.description?.match(/Parcela\s+(\d+)\/(\d+)/);
+      const sp = inv.student_id ? studentPackagesMap.get(inv.student_id) : null;
+
+      let isInstallment = false;
+      let installmentNumber: number | undefined = undefined;
+      let installmentCount: number | undefined = undefined;
+      let paidCount = 0;
+      let progressLabel = "Mensalidade";
+      let currentInstallmentLabel = "Mensalidade";
+      let remainingBalanceCents = 0;
+
+      if (instMatch) {
+        isInstallment = true;
+        installmentNumber = parseInt(instMatch[1], 10);
+        installmentCount = parseInt(instMatch[2], 10);
+        paidCount = inv.student_id ? (studentPaidCounts.get(inv.student_id) || 0) : 0;
+        progressLabel = `${paidCount}/${installmentCount}`;
+        currentInstallmentLabel = `Parcela ${installmentNumber} de ${installmentCount}`;
+        const totalCents = sp?.total_amount_cents || (inv.amount_cents * installmentCount);
+        const paidSum = inv.student_id ? (studentPaidSums.get(inv.student_id) || 0) : 0;
+        remainingBalanceCents = Math.max(0, totalCents - paidSum);
+      } else if (sp && (sp.installment_count || 1) > 1) {
+        isInstallment = true;
+        const validInstallmentCount = sp.installment_count || 1;
+        installmentCount = validInstallmentCount;
+        paidCount = studentPaidCounts.get(inv.student_id) || 0;
+        progressLabel = `${paidCount}/${validInstallmentCount}`;
+        currentInstallmentLabel = `Parcela ${Math.min(paidCount + 1, validInstallmentCount)} de ${validInstallmentCount}`;
+        const totalCents = sp.total_amount_cents || (inv.amount_cents * validInstallmentCount);
+        const paidSum = studentPaidSums.get(inv.student_id) || 0;
+        remainingBalanceCents = Math.max(0, totalCents - paidSum);
+      }
+
+      return {
+        id: inv.id,
+        teacherId: inv.teacher_id,
+        studentId: inv.student_id,
+        classId: null,
+        invoiceNumber: inv.invoice_number || `INV-${inv.id.substring(0, 6)}`,
+        description: inv.description || "",
+        amountCents: inv.amount_cents || 0,
+        amountFormatted: formatCentsToBRL(inv.amount_cents || 0),
+        currency: inv.currency || "BRL",
+        status: computedStatus,
+        dueDate: inv.due_date,
+        paidAt: inv.paid_at,
+        billingPeriod,
+        billingMode,
+        snapshotPackageName,
+        targetName,
+        targetType,
+        paymentMethod,
+        createdAt: inv.created_at || new Date().toISOString(),
+        isInstallment,
+        installmentNumber,
+        installmentCount,
+        paidInstallmentsCount: paidCount,
+        progressLabel,
+        currentInstallmentLabel,
+        remainingBalanceCents,
+      };
+    });
+
+    return mappedInvoices.sort((a, b) => (b.dueDate > a.dueDate ? 1 : -1));
   } catch (err) {
     console.error("[FinanceEngine] Error syncing receivables:", err);
     return await fetchTeacherInvoices(teacherId);
@@ -1637,6 +1792,20 @@ export async function renewStudentPackage(
     console.error("[FinanceEngine] Exception in renewStudentPackage:", err);
     return { success: false, message: `Falha na renovação: ${err?.message || err}` };
   }
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+  method: string;
+  notes?: string;
+  recurrenceType?: "one_time" | "fixed" | "period";
+  recurrenceMonths?: number;
+  endDate?: string;
+  parentExpenseId?: string;
 }
 
 export interface RemoteExpensePayload {

@@ -3,15 +3,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/lib/i18n";
 import { OnboardingPackage } from "@/types/onboarding";
+import { parseCurrencyToNumber, formatNumberToCurrencyInput } from "@/lib/finance-engine";
 
 export interface PackageFormData {
   id?: string;
   name: string;
   price: number;
-  frequency: "total" | "Monthly" | "One-time";
+  frequency: "total" | "Monthly" | "One-time" | "Weekly" | string;
   duration: number;
   lessons: number;
   method: string;
@@ -36,7 +38,7 @@ export function PackageFormModal({
   const isPt = lang === "pt";
 
   const [name, setName] = useState("");
-  const [price, setPrice] = useState<string>("300");
+  const [price, setPrice] = useState<string>("");
   const [frequency, setFrequency] = useState<"total" | "Monthly" | "One-time">("Monthly");
   const [duration, setDuration] = useState<string>("60");
   const [lessons, setLessons] = useState<string>("4");
@@ -46,7 +48,7 @@ export function PackageFormModal({
   useEffect(() => {
     if (initialData) {
       setName(initialData.name || "");
-      setPrice(String(initialData.price ?? 300));
+      setPrice(formatNumberToCurrencyInput(initialData.price, lang));
       setFrequency((initialData.frequency as any) || "Monthly");
       setDuration(String(initialData.duration ?? 60));
       setLessons(String(initialData.lessons ?? 4));
@@ -54,14 +56,14 @@ export function PackageFormModal({
       setDefaultInstallmentCount(String(initialData.defaultInstallmentCount ?? 6));
     } else {
       setName("");
-      setPrice("300");
+      setPrice("");
       setFrequency("Monthly");
       setDuration("60");
       setLessons("4");
       setMethod("Pix");
       setDefaultInstallmentCount("6");
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, lang]);
 
   const sanitizeNumeric = (value: string) => value.replace(/[^0-9]/g, "");
 
@@ -84,10 +86,12 @@ export function PackageFormModal({
     e.preventDefault();
     if (!name.trim()) return;
 
+    const numericPrice = parseCurrencyToNumber(price);
+
     onSave({
       id: initialData?.id,
       name: name.trim(),
-      price: Number(sanitizeDecimal(price)) || 0,
+      price: numericPrice,
       frequency,
       duration: Number(duration) || 60,
       lessons: Number(lessons) || 1,
@@ -148,13 +152,11 @@ export function PackageFormModal({
                   ? (isPt ? "Valor mensal (R$)" : "Monthly price ($)")
                   : (isPt ? "Valor (R$)" : "Price ($)")}
               </Label>
-              <Input
+              <CurrencyInput
                 id="modal-pkg-price"
-                type="text"
-                inputMode="decimal"
                 value={price}
-                onChange={(e) => setPrice(sanitizeDecimal(e.target.value))}
-                onBlur={() => setPrice(price.trim() === "" || price === "." ? "300" : price.replace(/^0+(?=\d)/, ""))}
+                onChange={setPrice}
+                placeholder="0,00"
                 required
                 className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
               />

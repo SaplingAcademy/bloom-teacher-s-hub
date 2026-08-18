@@ -4,7 +4,7 @@ export interface OnboardingPackage {
   lessons: number;
   price: number; // stored in REAIS (e.g., 500 for R$ 500,00)
   duration?: number; // in minutes (default 60)
-  frequency?: "Monthly" | "total" | "One-time"; // "Monthly" (Mensalidade), "total" (Valor total), or "One-time" (Aula avulsa)
+  frequency?: "Monthly" | "total" | "One-time" | "Weekly" | string; // "Monthly" (Mensalidade), "total" (Valor total), or "One-time" (Aula avulsa)
   defaultInstallmentCount?: number; // default suggested installment count for total value package
   method?: string; // payment method (Pix, Bank Transfer, Credit Card, Cash)
 }

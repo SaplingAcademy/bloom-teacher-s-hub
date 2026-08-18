@@ -26,6 +26,7 @@ import {
   EMPTY_DASHBOARD_METRICS,
   type DashboardMetrics,
 } from "@/lib/dashboard-metrics";
+import { useDashboardMetricsQuery } from "@/hooks/use-dashboard-query";
 import { formatCentsToBRL } from "@/lib/finance-engine";
 import {
   Users,
@@ -360,15 +361,8 @@ function TodayPage() {
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const { metrics, isLoading: metricsLoading, invalidateMetrics } = useDashboardMetricsQuery(user?.id);
   const [refreshKey, setRefreshKey] = useState(0);
-  const metricsQuery = useQuery({
-    queryKey: ["dashboard-metrics", user?.id],
-    enabled: Boolean(user?.id),
-    queryFn: () => fetchDashboardMetrics(user!.id),
-  });
-  const metrics: DashboardMetrics = metricsQuery.data ?? EMPTY_DASHBOARD_METRICS;
-  // Only the very first load shows placeholders; revalidations keep prior data visible.
-  const metricsLoading = metricsQuery.isLoading;
   const todayEvents = metrics.todayEvents;
 
   // Dynamic tags hook
@@ -408,16 +402,14 @@ function TodayPage() {
 
   const refreshEventsAndTasks = () => setRefreshKey((k) => k + 1);
 
-  // Metrics revalidate through the query cache (see metricsQuery above).
+  // Metrics revalidate through the query cache when refreshKey updates
   useEffect(() => {
-    if (refreshKey > 0 && user?.id) {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", user.id] });
+    if (refreshKey > 0) {
+      invalidateMetrics();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
+  }, [refreshKey, invalidateMetrics]);
 
   // Auto-refresh when returning to the dashboard — throttled and deduped
-  // (focus + visibilitychange used to fire twice on every tab switch).
   useEffect(() => {
     let lastRefresh = Date.now();
     const onFocus = () => {

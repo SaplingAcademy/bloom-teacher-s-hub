@@ -38,6 +38,7 @@ import {
 import { saveTeacherRestBlocks } from "@/lib/availability-engine";
 import { createTeacherTimeOffBatch } from "@/lib/time-off-engine";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
+import { formatReaisToBRL } from "@/lib/finance-engine";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -1778,7 +1779,7 @@ function Step4PlansPackages({
                     <div className="text-xs text-stone-500 font-semibold flex items-center gap-2 flex-wrap">
                       <span>{pkg.lessons} {isPt ? "aulas" : "lessons"}</span>
                       <span>•</span>
-                      <span>R$ {Number(pkg.price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span>{formatReaisToBRL(pkg.price)}</span>
                       <span>•</span>
                       <span>{pkg.duration || 60} min</span>
                       {pkg.frequency === "total" && pkg.defaultInstallmentCount && pkg.defaultInstallmentCount > 1 && (

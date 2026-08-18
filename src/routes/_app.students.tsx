@@ -17,6 +17,7 @@ import {
   markInvoiceAsPaid,
   updateInvoiceStatus,
   formatCentsToBRL,
+  formatReaisToBRL,
   StudentFinancialSummary,
   PackageRenewalAlert,
   PackageAgreementRecord,
@@ -1311,7 +1312,7 @@ function StudentsPage() {
         console.error(e);
       }
     }
-  }, []);
+  }, [user?.id]);
 
   // Writes happen inside modals; revalidate once when they close.
   useEffect(() => {
@@ -2003,7 +2004,7 @@ function StudentsPage() {
                   <p className="text-xs text-muted-foreground font-medium">
                     {financialSummary?.isInstallment
                       ? `${financialSummary.installmentCount}x de ${formatCentsToBRL(financialSummary.installmentAmountCents)}`
-                      : studentPkg ? `R$ ${(studentPkg.price / 100).toFixed(2)} / mês` : "Sem plano"}
+                      : studentPkg ? `${formatReaisToBRL(studentPkg.price)} / mês` : "Sem plano"}
                   </p>
                 </div>
 
@@ -2770,7 +2771,7 @@ function StudentsPage() {
                           <SelectItem value="none_value">{lang === "pt" ? "Nenhum plano" : "None"}</SelectItem>
                           {packages.map((pkg) => (
                             <SelectItem key={pkg.id} value={pkg.id}>
-                              {pkg.name} — R$ {pkg.price} ({pkg.lessons} {lang === "pt" ? "aulas" : "lessons"})
+                              {pkg.name} — {formatReaisToBRL(pkg.price)} ({pkg.lessons} {lang === "pt" ? "aulas" : "lessons"})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -2793,7 +2794,7 @@ function StudentsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Em quantas parcelas este aluno pagará?" : "In how many installments will this student pay?"}
+                                    {lang === "pt" ? "Parcelas" : "Installments"}
                                   </Label>
                                   <Select
                                     value={installmentCount.toString()}

@@ -107,7 +107,7 @@ export function PackageRenewalModal({
           const formatted = data.map((pkg: any) => ({
             id: pkg.id,
             name: pkg.name,
-            price: Math.round(Number(pkg.price || 0) * 100),
+            price: Math.round((Number(pkg.price) || 0) * 100),
             frequency: pkg.frequency || "Monthly",
             lessons: pkg.lessons || 4,
             duration: pkg.duration || 6,

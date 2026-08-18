@@ -92,7 +92,7 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
   const [eventsRes, studentsRes, leadsRes, paymentsRes] = await Promise.all([
     supabase
       .from("calendar_events")
-      .select("*")
+      .select("id, teacher_id, student_id, schedule_id, group_id, student_name, level, focus, date, start_time, end_time, duration, type, delivery_mode, location_link, status, attendance_recorded, attendance_status, notes, homework_title")
       .eq("teacher_id", teacherId)
       .eq("date", todayStr)
       .order("start_time", { ascending: true }),

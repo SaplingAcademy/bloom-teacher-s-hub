@@ -8,6 +8,8 @@ import {
   markInvoiceAsPaid,
   updateInvoiceStatus,
   formatCentsToBRL,
+  formatReaisToBRL,
+  parseCurrencyToNumber,
   checkPackageExpirationAlerts,
   PackageRenewalAlert,
   RealInvoice,
@@ -23,6 +25,7 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Pencil,
   CheckCircle2,
   Clock,
   Sparkles,
@@ -38,7 +41,12 @@ import {
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
 import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
+import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { useFinanceInvoicesQuery, useTeacherExpensesQuery } from "@/hooks/use-finance-query";
+import { usePackagesQuery } from "@/hooks/use-packages-query";
+import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -146,7 +154,7 @@ interface Package {
   id: string;
   name: string;
   price: number;
-  frequency: "Monthly" | "Weekly" | "One-time";
+  frequency: "total" | "Monthly" | "Weekly" | "One-time" | string;
   duration: number; // in months
   lessons: number; // lessons per billing cycle
   method: string; // e.g. "Pix", "Bank Transfer", "Card"
@@ -357,11 +365,11 @@ function FinancePage() {
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<"Ledger" | "Packages" | "Expenses">("Ledger");
 
-  // State Lists
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [invoices, setInvoices] = useState<RealInvoice[]>([]);
-  const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
+  // TanStack Query Cache
+  const { packages: queryPackages, refetch: refetchPackages } = usePackagesQuery(user?.id);
+  const { expenses, setExpensesCache, refetch: refetchExpenses } = useTeacherExpensesQuery(user?.id);
+  const { invoices, isLoading: isLoadingInvoices, setInvoicesCache, refetch: refetchInvoices } = useFinanceInvoicesQuery(user?.id);
+  const packages: Package[] = queryPackages as Package[];
 
   // Dialog States
   const [isPkgOpen, setIsPkgOpen] = useState(false);
@@ -369,11 +377,13 @@ function FinancePage() {
 
   // Package Form State
   const [pkgName, setPkgName] = useState("");
-  const [pkgPrice, setPkgPrice] = useState<number>(300);
+  const [pkgPrice, setPkgPrice] = useState<string>("300");
   const [pkgFreq, setPkgFreq] = useState<"total" | "Monthly" | "One-time">("total");
   const [pkgDur, setPkgDur] = useState<number>(6);
   const [pkgLessons, setPkgLessons] = useState<number>(4);
   const [pkgMethod, setPkgMethod] = useState("Pix");
+  const [editingPkg, setEditingPkg] = useState<Package | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Expense Form State
   const [expDesc, setExpDesc] = useState("");
@@ -405,90 +415,12 @@ function FinancePage() {
     loadExpirationAlerts();
   }, [user]);
 
-  useEffect(() => {
-    // Load Packages from Supabase
-    const fetchPackages = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from("packages")
-          .select("*")
-          .eq("teacher_id", user.id)
-          .order("name", { ascending: true });
-
-        if (error) {
-          console.error("[Finance] Failed to fetch packages:", error);
-          return;
-        }
-
-        if (data) {
-          const mappedPkgs: Package[] = data.map((d: any) => ({
-            id: d.id,
-            name: d.name,
-            price: Number(d.price) || 0,
-            frequency: d.frequency || "Monthly",
-            duration: d.duration || 60,
-            lessons: d.lessons || 4,
-            method: d.method || "Pix",
-          }));
-          setPackages(mappedPkgs);
-        }
-      } catch (e) {
-        console.error("[Finance] Error fetching packages:", e);
-      }
-    };
-
-    fetchPackages();
-
-    // Load Expenses from Supabase (canonical source of truth)
-    const fetchExpenses = async () => {
-      if (!user) return;
-      try {
-        const remoteExps = await fetchTeacherExpensesList(user.id);
-        setExpenses(remoteExps);
-        localStorage.setItem("bloom.expenses.list", JSON.stringify(remoteExps));
-      } catch (e) {
-        console.error("[Finance] Error fetching remote expenses:", e);
-        const savedExps = localStorage.getItem("bloom.expenses.list");
-        if (savedExps) {
-          try {
-            const parsed: Expense[] = JSON.parse(savedExps);
-            const DEMO_DESCRIPTIONS = [
-              "zoom pro subscription",
-              "instagram ads - july",
-              "esl grammar workbooks",
-            ];
-            setExpenses(
-              parsed.filter((item) => {
-                const desc = (item.description || "").trim().toLowerCase();
-                return !["e1", "e2", "e3"].includes(item.id) && !DEMO_DESCRIPTIONS.includes(desc);
-              })
-            );
-          } catch (err) {
-            setExpenses([]);
-          }
-        }
-      }
-    };
-
-    fetchExpenses();
-
-    // Load Real Invoices / Receivables directly connected to real students & student_packages
-    const fetchInvoices = async () => {
-      if (!user) return;
-      setIsLoadingInvoices(true);
-      const data = await syncTeacherReceivables(user.id);
-      setInvoices(data);
-      setIsLoadingInvoices(false);
-    };
-
-    fetchInvoices();
-  }, [user]);
-
   // Helper Save Package
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pkgName.trim() || !user) return;
+
+    const numericPrice = parseCurrencyToNumber(pkgPrice);
 
     try {
       const { data, error } = await supabase
@@ -496,7 +428,7 @@ function FinancePage() {
         .insert({
           teacher_id: user.id,
           name: pkgName.trim(),
-          price: Number(pkgPrice) || 0,
+          price: numericPrice,
           frequency: pkgFreq,
           duration: Number(pkgDur) || 60,
           lessons: Number(pkgLessons) || 4,
@@ -506,7 +438,7 @@ function FinancePage() {
         .single();
 
       if (error) {
-        toast.error((lang === "pt" ? "Erro ao criar pacote: " : "Error creating package: ") + error.message);
+        toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível criar o pacote agora." : "Could not create package."));
         return;
       }
 
@@ -520,13 +452,47 @@ function FinancePage() {
           lessons: Number(data.lessons) || 4,
           method: data.method || "Pix",
         };
-        setPackages((prev) => [...prev, createdPkg]);
+        refetchPackages();
         setIsPkgOpen(false);
         setPkgName("");
+        setPkgPrice("300");
         toast.success(lang === "pt" ? "Pacote criado com sucesso!" : "Package created successfully!");
       }
     } catch (err: any) {
-      toast.error(err.message || String(err));
+      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível criar o pacote agora." : "Could not create package."));
+    }
+  };
+
+  const handleSaveEditPackage = async (formData: PackageFormData) => {
+    if (!user || !formData.id) return;
+    try {
+      const { data, error } = await supabase
+        .from("packages")
+        .update({
+          name: formData.name,
+          price: formData.price,
+          frequency: formData.frequency,
+          duration: formData.duration,
+          lessons: formData.lessons,
+          method: formData.method,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", formData.id)
+        .eq("teacher_id", user.id)
+        .select()
+        .single();
+
+      if (error) {
+        toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível atualizar o pacote agora." : "Could not update package."));
+        return;
+      }
+
+      if (data) {
+        refetchPackages();
+        toast.success(lang === "pt" ? "Pacote atualizado com sucesso!" : "Package updated successfully!");
+      }
+    } catch (err: any) {
+      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível atualizar o pacote agora." : "Could not update package."));
     }
   };
 
@@ -564,16 +530,14 @@ function FinancePage() {
         endDate: computedEndDate,
       });
 
-      const updated = [created, ...expenses];
-      setExpenses(updated);
-      localStorage.setItem("bloom.expenses.list", JSON.stringify(updated));
+      setExpensesCache((prev) => [created, ...prev]);
       setIsExpOpen(false);
       setExpDesc("");
       setExpNotes("");
       toast.success(lang === "pt" ? "Despesa salva com sucesso!" : "Expense saved successfully!");
     } catch (err: any) {
       console.error("[Finance] Error saving expense:", err);
-      toast.error((lang === "pt" ? "Erro ao salvar despesa: " : "Error saving expense: ") + (err?.message || String(err)));
+      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível salvar a despesa agora." : "Could not save expense."));
     }
   };
 
@@ -587,10 +551,9 @@ function FinancePage() {
         await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
       }
       toast.success(lang === "pt" ? "Status atualizado com sucesso!" : "Status updated successfully!");
-      const updatedInvoices = await syncTeacherReceivables(user.id);
-      setInvoices(updatedInvoices);
+      refetchInvoices();
     } catch (err: any) {
-      toast.error(err.message || String(err));
+      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível atualizar o status agora." : "Could not update status."));
     }
   };
 
@@ -621,14 +584,14 @@ function FinancePage() {
         .eq("teacher_id", user.id);
 
       if (error) {
-        toast.error((lang === "pt" ? "Erro ao excluir pacote: " : "Error deleting package: ") + error.message);
+        toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível excluir o pacote agora." : "Could not delete package."));
         return;
       }
 
-      setPackages((prev) => prev.filter((p) => p.id !== id));
+      refetchPackages();
       toast.success(lang === "pt" ? "Pacote excluído com sucesso!" : "Package deleted successfully!");
     } catch (err: any) {
-      toast.error(err.message || String(err));
+      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível excluir o pacote agora." : "Could not delete package."));
     }
   };
 
@@ -636,13 +599,11 @@ function FinancePage() {
     if (!user) return;
     try {
       await deleteTeacherExpenseRemote(user.id, id);
-      const updated = expenses.filter((e) => e.id !== id);
-      setExpenses(updated);
-      localStorage.setItem("bloom.expenses.list", JSON.stringify(updated));
+      setExpensesCache((prev) => prev.filter((e) => e.id !== id));
       toast.success(lang === "pt" ? "Despesa excluída com sucesso!" : "Expense deleted successfully!");
     } catch (err: any) {
       console.error("[Finance] Error deleting expense:", err);
-      toast.error((lang === "pt" ? "Erro ao excluir despesa: " : "Error deleting expense: ") + (err?.message || String(err)));
+      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível excluir a despesa agora." : "Could not delete expense."));
     }
   };
 
@@ -963,12 +924,13 @@ function FinancePage() {
                       ? "Valor (R$)"
                       : "Price ($)"}
                   </Label>
-                  <SafeNumberInput
+                  <CurrencyInput
                     id="pkg-price"
                     value={pkgPrice}
                     onChange={setPkgPrice}
+                    placeholder="0,00"
                     required
-                    className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
+                    className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 focus-visible:ring-white focus-visible:ring-offset-emerald-900 font-bold"
                   />
                 </div>
               </div>
@@ -1050,16 +1012,28 @@ function FinancePage() {
                   <div>
                     <div className="flex items-start justify-between">
                       <h4 className="font-display font-bold text-foreground text-sm">{pkg.name}</h4>
-                      <button
-                        onClick={() => handleDeletePackage(pkg.id)}
-                        className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors cursor-pointer"
-                        title={t.confirmDelete}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingPkg(pkg);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-secondary transition-colors cursor-pointer"
+                          title={lang === "pt" ? "Editar Pacote" : "Edit Package"}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePackage(pkg.id)}
+                          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors cursor-pointer"
+                          title={t.confirmDelete}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xl font-extrabold text-primary mt-2">
-                      R$ {Number(pkg.price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {formatReaisToBRL(pkg.price)}
                       <span className="text-xs text-muted-foreground font-medium">
                         {" "}
                         / {(pkg.frequency as string) === "total" || (pkg.frequency as string) === "Valor total do curso" ? (lang === "pt" ? "valor total" : "total value") : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
@@ -1364,8 +1338,7 @@ function FinancePage() {
           studentName={renewalStudentName}
           onRenewalCompleted={async () => {
             if (user) {
-              const updatedInvoices = await syncTeacherReceivables(user.id);
-              setInvoices(updatedInvoices);
+              refetchInvoices();
               loadExpirationAlerts();
             }
           }}
@@ -1387,6 +1360,17 @@ function FinancePage() {
           }}
         />
       )}
+
+      {/* EDIT PACKAGE MODAL */}
+      <PackageFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingPkg(null);
+        }}
+        onSave={handleSaveEditPackage}
+        initialData={editingPkg}
+      />
     </div>
   );
 }
