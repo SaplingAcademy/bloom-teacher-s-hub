@@ -571,10 +571,8 @@ function StudentsPage() {
 
   // Enrollment Agreement Form States
   const [formInstallmentCount, setFormInstallmentCount] = useState<number>(6);
-  const [formDueDay, setFormDueDay] = useState<number>(18);
-  const [formFirstDueDate, setFormFirstDueDate] = useState<string>(
-    getFirstDueDateFromDay(18)
-  );
+  const [formDueDay, setFormDueDay] = useState<number | null>(null);
+  const [formFirstDueDate, setFormFirstDueDate] = useState<string>("");
   const [formPaymentMethod, setFormPaymentMethod] = useState<string>("Pix");
 
   // Edit Student Form State
@@ -987,6 +985,16 @@ function StudentsPage() {
       return;
     }
 
+    const isEditPackageSelected = editPackageId && editPackageId !== "" && editPackageId !== "none_value";
+    if (isEditPackageSelected && !formDueDay) {
+      toast.error(
+        lang === "pt"
+          ? "Por favor, selecione o dia de vencimento."
+          : "Please select a due day."
+      );
+      return;
+    }
+
     const scheduleString = editLinkedGroupId 
       ? "Linked Group" 
       : editSchedulesList.map(s => `${s.weekday.substring(0, 3)} • ${s.startTime}`).join(", ");
@@ -1341,8 +1349,8 @@ function StudentsPage() {
     setFormPackageId("");
     setFormNotes("");
     setFormColorKey("default");
-    setFormDueDay(18);
-    setFormFirstDueDate(getFirstDueDateFromDay(18));
+    setFormDueDay(null);
+    setFormFirstDueDate("");
 
     // Reset Schedule fields
     setFormClassFrequency(1);
@@ -1516,6 +1524,16 @@ function StudentsPage() {
 
     if (!formWhatsApp.trim()) {
       toast.error(i18nT("students.toastWhatsAppRequired", lang));
+      return;
+    }
+
+    const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
+    if (isPackageSelected && !formDueDay) {
+      toast.error(
+        lang === "pt"
+          ? "Por favor, selecione o dia de vencimento."
+          : "Please select a due day."
+      );
       return;
     }
 
@@ -2789,7 +2807,7 @@ function StudentsPage() {
                         const totalPriceCents = (Number(selectedPkg.price) || 0) * 100;
                         const installmentCount = Math.max(1, Math.min(12, Math.round(formInstallmentCount || 1)));
                         const scheduleInfo = calculateInstallmentSchedule(totalPriceCents, installmentCount);
-                        const lastDueDate = calculateLastDueDate(formFirstDueDate, installmentCount, formDueDay);
+                        const lastDueDate = calculateLastDueDate(formFirstDueDate, installmentCount, formDueDay || 18);
 
                         return (
                           <div className="space-y-4 pt-2 border-t border-border/50 animate-in fade-in duration-150">
@@ -2821,15 +2839,17 @@ function StudentsPage() {
                                     {lang === "pt" ? "Vencimento" : "Due Date"}
                                   </Label>
                                   <Select
-                                    value={(formDueDay || 18).toString()}
+                                    value={formDueDay ? formDueDay.toString() : ""}
                                     onValueChange={(val) => {
-                                      const day = parseInt(val, 10) || 18;
-                                      setFormDueDay(day);
-                                      setFormFirstDueDate(getFirstDueDateFromDay(day));
+                                      const day = parseInt(val, 10);
+                                      if (day) {
+                                        setFormDueDay(day);
+                                        setFormFirstDueDate(getFirstDueDateFromDay(day));
+                                      }
                                     }}
                                   >
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
-                                      <SelectValue />
+                                      <SelectValue placeholder={lang === "pt" ? "Selecione o dia" : "Select a day"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -2865,15 +2885,17 @@ function StudentsPage() {
                                     {lang === "pt" ? "Vencimento" : "Due Date"}
                                   </Label>
                                   <Select
-                                    value={(formDueDay || 18).toString()}
+                                    value={formDueDay ? formDueDay.toString() : ""}
                                     onValueChange={(val) => {
-                                      const day = parseInt(val, 10) || 18;
-                                      setFormDueDay(day);
-                                      setFormFirstDueDate(getFirstDueDateFromDay(day));
+                                      const day = parseInt(val, 10);
+                                      if (day) {
+                                        setFormDueDay(day);
+                                        setFormFirstDueDate(getFirstDueDateFromDay(day));
+                                      }
                                     }}
                                   >
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
-                                      <SelectValue />
+                                      <SelectValue placeholder={lang === "pt" ? "Selecione o dia" : "Select a day"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -2934,19 +2956,25 @@ function StudentsPage() {
                                     <div>
                                       <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
-                                        {lang === "pt" ? `dia ${formDueDay || 18}` : `day ${formDueDay || 18}`}
+                                        {formDueDay
+                                          ? (lang === "pt" ? `dia ${formDueDay}` : `day ${formDueDay}`)
+                                          : (lang === "pt" ? "Selecione o dia" : "Select a day")}
                                       </strong>
                                     </div>
                                     <div className="sm:col-span-2">
                                       <span className="text-stone-500 font-medium">{lang === "pt" ? "Última Parcela:" : "Last Installment:"}</span>{" "}
-                                      <strong className="text-stone-900 font-bold">{lastDueDate}</strong>
+                                      <strong className="text-stone-900 font-bold">
+                                        {formDueDay && formFirstDueDate ? lastDueDate : "-"}
+                                      </strong>
                                     </div>
                                   </>
                                 ) : (
                                   <div>
                                     <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
                                     <strong className="text-stone-900 font-bold">
-                                      {lang === "pt" ? `dia ${formDueDay || 18}` : `day ${formDueDay || 18}`}
+                                      {formDueDay
+                                        ? (lang === "pt" ? `dia ${formDueDay}` : `day ${formDueDay}`)
+                                        : (lang === "pt" ? "Selecione o dia" : "Select a day")}
                                     </strong>
                                   </div>
                                 )}
