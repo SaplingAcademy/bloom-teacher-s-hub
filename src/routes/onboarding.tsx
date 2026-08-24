@@ -166,9 +166,62 @@ export function normalizeOnboardingData(raw: any): OnboardingData {
     tools = tools.filter((t) => t !== "none");
   }
 
+  const languages = Array.isArray(raw.languages) ? raw.languages : base.languages;
+  const otherLanguage = raw.otherLanguage ?? raw.other_language ?? base.otherLanguage;
+  const studentRange = raw.studentRange ?? raw.student_range ?? base.studentRange;
+  const workingDays = Array.isArray(raw.workingDays)
+    ? raw.workingDays
+    : Array.isArray(raw.working_days)
+      ? raw.working_days
+      : base.workingDays;
+
+  const sameAvailabilityAllDays =
+    raw.sameAvailabilityAllDays ?? raw.same_availability_all_days ?? base.sameAvailabilityAllDays;
+  const unifiedAvailability =
+    raw.unifiedAvailability ?? raw.unified_availability ?? base.unifiedAvailability;
+  const customAvailability =
+    raw.customAvailability ?? raw.custom_availability ?? base.customAvailability;
+
+  const lessonTypes = Array.isArray(raw.lessonTypes)
+    ? raw.lessonTypes
+    : Array.isArray(raw.lesson_types)
+      ? raw.lesson_types
+      : base.lessonTypes;
+
+  const packages = Array.isArray(raw.packages) ? raw.packages : base.packages;
+
+  const monthlyGoal = raw.monthlyGoal ?? raw.monthly_goal ?? base.monthlyGoal;
+  const monthlyExpense = raw.monthlyExpense ?? raw.monthly_expense ?? base.monthlyExpense;
+  const knowsHourlyRate = raw.knowsHourlyRate ?? raw.knows_hourly_rate ?? base.knowsHourlyRate;
+  const hourlyRate = raw.hourlyRate ?? raw.hourly_rate ?? base.hourlyRate;
+
+  const paymentMethods = Array.isArray(raw.paymentMethods)
+    ? raw.paymentMethods
+    : Array.isArray(raw.payment_methods)
+      ? raw.payment_methods
+      : base.paymentMethods;
+
+  const contractsPreference =
+    raw.contractsPreference ?? raw.contracts_preference ?? base.contractsPreference;
+
   return {
     ...base,
     ...raw,
+    languages,
+    otherLanguage,
+    studentRange,
+    workingDays,
+    sameAvailabilityAllDays,
+    unifiedAvailability,
+    customAvailability,
+    lessonTypes,
+    packages,
+    monthlyGoal,
+    monthlyExpense,
+    knowsHourlyRate,
+    hourlyRate,
+    paymentMethods,
+    contractsPreference,
     managementTools: tools,
     managementTool: tools[0] || "none",
     restBlocks: Array.isArray(raw.restBlocks)
