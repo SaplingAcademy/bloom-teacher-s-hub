@@ -39,6 +39,16 @@ import { saveTeacherRestBlocks } from "@/lib/availability-engine";
 import { createTeacherTimeOffBatch } from "@/lib/time-off-engine";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { formatReaisToBRL } from "@/lib/finance-engine";
+import {
+  formatOnboardingLanguage,
+  formatOnboardingPaymentMethod,
+  formatOnboardingStudentRange,
+  formatOnboardingManagementTool,
+  formatOnboardingLessonType,
+  formatOnboardingContractPreference,
+  formatOnboardingFrequency,
+  formatWeekdayName,
+} from "@/lib/i18n";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -54,62 +64,52 @@ const DEFAULT_DAYS = [
   "Sunday",
 ];
 
-const DAY_LABELS: Record<string, { en: string; pt: string }> = {
-  Monday: { en: "Monday", pt: "Segunda-feira" },
-  Tuesday: { en: "Tuesday", pt: "Terça-feira" },
-  Wednesday: { en: "Wednesday", pt: "Quarta-feira" },
-  Thursday: { en: "Thursday", pt: "Quinta-feira" },
-  Friday: { en: "Friday", pt: "Sexta-feira" },
-  Saturday: { en: "Saturday", pt: "Sábado" },
-  Sunday: { en: "Sunday", pt: "Domingo" },
-};
-
 const LANGUAGE_OPTIONS = [
-  { id: "English", label: { en: "English", pt: "Inglês" } },
-  { id: "Spanish", label: { en: "Spanish", pt: "Espanhol" } },
-  { id: "French", label: { en: "French", pt: "Francês" } },
-  { id: "Italian", label: { en: "Italian", pt: "Italiano" } },
-  { id: "German", label: { en: "German", pt: "Alemão" } },
-  { id: "Japanese", label: { en: "Japanese", pt: "Japonês" } },
-  { id: "Korean", label: { en: "Korean", pt: "Coreano" } },
-  { id: "Portuguese", label: { en: "Portuguese", pt: "Português" } },
-  { id: "Other", label: { en: "Other", pt: "Outro" } },
+  "English",
+  "Spanish",
+  "French",
+  "Italian",
+  "German",
+  "Japanese",
+  "Korean",
+  "Portuguese",
+  "Other",
 ];
 
 const MANAGEMENT_OPTIONS = [
-  { id: "none", label: { en: "I don't use any system", pt: "Não uso nenhum sistema" } },
-  { id: "excel", label: { en: "Excel", pt: "Excel" } },
-  { id: "sheets", label: { en: "Google Sheets", pt: "Google Sheets" } },
-  { id: "calendar", label: { en: "Google Calendar", pt: "Google Calendar" } },
-  { id: "notion", label: { en: "Notion", pt: "Notion" } },
-  { id: "trello", label: { en: "Trello", pt: "Trello" } },
-  { id: "another_platform", label: { en: "Another platform", pt: "Outra plataforma" } },
-  { id: "other", label: { en: "Other", pt: "Outro" } },
+  "none",
+  "excel",
+  "sheets",
+  "calendar",
+  "notion",
+  "trello",
+  "another_platform",
+  "other",
 ];
 
 const STUDENT_RANGE_OPTIONS = [
-  { id: "0", label: { en: "I don't have students yet", pt: "Ainda não tenho alunos" } },
-  { id: "1-5", label: { en: "1–5 students", pt: "1–5 alunos" } },
-  { id: "6-10", label: { en: "6–10 students", pt: "6–10 alunos" } },
-  { id: "11-20", label: { en: "11–20 students", pt: "11–20 alunos" } },
-  { id: "21-40", label: { en: "21–40 students", pt: "21–40 alunos" } },
-  { id: "40+", label: { en: "40+ students", pt: "40+ alunos" } },
+  "0",
+  "1-5",
+  "6-10",
+  "11-20",
+  "21-40",
+  "40+",
 ];
 
 const LESSON_TYPE_OPTIONS = [
-  { id: "Individual", label: { en: "Individual", pt: "Individual" } },
-  { id: "Pair", label: { en: "Pair", pt: "Em dupla" } },
-  { id: "Group", label: { en: "Group", pt: "Em grupo" } },
+  "Individual",
+  "Pair",
+  "Group",
 ];
 
 const PAYMENT_METHOD_OPTIONS = [
-  { id: "PIX", label: { en: "PIX", pt: "PIX" } },
-  { id: "Bank transfer", label: { en: "Bank transfer", pt: "Transferência Bancária" } },
-  { id: "Credit card", label: { en: "Credit card", pt: "Cartão de Crédito" } },
-  { id: "Debit card", label: { en: "Debit card", pt: "Cartão de Débito" } },
-  { id: "Cash", label: { en: "Cash", pt: "Dinheiro / Espécie" } },
-  { id: "Invoice (Boleto)", label: { en: "Invoice (Boleto)", pt: "Boleto Bancário" } },
-  { id: "Other", label: { en: "Other", pt: "Outro" } },
+  "PIX",
+  "Bank transfer",
+  "Credit card",
+  "Debit card",
+  "Cash",
+  "Invoice (Boleto)",
+  "Other",
 ];
 
 const INITIAL_DATA: OnboardingData = {
@@ -908,7 +908,7 @@ function Step1AboutYou({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const toggleLanguage = (langId: string) => {
     let next: string[];
     if (data.languages.includes(langId)) {
@@ -938,20 +938,20 @@ function Step1AboutYou({
 
       {/* Languages Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {LANGUAGE_OPTIONS.map((opt) => {
-          const selected = data.languages.includes(opt.id);
+        {LANGUAGE_OPTIONS.map((langId) => {
+          const selected = data.languages.includes(langId);
           return (
             <button
-              key={opt.id}
+              key={langId}
               type="button"
-              onClick={() => toggleLanguage(opt.id)}
+              onClick={() => toggleLanguage(langId)}
               className={`flex items-center justify-between p-3.5 rounded-2xl border text-sm font-semibold transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                   : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
               }`}
             >
-              <span>{isPt ? opt.label.pt : opt.label.en}</span>
+              <span>{formatOnboardingLanguage(langId, lang)}</span>
               <div
                 className={`h-5 w-5 rounded-md flex items-center justify-center text-xs transition-colors ${
                   selected ? "bg-emerald-500 text-white" : "border border-stone-300"
@@ -992,24 +992,24 @@ function Step1AboutYou({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {MANAGEMENT_OPTIONS.map((opt) => {
+          {MANAGEMENT_OPTIONS.map((toolId) => {
             const currentTools = data.managementTools || [];
-            const selected = currentTools.includes(opt.id);
+            const selected = currentTools.includes(toolId);
 
-            const toggleTool = (toolId: string) => {
+            const toggleTool = (idToToggle: string) => {
               let nextTools: string[];
-              if (toolId === "none") {
+              if (idToToggle === "none") {
                 // Rule 2: "Não uso nenhum sistema" is exclusive
                 nextTools = ["none"];
               } else {
-                if (currentTools.includes(toolId)) {
-                  nextTools = currentTools.filter((tItem) => tItem !== toolId);
+                if (currentTools.includes(idToToggle)) {
+                  nextTools = currentTools.filter((tItem) => tItem !== idToToggle);
                   if (nextTools.length === 0) {
                     nextTools = ["none"];
                   }
                 } else {
                   // Add toolId and deselect "none"
-                  nextTools = [...currentTools.filter((tItem) => tItem !== "none"), toolId];
+                  nextTools = [...currentTools.filter((tItem) => tItem !== "none"), idToToggle];
                 }
               }
 
@@ -1019,16 +1019,16 @@ function Step1AboutYou({
 
             return (
               <button
-                key={opt.id}
+                key={toolId}
                 type="button"
-                onClick={() => toggleTool(opt.id)}
+                onClick={() => toggleTool(toolId)}
                 className={`flex items-center justify-between p-3.5 rounded-2xl border text-sm font-semibold transition-all text-left cursor-pointer ${
                   selected
                     ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                     : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
                 }`}
               >
-                <span className="text-xs sm:text-sm">{isPt ? opt.label.pt : opt.label.en}</span>
+                <span className="text-xs sm:text-sm">{formatOnboardingManagementTool(toolId, lang)}</span>
                 <div
                   className={`h-5 w-5 rounded-md flex items-center justify-center text-xs transition-colors shrink-0 ${
                     selected ? "bg-emerald-500 text-white" : "border border-stone-300"
@@ -1089,6 +1089,7 @@ function Step2YourBusiness({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { lang } = useLanguage();
   return (
     <div className="space-y-8">
       {/* Title */}
@@ -1108,13 +1109,13 @@ function Step2YourBusiness({
 
       {/* Options List */}
       <div className="space-y-3">
-        {STUDENT_RANGE_OPTIONS.map((opt) => {
-          const selected = data.studentRange === opt.id;
+        {STUDENT_RANGE_OPTIONS.map((rangeId) => {
+          const selected = data.studentRange === rangeId;
           return (
             <button
-              key={opt.id}
+              key={rangeId}
               type="button"
-              onClick={() => updateData("studentRange", opt.id)}
+              onClick={() => updateData("studentRange", rangeId)}
               className={`w-full flex items-center justify-between p-4 rounded-2xl border text-base font-semibold transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-md scale-[1.01]"
@@ -1123,7 +1124,7 @@ function Step2YourBusiness({
             >
               <div className="flex items-center gap-3">
                 <Users className={`h-5 w-5 ${selected ? "text-emerald-400" : "text-stone-400"}`} />
-                <span>{isPt ? opt.label.pt : opt.label.en}</span>
+                <span>{formatOnboardingStudentRange(rangeId, lang)}</span>
               </div>
               <div
                 className={`h-5 w-5 rounded-full border flex items-center justify-center ${
@@ -1152,6 +1153,7 @@ function Step3YourSchedule({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { lang } = useLanguage();
   const toggleDay = (day: string) => {
     let next: string[];
     if (data.workingDays.includes(day)) {
@@ -1202,29 +1204,21 @@ function Step3YourSchedule({
 
       {/* Days Selection — Uniform 7-column grid */}
       <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-        {[
-          { id: "Monday", short: "Seg", fullPt: "Segunda-feira", fullEn: "Monday" },
-          { id: "Tuesday", short: "Ter", fullPt: "Terça-feira", fullEn: "Tuesday" },
-          { id: "Wednesday", short: "Qua", fullPt: "Quarta-feira", fullEn: "Wednesday" },
-          { id: "Thursday", short: "Qui", fullPt: "Quinta-feira", fullEn: "Thursday" },
-          { id: "Friday", short: "Sex", fullPt: "Sexta-feira", fullEn: "Friday" },
-          { id: "Saturday", short: "Sáb", fullPt: "Sábado", fullEn: "Saturday" },
-          { id: "Sunday", short: "Dom", fullPt: "Domingo", fullEn: "Sunday" },
-        ].map((w) => {
-          const selected = data.workingDays.includes(w.id);
+        {DEFAULT_DAYS.map((day) => {
+          const selected = data.workingDays.includes(day);
           return (
             <button
-              key={w.id}
+              key={day}
               type="button"
-              onClick={() => toggleDay(w.id)}
-              title={isPt ? w.fullPt : w.fullEn}
+              onClick={() => toggleDay(day)}
+              title={formatWeekdayName(day, lang, false)}
               className={`flex flex-col items-center justify-center h-13 sm:h-14 rounded-2xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm scale-[1.02]"
                   : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50"
               }`}
             >
-              <span>{w.short}</span>
+              <span>{formatWeekdayName(day, lang, true)}</span>
             </button>
           );
         })}
@@ -1302,7 +1296,7 @@ function Step3YourSchedule({
                     className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-stone-200"
                   >
                     <span className="text-sm font-bold text-stone-800">
-                      {isPt ? DAY_LABELS[day].pt : DAY_LABELS[day].en}
+                      {formatWeekdayName(day, lang, false)}
                     </span>
                     <div className="flex items-center gap-2">
                       <input
@@ -1363,6 +1357,7 @@ function RestBlocksSection({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { lang } = useLanguage();
   const blocks = data.restBlocks || [];
 
   const addBlock = () => {
@@ -1424,9 +1419,9 @@ function RestBlocksSection({
                     onChange={(e) => updateBlock(b.id, "day", e.target.value)}
                     className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 cursor-pointer"
                   >
-                    {OPTIONAL_SECTION_DAYS.map((d) => (
+                    {DEFAULT_DAYS.map((d) => (
                       <option key={d} value={d}>
-                        {isPt ? DAY_LABELS[d].pt : DAY_LABELS[d].en}
+                        {formatWeekdayName(d, lang, false)}
                       </option>
                     ))}
                   </select>
@@ -1617,7 +1612,7 @@ function Step4PlansPackages({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPkg, setEditingPkg] = useState<OnboardingPackage | null>(null);
 
@@ -1699,20 +1694,20 @@ function Step4PlansPackages({
 
       {/* Lesson Types */}
       <div className="grid grid-cols-3 gap-3">
-        {LESSON_TYPE_OPTIONS.map((opt) => {
-          const selected = data.lessonTypes.includes(opt.id);
+        {LESSON_TYPE_OPTIONS.map((typeId) => {
+          const selected = data.lessonTypes.includes(typeId);
           return (
             <button
-              key={opt.id}
+              key={typeId}
               type="button"
-              onClick={() => toggleLessonType(opt.id)}
+              onClick={() => toggleLessonType(typeId)}
               className={`p-3.5 rounded-2xl border text-center font-bold text-sm transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                   : "bg-white text-stone-700 border-stone-200 hover:border-stone-300"
               }`}
             >
-              {isPt ? opt.label.pt : opt.label.en}
+              {formatOnboardingLessonType(typeId, lang)}
             </button>
           );
         })}
@@ -1757,12 +1752,8 @@ function Step4PlansPackages({
             </div>
           ) : (
             data.packages.map((pkg) => {
-              const freqLabel =
-                pkg.frequency === "total"
-                  ? isPt ? "Valor Total" : "Total Course"
-                  : pkg.frequency === "One-time"
-                  ? isPt ? "Aula Avulsa" : "One-time"
-                  : isPt ? "Mensalidade" : "Monthly";
+              const freqLabel = formatOnboardingFrequency(pkg.frequency, lang);
+              const methodLabel = formatOnboardingPaymentMethod(pkg.method, lang);
 
               return (
                 <div
@@ -1792,7 +1783,7 @@ function Step4PlansPackages({
                       )}
                       <span>•</span>
                       <span className="bg-stone-100 px-2 py-0.5 rounded text-[11px] text-stone-600 font-bold">
-                        {pkg.method || "Pix"}
+                        {methodLabel}
                       </span>
                     </div>
                   </div>
@@ -1964,6 +1955,7 @@ function Step6Payments({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { lang } = useLanguage();
   const togglePaymentMethod = (methodId: string) => {
     let next: string[];
     if (data.paymentMethods.includes(methodId)) {
@@ -1993,13 +1985,13 @@ function Step6Payments({
 
       {/* Payment Options */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {PAYMENT_METHOD_OPTIONS.map((opt) => {
-          const selected = data.paymentMethods.includes(opt.id);
+        {PAYMENT_METHOD_OPTIONS.map((methodId) => {
+          const selected = data.paymentMethods.includes(methodId);
           return (
             <button
-              key={opt.id}
+              key={methodId}
               type="button"
-              onClick={() => togglePaymentMethod(opt.id)}
+              onClick={() => togglePaymentMethod(methodId)}
               className={`flex items-center justify-between p-4 rounded-2xl border text-sm font-bold transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
@@ -2008,7 +2000,7 @@ function Step6Payments({
             >
               <div className="flex items-center gap-3">
                 <CreditCard className={`h-4 w-4 ${selected ? "text-emerald-400" : "text-stone-400"}`} />
-                <span>{isPt ? opt.label.pt : opt.label.en}</span>
+                <span>{formatOnboardingPaymentMethod(methodId, lang)}</span>
               </div>
               <div
                 className={`h-5 w-5 rounded-md flex items-center justify-center text-xs transition-colors ${
@@ -2037,10 +2029,11 @@ function Step7Contracts({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const options: Array<{ id: "YES" | "NO" | "Planning to start"; label: { en: string; pt: string } }> = [
-    { id: "YES", label: { en: "YES", pt: "SIM" } },
-    { id: "NO", label: { en: "NO", pt: "NÃO" } },
-    { id: "Planning to start", label: { en: "Planning to start", pt: "Planejo começar" } },
+  const { lang } = useLanguage();
+  const options: Array<"YES" | "NO" | "Planning to start"> = [
+    "YES",
+    "NO",
+    "Planning to start",
   ];
 
   return (
@@ -2062,13 +2055,13 @@ function Step7Contracts({
 
       {/* Options */}
       <div className="space-y-3">
-        {options.map((opt) => {
-          const selected = data.contractsPreference === opt.id;
+        {options.map((optKey) => {
+          const selected = data.contractsPreference === optKey;
           return (
             <button
-              key={opt.id}
+              key={optKey}
               type="button"
-              onClick={() => updateData("contractsPreference", opt.id)}
+              onClick={() => updateData("contractsPreference", optKey)}
               className={`w-full flex items-center justify-between p-4 rounded-2xl border text-base font-bold transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-md scale-[1.01]"
@@ -2077,7 +2070,7 @@ function Step7Contracts({
             >
               <div className="flex items-center gap-3">
                 <FileText className={`h-5 w-5 ${selected ? "text-emerald-400" : "text-stone-400"}`} />
-                <span>{isPt ? opt.label.pt : opt.label.en}</span>
+                <span>{formatOnboardingContractPreference(optKey, lang)}</span>
               </div>
               <div
                 className={`h-5 w-5 rounded-full border flex items-center justify-center ${
@@ -2098,6 +2091,48 @@ function Step7Contracts({
    FINAL SUMMARY SCREEN
    ========================================================================= */
 function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean }) {
+  const { lang } = useLanguage();
+
+  const formattedLanguages = (data.languages || [])
+    .map((l) => {
+      if (l === "Other" && data.otherLanguage) {
+        const otherLabel = formatOnboardingLanguage("Other", lang);
+        return `${otherLabel} (${data.otherLanguage})`;
+      }
+      return formatOnboardingLanguage(l, lang);
+    })
+    .join(", ") || (isPt ? "Não especificado" : "Not specified");
+
+  const formattedStudents = formatOnboardingStudentRange(data.studentRange, lang);
+
+  const formattedDays = (data.workingDays || [])
+    .map((d) => formatWeekdayName(d, lang, true))
+    .join(", ") || "-";
+
+  const packagesCount = data.packages ? data.packages.length : 0;
+  const formattedPackages = isPt
+    ? `${packagesCount} pacote(s)`
+    : `${packagesCount} package(s)`;
+
+  const formattedGoal = `R$ ${data.monthlyGoal || "0"}`;
+
+  const formattedTools = (data.managementTools || [])
+    .map((toolId) => {
+      const label = formatOnboardingManagementTool(toolId, lang);
+      if (toolId === "another_platform" && data.otherPlatformText) {
+        return `${label} (${data.otherPlatformText})`;
+      }
+      if (toolId === "other" && data.otherManagementText) {
+        return `${label} (${data.otherManagementText})`;
+      }
+      return label;
+    })
+    .join(", ") || "-";
+
+  const formattedPaymentMethods = (data.paymentMethods || [])
+    .map((method) => formatOnboardingPaymentMethod(method, lang))
+    .join(", ") || "-";
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -2124,7 +2159,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Idiomas" : "Languages"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            {data.languages.join(", ") || (isPt ? "Não especificado" : "Not specified")}
+            {formattedLanguages}
           </p>
         </div>
 
@@ -2135,8 +2170,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Alunos Ativos" : "Active Students"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            {STUDENT_RANGE_OPTIONS.find((s) => s.id === data.studentRange)?.label[isPt ? "pt" : "en"] ||
-              data.studentRange}
+            {formattedStudents}
           </p>
         </div>
 
@@ -2147,8 +2181,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Dias de Trabalho" : "Working Days"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            {data.workingDays.map((d) => (isPt ? DAY_LABELS[d]?.pt?.substring(0, 3) : d.substring(0, 3))).join(", ") ||
-              "-"}
+            {formattedDays}
           </p>
         </div>
 
@@ -2159,7 +2192,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Pacotes Criados" : "Packages Created"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            {data.packages.length} {isPt ? "pacote(s)" : "package(s)"}
+            {formattedPackages}
           </p>
         </div>
 
@@ -2170,7 +2203,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Meta Mensal" : "Monthly Goal"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            R$ {data.monthlyGoal || "0"}
+            {formattedGoal}
           </p>
         </div>
 
@@ -2181,17 +2214,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Ferramentas de Gestão" : "Management Tools"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            {(data.managementTools || []).map((toolId) => {
-              const opt = MANAGEMENT_OPTIONS.find((m) => m.id === toolId);
-              const label = opt ? opt.label[isPt ? "pt" : "en"] : toolId;
-              if (toolId === "another_platform" && data.otherPlatformText) {
-                return `${label} (${data.otherPlatformText})`;
-              }
-              if (toolId === "other" && data.otherManagementText) {
-                return `${label} (${data.otherManagementText})`;
-              }
-              return label;
-            }).join(", ") || "-"}
+            {formattedTools}
           </p>
         </div>
 
@@ -2202,7 +2225,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
             {isPt ? "Formas de Pagamento" : "Payment Methods"}
           </span>
           <p className="font-bold text-stone-800 text-sm">
-            {data.paymentMethods.join(", ") || "-"}
+            {formattedPaymentMethods}
           </p>
         </div>
       </div>

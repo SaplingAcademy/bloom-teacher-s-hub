@@ -178,12 +178,67 @@ export const translations: Record<Language, TranslationDictionary> = {
       optionNotion: "Notion",
       optionTrello: "Trello",
       optionAnotherPlatform: "Outra plataforma",
-      optionOther: "Outro",
-      teachingLanguages: "Idiomas de ensino",
-      interfaceLanguage: "Idioma da Plataforma",
-      validationMinLanguage: "Selecione pelo menos um idioma que você ensina.",
-      validationMinPackage: "Adicione pelo menos um pacote de aula.",
-      validationMonthlyGoal: "Defina um valor de meta mensal.",
+      onboardingOptions: {
+        languages: {
+          English: "Inglês",
+          Spanish: "Espanhol",
+          French: "Francês",
+          Italian: "Italiano",
+          German: "Alemão",
+          Japanese: "Japonês",
+          Korean: "Coreano",
+          Portuguese: "Português",
+          Other: "Outro",
+        },
+        paymentMethods: {
+          PIX: "PIX",
+          "Bank transfer": "Transferência Bancária",
+          "Bank Transfer": "Transferência Bancária",
+          "Credit card": "Cartão de Crédito",
+          "Credit Card": "Cartão de Crédito",
+          "Debit card": "Cartão de Débito",
+          "Debit Card": "Cartão de Débito",
+          Cash: "Dinheiro",
+          "Invoice (Boleto)": "Boleto",
+          Invoice: "Boleto",
+          Boleto: "Boleto",
+          Other: "Outro",
+        },
+        studentRanges: {
+          "0": "Ainda não tenho alunos",
+          "1-5": "1–5 alunos",
+          "6-10": "6–10 alunos",
+          "11-20": "11–20 alunos",
+          "21-40": "21–40 alunos",
+          "40+": "40+ alunos",
+        },
+        managementTools: {
+          none: "Não uso nenhum sistema",
+          excel: "Excel",
+          sheets: "Google Sheets",
+          calendar: "Google Calendar",
+          notion: "Notion",
+          trello: "Trello",
+          another_platform: "Outra plataforma",
+          other: "Outro",
+        },
+        lessonTypes: {
+          Individual: "Individual",
+          Pair: "Em dupla",
+          Group: "Em grupo",
+        },
+        contractsPreference: {
+          YES: "SIM",
+          NO: "NÃO",
+          "Planning to start": "Planejo começar",
+        },
+        frequencies: {
+          Monthly: "Mensalidade",
+          total: "Valor Total",
+          "One-time": "Aula Avulsa",
+          Weekly: "Semanal",
+        },
+      },
     },
     today: {
       greetingMorning: "Bom dia",
@@ -974,12 +1029,67 @@ export const translations: Record<Language, TranslationDictionary> = {
       optionNotion: "Notion",
       optionTrello: "Trello",
       optionAnotherPlatform: "Another platform",
-      optionOther: "Other",
-      teachingLanguages: "Languages Taught",
-      interfaceLanguage: "Platform Language",
-      validationMinLanguage: "Select at least one language you teach.",
-      validationMinPackage: "Add at least one teaching package.",
-      validationMonthlyGoal: "Set a monthly target value.",
+      onboardingOptions: {
+        languages: {
+          English: "English",
+          Spanish: "Spanish",
+          French: "French",
+          Italian: "Italian",
+          German: "German",
+          Japanese: "Japanese",
+          Korean: "Korean",
+          Portuguese: "Portuguese",
+          Other: "Other",
+        },
+        paymentMethods: {
+          PIX: "PIX",
+          "Bank transfer": "Bank transfer",
+          "Bank Transfer": "Bank Transfer",
+          "Credit card": "Credit card",
+          "Credit Card": "Credit Card",
+          "Debit card": "Debit card",
+          "Debit Card": "Debit Card",
+          Cash: "Cash",
+          "Invoice (Boleto)": "Invoice (Boleto)",
+          Invoice: "Invoice",
+          Boleto: "Boleto",
+          Other: "Other",
+        },
+        studentRanges: {
+          "0": "I don't have students yet",
+          "1-5": "1–5 students",
+          "6-10": "6–10 students",
+          "11-20": "11–20 students",
+          "21-40": "21–40 students",
+          "40+": "40+ students",
+        },
+        managementTools: {
+          none: "I don't use any system",
+          excel: "Excel",
+          sheets: "Google Sheets",
+          calendar: "Google Calendar",
+          notion: "Notion",
+          trello: "Trello",
+          another_platform: "Another platform",
+          other: "Other",
+        },
+        lessonTypes: {
+          Individual: "Individual",
+          Pair: "Pair",
+          Group: "Group",
+        },
+        contractsPreference: {
+          YES: "YES",
+          NO: "NO",
+          "Planning to start": "Planning to start",
+        },
+        frequencies: {
+          Monthly: "Monthly",
+          total: "Total Course",
+          "One-time": "One-time",
+          Weekly: "Weekly",
+        },
+      },
     },
     today: {
       greetingMorning: "Good morning",
@@ -1693,3 +1803,95 @@ export function formatWeekdayName(dayStr: string | undefined | null, lang: Langu
   }
   return cleanDay;
 }
+
+/**
+ * Localizes onboarding language option names cleanly
+ */
+export function formatOnboardingLanguage(langKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!langKey) return "";
+  const clean = String(langKey).trim();
+  const localized = t(`onboardingOptions.languages.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.languages.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+
+/**
+ * Localizes onboarding payment method names cleanly
+ */
+export function formatOnboardingPaymentMethod(methodKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!methodKey) return "";
+  const clean = String(methodKey).trim();
+  const localized = t(`onboardingOptions.paymentMethods.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.paymentMethods.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+
+/**
+ * Localizes onboarding student range names cleanly
+ */
+export function formatOnboardingStudentRange(rangeKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!rangeKey) return "";
+  const clean = String(rangeKey).trim();
+  const localized = t(`onboardingOptions.studentRanges.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.studentRanges.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+
+/**
+ * Localizes onboarding management tool names cleanly
+ */
+export function formatOnboardingManagementTool(toolKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!toolKey) return "";
+  const clean = String(toolKey).trim();
+  const localized = t(`onboardingOptions.managementTools.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.managementTools.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+
+/**
+ * Localizes onboarding lesson type names cleanly
+ */
+export function formatOnboardingLessonType(typeKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!typeKey) return "";
+  const clean = String(typeKey).trim();
+  const localized = t(`onboardingOptions.lessonTypes.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.lessonTypes.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+
+/**
+ * Localizes onboarding contract preference names cleanly
+ */
+export function formatOnboardingContractPreference(prefKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!prefKey) return "";
+  const clean = String(prefKey).trim();
+  const localized = t(`onboardingOptions.contractsPreference.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.contractsPreference.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+
+/**
+ * Localizes onboarding package billing frequency names cleanly
+ */
+export function formatOnboardingFrequency(freqKey: string | undefined | null, lang: Language = "pt"): string {
+  if (!freqKey) return "";
+  const clean = String(freqKey).trim();
+  const localized = t(`onboardingOptions.frequencies.${clean}`, lang, "");
+  if (localized && localized !== `onboardingOptions.frequencies.${clean}`) {
+    return localized;
+  }
+  return clean;
+}
+

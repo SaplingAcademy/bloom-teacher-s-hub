@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useLanguage } from "@/hooks/use-language";
-import { translations } from "@/lib/i18n";
+import { translations, formatOnboardingFrequency, formatOnboardingPaymentMethod } from "@/lib/i18n";
 import { OnboardingPackage } from "@/types/onboarding";
 import { parseCurrencyToNumber, formatNumberToCurrencyInput } from "@/lib/finance-engine";
 
@@ -137,9 +137,9 @@ export function PackageFormModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Monthly">{isPt ? "Mensalidade" : "Monthly fee"}</SelectItem>
-                  <SelectItem value="total">{isPt ? "Valor total do curso" : "Total course value"}</SelectItem>
-                  <SelectItem value="One-time">{isPt ? "Aula avulsa" : "One-time"}</SelectItem>
+                  <SelectItem value="Monthly">{formatOnboardingFrequency("Monthly", lang)}</SelectItem>
+                  <SelectItem value="total">{formatOnboardingFrequency("total", lang)}</SelectItem>
+                  <SelectItem value="One-time">{formatOnboardingFrequency("One-time", lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -234,9 +234,9 @@ export function PackageFormModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Pix">Pix</SelectItem>
-                <SelectItem value="Bank Transfer">{isPt ? "Transferência Bancária" : "Bank Transfer"}</SelectItem>
-                <SelectItem value="Credit Card">{isPt ? "Cartão de Crédito" : "Credit Card"}</SelectItem>
-                <SelectItem value="Cash">{isPt ? "Dinheiro" : "Cash"}</SelectItem>
+                <SelectItem value="Bank Transfer">{formatOnboardingPaymentMethod("Bank transfer", lang)}</SelectItem>
+                <SelectItem value="Credit Card">{formatOnboardingPaymentMethod("Credit card", lang)}</SelectItem>
+                <SelectItem value="Cash">{formatOnboardingPaymentMethod("Cash", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
