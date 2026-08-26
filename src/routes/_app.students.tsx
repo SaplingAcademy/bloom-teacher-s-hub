@@ -1743,6 +1743,16 @@ function StudentsPage() {
   });
 
   const t = translations[lang];
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("[BLOOM DIAGNOSTIC - StudentsPage]", {
+        lang,
+        fieldWhatsApp: t?.fieldWhatsApp,
+        placeholderWhatsApp: t?.placeholderWhatsApp,
+      });
+    }
+  }, [lang, t]);
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
   const selectedClass = classesList.find((c) => c.id === selectedClassId);
 
