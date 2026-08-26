@@ -220,7 +220,7 @@ const translations = {
     // Modal fields
     modalTitle: "Create Student Profile",
     fieldName: "Full Name or Group Title",
-    fieldWhatsApp: "Phone",
+    fieldPhone: "Phone",
     fieldEmail: "Email (Optional)",
     fieldLevel: "CEFR Level",
     fieldFocus: "Language Studied",
@@ -233,7 +233,7 @@ const translations = {
     btnSave: "Save Changes",
     btnCancel: "Cancel",
     placeholderName: "e.g., John Smith or Group B1",
-    placeholderWhatsApp: "e.g. +1 407 555 1234",
+    placeholderPhone: "e.g. +1 407 555 1234",
     placeholderSchedule: "e.g., Mon • 10:00 AM",
     // Student Hub Finance Tab
     financeCurrentPkg: "Current Active Package",
@@ -292,7 +292,7 @@ const translations = {
     // Modal fields
     modalTitle: "Criar Perfil de Aluno",
     fieldName: "Nome Completo ou Nome do Grupo",
-    fieldWhatsApp: "Telefone",
+    fieldPhone: "Telefone",
     fieldEmail: "E-mail (Opcional)",
     fieldLevel: "Nível CEFR",
     fieldFocus: "Idioma Estudado",
@@ -305,7 +305,7 @@ const translations = {
     btnSave: "Salvar Alterações",
     btnCancel: "Cancelar",
     placeholderName: "ex: John Smith ou Grupo B1",
-    placeholderWhatsApp: "Ex.: +55 43 99999-9999",
+    placeholderPhone: "Ex.: +55 43 99999-9999",
     placeholderSchedule: "ex: Seg • 10:00",
     // Student Hub Finance Tab
     financeCurrentPkg: "Plano Ativo Atual",
@@ -981,7 +981,7 @@ function StudentsPage() {
     if (!selectedStudentId || !editName.trim() || !user) return;
 
     if (!editWhatsApp.trim()) {
-      toast.error(i18nT("students.toastWhatsAppRequired", lang));
+      toast.error(i18nT("students.toastPhoneRequired", lang));
       return;
     }
 
@@ -1523,7 +1523,7 @@ function StudentsPage() {
     if (!formName.trim() || !user) return;
 
     if (!formWhatsApp.trim()) {
-      toast.error(i18nT("students.toastWhatsAppRequired", lang));
+      toast.error(i18nT("students.toastPhoneRequired", lang));
       return;
     }
 
@@ -1748,8 +1748,8 @@ function StudentsPage() {
     if (typeof window !== "undefined") {
       console.log("[BLOOM DIAGNOSTIC - StudentsPage]", {
         lang,
-        fieldWhatsApp: t?.fieldWhatsApp,
-        placeholderWhatsApp: t?.placeholderWhatsApp,
+        fieldPhone: t?.fieldPhone,
+        placeholderPhone: t?.placeholderPhone,
       });
     }
   }, [lang, t]);
@@ -1899,7 +1899,7 @@ function StudentsPage() {
                 </h3>
                 <div className="space-y-3 text-xs">
                   <div>
-                    <span className="text-muted-foreground font-medium block">{t.fieldWhatsApp}:</span>
+                    <span className="text-muted-foreground font-medium block">{t.fieldPhone}:</span>
                     <a
                       href={`tel:${selectedStudent.whatsapp.trim()}`}
                       className="text-foreground hover:underline font-medium flex items-center gap-1 mt-0.5"
@@ -2234,7 +2234,7 @@ function StudentsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-xs font-bold">{t.fieldWhatsApp}</Label>
+                    <Label className="text-xs font-bold">{t.fieldPhone}</Label>
                     <Input type="tel" value={editWhatsApp} onChange={(e) => setEditWhatsApp(e.target.value)} placeholder={t.placeholderWhatsApp} />
                   </div>
                   <div className="space-y-1">
@@ -2617,14 +2617,14 @@ function StudentsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="std-phone" className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
-                        {t.fieldWhatsApp} <span className="text-[#ED7034] font-bold">*</span>
+                        {t.fieldPhone} <span className="text-[#ED7034] font-bold">*</span>
                       </Label>
                       <Input
                         id="std-phone"
                         type="tel"
                         value={formWhatsApp}
                         onChange={(e) => setFormWhatsApp(e.target.value)}
-                        placeholder={t.placeholderWhatsApp}
+                        placeholder={t.placeholderPhone}
                         required
                         className="h-11 rounded-xl border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary"
                       />
