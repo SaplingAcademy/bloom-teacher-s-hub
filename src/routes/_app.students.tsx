@@ -2235,7 +2235,7 @@ function StudentsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs font-bold">{t.fieldPhone}</Label>
-                    <Input type="tel" value={editWhatsApp} onChange={(e) => setEditWhatsApp(e.target.value)} placeholder={t.placeholderWhatsApp} />
+                    <Input type="tel" value={editWhatsApp} onChange={(e) => setEditWhatsApp(e.target.value)} placeholder={t.placeholderPhone} />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-bold">{t.fieldEmail}</Label>
