@@ -220,7 +220,7 @@ const translations = {
     // Modal fields
     modalTitle: "Create Student Profile",
     fieldName: "Full Name or Group Title",
-    fieldWhatsApp: "WhatsApp Number",
+    fieldWhatsApp: "Phone",
     fieldEmail: "Email (Optional)",
     fieldLevel: "CEFR Level",
     fieldFocus: "Language Studied",
@@ -233,7 +233,7 @@ const translations = {
     btnSave: "Save Changes",
     btnCancel: "Cancel",
     placeholderName: "e.g., John Smith or Group B1",
-    placeholderWhatsApp: "e.g., +55 11 99999-9999",
+    placeholderWhatsApp: "e.g. +1 407 555 1234",
     placeholderSchedule: "e.g., Mon • 10:00 AM",
     // Student Hub Finance Tab
     financeCurrentPkg: "Current Active Package",
@@ -292,7 +292,7 @@ const translations = {
     // Modal fields
     modalTitle: "Criar Perfil de Aluno",
     fieldName: "Nome Completo ou Nome do Grupo",
-    fieldWhatsApp: "WhatsApp",
+    fieldWhatsApp: "Telefone",
     fieldEmail: "E-mail (Opcional)",
     fieldLevel: "Nível CEFR",
     fieldFocus: "Idioma Estudado",
@@ -305,7 +305,7 @@ const translations = {
     btnSave: "Salvar Alterações",
     btnCancel: "Cancelar",
     placeholderName: "ex: John Smith ou Grupo B1",
-    placeholderWhatsApp: "ex: +55 11 99999-9999",
+    placeholderWhatsApp: "Ex.: +55 43 99999-9999",
     placeholderSchedule: "ex: Seg • 10:00",
     // Student Hub Finance Tab
     financeCurrentPkg: "Plano Ativo Atual",
@@ -1891,12 +1891,10 @@ function StudentsPage() {
                   <div>
                     <span className="text-muted-foreground font-medium block">{t.fieldWhatsApp}:</span>
                     <a
-                      href={`https://wa.me/${selectedStudent.whatsapp.replace(/\D/g, "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary hover:underline font-bold flex items-center gap-1 mt-0.5"
+                      href={`tel:${selectedStudent.whatsapp.trim()}`}
+                      className="text-foreground hover:underline font-medium flex items-center gap-1 mt-0.5"
                     >
-                      <Phone className="h-3.5 w-3.5" />
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                       {selectedStudent.whatsapp}
                     </a>
                   </div>
@@ -2227,7 +2225,7 @@ function StudentsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs font-bold">{t.fieldWhatsApp}</Label>
-                    <Input value={editWhatsApp} onChange={(e) => setEditWhatsApp(e.target.value)} />
+                    <Input type="tel" value={editWhatsApp} onChange={(e) => setEditWhatsApp(e.target.value)} placeholder={t.placeholderWhatsApp} />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-bold">{t.fieldEmail}</Label>
@@ -2605,14 +2603,15 @@ function StudentsPage() {
                       className="h-11 rounded-xl border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary"
                     />
                   </div>
-                  {/* WhatsApp & Email */}
+                  {/* Telefone & Email */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label htmlFor="std-whatsapp" className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
+                      <Label htmlFor="std-phone" className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
                         {t.fieldWhatsApp} <span className="text-[#ED7034] font-bold">*</span>
                       </Label>
                       <Input
-                        id="std-whatsapp"
+                        id="std-phone"
+                        type="tel"
                         value={formWhatsApp}
                         onChange={(e) => setFormWhatsApp(e.target.value)}
                         placeholder={t.placeholderWhatsApp}

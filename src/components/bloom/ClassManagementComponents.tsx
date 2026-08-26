@@ -396,7 +396,8 @@ export function ClassFormModal({
                       className="h-9 text-xs bg-white"
                     />
                     <Input
-                      placeholder={isPt ? "WhatsApp" : "WhatsApp"}
+                      type="tel"
+                      placeholder={isPt ? "Telefone (Ex.: +55 43 99999-9999)" : "Phone (e.g. +1 407 555 1234)"}
                       value={inlineWhatsApp}
                       onChange={(e) => setInlineWhatsApp(e.target.value)}
                       className="h-9 text-xs bg-white"
