@@ -46,6 +46,8 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import { TimezoneSelect } from "@/components/bloom/TimezoneSelect";
+import { getTimezoneLabel } from "@/lib/timezones";
 
 export const Route = createFileRoute("/_app/profile")({
   head: () => ({
@@ -480,7 +482,7 @@ function ProfilePage() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
-                    {profile.timezone}
+                    {getTimezoneLabel(profile.timezone, lang === "pt" ? "pt" : "en")}
                   </span>
                 </div>
               </div>
@@ -1039,18 +1041,12 @@ function ProfilePage() {
                   <Label htmlFor="edit-timezone" className="text-xs font-semibold text-foreground">
                     {lang === "pt" ? "Fuso Horário" : "Timezone"}
                   </Label>
-                  <select
+                  <TimezoneSelect
                     id="edit-timezone"
                     value={editTimezone}
-                    onChange={(e) => setEditTimezone(e.target.value)}
-                    className="flex h-10 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="America/Sao_Paulo">Brasília (GMT-3)</option>
-                    <option value="America/New_York">New York (EST/EDT)</option>
-                    <option value="Europe/London">London (GMT/BST)</option>
-                    <option value="Europe/Paris">Paris (CET/CEST)</option>
-                    <option value="Asia/Tokyo">Tokyo (JST)</option>
-                  </select>
+                    onValueChange={setEditTimezone}
+                    lang={lang === "pt" ? "pt" : "en"}
+                  />
                 </div>
               </div>
             </div>

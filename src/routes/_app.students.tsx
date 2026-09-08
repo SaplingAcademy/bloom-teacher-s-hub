@@ -120,6 +120,7 @@ import {
   fetchActiveClassMemberStudentIds,
 } from "@/lib/class-sync";
 import { InactivateStudentModal } from "@/components/bloom/InactivateStudentModal";
+import { TimezoneSelect } from "@/components/bloom/TimezoneSelect";
 
 export interface ScheduleInput {
   id?: string;
@@ -3116,11 +3117,11 @@ function StudentsPage() {
                         <Label htmlFor="std-tz" className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
                           {lang === "pt" ? "Fuso Horário" : "Time Zone"}
                         </Label>
-                        <Input
+                        <TimezoneSelect
                           id="std-tz"
                           value={formTimezone}
-                          onChange={(e) => setFormTimezone(e.target.value)}
-                          placeholder="America/Sao_Paulo"
+                          onValueChange={setFormTimezone}
+                          lang={lang === "pt" ? "pt" : "en"}
                           className="h-11 rounded-xl border-border bg-white text-sm"
                         />
                       </div>
