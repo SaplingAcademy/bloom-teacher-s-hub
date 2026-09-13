@@ -35,6 +35,64 @@ const defaultProfile = {
   website: "",
 };
 
+export type OnboardingStatusType = "completed" | "skipped" | "in_progress" | "pending";
+
+export interface OnboardingStatusResult {
+  status: OnboardingStatusType;
+  isCompletedOrSkipped: boolean;
+  isCompleted: boolean;
+  isSkipped: boolean;
+}
+
+/**
+ * Checks the canonical onboarding status for a given user from Supabase.
+ * Primary Source of Truth: Supabase `onboarding` table (`answers.status`).
+ * - "completed" -> completed
+ * - "skipped"   -> skipped
+ * - "in_progress" -> pending/in_progress
+ * Legacy Fallback: Supabase `profiles` table (`onboarding_completed` === true -> completed).
+ * Note: localStorage is NEVER used for decision-making.
+ */
+export async function checkUserOnboardingStatus(userId: string): Promise<OnboardingStatusResult> {
+  try {
+    const [{ data: legacyData }, { data: onboardingRecord }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase
+        .from("onboarding")
+        .select("answers")
+        .eq("teacher_id", userId)
+        .maybeSingle(),
+    ]);
+
+    const onboardingAnswers = onboardingRecord?.answers || {};
+    const rawStatus = onboardingAnswers.status;
+
+    if (rawStatus === "completed") {
+      return { status: "completed", isCompletedOrSkipped: true, isCompleted: true, isSkipped: false };
+    }
+    if (rawStatus === "skipped") {
+      return { status: "skipped", isCompletedOrSkipped: true, isCompleted: false, isSkipped: true };
+    }
+    if (rawStatus === "in_progress") {
+      return { status: "in_progress", isCompletedOrSkipped: false, isCompleted: false, isSkipped: false };
+    }
+
+    // Legacy fallback for old users: if no onboarding table status exists, check legacy profiles table
+    if (legacyData?.onboarding_completed === true) {
+      return { status: "completed", isCompletedOrSkipped: true, isCompleted: true, isSkipped: false };
+    }
+
+    return { status: "pending", isCompletedOrSkipped: false, isCompleted: false, isSkipped: false };
+  } catch (err) {
+    console.warn("[checkUserOnboardingStatus] Error checking status from database:", err);
+    return { status: "pending", isCompletedOrSkipped: false, isCompleted: false, isSkipped: false };
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -169,31 +227,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Fetch onboarding status and teaching languages in parallel (they are independent).
-        const [{ data: legacyData }, { data: onboardingRecord }] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("onboarding_completed, languages_taught")
-            .eq("id", userId)
-            .maybeSingle(),
-          supabase
-            .from("onboarding")
-            .select("answers")
-            .eq("teacher_id", userId)
-            .maybeSingle(),
-        ]);
+        // Fetch onboarding status and teaching languages in parallel
+        const [onboardingStatusResult, { data: legacyProfileExtra }, { data: onboardingRecord }] =
+          await Promise.all([
+            checkUserOnboardingStatus(userId),
+            supabase
+              .from("profiles")
+              .select("languages_taught")
+              .eq("id", userId)
+              .maybeSingle(),
+            supabase
+              .from("onboarding")
+              .select("answers")
+              .eq("teacher_id", userId)
+              .maybeSingle(),
+          ]);
 
         const onboardingAnswers = onboardingRecord?.answers || {};
-        const isCompleted =
-          Boolean(legacyData?.onboarding_completed) ||
-          onboardingAnswers.status === "completed";
-        const onboardingStatus =
-          onboardingAnswers.status ||
-          (isCompleted ? "completed" : "not_started");
+        const isCompleted = onboardingStatusResult.isCompleted;
+        const onboardingStatus = onboardingStatusResult.status;
 
         const languagesTaught =
-          Array.isArray(legacyData?.languages_taught) && legacyData.languages_taught.length > 0
-            ? legacyData.languages_taught
+          Array.isArray(legacyProfileExtra?.languages_taught) && legacyProfileExtra.languages_taught.length > 0
+            ? legacyProfileExtra.languages_taught
             : Array.isArray(onboardingAnswers.languages) && onboardingAnswers.languages.length > 0
               ? onboardingAnswers.languages
               : [];
@@ -246,23 +302,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
 
           localStorage.setItem("bloom.profile.data", JSON.stringify(updatedProfile));
-          console.log("[useAuth] Profile created/loaded in localStorage:", updatedProfile);
+          console.log(`[useAuth] Onboarding status loaded: ${onboardingStatus}`);
 
-          if (isCompleted) {
-            localStorage.setItem("bloom.onboarding.completed", "true");
-            localStorage.removeItem("bloom.onboarding.skipped");
-            console.log("[useAuth] Onboarding status loaded: completed");
-          } else if (onboardingStatus === "skipped") {
-            localStorage.setItem("bloom.onboarding.skipped", "true");
-            localStorage.removeItem("bloom.onboarding.completed");
-            console.log("[useAuth] Onboarding status loaded: skipped");
-          } else {
-            localStorage.removeItem("bloom.onboarding.completed");
-            console.log("[useAuth] Onboarding status loaded: pending");
-          }
-
-        syncCompletedRef.current = userId;
-        setProfile(profileData);
+          syncCompletedRef.current = userId;
+          setProfile(profileData);
           setAuthError(null);
         }
       } catch (err: unknown) {
@@ -359,8 +402,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setLoading(true);
     syncedUserRef.current = null;
+    syncCompletedRef.current = null;
     setProfile(null);
     setAuthError(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("bloom.onboarding.completed");
+      localStorage.removeItem("bloom.onboarding.skipped");
+      localStorage.removeItem("bloom.onboarding.draft");
+      localStorage.removeItem("bloom.onboarding.step");
+      localStorage.removeItem("bloom.profile.data");
+    }
     try {
       await supabase.auth.signOut();
     } finally {
@@ -391,11 +442,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfileState = (partialProfile: any) => {
     setProfile((prev: any) => {
       const updated = { ...(prev || {}), ...partialProfile };
-      if (updated.onboarding_completed) {
-        localStorage.setItem("bloom.onboarding.completed", "true");
-        localStorage.removeItem("bloom.onboarding.skipped");
-      } else if (updated.onboarding_status === "skipped") {
-        localStorage.setItem("bloom.onboarding.skipped", "true");
+      if (updated.onboarding_status === "completed") {
+        updated.onboarding_completed = true;
+      } else if (updated.onboarding_status === "skipped" || updated.onboarding_status === "in_progress" || updated.onboarding_status === "pending") {
+        if (updated.onboarding_status !== "completed") {
+          updated.onboarding_completed = false;
+        }
       }
       return updated;
     });

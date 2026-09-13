@@ -89,17 +89,8 @@ function AppLayout() {
     return <Navigate to="/auth" replace />;
   }
 
-  const onboardingCompleted =
-    Boolean(profile?.onboarding_completed) ||
-    (typeof window !== "undefined"
-      ? localStorage.getItem("bloom.onboarding.completed") === "true"
-      : false);
-
-  const onboardingSkipped =
-    profile?.onboarding_status === "skipped" ||
-    (typeof window !== "undefined"
-      ? localStorage.getItem("bloom.onboarding.skipped") === "true"
-      : false);
+  const onboardingCompleted = Boolean(profile?.onboarding_completed);
+  const onboardingSkipped = profile?.onboarding_status === "skipped";
 
   if (!onboardingCompleted && !onboardingSkipped) {
     return <Navigate to="/onboarding" replace />;

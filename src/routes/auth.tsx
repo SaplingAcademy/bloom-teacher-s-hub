@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, checkUserOnboardingStatus } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
@@ -438,17 +438,8 @@ function AuthPage() {
     }
 
     if (user) {
-      const onboardingCompleted =
-        Boolean(profile?.onboarding_completed) ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.completed") === "true"
-          : false);
-
-      const onboardingSkipped =
-        profile?.onboarding_status === "skipped" ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.skipped") === "true"
-          : false);
+      const onboardingCompleted = Boolean(profile?.onboarding_completed);
+      const onboardingSkipped = profile?.onboarding_status === "skipped";
 
       if (onboardingCompleted || onboardingSkipped) {
         navigate({ to: "/" });
@@ -619,17 +610,8 @@ function AuthPage() {
   useEffect(() => {
     if (!authLoading && user && view !== "confirmed_success" && view !== "confirmed_error" && view !== "unconfirmed") {
       console.log("[Auth] User is authenticated, checking onboarding status...");
-      const onboardingCompleted =
-        Boolean(profile?.onboarding_completed) ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.completed") === "true"
-          : false);
-
-      const onboardingSkipped =
-        profile?.onboarding_status === "skipped" ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.skipped") === "true"
-          : false);
+      const onboardingCompleted = Boolean(profile?.onboarding_completed);
+      const onboardingSkipped = profile?.onboarding_status === "skipped";
 
       if (onboardingCompleted || onboardingSkipped) {
         navigate({ to: "/" });
@@ -676,20 +658,10 @@ function AuthPage() {
 
         toast.success(t.signInSuccess);
 
-        // Fetch user profile onboarding status from database
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", data.user.id)
-          .single();
+        // Fetch canonical user onboarding status from Supabase (never from localStorage)
+        const onboardingResult = await checkUserOnboardingStatus(data.user.id);
 
-        const isCompleted =
-          profileData?.onboarding_completed ??
-          (typeof window !== "undefined"
-            ? localStorage.getItem("bloom.onboarding.completed") === "true"
-            : false);
-
-        if (isCompleted) {
+        if (onboardingResult.isCompletedOrSkipped) {
           navigate({ to: "/" });
         } else {
           navigate({ to: "/onboarding" });
@@ -762,12 +734,12 @@ function AuthPage() {
           localStorage.removeItem("bloom.onboarding.completed");
 
           if (data.session) {
-            console.log("[Auth] Auto-confirmed or active session found. Redirecting to app...");
+            console.log("[Auth] Auto-confirmed or active session found. Redirecting new user to onboarding...");
             setLocalUser(data.user);
             toast.success(
               lang === "pt" ? "Conta criada com sucesso!" : "Account created successfully!",
             );
-            navigate({ to: "/" });
+            navigate({ to: "/onboarding" });
           } else {
             console.log("[Auth] Email confirmation required. Switching view to unconfirmed.");
             sessionStorage.setItem("bloom.confirmation.email", email);
