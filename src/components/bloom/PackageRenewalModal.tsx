@@ -66,6 +66,11 @@ interface PackageRenewalModalProps {
   onRenewalCompleted?: () => void;
 }
 
+function formatAgreementDate(value?: string | null): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
 export function PackageRenewalModal({
   isOpen,
   onClose,
@@ -322,7 +327,7 @@ export function PackageRenewalModal({
                   <div>
                     <span className="text-muted-foreground font-medium block">Término do Pacote</span>
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                      {currentSummary?.nextDueDate || "30/09/2026"}
+                      {formatAgreementDate(currentSummary?.nextDueDate)}
                     </span>
                   </div>
                   <div>
@@ -590,11 +595,11 @@ export function PackageRenewalModal({
 
                   <div>
                     <span className="text-muted-foreground block">Data de Início</span>
-                    <span className="font-bold text-foreground">{startDate}</span>
+                    <span className="font-bold text-foreground">{formatAgreementDate(startDate)}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block">{selectedBillingModel === "installment_total" ? "Última Parcela / Término" : "Término"}</span>
-                    <span className="font-bold text-foreground">{lastDueDateStr}</span>
+                    <span className="font-bold text-foreground">{lastDueDateStr === "Sem término" ? lastDueDateStr : formatAgreementDate(lastDueDateStr)}</span>
                   </div>
 
                   <div>

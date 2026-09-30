@@ -1023,7 +1023,7 @@ function StudentsPage() {
     }
 
     const isEditPackageSelected = editPackageId && editPackageId !== "" && editPackageId !== "none_value";
-    if (isEditPackageSelected && !formDueDay) {
+    if (isEditPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
         lang === "pt"
           ? "Por favor, selecione o dia de vencimento."
@@ -1592,7 +1592,7 @@ function StudentsPage() {
     }
 
     const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
-    if (isPackageSelected && !formDueDay) {
+    if (isPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
         lang === "pt"
           ? "Por favor, selecione o dia de vencimento."
