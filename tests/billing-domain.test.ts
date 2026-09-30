@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildBillingAgreement, calculateExactInstallments, normalizeBillingModel } from "../src/lib/billing-domain";
 
 describe("billing domain", () => {
