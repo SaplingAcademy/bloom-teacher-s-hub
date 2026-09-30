@@ -1934,7 +1934,7 @@ export async function renewStudentPackage(
     // 5. Calculate the new agreement through the canonical billing model.
     const terms = buildBillingAgreement(
       {
-        price: Math.max(0, totalAmountCents) / 100,
+        price: Math.max(0, totalAmountCents ?? Math.round(Number(newPkg.price || 0) * 100)) / 100,
         billingModel: newPkg.billing_model,
         frequency: newPkg.frequency,
         billingDurationType: newPkg.billing_duration_type,
