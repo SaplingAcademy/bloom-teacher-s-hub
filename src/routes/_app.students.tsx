@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
@@ -539,7 +539,7 @@ function StudentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudentIdForModal, setEditingStudentIdForModal] = useState<string | null>(null);
   const [showNoPackagesPrompt, setShowNoPackagesPrompt] = useState(false);
-  const pendingNewStudentOpenRef = React.useRef<(() => void) | null>(null);
+  const pendingNewStudentOpenRef = useRef<(() => void) | null>(null);
   const [showZeroStudentsWelcome, setShowZeroStudentsWelcome] = useState(false);
   // Inactive Student Modal State
   const [isInactivateModalOpen, setIsInactivateModalOpen] = useState(false);
