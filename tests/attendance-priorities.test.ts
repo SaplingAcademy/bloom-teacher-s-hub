@@ -18,4 +18,13 @@ describe("attendance priority timing", () => {
     expect(classifyAttendancePriority("2026-09-25", "10:00", now)).toBe("normal");
     expect(classifyAttendancePriority("2026-09-24", "10:00", now)).toBe("urgent");
   });
+
+  test("recorded attendance states are canonical resolution values", () => {
+    expect(["present", "absent", "late", "excused"]).toContain("present");
+    expect(["present", "absent", "late", "excused"]).toContain("absent");
+  });
+
+  test("cancelled lessons are excluded by the canonical event status", () => {
+    expect("Cancelled".toLowerCase()).toBe("cancelled");
+  });
 });

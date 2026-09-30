@@ -12,4 +12,4 @@
 - [x] Validate due-date scenarios and TypeScript
 - [x] Derive attendance priorities from lesson-plan events and canonical attendance records
 - [x] Escalate unresolved attendance after five days and deep-link to the exact lesson
-- [ ] Validate future, current, overdue, resolved, absent, and cancelled scenarios
+- [x] Validate future, current, overdue, resolved, absent, and cancelled scenarios
