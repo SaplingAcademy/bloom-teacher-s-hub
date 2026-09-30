@@ -83,6 +83,9 @@ import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictD
 import { resolveEventColorMeta } from "@/lib/brand-colors";
 
 export const Route = createFileRoute("/_app/calendar")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    availability: search.availability === "working_hours" ? "working_hours" as const : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Calendar · Bloom" },
@@ -213,6 +216,7 @@ function CalendarPage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { availability: requestedAvailability } = Route.useSearch();
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
@@ -270,6 +274,12 @@ function CalendarPage() {
   const [conflictTimeOff, setConflictTimeOff] = useState<TeacherTimeOff | null>(null);
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [pendingClassData, setPendingClassData] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (requestedAvailability !== "working_hours") return;
+    setCentralAvailTab("working_hours");
+    setIsCentralAvailOpen(true);
+  }, [requestedAvailability]);
 
   // Load time off records and check first-time setup prompt
   const loadTimeOffData = useCallback(async () => {
