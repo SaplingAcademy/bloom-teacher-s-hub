@@ -66,6 +66,11 @@ interface PackageRenewalModalProps {
   onRenewalCompleted?: () => void;
 }
 
+function formatAgreementDate(value?: string | null): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
 export function PackageRenewalModal({
   isOpen,
   onClose,
@@ -89,7 +94,7 @@ export function PackageRenewalModal({
   const [startDate, setStartDate] = useState<string>("");
   const [totalAmountCents, setTotalAmountCents] = useState<number>(240000);
   const [installmentCount, setInstallmentCount] = useState<number>(6);
-  const [dueDay, setDueDay] = useState<number>(5);
+  const [dueDay, setDueDay] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>("Pix");
   const [renewalNotes, setRenewalNotes] = useState<string>("");
   const [billingDurationType, setBillingDurationType] = useState<BillingDurationType>("continuous");
@@ -165,6 +170,7 @@ export function PackageRenewalModal({
       defaultStart = currentSummary.nextDueDate;
     }
     setStartDate(defaultStart);
+    setDueDay(null);
   }, [isOpen, currentSummary]);
 
   // When selected package changes
@@ -213,6 +219,10 @@ export function PackageRenewalModal({
   // Handle final submission with Idempotency Guard
   const handleConfirmRenewal = async () => {
     if (isSubmitting) return; // Guard against double click
+    if (!dueDay || !startDate) {
+      toast.error("Informe o dia e a data do primeiro vencimento.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -317,7 +327,7 @@ export function PackageRenewalModal({
                   <div>
                     <span className="text-muted-foreground font-medium block">Término do Pacote</span>
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                      {currentSummary?.nextDueDate || "30/09/2026"}
+                      {formatAgreementDate(currentSummary?.nextDueDate)}
                     </span>
                   </div>
                   <div>
@@ -512,9 +522,12 @@ export function PackageRenewalModal({
                   <Input
                     type="number"
                     min={1}
-                    max={28}
-                    value={dueDay}
-                    onChange={(e) => setDueDay(parseInt(e.target.value || "5", 10))}
+                    max={31}
+                    value={dueDay ?? ""}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setDueDay(value >= 1 && value <= 31 ? value : null);
+                    }}
                   />
                 </div>
 
@@ -582,11 +595,11 @@ export function PackageRenewalModal({
 
                   <div>
                     <span className="text-muted-foreground block">Data de Início</span>
-                    <span className="font-bold text-foreground">{startDate}</span>
+                    <span className="font-bold text-foreground">{formatAgreementDate(startDate)}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block">{selectedBillingModel === "installment_total" ? "Última Parcela / Término" : "Término"}</span>
-                    <span className="font-bold text-foreground">{lastDueDateStr}</span>
+                    <span className="font-bold text-foreground">{lastDueDateStr === "Sem término" ? lastDueDateStr : formatAgreementDate(lastDueDateStr)}</span>
                   </div>
 
                   <div>
@@ -633,7 +646,13 @@ export function PackageRenewalModal({
             <Button
               type="button"
               size="sm"
-              onClick={() => setStep((s) => (s + 1) as any)}
+              onClick={() => {
+                if (step === 3 && (!dueDay || !startDate)) {
+                  toast.error("Informe o dia e a data do primeiro vencimento.");
+                  return;
+                }
+                setStep((s) => (s + 1) as any);
+              }}
               className="bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 text-xs font-bold gap-1 cursor-pointer"
             >
               Continuar <ArrowRight className="w-4 h-4" />

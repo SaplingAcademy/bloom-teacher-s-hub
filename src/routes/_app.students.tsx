@@ -157,6 +157,14 @@ interface Student {
   lessonsDelivered?: number;
   inactivationDate?: string;
   inactivationReason?: string;
+  activeAgreement?: {
+    id: string;
+    packageId: string;
+    dueDay: number | null;
+    firstDueDate: string;
+    paymentMethod: string;
+    installmentCount: number | null;
+  };
 }
 
 interface Package {
@@ -912,23 +920,35 @@ function StudentsPage() {
       if (selectedPackageId) {
         const selectedPkg = packages.find((p) => p.id === selectedPackageId);
         if (!selectedPkg) throw new Error("Selected package not found");
+        if (!formDueDay || !formFirstDueDate) throw new Error("Due date is required");
+        const existingAgreement = isEdit && studentId
+          ? students.find((student) => student.id === studentId)?.activeAgreement
+          : undefined;
+        const financialTermsUnchanged = Boolean(
+          existingAgreement
+          && existingAgreement.packageId === selectedPackageId
+          && existingAgreement.dueDay === formDueDay
+          && existingAgreement.firstDueDate === formFirstDueDate
+          && existingAgreement.paymentMethod === formPaymentMethod
+          && (existingAgreement.installmentCount || 1) === (formInstallmentCount || 1),
+        );
         const terms = buildBillingAgreement(selectedPkg, {
-          firstDueDate: formFirstDueDate || new Date().toISOString().split("T")[0],
+          firstDueDate: formFirstDueDate,
           installmentCount: formInstallmentCount,
           billingDurationType: selectedPkg.billingDurationType,
           contractMonths: selectedPkg.contractMonths,
         });
 
-        const ok = await saveStudentEnrollmentAgreement({
+        const ok = financialTermsUnchanged || await saveStudentEnrollmentAgreement({
           teacherId: studentData.teacher_id,
           studentId: savedStudentId,
           packageId: selectedPackageId,
           totalAmountCents: terms.totalAmountCents,
           installmentCount: terms.installmentCount,
           installmentAmountCents: terms.installmentAmountCents,
-          dueDay: formDueDay || 5,
-          firstDueDate: formFirstDueDate || new Date().toISOString().split("T")[0],
-          paymentMethod: formPaymentMethod || "Pix",
+          dueDay: formDueDay,
+          firstDueDate: formFirstDueDate,
+          paymentMethod: formPaymentMethod,
           billingModel: terms.billingModel,
           billingDurationType: terms.billingDurationType,
           contractMonths: terms.contractMonths,
@@ -1003,7 +1023,7 @@ function StudentsPage() {
     }
 
     const isEditPackageSelected = editPackageId && editPackageId !== "" && editPackageId !== "none_value";
-    if (isEditPackageSelected && !formDueDay) {
+    if (isEditPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
         lang === "pt"
           ? "Por favor, selecione o dia de vencimento."
@@ -1283,6 +1303,14 @@ function StudentsPage() {
         color_key: d.color_key || "default",
         groupSize: d.group_size || undefined,
         packageId: activePackageId,
+        activeAgreement: activePkgAssignment ? {
+          id: activePkgAssignment.id,
+          packageId: activePkgAssignment.package_id,
+          dueDay: activePkgAssignment.due_day ?? null,
+          firstDueDate: activePkgAssignment.first_due_date || "",
+          paymentMethod: activePkgAssignment.payment_method || "Pix",
+          installmentCount: activePkgAssignment.installment_count ?? null,
+        } : undefined,
         schedules: schedulesList.map((s: any) => ({
           id: s.id,
           weekday: s.weekday,
@@ -1316,10 +1344,10 @@ function StudentsPage() {
         duration: Number(d.duration) || 60,
         lessons: Number(d.lessons) || 4,
         method: d.method || "Pix",
-        defaultInstallmentCount: Number(d.defaultInstallmentCount) || 1,
-        billingModel: d.billingModel,
-        billingDurationType: d.billingDurationType,
-        contractMonths: d.contractMonths,
+        defaultInstallmentCount: Number(d.default_installment_count) || 1,
+        billingModel: d.billing_model,
+        billingDurationType: d.billing_duration_type,
+        contractMonths: d.contract_months,
       })),
     );
   }, [packagesQuery.data]);
@@ -1417,6 +1445,10 @@ function StudentsPage() {
     setFormPackageId(student.packageId || "");
     setFormNotes(student.notes || "");
     setFormColorKey(student.color_key || "default");
+    setFormDueDay(student.activeAgreement?.dueDay ?? null);
+    setFormFirstDueDate(student.activeAgreement?.firstDueDate || "");
+    setFormPaymentMethod(student.activeAgreement?.paymentMethod || "Pix");
+    setFormInstallmentCount(student.activeAgreement?.installmentCount || 1);
 
     // Populate Multiple Schedules
     if (student.schedules && student.schedules.length > 0) {
@@ -1560,7 +1592,7 @@ function StudentsPage() {
     }
 
     const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
-    if (isPackageSelected && !formDueDay) {
+    if (isPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
         lang === "pt"
           ? "Por favor, selecione o dia de vencimento."
@@ -2086,11 +2118,13 @@ function StudentsPage() {
                     {lang === "pt" ? "Próximo Vencimento" : "Next Due Date"}
                   </span>
                   <div className="text-base font-bold text-foreground">
-                    {financialSummary?.nextDueDate || (lang === "pt" ? "Em dia" : "Up to date")}
+                    {financialSummary?.nextDueDate
+                      ? new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.nextDueDate}T00:00:00Z`))
+                      : (lang === "pt" ? "Em dia" : "Up to date")}
                   </div>
                   {financialSummary?.lastPaymentDate && (
                     <p className="text-[11px] text-muted-foreground font-medium">
-                      {lang === "pt" ? "Último pago:" : "Last paid:"} {financialSummary.lastPaymentDate}
+                      {lang === "pt" ? "Último pago:" : "Last paid:"} {new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.lastPaymentDate}T00:00:00Z`))}
                     </p>
                   )}
                 </div>
@@ -2853,7 +2887,9 @@ function StudentsPage() {
                           ? Math.max(1, Math.min(24, Math.round(formInstallmentCount || 1)))
                           : 1;
                         const scheduleInfo = calculateInstallmentSchedule(totalPriceCents, installmentCount);
-                        const lastDueDate = calculateLastDueDate(formFirstDueDate, installmentCount, formDueDay || 18);
+                        const lastDueDate = formFirstDueDate && formDueDay
+                          ? calculateLastDueDate(formFirstDueDate, installmentCount, formDueDay)
+                          : "";
 
                         return (
                           <div className="space-y-4 pt-2 border-t border-border/50 animate-in fade-in duration-150">

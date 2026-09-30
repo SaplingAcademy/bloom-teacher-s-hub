@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { buildBillingAgreement, calculateExactInstallments, normalizeBillingModel } from "../src/lib/billing-domain";
+import {
+  billingDateForMonth,
+  buildBillingAgreement,
+  calculateExactInstallments,
+  nextAgreementDueDate,
+  normalizeBillingModel,
+  recurringBillingDate,
+} from "../src/lib/billing-domain";
 
 describe("billing domain", () => {
   it("normalizes legacy billing labels", () => {
@@ -38,5 +45,33 @@ describe("billing domain", () => {
     expect(terms.totalAmountCents).toBe(150000);
     expect(terms.installmentCount).toBeNull();
     expect(terms.lastDueDate).toBe("2026-10-06");
+  });
+
+  it("preserves day 10 for recurring monthly charges", () => {
+    expect(recurringBillingDate("2026-10-10", 1, 10)).toBe("2026-11-10");
+  });
+
+  it("uses day 31 whenever possible and clamps only shorter months", () => {
+    expect(recurringBillingDate("2026-01-31", 1, 31)).toBe("2026-02-28");
+    expect(recurringBillingDate("2027-01-31", 1, 31)).toBe("2027-02-28");
+    expect(recurringBillingDate("2028-01-31", 1, 31)).toBe("2028-02-29");
+    expect(recurringBillingDate("2026-03-31", 1, 31)).toBe("2026-04-30");
+    expect(recurringBillingDate("2026-04-30", 1, 31)).toBe("2026-05-31");
+    expect(billingDateForMonth(2026, 9, 31)).toBe("2026-10-31");
+  });
+
+  it("isolates the next due date to the active agreement schedule", () => {
+    expect(nextAgreementDueDate({
+      firstDueDate: "2026-10-10",
+      dueDay: 10,
+      billingModel: "monthly",
+      afterDate: "2026-11-01",
+    })).toBe("2026-11-10");
+  });
+
+  it("preserves monthly, installment and one-time schedule limits", () => {
+    expect(nextAgreementDueDate({ firstDueDate: "2026-10-31", dueDay: 31, billingModel: "one_time", afterDate: "2026-11-01" })).toBeNull();
+    expect(nextAgreementDueDate({ firstDueDate: "2026-10-31", dueDay: 31, billingModel: "installment_total", installmentCount: 2, afterDate: "2026-11-01" })).toBe("2026-11-30");
+    expect(nextAgreementDueDate({ firstDueDate: "2026-10-31", dueDay: 31, billingModel: "monthly", contractMonths: 2, afterDate: "2026-12-01" })).toBeNull();
   });
 });
