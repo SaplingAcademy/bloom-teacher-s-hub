@@ -285,7 +285,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         .eq("status", "active"),
       supabase
         .from("classes")
-        .select("id, name, status, billing_mode, package_id, due_day, billing_amount, class_members(student_id)")
+        .select("id, name, status, billing_mode, package_id, due_day, billing_amount, class_members(student_id, status)")
         .eq("teacher_id", teacherId)
         .eq("status", "active"),
       supabase

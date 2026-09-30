@@ -9,4 +9,4 @@
 - [x] Centralize due-date calculations and require canonical agreement dates
 - [x] Preserve active agreement terms when editing students
 - [x] Link new invoices and isolate active-contract financial summaries
-- [ ] Validate due-date scenarios and TypeScript
+- [x] Validate due-date scenarios and TypeScript
