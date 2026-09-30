@@ -131,8 +131,10 @@ export function PackageRenewalModal({
             if (currentCatalogPkg) {
               setSelectedPackageId(currentCatalogPkg.id);
               setSelectedPackage(currentCatalogPkg);
-              setTotalAmountCents(currentSummary.totalAmountCents || currentCatalogPkg.price);
-              setInstallmentCount(currentSummary.installmentCount || 6);
+              setTotalAmountCents(currentCatalogPkg.price);
+              setInstallmentCount(currentCatalogPkg.defaultInstallmentCount || 1);
+              setBillingDurationType(currentCatalogPkg.billingDurationType || "continuous");
+              setContractMonths(currentCatalogPkg.contractMonths || 6);
             } else if (formatted.length > 0) {
               setSelectedPackageId(formatted[0].id);
               setSelectedPackage(formatted[0]);
@@ -583,13 +585,13 @@ export function PackageRenewalModal({
                     <span className="font-bold text-foreground">{startDate}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Última Parcela / Término</span>
+                    <span className="text-muted-foreground block">{selectedBillingModel === "installment_total" ? "Última Parcela / Término" : "Término"}</span>
                     <span className="font-bold text-foreground">{lastDueDateStr}</span>
                   </div>
 
                   <div>
-                    <span className="text-muted-foreground block">Valor Total do Novo Contrato</span>
-                     <span className="font-bold text-base text-foreground">{formatCentsToBRL(previewTerms?.expectedTotalCents || totalAmountCents)}{selectedBillingModel === "monthly" && billingDurationType === "continuous" ? " / mês" : ""}</span>
+                    <span className="text-muted-foreground block">{selectedBillingModel === "monthly" ? "Valor Mensal" : selectedBillingModel === "one_time" ? "Valor da Cobrança" : "Valor Total do Novo Contrato"}</span>
+                     <span className="font-bold text-base text-foreground">{formatCentsToBRL(selectedBillingModel === "monthly" ? previewTerms?.monthlyAmountCents || totalAmountCents : previewTerms?.expectedTotalCents || totalAmountCents)}{selectedBillingModel === "monthly" ? " / mês" : ""}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block">Forma de Pagamento</span>

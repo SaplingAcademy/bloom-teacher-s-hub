@@ -599,9 +599,13 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
     // 5. Persist structured invoices. Until the additive migration is approved,
     // retry with the legacy shape so current production remains operational.
     if (newInvoiceRows.length > 0) {
-      const { error: structuredError } = await supabase.from("invoices").insert(newInvoiceRows);
+      const structuredRows = newInvoiceRows.map((row) => ({
+        ...row,
+        billing_period: row.due_date?.slice(0, 7) || null,
+      }));
+      const { error: structuredError } = await supabase.from("invoices").insert(structuredRows);
       if (structuredError && /column|schema cache/i.test(structuredError.message || "")) {
-        const legacyRows = newInvoiceRows.map(({ student_package_id, charge_kind, sequence_number, sequence_count, ...row }) => row);
+        const legacyRows = structuredRows.map(({ student_package_id, charge_kind, sequence_number, sequence_count, ...row }) => row);
         const { error: legacyError } = await supabase.from("invoices").insert(legacyRows);
         if (legacyError) console.warn("[FinanceEngine] Invoice insert note:", legacyError.message);
       } else if (structuredError) {
@@ -692,7 +696,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         const totalCents = sp?.total_amount_cents || (inv.amount_cents * installmentCount);
         const paidSum = inv.student_id ? (studentPaidSums.get(inv.student_id) || 0) : 0;
         remainingBalanceCents = Math.max(0, totalCents - paidSum);
-      } else if (sp && (sp.installment_count || 1) > 1) {
+      } else if (sp && billingModelFromAgreement(sp) === "installment_total" && (sp.installment_count || 1) > 1) {
         isInstallment = true;
         const validInstallmentCount = sp.installment_count || 1;
         installmentCount = validInstallmentCount;
@@ -956,7 +960,7 @@ export async function fetchTeacherInvoices(teacherId: string): Promise<RealInvoi
         const totalCents = sp?.total_amount_cents || (inv.amount_cents * installmentCount);
         const paidSum = inv.student_id ? (studentPaidSums.get(inv.student_id) || 0) : 0;
         remainingBalanceCents = Math.max(0, totalCents - paidSum);
-      } else if (sp && (sp.installment_count || 1) > 1) {
+      } else if (sp && billingModelFromAgreement(sp) === "installment_total" && (sp.installment_count || 1) > 1) {
         isInstallment = true;
         const validInstallmentCount = sp.installment_count || 1;
         installmentCount = validInstallmentCount;
@@ -1776,7 +1780,8 @@ export async function checkPackageExpirationAlerts(
       // Calculate effective package end date
       let endDateStr = sp.ended_at;
       if (!endDateStr) {
-        if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type === "continuous") return;
+        const billingModel = billingModelFromAgreement(sp);
+        if (billingModel === "monthly" && sp.billing_duration_type !== "fixed") return;
         if (sp.last_due_date) {
           endDateStr = sp.last_due_date;
         } else if (sp.first_due_date && sp.installment_count) {
@@ -1929,7 +1934,7 @@ export async function renewStudentPackage(
     // 5. Calculate the new agreement through the canonical billing model.
     const terms = buildBillingAgreement(
       {
-        price: Number(newPkg.price || 0),
+        price: Math.max(0, totalAmountCents ?? Math.round(Number(newPkg.price || 0) * 100)) / 100,
         billingModel: newPkg.billing_model,
         frequency: newPkg.frequency,
         billingDurationType: newPkg.billing_duration_type,
