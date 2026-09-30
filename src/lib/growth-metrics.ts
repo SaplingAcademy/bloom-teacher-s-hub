@@ -62,7 +62,7 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
       .eq("teacher_id", teacherId),
     supabase
       .from("student_packages")
-      .select("id, student_id, status, total_amount_cents, created_at, started_at, ended_at")
+      .select("*")
       .eq("teacher_id", teacherId),
     supabase
       .from("payments")
@@ -119,7 +119,7 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
 
   // --- 4. Average package value (real agreements linked to students) ---
   const amounts = studentPackages
-    .map((sp: any) => Number(sp.total_amount_cents) || 0)
+    .map((sp: any) => Number(sp.expected_total_cents ?? sp.total_amount_cents) || 0)
     .filter((cents) => cents > 0);
   const avgPackageValue: GrowthMetricValue = {
     value: amounts.length > 0

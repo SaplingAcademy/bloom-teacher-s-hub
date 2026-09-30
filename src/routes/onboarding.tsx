@@ -476,6 +476,9 @@ export function OnboardingPage() {
           duration: pkg.duration || 60,
           frequency: pkg.frequency || "Monthly",
           default_installment_count: pkg.defaultInstallmentCount || 1,
+          billing_model: pkg.billingModel,
+          billing_duration_type: pkg.billingModel === "monthly" ? pkg.billingDurationType || "continuous" : null,
+          contract_months: pkg.billingModel === "monthly" && pkg.billingDurationType === "fixed" ? pkg.contractMonths || null : null,
           method: "Pix",
         }));
 
@@ -1710,6 +1713,9 @@ function Step4PlansPackages({
               lessons: formData.lessons,
               method: formData.method,
               defaultInstallmentCount: formData.defaultInstallmentCount,
+              billingModel: formData.billingModel,
+              billingDurationType: formData.billingDurationType,
+              contractMonths: formData.contractMonths,
             }
           : p
       );
@@ -1725,6 +1731,9 @@ function Step4PlansPackages({
         lessons: formData.lessons,
         method: formData.method,
         defaultInstallmentCount: formData.defaultInstallmentCount,
+        billingModel: formData.billingModel,
+        billingDurationType: formData.billingDurationType,
+        contractMonths: formData.contractMonths,
       };
       updateData("packages", [...data.packages, newPkg]);
     }

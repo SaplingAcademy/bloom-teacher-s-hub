@@ -47,6 +47,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
 import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
+import { normalizeBillingModel } from "@/lib/billing-domain";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -155,9 +156,13 @@ interface Package {
   name: string;
   price: number;
   frequency: "total" | "Monthly" | "Weekly" | "One-time" | string;
-  duration: number; // in months
+  duration: number; // lesson duration in minutes
   lessons: number; // lessons per billing cycle
   method: string; // e.g. "Pix", "Bank Transfer", "Card"
+  defaultInstallmentCount?: number;
+  billingModel?: "monthly" | "installment_total" | "one_time";
+  billingDurationType?: "fixed" | "continuous" | null;
+  contractMonths?: number | null;
 }
 
 interface Expense {
@@ -423,6 +428,7 @@ function FinancePage() {
     const numericPrice = parseCurrencyToNumber(pkgPrice);
 
     try {
+      const billingModel = normalizeBillingModel(pkgFreq);
       const { data, error } = await supabase
         .from("packages")
         .insert({
@@ -433,6 +439,9 @@ function FinancePage() {
           duration: Number(pkgDur) || 60,
           lessons: Number(pkgLessons) || 4,
           method: pkgMethod,
+          billing_model: billingModel,
+          billing_duration_type: billingModel === "monthly" ? "continuous" : null,
+          contract_months: null,
         })
         .select()
         .single();
@@ -451,6 +460,10 @@ function FinancePage() {
           duration: Number(data.duration) || 60,
           lessons: Number(data.lessons) || 4,
           method: data.method || "Pix",
+          defaultInstallmentCount: Number(data.default_installment_count) || 1,
+          billingModel: data.billing_model || billingModel,
+          billingDurationType: data.billing_duration_type || null,
+          contractMonths: data.contract_months ? Number(data.contract_months) : null,
         };
         refetchPackages();
         setIsPkgOpen(false);
@@ -475,6 +488,10 @@ function FinancePage() {
           duration: formData.duration,
           lessons: formData.lessons,
           method: formData.method,
+          default_installment_count: formData.billingModel === "installment_total" ? formData.defaultInstallmentCount || 1 : 1,
+          billing_model: formData.billingModel || normalizeBillingModel(formData.frequency),
+          billing_duration_type: formData.billingModel === "monthly" ? formData.billingDurationType || "continuous" : null,
+          contract_months: formData.billingModel === "monthly" && formData.billingDurationType === "fixed" ? formData.contractMonths || null : null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", formData.id)
@@ -1046,7 +1063,7 @@ function FinancePage() {
                       {pkg.lessons} {t.lessonsCount}
                     </span>
                     <span>
-                      {pkg.duration} {t.durationMonths}
+                       {pkg.duration} min
                     </span>
                     <Badge variant="outline" className="text-[8px] py-0 px-1 font-bold">
                       {pkg.method}

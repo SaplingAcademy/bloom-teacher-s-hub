@@ -773,7 +773,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       error = legacyInsert.error;
     }
 
-    if (error) {
+    if (error || !inserted) {
       console.error("[Student Save Failure]", {
         step: "student_packages_insert",
         code: error?.code,

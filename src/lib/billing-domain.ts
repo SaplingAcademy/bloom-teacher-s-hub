@@ -3,7 +3,7 @@ export type BillingDurationType = "fixed" | "continuous";
 export type ChargeKind = "monthly_charge" | "installment" | "one_time";
 
 export interface BillingPackageInput {
-  price: number | string | null | undefined;
+  price?: number | string | null;
   billingModel?: string | null;
   frequency?: string | null;
   billingDurationType?: string | null;
