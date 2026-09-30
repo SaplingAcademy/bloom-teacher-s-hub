@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
@@ -538,6 +538,8 @@ function StudentsPage() {
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudentIdForModal, setEditingStudentIdForModal] = useState<string | null>(null);
+  const [showNoPackagesPrompt, setShowNoPackagesPrompt] = useState(false);
+  const pendingNewStudentOpenRef = useRef<(() => void) | null>(null);
   const [showZeroStudentsWelcome, setShowZeroStudentsWelcome] = useState(false);
   // Inactive Student Modal State
   const [isInactivateModalOpen, setIsInactivateModalOpen] = useState(false);
@@ -1335,6 +1337,17 @@ function StudentsPage() {
   }, [isClassModalOpen]);
 
   // Open modal for creating student
+  // Gate: before opening a NEW student form, suggest creating packages first
+  // when the teacher has none (uses the already-loaded packages query/state).
+  const requestNewStudent = (open: () => void) => {
+    if (packagesQuery.data && packages.length === 0) {
+      pendingNewStudentOpenRef.current = open;
+      setShowNoPackagesPrompt(true);
+      return;
+    }
+    open();
+  };
+
   const handleOpenModal = () => {
     setEditingStudentIdForModal(null);
     setFormName("");
@@ -3366,8 +3379,10 @@ function StudentsPage() {
               onClick={() => {
                 setShowZeroStudentsWelcome(false);
                 localStorage.setItem("bloom.students_welcome_dismissed", "true");
-                setEditingStudentIdForModal(null);
-                setIsModalOpen(true);
+                requestNewStudent(() => {
+                  setEditingStudentIdForModal(null);
+                  setIsModalOpen(true);
+                });
               }}
               className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-extrabold text-sm shadow-md transition-all cursor-pointer"
             >
@@ -3388,11 +3403,69 @@ function StudentsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* NO PACKAGES PROMPT (shown before opening a new student form) */}
+      <Dialog
+        open={showNoPackagesPrompt}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowNoPackagesPrompt(false);
+            pendingNewStudentOpenRef.current = null;
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md rounded-3xl p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold font-outfit">
+              {lang === "pt" ? "Cadastre seus pacotes primeiro" : "Create your packages first"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+            <p className="font-semibold text-foreground">
+              {lang === "pt"
+                ? "Você ainda não possui nenhum pacote cadastrado."
+                : "You don't have any packages yet."}
+            </p>
+            <p>
+              {lang === "pt"
+                ? "Cadastrar seus pacotes antes dos alunos facilita o processo: durante o cadastro, você poderá selecionar o pacote correspondente e manter aulas e informações financeiras organizadas desde o início."
+                : "Creating your packages before adding students makes the process easier. During registration, you'll be able to select the appropriate package and keep lessons and financial information organized from the start."}
+            </p>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => {
+                const open = pendingNewStudentOpenRef.current;
+                pendingNewStudentOpenRef.current = null;
+                setShowNoPackagesPrompt(false);
+                open?.();
+              }}
+            >
+              {lang === "pt" ? "Continuar sem pacote" : "Continue without a package"}
+            </Button>
+            <Button
+              type="button"
+              className="rounded-xl"
+              onClick={() => {
+                pendingNewStudentOpenRef.current = null;
+                setShowNoPackagesPrompt(false);
+                navigate({ to: "/finance" });
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {lang === "pt" ? "Criar pacote" : "Create package"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ADD TYPE SELECTION MODAL */}
       <AddTypeSelectionModal
         open={isAddSelectionOpen}
         onClose={() => setIsAddSelectionOpen(false)}
-        onSelectIndividual={() => handleOpenModal()}
+        onSelectIndividual={() => requestNewStudent(handleOpenModal)}
         onSelectPair={() => {
           setEditingClass(null);
           setClassModalType("pair");
