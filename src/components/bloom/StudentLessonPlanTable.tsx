@@ -32,6 +32,7 @@ import {
 import { exportLessonPlanPDF } from "@/lib/pdf-export";
 import { LessonNotesModal, LessonAttachment } from "./LessonNotesModal";
 import { StudentLessonPlanHistoryModal } from "./StudentLessonPlanHistoryModal";
+import { LessonPlanAvailabilityConfirmation } from "./LessonPlanAvailabilityConfirmation";
 import { completeStudentLessonPlan } from "@/lib/lesson-plan-documents";
 import { toast } from "sonner";
 
@@ -75,6 +76,7 @@ export function StudentLessonPlanTable({
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "present" | "absent" | "rescheduled">("all");
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAvailabilityConfirmationOpen, setIsAvailabilityConfirmationOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCompletingPlan, setIsCompletingPlan] = useState(false);
@@ -279,7 +281,7 @@ export function StudentLessonPlanTable({
           </div>
           <div className="pt-2">
             <Button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsAvailabilityConfirmationOpen(true)}
               className="h-11 px-6 text-sm font-semibold rounded-xl gap-2 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
@@ -300,6 +302,15 @@ export function StudentLessonPlanTable({
         </div>
 
         {/* GENERATION MODAL */}
+        <LessonPlanAvailabilityConfirmation
+          isOpen={isAvailabilityConfirmationOpen}
+          onOpenChange={setIsAvailabilityConfirmationOpen}
+          onContinue={() => {
+            setIsAvailabilityConfirmationOpen(false);
+            setIsModalOpen(true);
+          }}
+        />
+
         <GenerateLessonPlanModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -366,7 +377,7 @@ export function StudentLessonPlanTable({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsAvailabilityConfirmationOpen(true)}
               className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -751,6 +762,15 @@ export function StudentLessonPlanTable({
       </div>
 
       {/* GENERATION MODAL */}
+      <LessonPlanAvailabilityConfirmation
+        isOpen={isAvailabilityConfirmationOpen}
+        onOpenChange={setIsAvailabilityConfirmationOpen}
+        onContinue={() => {
+          setIsAvailabilityConfirmationOpen(false);
+          setIsModalOpen(true);
+        }}
+      />
+
       <GenerateLessonPlanModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
