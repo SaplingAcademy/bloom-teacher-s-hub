@@ -8,6 +8,7 @@ import {
   renewStudentPackage,
   StudentFinancialSummary,
 } from "@/lib/finance-engine";
+import { BillingDurationType, billingModelFromPackage, buildBillingAgreement } from "@/lib/billing-domain";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -49,6 +50,10 @@ interface CatalogPackage {
   frequency: string;
   lessons: number;
   duration: number;
+  defaultInstallmentCount?: number;
+  billingModel?: "monthly" | "installment_total" | "one_time";
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
 }
 
 interface PackageRenewalModalProps {
@@ -87,6 +92,8 @@ export function PackageRenewalModal({
   const [dueDay, setDueDay] = useState<number>(5);
   const [paymentMethod, setPaymentMethod] = useState<string>("Pix");
   const [renewalNotes, setRenewalNotes] = useState<string>("");
+  const [billingDurationType, setBillingDurationType] = useState<BillingDurationType>("continuous");
+  const [contractMonths, setContractMonths] = useState<number>(6);
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -111,6 +118,10 @@ export function PackageRenewalModal({
             frequency: pkg.frequency || "Monthly",
             lessons: pkg.lessons || 4,
             duration: pkg.duration || 6,
+            defaultInstallmentCount: pkg.default_installment_count || 1,
+            billingModel: pkg.billing_model,
+            billingDurationType: pkg.billing_duration_type || null,
+            contractMonths: pkg.contract_months || null,
           }));
           setCatalogPackages(formatted);
 
@@ -161,6 +172,9 @@ export function PackageRenewalModal({
     if (found) {
       setSelectedPackage(found);
       setTotalAmountCents(found.price);
+      setInstallmentCount(found.defaultInstallmentCount || 1);
+      setBillingDurationType(found.billingDurationType || "continuous");
+      setContractMonths(found.contractMonths || 6);
     }
   };
 
@@ -185,9 +199,14 @@ export function PackageRenewalModal({
   }
 
   // Calculate schedule preview
-  const safeCount = Math.max(1, Math.min(12, installmentCount));
-  const { schedule, baseAmountCents } = calculateInstallmentSchedule(totalAmountCents, safeCount);
-  const lastDueDateStr = calculateLastDueDate(startDate, safeCount, dueDay);
+  const selectedBillingModel = selectedPackage ? billingModelFromPackage(selectedPackage) : "monthly";
+  const previewTerms = selectedPackage ? buildBillingAgreement(
+    { ...selectedPackage, price: selectedPackage.price / 100 },
+    { firstDueDate: startDate, installmentCount, billingDurationType, contractMonths },
+  ) : null;
+  const safeCount = previewTerms?.installmentCount || 1;
+  const { baseAmountCents } = calculateInstallmentSchedule(previewTerms?.totalAmountCents || totalAmountCents, safeCount);
+  const lastDueDateStr = previewTerms?.lastDueDate || (billingDurationType === "continuous" ? "Sem término" : startDate);
 
   // Handle final submission with Idempotency Guard
   const handleConfirmRenewal = async () => {
@@ -206,6 +225,8 @@ export function PackageRenewalModal({
         dueDay,
         paymentMethod,
         renewalNotes,
+        billingDurationType,
+        contractMonths: billingDurationType === "fixed" ? contractMonths : null,
       });
 
       if (res.success) {
@@ -439,8 +460,8 @@ export function PackageRenewalModal({
                   </span>
                 </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold">Valor Total do Pacote (R$)</Label>
+                 <div className="space-y-1">
+                   <Label className="text-xs font-bold">{selectedBillingModel === "monthly" ? "Valor Mensal (R$)" : selectedBillingModel === "one_time" ? "Valor da Cobrança (R$)" : "Valor Total do Pacote (R$)"}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -449,7 +470,7 @@ export function PackageRenewalModal({
                   />
                 </div>
 
-                <div className="space-y-1">
+                 {selectedBillingModel === "installment_total" && <div className="space-y-1">
                   <Label className="text-xs font-bold">Número de Parcelas do Novo Contrato</Label>
                   <Select
                     value={String(installmentCount)}
@@ -466,7 +487,23 @@ export function PackageRenewalModal({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                 </div>}
+
+                 {selectedBillingModel === "monthly" && <div className="space-y-1">
+                   <Label className="text-xs font-bold">Duração da Cobrança</Label>
+                   <Select value={billingDurationType} onValueChange={(value) => setBillingDurationType(value as BillingDurationType)}>
+                     <SelectTrigger><SelectValue /></SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="continuous">Contínua — até cancelamento</SelectItem>
+                       <SelectItem value="fixed">Período determinado</SelectItem>
+                     </SelectContent>
+                   </Select>
+                 </div>}
+
+                 {selectedBillingModel === "monthly" && billingDurationType === "fixed" && <div className="space-y-1">
+                   <Label className="text-xs font-bold">Duração Contratual (meses)</Label>
+                   <Input type="number" min={1} max={120} value={contractMonths} onChange={(e) => setContractMonths(Math.max(1, Number(e.target.value) || 1))} />
+                 </div>}
 
                 <div className="space-y-1">
                   <Label className="text-xs font-bold">Dia do Vencimento Mensal</Label>
@@ -552,12 +589,12 @@ export function PackageRenewalModal({
 
                   <div>
                     <span className="text-muted-foreground block">Valor Total do Novo Contrato</span>
-                    <span className="font-bold text-base text-foreground">{formatCentsToBRL(totalAmountCents)}</span>
+                     <span className="font-bold text-base text-foreground">{formatCentsToBRL(previewTerms?.expectedTotalCents || totalAmountCents)}{selectedBillingModel === "monthly" && billingDurationType === "continuous" ? " / mês" : ""}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block">Forma de Pagamento</span>
                     <span className="font-bold text-sm text-emerald-700 dark:text-emerald-400">
-                      {safeCount}x de {formatCentsToBRL(baseAmountCents)} ({paymentMethod})
+                       {selectedBillingModel === "monthly" ? `${formatCentsToBRL(previewTerms?.monthlyAmountCents || 0)} por mês` : selectedBillingModel === "one_time" ? `Cobrança única de ${formatCentsToBRL(totalAmountCents)}` : `${safeCount}x de ${formatCentsToBRL(baseAmountCents)}`} ({paymentMethod})
                     </span>
                   </div>
                 </div>

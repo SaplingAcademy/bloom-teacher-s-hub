@@ -4,6 +4,7 @@ import {
   BillingModel,
   billingModelFromAgreement,
   billingModelFromPackage,
+  buildBillingAgreement,
 } from "@/lib/billing-domain";
 
 export interface RealInvoice {
@@ -1374,6 +1375,8 @@ export interface RenewStudentPackageOptions {
   dueDay?: number;
   paymentMethod?: string;
   renewalNotes?: string;
+  billingDurationType?: BillingDurationType;
+  contractMonths?: number | null;
 }
 
 /**
@@ -1779,6 +1782,8 @@ export async function renewStudentPackage(
     dueDay = 5,
     paymentMethod = "Pix",
     renewalNotes,
+    billingDurationType,
+    contractMonths,
   } = options;
 
   if (!teacherId || !studentId || !newPackageId) {
@@ -1875,14 +1880,27 @@ export async function renewStudentPackage(
         .eq("id", currentSp.id);
     }
 
-    // 6. Calculate total amount & installment schedules for new agreement
-    const safeInstallmentCount = Math.max(1, Math.min(12, Math.round(installmentCount || 1)));
-    const finalTotalCents = totalAmountCents || Math.round(Number(newPkg.price || 0) * 100);
-    const scheduleInfo = calculateInstallmentSchedule(finalTotalCents, safeInstallmentCount);
-    const lastDueDate = calculateLastDueDate(effectiveStartDate, safeInstallmentCount, dueDay);
+    // 6. Calculate the new agreement through the canonical billing model.
+    const terms = buildBillingAgreement(
+      {
+        price: Number(newPkg.price || 0),
+        billingModel: newPkg.billing_model,
+        frequency: newPkg.frequency,
+        billingDurationType: newPkg.billing_duration_type,
+        contractMonths: newPkg.contract_months,
+        defaultInstallmentCount: newPkg.default_installment_count,
+      },
+      {
+        firstDueDate: effectiveStartDate,
+        installmentCount,
+        billingDurationType: billingDurationType || newPkg.billing_duration_type,
+        contractMonths: contractMonths ?? newPkg.contract_months,
+      },
+    );
+    const finalTotalCents = terms.totalAmountCents || terms.monthlyAmountCents || 0;
 
     // 7. Insert NEW active package agreement snapshot
-    const { data: insertedSp, error: insertErr } = await supabase
+    let { data: insertedSp, error: insertErr } = await supabase
       .from("student_packages")
       .insert({
         student_id: studentId,
@@ -1890,21 +1908,50 @@ export async function renewStudentPackage(
         teacher_id: teacherId,
         started_at: effectiveStartDate,
         status: "active",
-        total_amount_cents: finalTotalCents,
-        installment_count: safeInstallmentCount,
-        installment_amount_cents: scheduleInfo.baseAmountCents,
+        total_amount_cents: terms.totalAmountCents,
+        installment_count: terms.installmentCount,
+        installment_amount_cents: terms.installmentAmountCents,
         due_day: dueDay,
         first_due_date: effectiveStartDate,
-        last_due_date: lastDueDate,
+        last_due_date: terms.lastDueDate,
         payment_method: paymentMethod,
         snapshot_package_name: newPkg.name,
         snapshot_package_price_cents: finalTotalCents,
         change_type: changeType,
         renewal_notes: renewalNotes || null,
         renewed_from_id: currentSp?.id || null,
+        billing_model: terms.billingModel,
+        billing_duration_type: terms.billingDurationType,
+        contract_months: terms.contractMonths,
+        monthly_amount_cents: terms.monthlyAmountCents,
+        expected_total_cents: terms.expectedTotalCents || null,
       })
       .select("id")
       .single();
+
+    if (insertErr && /column|schema cache|null value.*installment_count/i.test(insertErr.message || "")) {
+      const legacyInsert = await supabase.from("student_packages").insert({
+        student_id: studentId,
+        package_id: newPackageId,
+        teacher_id: teacherId,
+        started_at: effectiveStartDate,
+        status: "active",
+        total_amount_cents: finalTotalCents,
+        installment_count: terms.installmentCount || 1,
+        installment_amount_cents: terms.installmentAmountCents || terms.monthlyAmountCents || finalTotalCents,
+        due_day: dueDay,
+        first_due_date: effectiveStartDate,
+        last_due_date: terms.lastDueDate,
+        payment_method: paymentMethod,
+        snapshot_package_name: newPkg.name,
+        snapshot_package_price_cents: finalTotalCents,
+        change_type: changeType,
+        renewal_notes: renewalNotes || null,
+        renewed_from_id: currentSp?.id || null,
+      }).select("id").single();
+      insertedSp = legacyInsert.data;
+      insertErr = legacyInsert.error;
+    }
 
     if (insertErr || !insertedSp) {
       console.error("[FinanceEngine] Error creating renewed package agreement:", insertErr);
