@@ -538,6 +538,8 @@ function StudentsPage() {
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudentIdForModal, setEditingStudentIdForModal] = useState<string | null>(null);
+  const [showNoPackagesPrompt, setShowNoPackagesPrompt] = useState(false);
+  const pendingNewStudentOpenRef = React.useRef<(() => void) | null>(null);
   const [showZeroStudentsWelcome, setShowZeroStudentsWelcome] = useState(false);
   // Inactive Student Modal State
   const [isInactivateModalOpen, setIsInactivateModalOpen] = useState(false);
@@ -1335,6 +1337,17 @@ function StudentsPage() {
   }, [isClassModalOpen]);
 
   // Open modal for creating student
+  // Gate: before opening a NEW student form, suggest creating packages first
+  // when the teacher has none (uses the already-loaded packages query/state).
+  const requestNewStudent = (open: () => void) => {
+    if (packagesQuery.data && packages.length === 0) {
+      pendingNewStudentOpenRef.current = open;
+      setShowNoPackagesPrompt(true);
+      return;
+    }
+    open();
+  };
+
   const handleOpenModal = () => {
     setEditingStudentIdForModal(null);
     setFormName("");
