@@ -1326,6 +1326,10 @@ export interface PackageAgreementRecord {
   firstDueDate: string;
   lastDueDate: string;
   isCurrent: boolean;
+  billingModel: BillingModel;
+  billingModelLabel: string;
+  agreementValueLabel: string;
+  paymentTermsLabel: string;
 }
 
 export interface FinancialTimelineEvent {
@@ -1486,9 +1490,16 @@ export async function getStudentPackageHistory(
     return data.map((sp: any) => {
       const isCurrent = sp.status === "active";
       const packageName = sp.snapshot_package_name || sp.package?.name || "Pacote Personalizado";
-      const totalAmountCents = sp.total_amount_cents || (sp.package ? Math.round(Number(sp.package.price || 0) * 100) : 0);
-      const installmentCount = Math.max(1, Math.min(12, sp.installment_count || 1));
-      const installmentAmountCents = sp.installment_amount_cents || Math.round(totalAmountCents / installmentCount);
+      const billingModel = sp.billing_model
+        ? billingModelFromAgreement(sp)
+        : billingModelFromPackage({ frequency: sp.snapshot_frequency || sp.package?.frequency });
+      const catalogPriceCents = sp.package ? Math.round(Number(sp.package.price || 0) * 100) : 0;
+      const monthlyAmountCents = sp.monthly_amount_cents || (billingModel === "monthly" ? sp.total_amount_cents || catalogPriceCents : 0);
+      const totalAmountCents = sp.expected_total_cents || sp.total_amount_cents || monthlyAmountCents || catalogPriceCents;
+      const installmentCount = billingModel === "installment_total" ? Math.max(1, Math.min(24, sp.installment_count || 1)) : 1;
+      const installmentAmountCents = billingModel === "installment_total"
+        ? sp.installment_amount_cents || Math.round(totalAmountCents / installmentCount)
+        : monthlyAmountCents || totalAmountCents;
 
       // Count paid invoices related to this agreement period
       const agreementInvoices = studentInvoices.filter((inv) => {
@@ -1513,7 +1524,20 @@ export async function getStudentPackageHistory(
       else if (sp.change_type === "lateral") changeTypeLabel = "Troca de pacote";
 
       const firstDueDate = sp.first_due_date || sp.started_at;
-      const lastDueDate = sp.last_due_date || calculateLastDueDate(firstDueDate, installmentCount, sp.due_day || 5);
+      const lastDueDate = sp.last_due_date || (billingModel === "installment_total"
+        ? calculateLastDueDate(firstDueDate, installmentCount, sp.due_day || 5)
+        : firstDueDate);
+      const billingModelLabel = billingModel === "monthly" ? "Mensalidade" : billingModel === "one_time" ? "Pagamento único" : "Valor total parcelado";
+      const agreementValueLabel = billingModel === "monthly"
+        ? `${formatCentsToBRL(monthlyAmountCents)} / mês`
+        : formatCentsToBRL(totalAmountCents);
+      const paymentTermsLabel = billingModel === "monthly"
+        ? sp.billing_duration_type === "fixed" && sp.contract_months
+          ? `${sp.contract_months} cobranças mensais de ${formatCentsToBRL(monthlyAmountCents)}`
+          : `Cobrança mensal de ${formatCentsToBRL(monthlyAmountCents)}`
+        : billingModel === "one_time"
+          ? `Cobrança única de ${formatCentsToBRL(totalAmountCents)}`
+          : `${installmentCount}x de ${formatCentsToBRL(installmentAmountCents)}`;
 
       return {
         id: sp.id,
@@ -1529,7 +1553,7 @@ export async function getStudentPackageHistory(
         installmentAmountCents,
         installmentAmountFormatted: formatCentsToBRL(installmentAmountCents),
         paidInstallmentsCount: paidCount,
-        progressLabel: installmentCount > 1 ? `${paidCount}/${installmentCount} pagas` : `${paidCount} pagas`,
+        progressLabel: billingModel === "installment_total" ? `${paidCount}/${installmentCount} pagas` : billingModel === "one_time" ? (paidCount ? "Pago" : "Pendente") : `${paidCount} mensalidade${paidCount === 1 ? " paga" : "s pagas"}`,
         changeType: (sp.change_type as any) || "initial",
         changeTypeLabel,
         paymentMethod: sp.payment_method || "Pix",
@@ -1537,6 +1561,10 @@ export async function getStudentPackageHistory(
         firstDueDate,
         lastDueDate,
         isCurrent,
+        billingModel,
+        billingModelLabel,
+        agreementValueLabel,
+        paymentTermsLabel,
       };
     });
   } catch (err) {
@@ -1582,7 +1610,7 @@ export async function getStudentFinancialTimeline(
         type,
         date: pkg.startedAt,
         title,
-        description: `Contrato de ${pkg.totalAmountFormatted} em ${pkg.installmentCount}x de ${pkg.installmentAmountFormatted} (${pkg.paymentMethod})`,
+        description: `${pkg.billingModelLabel}: ${pkg.paymentTermsLabel} (${pkg.paymentMethod})`,
         badgeText: pkg.changeTypeLabel,
         badgeVariant: pkg.changeType === "upgrade" ? "default" : "secondary",
       });
@@ -1683,15 +1711,13 @@ export async function checkPackageExpirationAlerts(
       // Calculate effective package end date
       let endDateStr = sp.ended_at;
       if (!endDateStr) {
+        if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type === "continuous") return;
         if (sp.last_due_date) {
           endDateStr = sp.last_due_date;
         } else if (sp.first_due_date && sp.installment_count) {
           endDateStr = calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day || 5);
         } else {
-          // Default 1 month or 6 months if undefined
-          const start = new Date(sp.started_at || todayStr);
-          start.setMonth(start.getMonth() + (sp.installment_count || 1));
-          endDateStr = start.toISOString().split("T")[0];
+          return;
         }
       }
 

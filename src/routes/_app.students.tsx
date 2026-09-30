@@ -2857,7 +2857,7 @@ function StudentsPage() {
 
                         return (
                           <div className="space-y-4 pt-2 border-t border-border/50 animate-in fade-in duration-150">
-                            {!isMonthly ? (
+                            {model === "installment_total" ? (
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
@@ -2985,11 +2985,11 @@ function StudentsPage() {
                                 </div>
                                 <div>
                                   <span className="text-stone-500 font-medium">
-                                    {isMonthly ? (lang === "pt" ? "Valor Mensal:" : "Monthly Price:") : (lang === "pt" ? "Valor Total:" : "Total Price:")}
+                                    {isMonthly ? (lang === "pt" ? "Valor Mensal:" : "Monthly Price:") : (lang === "pt" ? "Valor:" : "Price:")}
                                   </span>{" "}
                                   <strong className="text-stone-900 font-bold">{formatCentsToBRL(totalPriceCents)}</strong>
                                 </div>
-                                {!isMonthly ? (
+                                {model === "installment_total" ? (
                                   <>
                                     <div>
                                       <span className="text-stone-500 font-medium">{lang === "pt" ? "Condição de Pagamento:" : "Payment Terms:"}</span>{" "}
@@ -3014,6 +3014,11 @@ function StudentsPage() {
                                       </strong>
                                     </div>
                                   </>
+                                ) : model === "one_time" ? (
+                                  <div>
+                                    <span className="text-stone-500 font-medium">{lang === "pt" ? "Condição:" : "Terms:"}</span>{" "}
+                                    <strong className="text-stone-900 font-bold">{lang === "pt" ? "Cobrança única" : "One-time charge"}</strong>
+                                  </div>
                                 ) : (
                                   <div>
                                     <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
