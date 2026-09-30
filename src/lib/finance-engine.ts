@@ -1,4 +1,11 @@
 import { supabase } from "@/lib/supabase";
+import {
+  BillingDurationType,
+  BillingModel,
+  billingModelFromAgreement,
+  billingModelFromPackage,
+  buildBillingAgreement,
+} from "@/lib/billing-domain";
 
 export interface RealInvoice {
   id: string;
@@ -64,6 +71,11 @@ export interface StudentEnrollmentAgreement {
   lastDueDate: string;
   paymentMethod: string;
   frequency: string; // "Monthly" | "custom" | "total"
+  billingModel?: BillingModel;
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
+  monthlyAmountCents?: number | null;
+  expectedTotalCents?: number | null;
 }
 
 /**
@@ -272,7 +284,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
     ] = await Promise.all([
       supabase
         .from("packages")
-        .select("id, name, price, frequency, duration, lessons, method")
+        .select("*")
         .eq("teacher_id", teacherId),
       supabase
         .from("students")
@@ -281,7 +293,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         .eq("status", "Active"),
       supabase
         .from("student_packages")
-        .select("id, student_id, package_id, status, total_amount_cents, installment_count, default_due_day, first_due_date, due_day, created_at, snapshot_package_name, snapshot_package_price, snapshot_frequency")
+        .select("*")
         .eq("teacher_id", teacherId)
         .eq("status", "active"),
       supabase
@@ -291,7 +303,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         .eq("status", "active"),
       supabase
         .from("invoices")
-        .select("id, teacher_id, student_id, description, amount_cents, due_date, status, currency, created_at, updated_at, payments(id, amount_cents, received_at)")
+        .select("*, payments(id, amount_cents, received_at)")
         .eq("teacher_id", teacherId),
     ]);
 
@@ -316,6 +328,15 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       const period = extractBillingPeriod(inv);
       if (inv.student_id) {
         existingKeys.add(`student_${inv.student_id}_${period}`);
+        if (inv.student_package_id && inv.charge_kind === "monthly_charge") {
+          existingKeys.add(`agreement_${inv.student_package_id}_month_${period}`);
+        }
+        if (inv.student_package_id && inv.charge_kind === "installment" && inv.sequence_number) {
+          existingKeys.add(`agreement_${inv.student_package_id}_installment_${inv.sequence_number}`);
+        }
+        if (inv.student_package_id && inv.charge_kind === "one_time") {
+          existingKeys.add(`agreement_${inv.student_package_id}_one_time`);
+        }
         // Check if invoice description has installment e.g. Parcela 1/8
         const instMatch = inv.description?.match(/Parcela\s+(\d+)\/(\d+)/);
         if (instMatch) {
@@ -339,9 +360,12 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       const sp = studentPackagesMap.get(student.id);
       const pkg = student.package_id ? packagesMap.get(student.package_id) : null;
       const pkgName = pkg ? pkg.name : "Plano VIP Personalizado";
-      const isMonthly = pkg ? pkg.frequency === "Monthly" || pkg.frequency === "monthly" : true;
+      const billingModel = sp?.billing_model
+        ? billingModelFromAgreement(sp)
+        : billingModelFromPackage(pkg || { frequency: sp?.snapshot_frequency });
+      const isMonthly = billingModel === "monthly";
 
-      if (sp && !isMonthly && sp.installment_count && sp.installment_count >= 1) {
+      if (sp && billingModel === "installment_total" && sp.installment_count && sp.installment_count >= 1) {
         // --- Installment Course Package Flow ---
         const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
         const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
@@ -350,7 +374,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         const dueDay = sp.due_day || student.due_day || 5;
 
         for (let i = 1; i <= safeInstallmentCount; i++) {
-          const instKey = `student_${student.id}_inst_${i}`;
+          const instKey = sp.billing_model ? `agreement_${sp.id}_installment_${i}` : `student_${student.id}_inst_${i}`;
           const dueDateStr = calculateInstallmentDueDate(firstDueDateStr, i - 1, dueDay);
           const periodStr = dueDateStr.substring(0, 7);
           const periodKey = `student_${student.id}_${periodStr}`;
@@ -364,6 +388,10 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             newInvoiceRows.push({
               teacher_id: teacherId,
               student_id: student.id,
+              student_package_id: sp.id,
+              charge_kind: "installment",
+              sequence_number: i,
+              sequence_count: safeInstallmentCount,
               invoice_number: invNumber,
               description: `Parcela ${i}/${safeInstallmentCount} - ${pkgName} (${formattedInstAmount}) - ${student.full_name} | [Individual] | Period: ${periodStr}`,
               amount_cents: currentInstCents,
@@ -376,19 +404,48 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             existingKeys.add(periodKey);
           }
         }
+      } else if (billingModel === "one_time" && sp) {
+        const oneTimeKey = `agreement_${sp.id}_one_time`;
+        if (!existingKeys.has(oneTimeKey)) {
+          const dueDateStr = sp.first_due_date || todayStr;
+          newInvoiceRows.push({
+            teacher_id: teacherId,
+            student_id: student.id,
+            student_package_id: sp.id,
+            charge_kind: "one_time",
+            sequence_number: 1,
+            sequence_count: 1,
+            invoice_number: `INV-ONE-${sp.id.slice(0, 8)}`,
+            description: `Pagamento único ${pkgName} - ${student.full_name} | [Individual] | Period: ${dueDateStr.slice(0, 7)}`,
+            amount_cents: sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 0),
+            currency: "BRL",
+            status: dueDateStr < todayStr ? "overdue" : "pending",
+            due_date: dueDateStr,
+          });
+          existingKeys.add(oneTimeKey);
+        }
       } else {
         // --- Monthly Package Flow ---
-        const periodKey = `student_${student.id}_${currentPeriod}`;
-        if (!existingKeys.has(periodKey)) {
-          const priceCents = sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
+        const periodKey = sp?.billing_model ? `agreement_${sp.id}_month_${currentPeriod}` : `student_${student.id}_${currentPeriod}`;
+        const sequenceNumber = sp?.first_due_date
+          ? (currentYear - Number(sp.first_due_date.slice(0, 4))) * 12 + currentDate.getMonth() - (Number(sp.first_due_date.slice(5, 7)) - 1) + 1
+          : 1;
+        const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
+        if (!existingKeys.has(periodKey) && sequenceNumber >= 1 && withinFixedTerm) {
+          const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
           const dueDay = sp?.due_day || student.due_day || 5;
           const dueDateStr = `${currentYear}-${currentMonth}-${String(Math.min(Math.max(dueDay, 1), 28)).padStart(2, "0")}`;
+          if (sp?.last_due_date && dueDateStr > sp.last_due_date) return;
           const status = dueDateStr < todayStr ? "overdue" : "pending";
           const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
 
           newInvoiceRows.push({
             teacher_id: teacherId,
             student_id: student.id,
+            student_package_id: sp?.id || null,
+            charge_kind: "monthly_charge",
+            sequence_number: sequenceNumber,
+            sequence_count: sp?.contract_months || null,
             invoice_number: invNumber,
             description: `Mensalidade ${pkgName} - ${student.full_name} | [Individual] | Period: ${currentPeriod}`,
             amount_cents: priceCents,
@@ -443,9 +500,12 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
 
           const sp = studentPackagesMap.get(mem.student_id);
           const pkgName = pkg ? pkg.name : `Turma ${cls.name}`;
-          const isMonthly = pkg ? pkg.frequency === "Monthly" || pkg.frequency === "monthly" : true;
+          const memberBillingModel = sp?.billing_model
+            ? billingModelFromAgreement(sp)
+            : billingModelFromPackage(pkg || { frequency: sp?.snapshot_frequency });
+          const isMonthly = memberBillingModel === "monthly";
 
-          if (sp && !isMonthly && sp.installment_count && sp.installment_count >= 1) {
+          if (sp && memberBillingModel === "installment_total" && sp.installment_count && sp.installment_count >= 1) {
             const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
             const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
             const { schedule } = calculateInstallmentSchedule(totalCents, safeInstallmentCount);
@@ -453,7 +513,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             const dueDay = sp.due_day || 5;
 
             for (let i = 1; i <= safeInstallmentCount; i++) {
-              const instKey = `student_${mem.student_id}_inst_${i}`;
+              const instKey = sp.billing_model ? `agreement_${sp.id}_installment_${i}` : `student_${mem.student_id}_inst_${i}`;
               const dueDateStr = calculateInstallmentDueDate(firstDueDateStr, i - 1, dueDay);
               const periodStr = dueDateStr.substring(0, 7);
               const periodKey = `student_${mem.student_id}_${periodStr}`;
@@ -467,6 +527,10 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
                 newInvoiceRows.push({
                   teacher_id: teacherId,
                   student_id: mem.student_id,
+                  student_package_id: sp.id,
+                  charge_kind: "installment",
+                  sequence_number: i,
+                  sequence_count: safeInstallmentCount,
                   invoice_number: invNumber,
                   description: `Parcela ${i}/${safeInstallmentCount} - ${cls.name} (${formattedInstAmount}) - ${memberStudent.full_name} [Por Aluno] | Period: ${periodStr}`,
                   amount_cents: currentInstCents,
@@ -479,15 +543,45 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
                 existingKeys.add(periodKey);
               }
             }
+          } else if (memberBillingModel === "one_time" && sp) {
+            const oneTimeKey = `agreement_${sp.id}_one_time`;
+            if (!existingKeys.has(oneTimeKey)) {
+              const oneTimeDueDate = sp.first_due_date || todayStr;
+              newInvoiceRows.push({
+                teacher_id: teacherId,
+                student_id: mem.student_id,
+                student_package_id: sp.id,
+                charge_kind: "one_time",
+                sequence_number: 1,
+                sequence_count: 1,
+                invoice_number: `INV-ONE-${sp.id.slice(0, 8)}`,
+                description: `Pagamento único ${pkgName} - ${memberStudent.full_name} [Por Aluno] | Period: ${oneTimeDueDate.slice(0, 7)}`,
+                amount_cents: sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 0),
+                currency: "BRL",
+                status: oneTimeDueDate < todayStr ? "overdue" : "pending",
+                due_date: oneTimeDueDate,
+              });
+              existingKeys.add(oneTimeKey);
+            }
           } else {
-            const memberKey = `student_${mem.student_id}_${currentPeriod}`;
-            if (!existingKeys.has(memberKey)) {
-              const priceCents = sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
+            const memberKey = sp?.billing_model ? `agreement_${sp.id}_month_${currentPeriod}` : `student_${mem.student_id}_${currentPeriod}`;
+            const sequenceNumber = sp?.first_due_date
+              ? (currentYear - Number(sp.first_due_date.slice(0, 4))) * 12 + currentDate.getMonth() - (Number(sp.first_due_date.slice(5, 7)) - 1) + 1
+              : 1;
+            const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
+            if (!existingKeys.has(memberKey) && sequenceNumber >= 1 && withinFixedTerm) {
+              const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
               const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+              if (sp?.last_due_date && dueDateStr > sp.last_due_date) return;
 
               newInvoiceRows.push({
                 teacher_id: teacherId,
                 student_id: mem.student_id,
+                student_package_id: sp?.id || null,
+                charge_kind: "monthly_charge",
+                sequence_number: sequenceNumber,
+                sequence_count: sp?.contract_months || null,
                 invoice_number: invNumber,
                 description: `Mensalidade ${cls.name} - ${memberStudent.full_name} [Por Aluno] | Period: ${currentPeriod}`,
                 amount_cents: priceCents,
@@ -502,11 +596,17 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       }
     });
 
-    // 5. Asynchronously persist new invoices and overdue status updates in background (non-blocking)
+    // 5. Persist structured invoices. Until the additive migration is approved,
+    // retry with the legacy shape so current production remains operational.
     if (newInvoiceRows.length > 0) {
-      supabase.from("invoices").insert(newInvoiceRows).then(({ error }) => {
-        if (error) console.warn("[FinanceEngine] Non-blocking invoice insert note:", error.message);
-      });
+      const { error: structuredError } = await supabase.from("invoices").insert(newInvoiceRows);
+      if (structuredError && /column|schema cache/i.test(structuredError.message || "")) {
+        const legacyRows = newInvoiceRows.map(({ student_package_id, charge_kind, sequence_number, sequence_count, ...row }) => row);
+        const { error: legacyError } = await supabase.from("invoices").insert(legacyRows);
+        if (legacyError) console.warn("[FinanceEngine] Invoice insert note:", legacyError.message);
+      } else if (structuredError) {
+        console.warn("[FinanceEngine] Invoice insert note:", structuredError.message);
+      }
     }
 
     const overdueUpdates = existingInvoices.filter(
@@ -648,13 +748,18 @@ export async function saveStudentEnrollmentAgreement(agreement: {
   teacherId: string;
   studentId: string;
   packageId: string;
-  totalAmountCents: number;
-  installmentCount: number;
-  installmentAmountCents: number;
+  totalAmountCents: number | null;
+  installmentCount: number | null;
+  installmentAmountCents: number | null;
   dueDay: number;
   firstDueDate: string;
-  lastDueDate?: string;
   paymentMethod?: string;
+  billingModel: BillingModel;
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
+  monthlyAmountCents?: number | null;
+  expectedTotalCents?: number | null;
+  lastDueDate?: string | null;
 }): Promise<boolean> {
   const {
     teacherId,
@@ -665,25 +770,30 @@ export async function saveStudentEnrollmentAgreement(agreement: {
     dueDay,
     firstDueDate,
     paymentMethod = "Pix",
+    billingModel,
+    billingDurationType = null,
+    contractMonths = null,
+    monthlyAmountCents = null,
+    expectedTotalCents = null,
+    lastDueDate: providedLastDueDate,
   } = agreement;
 
   if (!teacherId || !studentId || !packageId) return false;
 
   try {
-    const safeInstallmentCount = Math.max(1, Math.min(12, Math.round(installmentCount || 1)));
-    const scheduleInfo = calculateInstallmentSchedule(totalAmountCents, safeInstallmentCount);
-    const lastDueDate = calculateLastDueDate(firstDueDate, safeInstallmentCount, dueDay);
+    const safeInstallmentCount = billingModel === "installment_total"
+      ? Math.max(1, Math.min(24, Math.round(installmentCount || 1)))
+      : null;
+    const scheduleInfo = safeInstallmentCount
+      ? calculateInstallmentSchedule(totalAmountCents || 0, safeInstallmentCount)
+      : null;
+    const lastDueDate = providedLastDueDate ?? (
+      billingModel === "one_time" ? firstDueDate : safeInstallmentCount
+        ? calculateLastDueDate(firstDueDate, safeInstallmentCount, dueDay)
+        : null
+    );
 
-    // 1. Deactivate existing active student_packages for this student
-    await supabase
-      .from("student_packages")
-      .update({ status: "inactive", ended_at: new Date().toISOString().split("T")[0] })
-      .eq("student_id", studentId)
-      .eq("teacher_id", teacherId)
-      .eq("status", "active");
-
-    // 2. Insert new active enrollment agreement snapshot
-    const { error } = await supabase.from("student_packages").insert({
+    const canonicalRow = {
       student_id: studentId,
       package_id: packageId,
       teacher_id: teacherId,
@@ -691,14 +801,42 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       status: "active",
       total_amount_cents: totalAmountCents,
       installment_count: safeInstallmentCount,
-      installment_amount_cents: scheduleInfo.baseAmountCents,
+      installment_amount_cents: scheduleInfo?.baseAmountCents || null,
       due_day: dueDay,
       first_due_date: firstDueDate,
       last_due_date: lastDueDate,
       payment_method: paymentMethod,
-    });
+      snapshot_frequency: billingModel,
+      billing_model: billingModel,
+      billing_duration_type: billingDurationType,
+      contract_months: contractMonths,
+      monthly_amount_cents: monthlyAmountCents,
+      expected_total_cents: expectedTotalCents,
+    };
 
-    if (error) {
+    let { data: inserted, error } = await supabase.from("student_packages").insert(canonicalRow).select("id").single();
+    if (error && /column|schema cache|null value.*installment_count/i.test(error.message || "")) {
+      const legacyAmount = billingModel === "monthly" ? monthlyAmountCents : totalAmountCents;
+      const legacyInsert = await supabase.from("student_packages").insert({
+        student_id: studentId,
+        package_id: packageId,
+        teacher_id: teacherId,
+        started_at: firstDueDate,
+        status: "active",
+        total_amount_cents: legacyAmount || 0,
+        installment_count: safeInstallmentCount || 1,
+        installment_amount_cents: billingModel === "monthly" ? monthlyAmountCents || 0 : scheduleInfo?.baseAmountCents || legacyAmount || 0,
+        due_day: dueDay,
+        first_due_date: firstDueDate,
+        last_due_date: lastDueDate,
+        payment_method: paymentMethod,
+        snapshot_frequency: billingModel,
+      }).select("id").single();
+      inserted = legacyInsert.data;
+      error = legacyInsert.error;
+    }
+
+    if (error || !inserted) {
       console.error("[Student Save Failure]", {
         step: "student_packages_insert",
         code: error?.code,
@@ -709,6 +847,14 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       console.error("[FinanceEngine] Error inserting enrollment agreement:", error);
       return false;
     }
+
+    await supabase
+      .from("student_packages")
+      .update({ status: "inactive", ended_at: new Date().toISOString().split("T")[0] })
+      .eq("student_id", studentId)
+      .eq("teacher_id", teacherId)
+      .eq("status", "active")
+      .neq("id", inserted.id);
 
     // Trigger immediate invoice sync
     await syncTeacherReceivables(teacherId);
@@ -925,11 +1071,13 @@ export async function getStudentFinancialSummary(
     }
 
     const pkgName = spData.package?.name || "Pacote Personalizado";
-    const isMonthly = spData.package?.frequency === "Monthly" || spData.package?.frequency === "monthly";
-    const isInstallment = !isMonthly && (spData.installment_count || 1) >= 1;
+    const billingModel = spData.billing_model
+      ? billingModelFromAgreement(spData)
+      : billingModelFromPackage({ frequency: spData.snapshot_frequency || spData.package?.frequency });
+    const isInstallment = billingModel === "installment_total";
 
-    const totalAmountCents = spData.total_amount_cents || 0;
-    const installmentCount = Math.max(1, Math.min(12, spData.installment_count || 1));
+    const totalAmountCents = spData.expected_total_cents || spData.total_amount_cents || spData.monthly_amount_cents || 0;
+    const installmentCount = isInstallment ? Math.max(1, Math.min(24, spData.installment_count || 1)) : 1;
 
     const paidInvoices = studentInvoices.filter((i) => i.status === "paid");
     const paidInstallmentsCount = paidInvoices.length;
@@ -952,14 +1100,16 @@ export async function getStudentFinancialSummary(
       hasActiveAgreement: true,
       packageId: spData.package_id,
       packageName: pkgName,
-      billingModelLabel: isInstallment ? "Valor total do curso (Parcelado)" : "Mensalidade",
+      billingModelLabel: isInstallment ? "Valor total do curso (Parcelado)" : billingModel === "one_time" ? "Pagamento único" : "Mensalidade",
       isInstallment,
       totalAmountCents,
-      installmentAmountCents: spData.installment_amount_cents || Math.round(totalAmountCents / installmentCount),
+      installmentAmountCents: isInstallment
+        ? spData.installment_amount_cents || Math.round(totalAmountCents / installmentCount)
+        : spData.monthly_amount_cents || spData.total_amount_cents || 0,
       installmentCount,
       paidInstallmentsCount,
-      progressLabel: isInstallment ? `${paidInstallmentsCount}/${installmentCount} pagas` : "Mensalidade",
-      currentInstallmentLabel: isInstallment ? `Parcela ${currentInstallmentNum} de ${installmentCount}` : "Mensalidade",
+      progressLabel: isInstallment ? `${paidInstallmentsCount}/${installmentCount} pagas` : billingModel === "one_time" ? (paidInstallmentsCount ? "Pago" : "Pendente") : "Mensalidade",
+      currentInstallmentLabel: isInstallment ? `Parcela ${currentInstallmentNum} de ${installmentCount}` : billingModel === "one_time" ? "Pagamento único" : "Mensalidade",
       nextDueDate,
       lastPaymentDate,
       remainingBalanceCents,
@@ -1239,6 +1389,10 @@ export interface PackageAgreementRecord {
   firstDueDate: string;
   lastDueDate: string;
   isCurrent: boolean;
+  billingModel: BillingModel;
+  billingModelLabel: string;
+  agreementValueLabel: string;
+  paymentTermsLabel: string;
 }
 
 export interface FinancialTimelineEvent {
@@ -1283,6 +1437,8 @@ export interface RenewStudentPackageOptions {
   dueDay?: number;
   paymentMethod?: string;
   renewalNotes?: string;
+  billingDurationType?: BillingDurationType;
+  contractMonths?: number | null;
 }
 
 /**
@@ -1399,9 +1555,16 @@ export async function getStudentPackageHistory(
     return data.map((sp: any) => {
       const isCurrent = sp.status === "active";
       const packageName = sp.snapshot_package_name || sp.package?.name || "Pacote Personalizado";
-      const totalAmountCents = sp.total_amount_cents || (sp.package ? Math.round(Number(sp.package.price || 0) * 100) : 0);
-      const installmentCount = Math.max(1, Math.min(12, sp.installment_count || 1));
-      const installmentAmountCents = sp.installment_amount_cents || Math.round(totalAmountCents / installmentCount);
+      const billingModel = sp.billing_model
+        ? billingModelFromAgreement(sp)
+        : billingModelFromPackage({ frequency: sp.snapshot_frequency || sp.package?.frequency });
+      const catalogPriceCents = sp.package ? Math.round(Number(sp.package.price || 0) * 100) : 0;
+      const monthlyAmountCents = sp.monthly_amount_cents || (billingModel === "monthly" ? sp.total_amount_cents || catalogPriceCents : 0);
+      const totalAmountCents = sp.expected_total_cents || sp.total_amount_cents || monthlyAmountCents || catalogPriceCents;
+      const installmentCount = billingModel === "installment_total" ? Math.max(1, Math.min(24, sp.installment_count || 1)) : 1;
+      const installmentAmountCents = billingModel === "installment_total"
+        ? sp.installment_amount_cents || Math.round(totalAmountCents / installmentCount)
+        : monthlyAmountCents || totalAmountCents;
 
       // Count paid invoices related to this agreement period
       const agreementInvoices = studentInvoices.filter((inv) => {
@@ -1426,7 +1589,20 @@ export async function getStudentPackageHistory(
       else if (sp.change_type === "lateral") changeTypeLabel = "Troca de pacote";
 
       const firstDueDate = sp.first_due_date || sp.started_at;
-      const lastDueDate = sp.last_due_date || calculateLastDueDate(firstDueDate, installmentCount, sp.due_day || 5);
+      const lastDueDate = sp.last_due_date || (billingModel === "installment_total"
+        ? calculateLastDueDate(firstDueDate, installmentCount, sp.due_day || 5)
+        : firstDueDate);
+      const billingModelLabel = billingModel === "monthly" ? "Mensalidade" : billingModel === "one_time" ? "Pagamento único" : "Valor total parcelado";
+      const agreementValueLabel = billingModel === "monthly"
+        ? `${formatCentsToBRL(monthlyAmountCents)} / mês`
+        : formatCentsToBRL(totalAmountCents);
+      const paymentTermsLabel = billingModel === "monthly"
+        ? sp.billing_duration_type === "fixed" && sp.contract_months
+          ? `${sp.contract_months} cobranças mensais de ${formatCentsToBRL(monthlyAmountCents)}`
+          : `Cobrança mensal de ${formatCentsToBRL(monthlyAmountCents)}`
+        : billingModel === "one_time"
+          ? `Cobrança única de ${formatCentsToBRL(totalAmountCents)}`
+          : `${installmentCount}x de ${formatCentsToBRL(installmentAmountCents)}`;
 
       return {
         id: sp.id,
@@ -1442,7 +1618,7 @@ export async function getStudentPackageHistory(
         installmentAmountCents,
         installmentAmountFormatted: formatCentsToBRL(installmentAmountCents),
         paidInstallmentsCount: paidCount,
-        progressLabel: installmentCount > 1 ? `${paidCount}/${installmentCount} pagas` : `${paidCount} pagas`,
+        progressLabel: billingModel === "installment_total" ? `${paidCount}/${installmentCount} pagas` : billingModel === "one_time" ? (paidCount ? "Pago" : "Pendente") : `${paidCount} mensalidade${paidCount === 1 ? " paga" : "s pagas"}`,
         changeType: (sp.change_type as any) || "initial",
         changeTypeLabel,
         paymentMethod: sp.payment_method || "Pix",
@@ -1450,6 +1626,10 @@ export async function getStudentPackageHistory(
         firstDueDate,
         lastDueDate,
         isCurrent,
+        billingModel,
+        billingModelLabel,
+        agreementValueLabel,
+        paymentTermsLabel,
       };
     });
   } catch (err) {
@@ -1495,7 +1675,7 @@ export async function getStudentFinancialTimeline(
         type,
         date: pkg.startedAt,
         title,
-        description: `Contrato de ${pkg.totalAmountFormatted} em ${pkg.installmentCount}x de ${pkg.installmentAmountFormatted} (${pkg.paymentMethod})`,
+        description: `${pkg.billingModelLabel}: ${pkg.paymentTermsLabel} (${pkg.paymentMethod})`,
         badgeText: pkg.changeTypeLabel,
         badgeVariant: pkg.changeType === "upgrade" ? "default" : "secondary",
       });
@@ -1596,15 +1776,13 @@ export async function checkPackageExpirationAlerts(
       // Calculate effective package end date
       let endDateStr = sp.ended_at;
       if (!endDateStr) {
+        if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type === "continuous") return;
         if (sp.last_due_date) {
           endDateStr = sp.last_due_date;
         } else if (sp.first_due_date && sp.installment_count) {
           endDateStr = calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day || 5);
         } else {
-          // Default 1 month or 6 months if undefined
-          const start = new Date(sp.started_at || todayStr);
-          start.setMonth(start.getMonth() + (sp.installment_count || 1));
-          endDateStr = start.toISOString().split("T")[0];
+          return;
         }
       }
 
@@ -1666,6 +1844,8 @@ export async function renewStudentPackage(
     dueDay = 5,
     paymentMethod = "Pix",
     renewalNotes,
+    billingDurationType,
+    contractMonths,
   } = options;
 
   if (!teacherId || !studentId || !newPackageId) {
@@ -1746,30 +1926,27 @@ export async function renewStudentPackage(
       changeType = "renewal";
     }
 
-    // 5. Update previous active package agreement to status = 'completed'
-    if (currentSp) {
-      const prevEndDate = new Date(effectiveStartDate);
-      prevEndDate.setDate(prevEndDate.getDate() - 1);
-      const prevEndDateStr = prevEndDate.toISOString().split("T")[0];
-
-      await supabase
-        .from("student_packages")
-        .update({
-          status: "completed",
-          ended_at: prevEndDateStr,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", currentSp.id);
-    }
-
-    // 6. Calculate total amount & installment schedules for new agreement
-    const safeInstallmentCount = Math.max(1, Math.min(12, Math.round(installmentCount || 1)));
-    const finalTotalCents = totalAmountCents || Math.round(Number(newPkg.price || 0) * 100);
-    const scheduleInfo = calculateInstallmentSchedule(finalTotalCents, safeInstallmentCount);
-    const lastDueDate = calculateLastDueDate(effectiveStartDate, safeInstallmentCount, dueDay);
+    // 5. Calculate the new agreement through the canonical billing model.
+    const terms = buildBillingAgreement(
+      {
+        price: Number(newPkg.price || 0),
+        billingModel: newPkg.billing_model,
+        frequency: newPkg.frequency,
+        billingDurationType: newPkg.billing_duration_type,
+        contractMonths: newPkg.contract_months,
+        defaultInstallmentCount: newPkg.default_installment_count,
+      },
+      {
+        firstDueDate: effectiveStartDate,
+        installmentCount,
+        billingDurationType: billingDurationType || newPkg.billing_duration_type,
+        contractMonths: contractMonths ?? newPkg.contract_months,
+      },
+    );
+    const finalTotalCents = terms.totalAmountCents || terms.monthlyAmountCents || 0;
 
     // 7. Insert NEW active package agreement snapshot
-    const { data: insertedSp, error: insertErr } = await supabase
+    let { data: insertedSp, error: insertErr } = await supabase
       .from("student_packages")
       .insert({
         student_id: studentId,
@@ -1777,25 +1954,70 @@ export async function renewStudentPackage(
         teacher_id: teacherId,
         started_at: effectiveStartDate,
         status: "active",
-        total_amount_cents: finalTotalCents,
-        installment_count: safeInstallmentCount,
-        installment_amount_cents: scheduleInfo.baseAmountCents,
+        total_amount_cents: terms.totalAmountCents,
+        installment_count: terms.installmentCount,
+        installment_amount_cents: terms.installmentAmountCents,
         due_day: dueDay,
         first_due_date: effectiveStartDate,
-        last_due_date: lastDueDate,
+        last_due_date: terms.lastDueDate,
         payment_method: paymentMethod,
+        snapshot_frequency: terms.billingModel,
         snapshot_package_name: newPkg.name,
         snapshot_package_price_cents: finalTotalCents,
         change_type: changeType,
         renewal_notes: renewalNotes || null,
         renewed_from_id: currentSp?.id || null,
+        billing_model: terms.billingModel,
+        billing_duration_type: terms.billingDurationType,
+        contract_months: terms.contractMonths,
+        monthly_amount_cents: terms.monthlyAmountCents,
+        expected_total_cents: terms.expectedTotalCents || null,
       })
       .select("id")
       .single();
 
+    if (insertErr && /column|schema cache|null value.*installment_count/i.test(insertErr.message || "")) {
+      const legacyInsert = await supabase.from("student_packages").insert({
+        student_id: studentId,
+        package_id: newPackageId,
+        teacher_id: teacherId,
+        started_at: effectiveStartDate,
+        status: "active",
+        total_amount_cents: finalTotalCents,
+        installment_count: terms.installmentCount || 1,
+        installment_amount_cents: terms.installmentAmountCents || terms.monthlyAmountCents || finalTotalCents,
+        due_day: dueDay,
+        first_due_date: effectiveStartDate,
+        last_due_date: terms.lastDueDate,
+        payment_method: paymentMethod,
+        snapshot_frequency: terms.billingModel,
+        snapshot_package_name: newPkg.name,
+        snapshot_package_price_cents: finalTotalCents,
+        change_type: changeType,
+        renewal_notes: renewalNotes || null,
+        renewed_from_id: currentSp?.id || null,
+      }).select("id").single();
+      insertedSp = legacyInsert.data;
+      insertErr = legacyInsert.error;
+    }
+
     if (insertErr || !insertedSp) {
       console.error("[FinanceEngine] Error creating renewed package agreement:", insertErr);
       return { success: false, message: `Erro ao salvar nova renovação: ${insertErr?.message}` };
+    }
+
+    // Complete the previous agreement only after the replacement exists.
+    if (currentSp) {
+      const prevEndDate = new Date(effectiveStartDate);
+      prevEndDate.setDate(prevEndDate.getDate() - 1);
+      await supabase
+        .from("student_packages")
+        .update({
+          status: "completed",
+          ended_at: prevEndDate.toISOString().split("T")[0],
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentSp.id);
     }
 
     // 8. Also update student table reference to new package_id

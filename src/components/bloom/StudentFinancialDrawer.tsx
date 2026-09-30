@@ -300,14 +300,12 @@ export function StudentFinancialDrawer({
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-2 border-t border-emerald-200/60 dark:border-emerald-900/40">
                           <div>
-                            <span className="text-muted-foreground block">Valor Total</span>
-                            <strong className="text-foreground">{currentAgreement.totalAmountFormatted}</strong>
+                             <span className="text-muted-foreground block">{currentAgreement.billingModel === "monthly" ? "Mensalidade" : "Valor"}</span>
+                             <strong className="text-foreground">{currentAgreement.agreementValueLabel}</strong>
                           </div>
                           <div>
-                            <span className="text-muted-foreground block">Parcelamento</span>
-                            <strong className="text-foreground">
-                              {currentAgreement.installmentCount}x de {currentAgreement.installmentAmountFormatted}
-                            </strong>
+                             <span className="text-muted-foreground block">Condição</span>
+                             <strong className="text-foreground">{currentAgreement.paymentTermsLabel}</strong>
                           </div>
                           <div>
                             <span className="text-muted-foreground block">Progresso</span>
@@ -358,10 +356,10 @@ export function StudentFinancialDrawer({
 
                             <div className="grid grid-cols-3 gap-2 text-[11px] text-stone-700 dark:text-stone-300">
                               <div>
-                                Valor: <strong>{past.totalAmountFormatted}</strong>
+                                 Valor: <strong>{past.agreementValueLabel}</strong>
                               </div>
                               <div>
-                                Condição: <strong>{past.installmentCount}x de {past.installmentAmountFormatted}</strong>
+                                 Condição: <strong>{past.paymentTermsLabel}</strong>
                               </div>
                               <div>
                                 Progresso: <strong>{past.progressLabel}</strong>

@@ -9,6 +9,10 @@ export interface PackageQueryItem {
   duration: number;
   lessons: number;
   method: string;
+  defaultInstallmentCount: number;
+  billingModel: "monthly" | "installment_total" | "one_time";
+  billingDurationType: "fixed" | "continuous" | null;
+  contractMonths: number | null;
 }
 
 export const PACKAGES_QUERY_KEY = (teacherId: string | undefined) => ["packages", teacherId];
@@ -37,6 +41,10 @@ export function usePackagesQuery(teacherId: string | undefined) {
         duration: Number(d.duration) || 60,
         lessons: Number(d.lessons) || 4,
         method: d.method || "Pix",
+        defaultInstallmentCount: Number(d.default_installment_count) || 1,
+        billingModel: d.billing_model || (String(d.frequency).toLowerCase() === "total" ? "installment_total" : String(d.frequency).toLowerCase().includes("one") ? "one_time" : "monthly"),
+        billingDurationType: d.billing_duration_type || null,
+        contractMonths: d.contract_months ? Number(d.contract_months) : null,
       }));
     },
     enabled: Boolean(teacherId),

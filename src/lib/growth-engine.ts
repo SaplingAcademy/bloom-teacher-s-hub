@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { billingModelFromAgreement, billingModelFromPackage } from "@/lib/billing-domain";
 
 export interface MonthlyGoal {
   id: string;
@@ -166,7 +167,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
     const { data: spData } = await supabase
       .from("student_packages")
       .select(
-        "id, student_id, package_id, status, total_amount_cents, installment_count, installment_amount_cents, due_day"
+        "*"
       )
       .eq("teacher_id", teacherId)
       .eq("status", "active");
@@ -199,9 +200,16 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
       let contribution = 0;
 
       if (sp) {
+        const model = sp.billing_model
+          ? billingModelFromAgreement(sp)
+          : billingModelFromPackage({ frequency: pkg?.frequency || sp.snapshot_frequency });
         const installCount = sp.installment_count || 1;
 
-        if (installCount > 1 && sp.installment_amount_cents) {
+        if (model === "monthly") {
+          contribution = (sp.monthly_amount_cents || sp.total_amount_cents || 0) / 100;
+        } else if (model === "one_time") {
+          contribution = 0;
+        } else if (installCount > 1 && sp.installment_amount_cents) {
           contribution = sp.installment_amount_cents / 100;
         } else if (installCount > 1 && sp.total_amount_cents) {
           contribution = Math.round(sp.total_amount_cents / installCount) / 100;

@@ -476,10 +476,18 @@ export function OnboardingPage() {
           duration: pkg.duration || 60,
           frequency: pkg.frequency || "Monthly",
           default_installment_count: pkg.defaultInstallmentCount || 1,
+          billing_model: pkg.billingModel,
+          billing_duration_type: pkg.billingModel === "monthly" ? pkg.billingDurationType || "continuous" : null,
+          contract_months: pkg.billingModel === "monthly" && pkg.billingDurationType === "fixed" ? pkg.contractMonths || null : null,
           method: "Pix",
         }));
 
-        const { error: pkgError } = await supabase.from("packages").insert(pkgRows);
+        let { error: pkgError } = await supabase.from("packages").insert(pkgRows);
+        if (pkgError && /column|schema cache/i.test(pkgError.message || "")) {
+          const legacyRows = pkgRows.map(({ billing_model, billing_duration_type, contract_months, ...row }) => row);
+          const legacyInsert = await supabase.from("packages").insert(legacyRows);
+          pkgError = legacyInsert.error;
+        }
         if (pkgError) {
           console.warn("[Onboarding] Packages insert warning:", pkgError.message);
         }
@@ -1710,6 +1718,9 @@ function Step4PlansPackages({
               lessons: formData.lessons,
               method: formData.method,
               defaultInstallmentCount: formData.defaultInstallmentCount,
+              billingModel: formData.billingModel,
+              billingDurationType: formData.billingDurationType,
+              contractMonths: formData.contractMonths,
             }
           : p
       );
@@ -1725,6 +1736,9 @@ function Step4PlansPackages({
         lessons: formData.lessons,
         method: formData.method,
         defaultInstallmentCount: formData.defaultInstallmentCount,
+        billingModel: formData.billingModel,
+        billingDurationType: formData.billingDurationType,
+        contractMonths: formData.contractMonths,
       };
       updateData("packages", [...data.packages, newPkg]);
     }

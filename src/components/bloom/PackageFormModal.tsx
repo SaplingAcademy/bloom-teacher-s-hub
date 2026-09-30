@@ -8,6 +8,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations, formatOnboardingFrequency, formatOnboardingPaymentMethod } from "@/lib/i18n";
 import { OnboardingPackage } from "@/types/onboarding";
 import { parseCurrencyToNumber, formatNumberToCurrencyInput } from "@/lib/finance-engine";
+import { BillingDurationType, BillingModel, normalizeBillingModel } from "@/lib/billing-domain";
 
 export interface PackageFormData {
   id?: string;
@@ -18,6 +19,9 @@ export interface PackageFormData {
   lessons: number;
   method: string;
   defaultInstallmentCount?: number;
+  billingModel?: BillingModel;
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
 }
 
 interface PackageFormModalProps {
@@ -44,6 +48,8 @@ export function PackageFormModal({
   const [lessons, setLessons] = useState<string>("4");
   const [method, setMethod] = useState("Pix");
   const [defaultInstallmentCount, setDefaultInstallmentCount] = useState<string>("6");
+  const [billingDurationType, setBillingDurationType] = useState<BillingDurationType>("continuous");
+  const [contractMonths, setContractMonths] = useState<string>("6");
 
   useEffect(() => {
     if (initialData) {
@@ -54,6 +60,8 @@ export function PackageFormModal({
       setLessons(String(initialData.lessons ?? 4));
       setMethod(initialData.method || "Pix");
       setDefaultInstallmentCount(String(initialData.defaultInstallmentCount ?? 6));
+      setBillingDurationType(initialData.billingDurationType || "continuous");
+      setContractMonths(String(initialData.contractMonths ?? 6));
     } else {
       setName("");
       setPrice("");
@@ -62,6 +70,8 @@ export function PackageFormModal({
       setLessons("4");
       setMethod("Pix");
       setDefaultInstallmentCount("6");
+      setBillingDurationType("continuous");
+      setContractMonths("6");
     }
   }, [initialData, isOpen, lang]);
 
@@ -87,6 +97,7 @@ export function PackageFormModal({
     if (!name.trim()) return;
 
     const numericPrice = parseCurrencyToNumber(price);
+    const billingModel = normalizeBillingModel(frequency);
 
     onSave({
       id: initialData?.id,
@@ -97,6 +108,9 @@ export function PackageFormModal({
       lessons: Number(lessons) || 1,
       method,
       defaultInstallmentCount: frequency === "total" ? Number(defaultInstallmentCount) || 1 : 1,
+      billingModel,
+      billingDurationType: billingModel === "monthly" ? billingDurationType : undefined,
+      contractMonths: billingModel === "monthly" && billingDurationType === "fixed" ? Number(contractMonths) || 1 : undefined,
     });
     onClose();
   };
@@ -125,6 +139,42 @@ export function PackageFormModal({
               className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm focus:ring-2 focus:ring-emerald-700"
             />
           </div>
+
+          {frequency === "Monthly" && (
+            <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="modal-pkg-duration-type" className="text-xs font-bold text-stone-700">
+                  {isPt ? "Duração da cobrança" : "Billing duration"}
+                </Label>
+                <Select value={billingDurationType} onValueChange={(value) => setBillingDurationType(value as BillingDurationType)}>
+                  <SelectTrigger id="modal-pkg-duration-type" className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="continuous">{isPt ? "Contínua — até cancelamento" : "Continuous — until cancelled"}</SelectItem>
+                    <SelectItem value="fixed">{isPt ? "Período determinado" : "Fixed period"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {billingDurationType === "fixed" && (
+                <div className="space-y-1">
+                  <Label htmlFor="modal-pkg-contract-months" className="text-xs font-bold text-stone-700">
+                    {isPt ? "Duração contratual (meses)" : "Contract duration (months)"}
+                  </Label>
+                  <Input
+                    id="modal-pkg-contract-months"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={contractMonths}
+                    onChange={(e) => setContractMonths(sanitizeNumeric(e.target.value))}
+                    onBlur={() => handleNumericBlur(contractMonths, setContractMonths, 6)}
+                    className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Billing Model & Price */}
           <div className="grid grid-cols-2 gap-3">
