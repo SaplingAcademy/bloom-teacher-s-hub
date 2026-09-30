@@ -84,9 +84,12 @@ import { resolveEventColorMeta } from "@/lib/brand-colors";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 
 export const Route = createFileRoute("/_app/calendar")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    availability: search.availability === "working_hours" ? "working_hours" as const : undefined,
-    eventId: typeof search.eventId === "string" ? search.eventId : undefined,
+  validateSearch: (search: Record<string, unknown>): {
+    availability?: "working_hours";
+    eventId?: string;
+  } => ({
+    ...(search.availability === "working_hours" ? { availability: "working_hours" as const } : {}),
+    ...(typeof search.eventId === "string" ? { eventId: search.eventId } : {}),
   }),
   head: () => ({
     meta: [

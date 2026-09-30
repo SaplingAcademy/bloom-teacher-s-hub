@@ -57,7 +57,9 @@ export async function fetchAttentionQueue(teacherId: string, language: "pt" | "e
             studentId: candidate.studentId,
             dueDate: candidate.lessonDate,
             urgency: "high",
-            targetUrl: `/calendar?eventId=${candidate.eventId}`,
+            targetUrl: candidate.classId
+              ? `/students?classId=${candidate.classId}&eventId=${candidate.eventId}`
+              : `/calendar?eventId=${candidate.eventId}`,
           });
         });
     } catch (attendanceError) {

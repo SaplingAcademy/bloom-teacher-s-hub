@@ -47,6 +47,7 @@ interface Props {
   cls: ClassWithDetails;
   teacherId: string;
   isPt: boolean;
+  requestedEventId?: string;
 }
 
 const STATUS_LABELS: Record<AttendanceStatus, { pt: string; en: string; cls: string }> = {
@@ -56,7 +57,7 @@ const STATUS_LABELS: Record<AttendanceStatus, { pt: string; en: string; cls: str
   excused: { pt: "Justificada", en: "Excused", cls: "bg-sky-700 text-white" },
 };
 
-export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
+export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }: Props) {
   const [plans, setPlans] = useState<LessonPlan[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecordRow[]>>({});
   const [loading, setLoading] = useState(true);
@@ -112,6 +113,14 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt }: Props) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!requestedEventId || plans.length === 0) return;
+    const targetPlan = plans.find((plan) => plan.event_id === requestedEventId);
+    if (targetPlan && targetPlan.event_status !== "Cancelled") {
+      setAttendancePlan(targetPlan);
+    }
+  }, [plans, requestedEventId]);
 
   const completedCount = plans.filter((p) => p.completed).length;
   const progressPercent = plans.length > 0 ? Math.round((completedCount / plans.length) * 100) : 0;

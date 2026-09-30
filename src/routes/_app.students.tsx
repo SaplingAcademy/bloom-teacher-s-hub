@@ -75,6 +75,13 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_app/students")({
+  validateSearch: (search: Record<string, unknown>): {
+    classId?: string;
+    eventId?: string;
+  } => ({
+    ...(typeof search.classId === "string" ? { classId: search.classId } : {}),
+    ...(typeof search.eventId === "string" ? { eventId: search.eventId } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Students · Bloom" },
@@ -525,6 +532,7 @@ const getTxStatusStyles = (status: string) => {
 };
 
 function StudentsPage() {
+  const { classId: requestedClassId, eventId: requestedEventId } = Route.useSearch();
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -571,6 +579,14 @@ function StudentsPage() {
   const [attendanceClass, setAttendanceClass] = useState<ClassWithDetails | null>(null);
   const [classesList, setClassesList] = useState<ClassWithDetails[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!requestedClassId || classesList.length === 0) return;
+    if (classesList.some((item) => item.id === requestedClassId)) {
+      setSelectedStudentId(null);
+      setSelectedClassId(requestedClassId);
+    }
+  }, [classesList, requestedClassId]);
   const [formName, setFormName] = useState("");
   const [formWhatsApp, setFormWhatsApp] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -2326,6 +2342,7 @@ function StudentsPage() {
         /* 2. DEDICATED CLASS DETAILS VIEW */
         <ClassDetailsView
           cls={selectedClass}
+          requestedEventId={requestedEventId}
           onBack={() => setSelectedClassId(null)}
           onEditClass={() => {
             setEditingClass(selectedClass);

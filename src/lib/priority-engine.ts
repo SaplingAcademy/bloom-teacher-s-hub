@@ -249,8 +249,10 @@ export async function fetchTeacherDailyPriorities(
               : `${candidate.lessonDate} at ${candidate.startTime.slice(0, 5)}`,
             targetDate: candidate.lessonDate,
             deepLink: {
-              route: "/calendar",
-              params: { eventId: candidate.eventId },
+              route: candidate.classId ? "/students" : "/calendar",
+              params: candidate.classId
+                ? { classId: candidate.classId, eventId: candidate.eventId }
+                : { eventId: candidate.eventId },
             },
             completionType: "SOURCE_RESOLVED",
             isResolved: false,
