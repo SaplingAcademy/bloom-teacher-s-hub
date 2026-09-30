@@ -429,7 +429,7 @@ function FinancePage() {
 
     try {
       const billingModel = normalizeBillingModel(pkgFreq);
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("packages")
         .insert({
           teacher_id: user.id,
@@ -445,6 +445,20 @@ function FinancePage() {
         })
         .select()
         .single();
+
+      if (error && /column|schema cache/i.test(error.message || "")) {
+        const legacyInsert = await supabase.from("packages").insert({
+          teacher_id: user.id,
+          name: pkgName.trim(),
+          price: numericPrice,
+          frequency: pkgFreq,
+          duration: Number(pkgDur) || 60,
+          lessons: Number(pkgLessons) || 4,
+          method: pkgMethod,
+        }).select().single();
+        data = legacyInsert.data;
+        error = legacyInsert.error;
+      }
 
       if (error) {
         toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível criar o pacote agora." : "Could not create package."));
@@ -479,7 +493,7 @@ function FinancePage() {
   const handleSaveEditPackage = async (formData: PackageFormData) => {
     if (!user || !formData.id) return;
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("packages")
         .update({
           name: formData.name,
@@ -498,6 +512,20 @@ function FinancePage() {
         .eq("teacher_id", user.id)
         .select()
         .single();
+
+      if (error && /column|schema cache/i.test(error.message || "")) {
+        const legacyUpdate = await supabase.from("packages").update({
+          name: formData.name,
+          price: formData.price,
+          frequency: formData.frequency,
+          duration: formData.duration,
+          lessons: formData.lessons,
+          method: formData.method,
+          updated_at: new Date().toISOString(),
+        }).eq("id", formData.id).eq("teacher_id", user.id).select().single();
+        data = legacyUpdate.data;
+        error = legacyUpdate.error;
+      }
 
       if (error) {
         toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível atualizar o pacote agora." : "Could not update package."));

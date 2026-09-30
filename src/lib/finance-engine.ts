@@ -435,6 +435,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
           const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
           const dueDay = sp?.due_day || student.due_day || 5;
           const dueDateStr = `${currentYear}-${currentMonth}-${String(Math.min(Math.max(dueDay, 1), 28)).padStart(2, "0")}`;
+          if (sp?.last_due_date && dueDateStr > sp.last_due_date) return;
           const status = dueDateStr < todayStr ? "overdue" : "pending";
           const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -571,6 +572,8 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             if (!existingKeys.has(memberKey) && sequenceNumber >= 1 && withinFixedTerm) {
               const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
               const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+              if (sp?.last_due_date && dueDateStr > sp.last_due_date) return;
 
               newInvoiceRows.push({
                 teacher_id: teacherId,
