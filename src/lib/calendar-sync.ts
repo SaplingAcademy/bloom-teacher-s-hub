@@ -42,6 +42,7 @@ export interface CalendarEvent {
   id: string;
   teacherId?: string; // Links to Auth Teacher ID
   studentId?: string; // Links to Student ID
+  classId?: string; // Links to Class ID
   scheduleId?: string; // Links to Student Schedule ID
   groupId?: string; // Links to Group Student ID
   studentName: string;
@@ -56,7 +57,7 @@ export interface CalendarEvent {
   locationLink?: string;
   status: TimelineStatus;
   attendanceRecorded?: boolean;
-  attendanceStatus?: "Present" | "Absent" | "Excused";
+  attendanceStatus?: "Present" | "Absent" | "Late" | "Excused";
   notes?: string;
   homeworkTitle?: string;
   lessonPlanUrl?: string;

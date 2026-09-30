@@ -12,7 +12,7 @@ interface UrgentWidgetProps {
 
 export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [urgentItems, setUrgentItems] = useState<AttentionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +23,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
     }
     try {
       setLoading(true);
-      const items = await fetchAttentionQueue(teacherId);
+      const items = await fetchAttentionQueue(teacherId, lang);
       // Filter high-urgency items
       const highUrgent = items.filter((item) => item.urgency === "high");
       setUrgentItems(highUrgent);
@@ -37,7 +37,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
 
   useEffect(() => {
     loadUrgentItems();
-  }, [teacherId]);
+  }, [teacherId, lang]);
 
   const handleAction = (targetUrl: string) => {
     if (targetUrl) {

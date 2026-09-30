@@ -10,6 +10,6 @@
 - [x] Preserve active agreement terms when editing students
 - [x] Link new invoices and isolate active-contract financial summaries
 - [x] Validate due-date scenarios and TypeScript
-- [ ] Derive attendance priorities from lesson-plan events and canonical attendance records
-- [ ] Escalate unresolved attendance after five days and deep-link to the exact lesson
+- [x] Derive attendance priorities from lesson-plan events and canonical attendance records
+- [x] Escalate unresolved attendance after five days and deep-link to the exact lesson
 - [ ] Validate future, current, overdue, resolved, absent, and cancelled scenarios

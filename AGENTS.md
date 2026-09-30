@@ -14,3 +14,6 @@
 ## Financial model
 - Normalize package billing through `src/lib/billing-domain.ts`; `packages.duration` is lesson minutes only, never contract months or installments, so all financial surfaces share one interpretation.
 - New agreement/invoice schema is staged in `PROPOSAL_20260930000000_structural_billing_models.sql` and must not be enabled before its explicit database approval because existing rows require a separate audit.
+
+## Attendance priorities
+- Derive attendance priorities from lesson-plan `calendar_events` plus `attendance_records`; never persist duplicate tasks, and escalate unresolved records after five calendar days.

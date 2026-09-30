@@ -30,7 +30,7 @@ interface DailyPrioritiesCardProps {
 
 export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [activePriorities, setActivePriorities] = useState<PriorityItem[]>([]);
   const [completedPriorities, setCompletedPriorities] = useState<PriorityItem[]>([]);
@@ -42,7 +42,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const loadPriorities = async () => {
     if (!teacherId) return;
     try {
-      const res = await fetchTeacherDailyPriorities(teacherId);
+      const res = await fetchTeacherDailyPriorities(teacherId, new Date(), lang);
       setActivePriorities(res.activePriorities);
       setCompletedPriorities(res.completedTodayPriorities);
       setCompletedCount(res.completedCount);
@@ -57,7 +57,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
 
   useEffect(() => {
     loadPriorities();
-  }, [teacherId]);
+  }, [teacherId, lang]);
 
   // Handle clicking on priority body -> Deep Link navigation
   const handleItemClick = (item: PriorityItem) => {
