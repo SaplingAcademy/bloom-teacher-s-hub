@@ -365,7 +365,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         : billingModelFromPackage(pkg || { frequency: sp?.snapshot_frequency });
       const isMonthly = billingModel === "monthly";
 
-      if (sp && !isMonthly && sp.installment_count && sp.installment_count >= 1) {
+      if (sp && billingModel === "installment_total" && sp.installment_count && sp.installment_count >= 1) {
         // --- Installment Course Package Flow ---
         const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
         const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
@@ -505,7 +505,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             : billingModelFromPackage(pkg || { frequency: sp?.snapshot_frequency });
           const isMonthly = memberBillingModel === "monthly";
 
-          if (sp && !isMonthly && sp.installment_count && sp.installment_count >= 1) {
+          if (sp && memberBillingModel === "installment_total" && sp.installment_count && sp.installment_count >= 1) {
             const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
             const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
             const { schedule } = calculateInstallmentSchedule(totalCents, safeInstallmentCount);

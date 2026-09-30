@@ -7,8 +7,8 @@ export interface OnboardingPackage {
   frequency?: "Monthly" | "total" | "One-time" | "Weekly" | string; // "Monthly" (Mensalidade), "total" (Valor total), or "One-time" (Aula avulsa)
   defaultInstallmentCount?: number; // default suggested installment count for total value package
   billingModel?: "monthly" | "installment_total" | "one_time";
-  billingDurationType?: "fixed" | "continuous";
-  contractMonths?: number;
+  billingDurationType?: "fixed" | "continuous" | null;
+  contractMonths?: number | null;
   method?: string; // payment method (Pix, Bank Transfer, Credit Card, Cash)
 }
 

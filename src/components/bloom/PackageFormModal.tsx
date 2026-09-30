@@ -21,7 +21,7 @@ export interface PackageFormData {
   defaultInstallmentCount?: number;
   billingModel?: BillingModel;
   billingDurationType?: BillingDurationType | null;
-  contractMonths?: number;
+  contractMonths?: number | null;
 }
 
 interface PackageFormModalProps {
