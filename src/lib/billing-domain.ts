@@ -39,6 +39,12 @@ export function billingModelFromPackage(pkg: BillingPackageInput): BillingModel 
   return normalizeBillingModel(pkg.billingModel || pkg.frequency);
 }
 
+export function billingModelFromAgreement(agreement: Record<string, unknown>): BillingModel {
+  return normalizeBillingModel(
+    String(agreement.billing_model || agreement.snapshot_frequency || agreement.frequency || "monthly"),
+  );
+}
+
 export function normalizeDurationType(value?: string | null): BillingDurationType {
   return String(value || "").toLowerCase() === "fixed" ? "fixed" : "continuous";
 }
