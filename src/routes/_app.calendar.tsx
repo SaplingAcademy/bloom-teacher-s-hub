@@ -81,10 +81,15 @@ import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailability
 import { fetchTeacherWorkingAvailability, WEEKDAYS_MAP } from "@/lib/availability-engine";
 import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictDialog";
 import { resolveEventColorMeta } from "@/lib/brand-colors";
+import { saveAttendanceRecords } from "@/lib/lesson-plans";
 
 export const Route = createFileRoute("/_app/calendar")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    availability: search.availability === "working_hours" ? "working_hours" as const : undefined,
+  validateSearch: (search: Record<string, unknown>): {
+    availability?: "working_hours";
+    eventId?: string;
+  } => ({
+    ...(search.availability === "working_hours" ? { availability: "working_hours" as const } : {}),
+    ...(typeof search.eventId === "string" ? { eventId: search.eventId } : {}),
   }),
   head: () => ({
     meta: [
@@ -216,7 +221,7 @@ function CalendarPage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { availability: requestedAvailability } = Route.useSearch();
+  const { availability: requestedAvailability, eventId: requestedEventId } = Route.useSearch();
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
@@ -255,7 +260,7 @@ function CalendarPage() {
 
   // Quick Action Forms State
   const [hwTitle, setHwTitle] = useState("");
-  const [attStatus, setAttStatus] = useState<"Present" | "Absent" | "Excused">("Present");
+  const [attStatus, setAttStatus] = useState<"Present" | "Absent" | "Late" | "Excused">("Present");
   const [lessonUrl, setLessonUrl] = useState("");
   const [notesText, setNotesText] = useState("");
 
@@ -330,6 +335,7 @@ function CalendarPage() {
           id: d.id,
           teacherId: d.teacher_id,
           studentId: d.student_id,
+          classId: d.class_id,
           scheduleId: d.schedule_id,
           studentName: d.student_name || "Aula",
           level: (d.level as CEFRLevel) || "A1",
@@ -360,6 +366,15 @@ function CalendarPage() {
       setIsLoadingEvents(false);
     }
   }, [user, lang]);
+
+  useEffect(() => {
+    if (!requestedEventId || events.length === 0) return;
+    const target = events.find((event) => event.id === requestedEventId);
+    if (!target) return;
+    setCurrentDate(new Date(`${target.date}T12:00:00`));
+    setViewMode("day");
+    setSelectedEvent(target);
+  }, [events, requestedEventId]);
 
   // Temporary development action: Manual Sync Agenda button handler
   const handleManualSyncAgenda = async () => {
@@ -945,8 +960,19 @@ function CalendarPage() {
     );
   };
 
-  const handleSaveAttendance = () => {
-    if (!selectedEvent) return;
+  const handleSaveAttendance = async () => {
+    if (!selectedEvent || !user || !selectedEvent.studentId) return;
+    const statusMap = {
+      Present: "present",
+      Absent: "absent",
+      Late: "late",
+      Excused: "excused",
+    } as const;
+    try {
+      await saveAttendanceRecords(user.id, selectedEvent.id, [{
+        student_id: selectedEvent.studentId,
+        status: statusMap[attStatus],
+      }]);
     const updated = events.map((evt) => {
       if (evt.id === selectedEvent.id) {
         return { ...evt, attendanceRecorded: true, attendanceStatus: attStatus };
@@ -955,7 +981,10 @@ function CalendarPage() {
     });
     updateEventsState(updated);
     setSelectedEvent({ ...selectedEvent, attendanceRecorded: true, attendanceStatus: attStatus });
-    alert(lang === "pt" ? "Presença registrada!" : "Attendance recorded!");
+      toast.success(lang === "pt" ? "Presença registrada!" : "Attendance recorded!");
+    } catch {
+      toast.error(lang === "pt" ? "Erro ao registrar presença." : "Failed to record attendance.");
+    }
   };
 
   const handleSaveLessonPlan = () => {
@@ -1642,6 +1671,7 @@ function CalendarPage() {
               )}
 
               {/* Attendance Track */}
+              {!selectedEvent.classId && selectedEvent.studentId && (
               <div className="space-y-2 border-b border-border/60 pb-4 bg-secondary/10 p-3 rounded-xl">
                 <h5 className="font-bold text-xs uppercase text-foreground">
                   Attendance & Presence
@@ -1654,6 +1684,7 @@ function CalendarPage() {
                     <SelectContent>
                       <SelectItem value="Present">Present</SelectItem>
                       <SelectItem value="Absent">Absent</SelectItem>
+                      <SelectItem value="Late">Late</SelectItem>
                       <SelectItem value="Excused">Excused</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1670,6 +1701,7 @@ function CalendarPage() {
                   )}
                 </div>
               </div>
+              )}
 
               {/* Lesson Plan linking */}
               <div className="space-y-2 border-b border-border/60 pb-4">

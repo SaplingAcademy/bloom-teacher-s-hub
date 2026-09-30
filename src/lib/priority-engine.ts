@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { formatLocalDateStr } from "./time-off-engine";
+import { fetchAttendancePriorityCandidates } from "./attendance-priorities";
 
 export type PriorityType =
   | "homework_pending"
@@ -128,7 +129,8 @@ export async function undoManualPriorityCompletion(
  */
 export async function fetchTeacherDailyPriorities(
   teacherId: string,
-  todayDate: Date = new Date()
+  todayDate: Date = new Date(),
+  language: "pt" | "en" = "pt"
 ): Promise<{
   activePriorities: PriorityItem[];
   completedTodayPriorities: PriorityItem[];
@@ -221,49 +223,43 @@ export async function fetchTeacherDailyPriorities(
 
   // =========================================================================
   // 2. ATTENDANCE PENDING (Presença pendente)
-  // Source: past or today calendar_events / student_lessons where attendance_recorded = false
+  // Source: lesson-plan occurrences without a canonical attendance record.
   // =========================================================================
   try {
-    const { data: eventsData } = await supabase
-      .from("calendar_events")
-      .select("*")
-      .eq("teacher_id", teacherId)
-      .lte("date", todayStr);
-
-    if (eventsData) {
-      eventsData.forEach((evt: any) => {
-        // Attendance eligible only if event date is past or today
-        const isPastOrToday = evt.date <= todayStr;
-        const isRecorded = Boolean(evt.attendance_recorded || evt.attendance_status);
-
-        if (isPastOrToday && evt.status !== "Closed" && evt.status !== "Cancelled") {
-          const itemKey = `att_${evt.id}`;
+    const attendanceCandidates = await fetchAttendancePriorityCandidates(teacherId, todayDate);
+    attendanceCandidates
+      .filter((candidate) => candidate.age === "normal")
+      .forEach((candidate) => {
+          const itemKey = `att_${candidate.eventId}_${candidate.studentId}`;
           const isManuallyDone = Boolean(manualCompletions[itemKey]);
+          const formattedDate = candidate.lessonDate.split("-").reverse().join("/");
 
           rawPrioritiesList.push({
             id: itemKey,
             type: "attendance_pending",
             teacherId,
             sourceEntity: "calendar_events",
-            sourceRecordId: evt.id,
-            studentId: evt.student_id,
-            studentName: evt.student_name || "Aluno",
-            categoryLabel: "Presença pendente",
-            title: `Registrar presença — ${evt.student_name || "Aula"}`,
-            subtitle: `${evt.date.split("-").reverse().join("/")} às ${evt.start_time} • ${evt.focus || "Aula"}`,
-            targetDate: evt.date,
+            sourceRecordId: candidate.eventId,
+            studentId: candidate.studentId,
+            studentName: candidate.studentName,
+            categoryLabel: language === "pt" ? "Presença pendente" : "Attendance pending",
+            title: `${language === "pt" ? "Presença pendente" : "Attendance pending"} — ${candidate.studentName}`,
+            subtitle: language === "pt"
+              ? `${formattedDate} às ${candidate.startTime.slice(0, 5)}`
+              : `${candidate.lessonDate} at ${candidate.startTime.slice(0, 5)}`,
+            targetDate: candidate.lessonDate,
             deepLink: {
-              route: "/calendar",
-              params: { eventId: evt.id },
+              route: candidate.classId ? "/students" : "/calendar",
+              params: candidate.classId
+                ? { classId: candidate.classId, eventId: candidate.eventId }
+                : { eventId: candidate.eventId },
             },
             completionType: "SOURCE_RESOLVED",
-            isResolved: isRecorded,
+            isResolved: false,
             isManuallyCompleted: isManuallyDone,
-            completedAt: isRecorded ? "Origem" : isManuallyDone ? manualCompletions[itemKey].completedAt : undefined,
+            completedAt: isManuallyDone ? manualCompletions[itemKey].completedAt : undefined,
           });
-        }
       });
-    }
   } catch (err) {
     console.warn("[priority-engine] Error discovering attendance priorities:", err);
   }

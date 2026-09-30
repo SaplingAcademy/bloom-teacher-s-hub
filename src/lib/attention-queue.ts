@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { formatDateString } from "@/lib/calendar-sync";
+import { fetchAttendancePriorityCandidates } from "@/lib/attendance-priorities";
 
 export type AttentionCategory =
   | "overdue_followup"
@@ -9,7 +10,8 @@ export type AttentionCategory =
   | "inactive_lead"
   | "failed_automation"
   | "incomplete_conversion"
-  | "package_renewal";
+  | "package_renewal"
+  | "attendance_pending";
 
 export interface AttentionItem {
   id: string;
@@ -29,7 +31,7 @@ export interface AttentionItem {
 /**
  * Fetch unified Attention Queue ("Precisa de Atenção") items for a teacher
  */
-export async function fetchAttentionQueue(teacherId: string): Promise<AttentionItem[]> {
+export async function fetchAttentionQueue(teacherId: string, language: "pt" | "en" = "pt"): Promise<AttentionItem[]> {
   if (!teacherId) return [];
 
   const items: AttentionItem[] = [];
@@ -38,6 +40,32 @@ export async function fetchAttentionQueue(teacherId: string): Promise<AttentionI
   const nowIso = now.toISOString();
 
   try {
+    try {
+      const attendanceCandidates = await fetchAttendancePriorityCandidates(teacherId, now);
+      attendanceCandidates
+        .filter((candidate) => candidate.age === "urgent")
+        .forEach((candidate) => {
+          const formattedDate = candidate.lessonDate.split("-").reverse().join("/");
+          items.push({
+            id: `attendance-${candidate.eventId}-${candidate.studentId}`,
+            category: "attendance_pending",
+            title: `${language === "pt" ? "Presença pendente" : "Attendance pending"} — ${candidate.studentName}`,
+            reason: language === "pt"
+              ? `Aula de ${formattedDate} sem registro de presença`
+              : `Lesson from ${candidate.lessonDate} has no attendance record`,
+            recommendedAction: language === "pt" ? "Registrar presença da aula" : "Record lesson attendance",
+            studentId: candidate.studentId,
+            dueDate: candidate.lessonDate,
+            urgency: "high",
+            targetUrl: candidate.classId
+              ? `/students?classId=${candidate.classId}&eventId=${candidate.eventId}`
+              : `/calendar?eventId=${candidate.eventId}`,
+          });
+        });
+    } catch (attendanceError) {
+      console.warn("[attention-queue] Attendance priority check failed:", attendanceError);
+    }
+
     // 0. Package expiration alerts (30-day monitoring)
     try {
       const { checkPackageExpirationAlerts } = await import("@/lib/finance-engine");

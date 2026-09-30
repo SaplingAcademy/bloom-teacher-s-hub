@@ -845,6 +845,7 @@ export function ClassCard({
    ========================================================================= */
 export function ClassDetailsView({
   cls,
+  requestedEventId,
   onBack,
   onEditClass,
   onSelectStudent,
@@ -852,6 +853,7 @@ export function ClassDetailsView({
   isPt,
 }: {
   cls: ClassWithDetails;
+  requestedEventId?: string;
   onBack: () => void;
   onEditClass: () => void;
   onSelectStudent: (studentId: string) => void;
@@ -1042,7 +1044,12 @@ export function ClassDetailsView({
       </div>
 
       {/* Unified Lesson Plan & Attendance (same system as individual students) */}
-      <ClassLessonPlanTable cls={cls} teacherId={user?.id || ""} isPt={isPt} />
+      <ClassLessonPlanTable
+        cls={cls}
+        teacherId={user?.id || ""}
+        isPt={isPt}
+        requestedEventId={requestedEventId}
+      />
 
     </div>
   );
