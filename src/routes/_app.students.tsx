@@ -26,6 +26,7 @@ import {
   FinancialTimelineEvent,
 } from "@/lib/finance-engine";
 import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
+import { buildBillingAgreement, billingModelFromPackage } from "@/lib/billing-domain";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
@@ -166,6 +167,10 @@ interface Package {
   duration: number;
   lessons: number;
   method: string;
+  defaultInstallmentCount?: number;
+  billingModel?: "monthly" | "installment_total" | "one_time";
+  billingDurationType?: "fixed" | "continuous" | null;
+  contractMonths?: number | null;
 }
 
 interface Transaction {
@@ -906,20 +911,30 @@ function StudentsPage() {
     try {
       if (selectedPackageId) {
         const selectedPkg = packages.find((p) => p.id === selectedPackageId);
-        const totalPriceCents = (Number(selectedPkg?.price) || 0) * 100;
-        const instCount = Math.max(formInstallmentCount || 1, 1);
-        const instAmountCents = Math.round(totalPriceCents / instCount);
+        if (!selectedPkg) throw new Error("Selected package not found");
+        const terms = buildBillingAgreement(selectedPkg, {
+          firstDueDate: formFirstDueDate || new Date().toISOString().split("T")[0],
+          installmentCount: formInstallmentCount,
+          billingDurationType: selectedPkg.billingDurationType,
+          contractMonths: selectedPkg.contractMonths,
+        });
 
         const ok = await saveStudentEnrollmentAgreement({
           teacherId: studentData.teacher_id,
           studentId: savedStudentId,
           packageId: selectedPackageId,
-          totalAmountCents: totalPriceCents,
-          installmentCount: instCount,
-          installmentAmountCents: instAmountCents,
+          totalAmountCents: terms.totalAmountCents,
+          installmentCount: terms.installmentCount,
+          installmentAmountCents: terms.installmentAmountCents,
           dueDay: formDueDay || 5,
           firstDueDate: formFirstDueDate || new Date().toISOString().split("T")[0],
           paymentMethod: formPaymentMethod || "Pix",
+          billingModel: terms.billingModel,
+          billingDurationType: terms.billingDurationType,
+          contractMonths: terms.contractMonths,
+          monthlyAmountCents: terms.monthlyAmountCents,
+          expectedTotalCents: terms.expectedTotalCents || null,
+          lastDueDate: terms.lastDueDate,
         });
 
         if (!ok) {
@@ -1301,6 +1316,10 @@ function StudentsPage() {
         duration: Number(d.duration) || 60,
         lessons: Number(d.lessons) || 4,
         method: d.method || "Pix",
+        defaultInstallmentCount: Number(d.defaultInstallmentCount) || 1,
+        billingModel: d.billingModel,
+        billingDurationType: d.billingDurationType,
+        contractMonths: d.contractMonths,
       })),
     );
   }, [packagesQuery.data]);
@@ -2802,7 +2821,9 @@ function StudentsPage() {
                           setFormPackageId(val);
                           const selectedPkg = packages.find((p) => p.id === val);
                           if (selectedPkg) {
-                            const defaultInst = selectedPkg.duration && selectedPkg.duration > 0 ? selectedPkg.duration : 6;
+                            const defaultInst = billingModelFromPackage(selectedPkg) === "installment_total"
+                              ? selectedPkg.defaultInstallmentCount || 1
+                              : 1;
                             setFormInstallmentCount(defaultInst);
                           }
                         }}
@@ -2825,9 +2846,12 @@ function StudentsPage() {
                         const selectedPkg = packages.find((p) => p.id === formPackageId);
                         if (!selectedPkg || formPackageId === "none_value") return null;
 
-                        const isMonthly = selectedPkg.frequency === "Monthly" || selectedPkg.frequency === "monthly";
+                        const model = billingModelFromPackage(selectedPkg);
+                        const isMonthly = model === "monthly";
                         const totalPriceCents = (Number(selectedPkg.price) || 0) * 100;
-                        const installmentCount = Math.max(1, Math.min(12, Math.round(formInstallmentCount || 1)));
+                        const installmentCount = model === "installment_total"
+                          ? Math.max(1, Math.min(24, Math.round(formInstallmentCount || 1)))
+                          : 1;
                         const scheduleInfo = calculateInstallmentSchedule(totalPriceCents, installmentCount);
                         const lastDueDate = calculateLastDueDate(formFirstDueDate, installmentCount, formDueDay || 18);
 

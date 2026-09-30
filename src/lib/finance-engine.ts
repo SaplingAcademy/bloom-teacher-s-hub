@@ -1,4 +1,13 @@
 import { supabase } from "@/lib/supabase";
+import {
+  BillingDurationType,
+  BillingModel,
+  addBillingMonths,
+  billingModelFromPackage,
+  buildBillingAgreement,
+  calculateExactInstallments,
+  getChargeKind,
+} from "@/lib/billing-domain";
 
 export interface RealInvoice {
   id: string;
@@ -64,6 +73,11 @@ export interface StudentEnrollmentAgreement {
   lastDueDate: string;
   paymentMethod: string;
   frequency: string; // "Monthly" | "custom" | "total"
+  billingModel?: BillingModel;
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
+  monthlyAmountCents?: number | null;
+  expectedTotalCents?: number | null;
 }
 
 /**
@@ -648,13 +662,19 @@ export async function saveStudentEnrollmentAgreement(agreement: {
   teacherId: string;
   studentId: string;
   packageId: string;
-  totalAmountCents: number;
-  installmentCount: number;
-  installmentAmountCents: number;
+  totalAmountCents: number | null;
+  installmentCount: number | null;
+  installmentAmountCents: number | null;
   dueDay: number;
   firstDueDate: string;
   lastDueDate?: string;
   paymentMethod?: string;
+  billingModel: BillingModel;
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
+  monthlyAmountCents?: number | null;
+  expectedTotalCents?: number | null;
+  lastDueDate?: string | null;
 }): Promise<boolean> {
   const {
     teacherId,
@@ -665,14 +685,28 @@ export async function saveStudentEnrollmentAgreement(agreement: {
     dueDay,
     firstDueDate,
     paymentMethod = "Pix",
+    billingModel,
+    billingDurationType = null,
+    contractMonths = null,
+    monthlyAmountCents = null,
+    expectedTotalCents = null,
+    lastDueDate: providedLastDueDate,
   } = agreement;
 
   if (!teacherId || !studentId || !packageId) return false;
 
   try {
-    const safeInstallmentCount = Math.max(1, Math.min(12, Math.round(installmentCount || 1)));
-    const scheduleInfo = calculateInstallmentSchedule(totalAmountCents, safeInstallmentCount);
-    const lastDueDate = calculateLastDueDate(firstDueDate, safeInstallmentCount, dueDay);
+    const safeInstallmentCount = billingModel === "installment_total"
+      ? Math.max(1, Math.min(24, Math.round(installmentCount || 1)))
+      : null;
+    const scheduleInfo = safeInstallmentCount
+      ? calculateInstallmentSchedule(totalAmountCents || 0, safeInstallmentCount)
+      : null;
+    const lastDueDate = providedLastDueDate ?? (
+      billingModel === "one_time" ? firstDueDate : safeInstallmentCount
+        ? calculateLastDueDate(firstDueDate, safeInstallmentCount, dueDay)
+        : null
+    );
 
     // 1. Deactivate existing active student_packages for this student
     await supabase
@@ -691,11 +725,16 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       status: "active",
       total_amount_cents: totalAmountCents,
       installment_count: safeInstallmentCount,
-      installment_amount_cents: scheduleInfo.baseAmountCents,
+      installment_amount_cents: scheduleInfo?.baseAmountCents || null,
       due_day: dueDay,
       first_due_date: firstDueDate,
       last_due_date: lastDueDate,
       payment_method: paymentMethod,
+      billing_model: billingModel,
+      billing_duration_type: billingDurationType,
+      contract_months: contractMonths,
+      monthly_amount_cents: monthlyAmountCents,
+      expected_total_cents: expectedTotalCents,
     });
 
     if (error) {
