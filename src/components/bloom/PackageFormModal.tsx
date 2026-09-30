@@ -20,7 +20,7 @@ export interface PackageFormData {
   method: string;
   defaultInstallmentCount?: number;
   billingModel?: BillingModel;
-  billingDurationType?: BillingDurationType;
+  billingDurationType?: BillingDurationType | null;
   contractMonths?: number;
 }
 

@@ -328,6 +328,15 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       const period = extractBillingPeriod(inv);
       if (inv.student_id) {
         existingKeys.add(`student_${inv.student_id}_${period}`);
+        if (inv.student_package_id && inv.charge_kind === "monthly_charge") {
+          existingKeys.add(`agreement_${inv.student_package_id}_month_${period}`);
+        }
+        if (inv.student_package_id && inv.charge_kind === "installment" && inv.sequence_number) {
+          existingKeys.add(`agreement_${inv.student_package_id}_installment_${inv.sequence_number}`);
+        }
+        if (inv.student_package_id && inv.charge_kind === "one_time") {
+          existingKeys.add(`agreement_${inv.student_package_id}_one_time`);
+        }
         // Check if invoice description has installment e.g. Parcela 1/8
         const instMatch = inv.description?.match(/Parcela\s+(\d+)\/(\d+)/);
         if (instMatch) {
@@ -365,7 +374,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         const dueDay = sp.due_day || student.due_day || 5;
 
         for (let i = 1; i <= safeInstallmentCount; i++) {
-          const instKey = `student_${student.id}_inst_${i}`;
+          const instKey = sp.billing_model ? `agreement_${sp.id}_installment_${i}` : `student_${student.id}_inst_${i}`;
           const dueDateStr = calculateInstallmentDueDate(firstDueDateStr, i - 1, dueDay);
           const periodStr = dueDateStr.substring(0, 7);
           const periodKey = `student_${student.id}_${periodStr}`;
@@ -395,10 +404,34 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             existingKeys.add(periodKey);
           }
         }
+      } else if (billingModel === "one_time" && sp) {
+        const oneTimeKey = `agreement_${sp.id}_one_time`;
+        if (!existingKeys.has(oneTimeKey)) {
+          const dueDateStr = sp.first_due_date || todayStr;
+          newInvoiceRows.push({
+            teacher_id: teacherId,
+            student_id: student.id,
+            student_package_id: sp.id,
+            charge_kind: "one_time",
+            sequence_number: 1,
+            sequence_count: 1,
+            invoice_number: `INV-ONE-${sp.id.slice(0, 8)}`,
+            description: `Pagamento único ${pkgName} - ${student.full_name} | [Individual] | Period: ${dueDateStr.slice(0, 7)}`,
+            amount_cents: sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 0),
+            currency: "BRL",
+            status: dueDateStr < todayStr ? "overdue" : "pending",
+            due_date: dueDateStr,
+          });
+          existingKeys.add(oneTimeKey);
+        }
       } else {
         // --- Monthly Package Flow ---
-        const periodKey = `student_${student.id}_${currentPeriod}`;
-        if (!existingKeys.has(periodKey)) {
+        const periodKey = sp?.billing_model ? `agreement_${sp.id}_month_${currentPeriod}` : `student_${student.id}_${currentPeriod}`;
+        const sequenceNumber = sp?.first_due_date
+          ? (currentYear - Number(sp.first_due_date.slice(0, 4))) * 12 + currentDate.getMonth() - (Number(sp.first_due_date.slice(5, 7)) - 1) + 1
+          : 1;
+        const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
+        if (!existingKeys.has(periodKey) && sequenceNumber >= 1 && withinFixedTerm) {
           const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
           const dueDay = sp?.due_day || student.due_day || 5;
           const dueDateStr = `${currentYear}-${currentMonth}-${String(Math.min(Math.max(dueDay, 1), 28)).padStart(2, "0")}`;
@@ -410,7 +443,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             student_id: student.id,
             student_package_id: sp?.id || null,
             charge_kind: "monthly_charge",
-            sequence_number: null,
+            sequence_number: sequenceNumber,
             sequence_count: sp?.contract_months || null,
             invoice_number: invNumber,
             description: `Mensalidade ${pkgName} - ${student.full_name} | [Individual] | Period: ${currentPeriod}`,
@@ -479,7 +512,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             const dueDay = sp.due_day || 5;
 
             for (let i = 1; i <= safeInstallmentCount; i++) {
-              const instKey = `student_${mem.student_id}_inst_${i}`;
+              const instKey = sp.billing_model ? `agreement_${sp.id}_installment_${i}` : `student_${mem.student_id}_inst_${i}`;
               const dueDateStr = calculateInstallmentDueDate(firstDueDateStr, i - 1, dueDay);
               const periodStr = dueDateStr.substring(0, 7);
               const periodKey = `student_${mem.student_id}_${periodStr}`;
@@ -509,9 +542,33 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
                 existingKeys.add(periodKey);
               }
             }
+          } else if (memberBillingModel === "one_time" && sp) {
+            const oneTimeKey = `agreement_${sp.id}_one_time`;
+            if (!existingKeys.has(oneTimeKey)) {
+              const oneTimeDueDate = sp.first_due_date || todayStr;
+              newInvoiceRows.push({
+                teacher_id: teacherId,
+                student_id: mem.student_id,
+                student_package_id: sp.id,
+                charge_kind: "one_time",
+                sequence_number: 1,
+                sequence_count: 1,
+                invoice_number: `INV-ONE-${sp.id.slice(0, 8)}`,
+                description: `Pagamento único ${pkgName} - ${memberStudent.full_name} [Por Aluno] | Period: ${oneTimeDueDate.slice(0, 7)}`,
+                amount_cents: sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 0),
+                currency: "BRL",
+                status: oneTimeDueDate < todayStr ? "overdue" : "pending",
+                due_date: oneTimeDueDate,
+              });
+              existingKeys.add(oneTimeKey);
+            }
           } else {
-            const memberKey = `student_${mem.student_id}_${currentPeriod}`;
-            if (!existingKeys.has(memberKey)) {
+            const memberKey = sp?.billing_model ? `agreement_${sp.id}_month_${currentPeriod}` : `student_${mem.student_id}_${currentPeriod}`;
+            const sequenceNumber = sp?.first_due_date
+              ? (currentYear - Number(sp.first_due_date.slice(0, 4))) * 12 + currentDate.getMonth() - (Number(sp.first_due_date.slice(5, 7)) - 1) + 1
+              : 1;
+            const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
+            if (!existingKeys.has(memberKey) && sequenceNumber >= 1 && withinFixedTerm) {
               const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
               const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -520,7 +577,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
                 student_id: mem.student_id,
                 student_package_id: sp?.id || null,
                 charge_kind: "monthly_charge",
-                sequence_number: null,
+                sequence_number: sequenceNumber,
                 sequence_count: sp?.contract_months || null,
                 invoice_number: invNumber,
                 description: `Mensalidade ${cls.name} - ${memberStudent.full_name} [Por Aluno] | Period: ${currentPeriod}`,
@@ -746,6 +803,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       first_due_date: firstDueDate,
       last_due_date: lastDueDate,
       payment_method: paymentMethod,
+      snapshot_frequency: billingModel,
       billing_model: billingModel,
       billing_duration_type: billingDurationType,
       contract_months: contractMonths,
@@ -769,6 +827,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
         first_due_date: firstDueDate,
         last_due_date: lastDueDate,
         payment_method: paymentMethod,
+        snapshot_frequency: billingModel,
       }).select("id").single();
       inserted = legacyInsert.data;
       error = legacyInsert.error;
@@ -1864,23 +1923,7 @@ export async function renewStudentPackage(
       changeType = "renewal";
     }
 
-    // 5. Update previous active package agreement to status = 'completed'
-    if (currentSp) {
-      const prevEndDate = new Date(effectiveStartDate);
-      prevEndDate.setDate(prevEndDate.getDate() - 1);
-      const prevEndDateStr = prevEndDate.toISOString().split("T")[0];
-
-      await supabase
-        .from("student_packages")
-        .update({
-          status: "completed",
-          ended_at: prevEndDateStr,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", currentSp.id);
-    }
-
-    // 6. Calculate the new agreement through the canonical billing model.
+    // 5. Calculate the new agreement through the canonical billing model.
     const terms = buildBillingAgreement(
       {
         price: Number(newPkg.price || 0),
@@ -1915,6 +1958,7 @@ export async function renewStudentPackage(
         first_due_date: effectiveStartDate,
         last_due_date: terms.lastDueDate,
         payment_method: paymentMethod,
+        snapshot_frequency: terms.billingModel,
         snapshot_package_name: newPkg.name,
         snapshot_package_price_cents: finalTotalCents,
         change_type: changeType,
@@ -1943,6 +1987,7 @@ export async function renewStudentPackage(
         first_due_date: effectiveStartDate,
         last_due_date: terms.lastDueDate,
         payment_method: paymentMethod,
+        snapshot_frequency: terms.billingModel,
         snapshot_package_name: newPkg.name,
         snapshot_package_price_cents: finalTotalCents,
         change_type: changeType,
@@ -1956,6 +2001,20 @@ export async function renewStudentPackage(
     if (insertErr || !insertedSp) {
       console.error("[FinanceEngine] Error creating renewed package agreement:", insertErr);
       return { success: false, message: `Erro ao salvar nova renovação: ${insertErr?.message}` };
+    }
+
+    // Complete the previous agreement only after the replacement exists.
+    if (currentSp) {
+      const prevEndDate = new Date(effectiveStartDate);
+      prevEndDate.setDate(prevEndDate.getDate() - 1);
+      await supabase
+        .from("student_packages")
+        .update({
+          status: "completed",
+          ended_at: prevEndDate.toISOString().split("T")[0],
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentSp.id);
     }
 
     // 8. Also update student table reference to new package_id
