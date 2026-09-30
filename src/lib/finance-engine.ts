@@ -4,7 +4,12 @@ import {
   BillingModel,
   billingModelFromAgreement,
   billingModelFromPackage,
+  billingDateForMonth,
   buildBillingAgreement,
+  isValidBillingDate,
+  nextAgreementDueDate,
+  normalizeDueDay,
+  recurringBillingDate,
 } from "@/lib/billing-domain";
 
 export interface RealInvoice {
@@ -35,6 +40,7 @@ export interface RealInvoice {
   progressLabel?: string; // "2/6" or "Mensalidade"
   currentInstallmentLabel?: string; // "Parcela 3 de 6" or "Mensalidade"
   remainingBalanceCents?: number;
+  studentPackageId?: string | null;
 }
 
 export interface RealExpense {
@@ -176,8 +182,9 @@ export function calculateInstallmentSchedule(totalCents: number, installmentCoun
  * Calculate first ISO due date (YYYY-MM-DD) from a chosen recurring day of month (1-31).
  * If month has fewer days, caps to the last valid day of that month.
  */
-export function getFirstDueDateFromDay(dueDay: number = 18): string {
-  const safeDay = Math.max(1, Math.min(31, Math.round(dueDay || 18)));
+export function getFirstDueDateFromDay(dueDay: number): string {
+  const safeDay = normalizeDueDay(dueDay);
+  if (!safeDay) throw new Error("Dia de vencimento obrigatório e inválido.");
   const now = new Date();
   let year = now.getFullYear();
   let month = now.getMonth(); // 0-indexed
@@ -203,34 +210,14 @@ export function getFirstDueDateFromDay(dueDay: number = 18): string {
 /**
  * Calculate due date for installment `N` (0-indexed) given firstDueDate
  */
-export function calculateInstallmentDueDate(firstDueDateStr: string, installmentIndexZero: number, defaultDueDay: number = 18): string {
-  let startYear = new Date().getFullYear();
-  let startMonth = new Date().getMonth();
-  let targetDay = defaultDueDay || 18;
-
-  if (firstDueDateStr) {
-    const parts = firstDueDateStr.split("-").map(Number);
-    if (parts[0]) startYear = parts[0];
-    if (parts[1]) startMonth = parts[1] - 1;
-    if (parts[2]) targetDay = defaultDueDay || parts[2];
-  }
-
-  const targetDateObj = new Date(startYear, startMonth + installmentIndexZero, 1);
-  const y = targetDateObj.getFullYear();
-  const m = targetDateObj.getMonth();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const actualDay = Math.min(Math.max(1, targetDay), daysInMonth);
-
-  const mm = String(m + 1).padStart(2, "0");
-  const dd = String(actualDay).padStart(2, "0");
-
-  return `${y}-${mm}-${dd}`;
+export function calculateInstallmentDueDate(firstDueDateStr: string, installmentIndexZero: number, dueDay?: number | null): string {
+  return recurringBillingDate(firstDueDateStr, installmentIndexZero, dueDay);
 }
 
 /**
  * Calculate last payment date for an enrollment
  */
-export function calculateLastDueDate(firstDueDateStr: string, installmentCount: number, dueDay: number = 5): string {
+export function calculateLastDueDate(firstDueDateStr: string, installmentCount: number, dueDay?: number | null): string {
   const safeCount = Math.max(1, Math.min(12, Math.round(installmentCount || 1)));
   if (safeCount <= 1) return firstDueDateStr;
   return calculateInstallmentDueDate(firstDueDateStr, safeCount - 1, dueDay);
@@ -370,8 +357,9 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
         const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
         const { schedule } = calculateInstallmentSchedule(totalCents, safeInstallmentCount);
-        const firstDueDateStr = sp.first_due_date || todayStr;
-        const dueDay = sp.due_day || student.due_day || 5;
+        const firstDueDateStr = sp.first_due_date;
+        const dueDay = normalizeDueDay(sp.due_day);
+        if (!isValidBillingDate(firstDueDateStr) || !dueDay) return;
 
         for (let i = 1; i <= safeInstallmentCount; i++) {
           const instKey = sp.billing_model ? `agreement_${sp.id}_installment_${i}` : `student_${student.id}_inst_${i}`;
@@ -433,8 +421,9 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
         if (!existingKeys.has(periodKey) && sequenceNumber >= 1 && withinFixedTerm) {
           const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
-          const dueDay = sp?.due_day || student.due_day || 5;
-          const dueDateStr = `${currentYear}-${currentMonth}-${String(Math.min(Math.max(dueDay, 1), 28)).padStart(2, "0")}`;
+          const dueDay = normalizeDueDay(sp?.due_day);
+          if (!sp?.id || !isValidBillingDate(sp.first_due_date) || !dueDay) return;
+          const dueDateStr = billingDateForMonth(currentYear, currentDate.getMonth(), dueDay);
           if (sp?.last_due_date && dueDateStr > sp.last_due_date) return;
           const status = dueDateStr < todayStr ? "overdue" : "pending";
           const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -442,7 +431,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
           newInvoiceRows.push({
             teacher_id: teacherId,
             student_id: student.id,
-            student_package_id: sp?.id || null,
+            student_package_id: sp.id,
             charge_kind: "monthly_charge",
             sequence_number: sequenceNumber,
             sequence_count: sp?.contract_months || null,
@@ -463,10 +452,6 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
     activeClasses.forEach((cls) => {
       const mode = cls.billing_mode || "per_member";
       const pkg = cls.package_id ? packagesMap.get(cls.package_id) : null;
-      const dueDay = Math.min(Math.max(cls.due_day || 5, 1), 28);
-      const dueDateStr = `${currentYear}-${currentMonth}-${String(dueDay).padStart(2, "0")}`;
-      const status = dueDateStr < todayStr ? "overdue" : "pending";
-
       if (mode === "shared_class") {
         const classKey = `class_${cls.id}_${currentPeriod}`;
         if (!existingKeys.has(classKey)) {
@@ -475,17 +460,22 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
           const invNumber = `INV-CLS-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
           
           const activeMembers = (cls.class_members || []).filter((m: any) => m.status === "active");
-          const firstStudentId = activeMembers.length > 0 ? activeMembers[0].student_id : (activeStudents[0]?.id || null);
+          const billedMember = activeMembers.find((member: any) => studentPackagesMap.has(member.student_id));
+          const firstStudentId = billedMember?.student_id || null;
+          const memberAgreement = firstStudentId ? studentPackagesMap.get(firstStudentId) : null;
+          const dueDay = normalizeDueDay(memberAgreement?.due_day);
+          const dueDateStr = dueDay ? billingDateForMonth(currentYear, currentDate.getMonth(), dueDay) : null;
 
-          if (firstStudentId) {
+          if (firstStudentId && memberAgreement?.id && dueDateStr) {
             newInvoiceRows.push({
               teacher_id: teacherId,
               student_id: firstStudentId,
+              student_package_id: memberAgreement.id,
               invoice_number: invNumber,
               description: `Mensalidade ${cls.name} [Cobrança da Turma] [Turma: ${cls.id}] | Period: ${currentPeriod}`,
               amount_cents: priceCents,
               currency: "BRL",
-              status,
+              status: dueDateStr < todayStr ? "overdue" : "pending",
               due_date: dueDateStr,
             });
             existingKeys.add(classKey);
@@ -509,8 +499,9 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             const safeInstallmentCount = Math.max(1, Math.min(12, sp.installment_count));
             const totalCents = sp.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 240000);
             const { schedule } = calculateInstallmentSchedule(totalCents, safeInstallmentCount);
-            const firstDueDateStr = sp.first_due_date || todayStr;
-            const dueDay = sp.due_day || 5;
+            const firstDueDateStr = sp.first_due_date;
+            const dueDay = normalizeDueDay(sp.due_day);
+            if (!isValidBillingDate(firstDueDateStr) || !dueDay) return;
 
             for (let i = 1; i <= safeInstallmentCount; i++) {
               const instKey = sp.billing_model ? `agreement_${sp.id}_installment_${i}` : `student_${mem.student_id}_inst_${i}`;
@@ -571,14 +562,17 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
             if (!existingKeys.has(memberKey) && sequenceNumber >= 1 && withinFixedTerm) {
               const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
+              const memberDueDay = normalizeDueDay(sp?.due_day);
+              if (!sp?.id || !isValidBillingDate(sp.first_due_date) || !memberDueDay) return;
+              const memberDueDate = billingDateForMonth(currentYear, currentDate.getMonth(), memberDueDay);
               const invNumber = `INV-${currentYear}${currentMonth}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-              if (sp?.last_due_date && dueDateStr > sp.last_due_date) return;
+              if (sp.last_due_date && memberDueDate > sp.last_due_date) return;
 
               newInvoiceRows.push({
                 teacher_id: teacherId,
                 student_id: mem.student_id,
-                student_package_id: sp?.id || null,
+                student_package_id: sp.id,
                 charge_kind: "monthly_charge",
                 sequence_number: sequenceNumber,
                 sequence_count: sp?.contract_months || null,
@@ -586,8 +580,8 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
                 description: `Mensalidade ${cls.name} - ${memberStudent.full_name} [Por Aluno] | Period: ${currentPeriod}`,
                 amount_cents: priceCents,
                 currency: "BRL",
-                status,
-                due_date: dueDateStr,
+                status: memberDueDate < todayStr ? "overdue" : "pending",
+                due_date: memberDueDate,
               });
               existingKeys.add(memberKey);
             }
@@ -735,6 +729,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         progressLabel,
         currentInstallmentLabel,
         remainingBalanceCents,
+        studentPackageId: inv.student_package_id || null,
       };
     });
 
@@ -783,6 +778,8 @@ export async function saveStudentEnrollmentAgreement(agreement: {
   } = agreement;
 
   if (!teacherId || !studentId || !packageId) return false;
+  const canonicalDueDay = normalizeDueDay(dueDay);
+  if (!canonicalDueDay || !isValidBillingDate(firstDueDate)) return false;
 
   try {
     const safeInstallmentCount = billingModel === "installment_total"
@@ -793,7 +790,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       : null;
     const lastDueDate = providedLastDueDate ?? (
       billingModel === "one_time" ? firstDueDate : safeInstallmentCount
-        ? calculateLastDueDate(firstDueDate, safeInstallmentCount, dueDay)
+        ? calculateLastDueDate(firstDueDate, safeInstallmentCount, canonicalDueDay)
         : null
     );
 
@@ -806,7 +803,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       total_amount_cents: totalAmountCents,
       installment_count: safeInstallmentCount,
       installment_amount_cents: scheduleInfo?.baseAmountCents || null,
-      due_day: dueDay,
+      due_day: canonicalDueDay,
       first_due_date: firstDueDate,
       last_due_date: lastDueDate,
       payment_method: paymentMethod,
@@ -830,7 +827,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
         total_amount_cents: legacyAmount || 0,
         installment_count: safeInstallmentCount || 1,
         installment_amount_cents: billingModel === "monthly" ? monthlyAmountCents || 0 : scheduleInfo?.baseAmountCents || legacyAmount || 0,
-        due_day: dueDay,
+        due_day: canonicalDueDay,
         first_due_date: firstDueDate,
         last_due_date: lastDueDate,
         payment_method: paymentMethod,
@@ -999,6 +996,7 @@ export async function fetchTeacherInvoices(teacherId: string): Promise<RealInvoi
         progressLabel,
         currentInstallmentLabel,
         remainingBalanceCents,
+        studentPackageId: inv.student_package_id || null,
       };
     });
   } catch (err) {
@@ -1065,12 +1063,12 @@ export async function getStudentFinancialSummary(
       .maybeSingle();
 
     const allInvoices = await fetchTeacherInvoices(teacherId);
-    const studentInvoices = allInvoices.filter((i) => i.studentId === studentId);
+    const allStudentInvoices = allInvoices.filter((i) => i.studentId === studentId);
 
     if (!spData) {
       return {
         ...defaultSummary,
-        invoices: studentInvoices,
+        invoices: allStudentInvoices,
       };
     }
 
@@ -1079,6 +1077,12 @@ export async function getStudentFinancialSummary(
       ? billingModelFromAgreement(spData)
       : billingModelFromPackage({ frequency: spData.snapshot_frequency || spData.package?.frequency });
     const isInstallment = billingModel === "installment_total";
+    const agreementStart = spData.first_due_date || spData.started_at;
+    const agreementEnd = spData.ended_at || spData.last_due_date || null;
+    const studentInvoices = allStudentInvoices.filter((invoice) => {
+      if (invoice.studentPackageId) return invoice.studentPackageId === spData.id;
+      return Boolean(agreementStart && invoice.dueDate >= agreementStart && (!agreementEnd || invoice.dueDate <= agreementEnd));
+    });
 
     const totalAmountCents = spData.expected_total_cents || spData.total_amount_cents || spData.monthly_amount_cents || 0;
     const installmentCount = isInstallment ? Math.max(1, Math.min(24, spData.installment_count || 1)) : 1;
@@ -1092,7 +1096,19 @@ export async function getStudentFinancialSummary(
     const pendingInvoices = studentInvoices.filter((i) => i.status === "pending" || i.status === "overdue");
     pendingInvoices.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
-    const nextDueDate = pendingInvoices.length > 0 ? pendingInvoices[0].dueDate : null;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const nextDueDate = pendingInvoices.length > 0
+      ? pendingInvoices[0].dueDate
+      : nextAgreementDueDate({
+          firstDueDate: spData.first_due_date,
+          dueDay: spData.due_day,
+          billingModel,
+          installmentCount: spData.installment_count,
+          contractMonths: spData.billing_duration_type === "fixed" ? spData.contract_months : null,
+          lastDueDate: spData.last_due_date,
+          afterDate: todayStr,
+        });
 
     const paidInvoicesWithDate = paidInvoices.filter((i) => i.paidAt).sort((a, b) => (b.paidAt || "").localeCompare(a.paidAt || ""));
     const lastPaymentDate = paidInvoicesWithDate.length > 0 ? paidInvoicesWithDate[0].paidAt?.substring(0, 10) || null : null;
@@ -1594,7 +1610,7 @@ export async function getStudentPackageHistory(
 
       const firstDueDate = sp.first_due_date || sp.started_at;
       const lastDueDate = sp.last_due_date || (billingModel === "installment_total"
-        ? calculateLastDueDate(firstDueDate, installmentCount, sp.due_day || 5)
+        ? calculateLastDueDate(firstDueDate, installmentCount, sp.due_day)
         : firstDueDate);
       const billingModelLabel = billingModel === "monthly" ? "Mensalidade" : billingModel === "one_time" ? "Pagamento único" : "Valor total parcelado";
       const agreementValueLabel = billingModel === "monthly"
@@ -1626,7 +1642,7 @@ export async function getStudentPackageHistory(
         changeType: (sp.change_type as any) || "initial",
         changeTypeLabel,
         paymentMethod: sp.payment_method || "Pix",
-        dueDay: sp.due_day || 5,
+        dueDay: sp.due_day,
         firstDueDate,
         lastDueDate,
         isCurrent,
@@ -1785,7 +1801,7 @@ export async function checkPackageExpirationAlerts(
         if (sp.last_due_date) {
           endDateStr = sp.last_due_date;
         } else if (sp.first_due_date && sp.installment_count) {
-          endDateStr = calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day || 5);
+          endDateStr = calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day);
         } else {
           return;
         }
@@ -1846,7 +1862,7 @@ export async function renewStudentPackage(
     startDate,
     totalAmountCents,
     installmentCount = 1,
-    dueDay = 5,
+    dueDay,
     paymentMethod = "Pix",
     renewalNotes,
     billingDurationType,
@@ -1855,6 +1871,10 @@ export async function renewStudentPackage(
 
   if (!teacherId || !studentId || !newPackageId) {
     return { success: false, message: "Parâmetros obrigatórios ausentes." };
+  }
+  const canonicalDueDay = normalizeDueDay(dueDay);
+  if (!canonicalDueDay || !isValidBillingDate(startDate)) {
+    return { success: false, message: "Informe o dia e a data do primeiro vencimento." };
   }
 
   try {
@@ -1962,7 +1982,7 @@ export async function renewStudentPackage(
         total_amount_cents: terms.totalAmountCents,
         installment_count: terms.installmentCount,
         installment_amount_cents: terms.installmentAmountCents,
-        due_day: dueDay,
+        due_day: canonicalDueDay,
         first_due_date: effectiveStartDate,
         last_due_date: terms.lastDueDate,
         payment_method: paymentMethod,
@@ -1991,7 +2011,7 @@ export async function renewStudentPackage(
         total_amount_cents: finalTotalCents,
         installment_count: terms.installmentCount || 1,
         installment_amount_cents: terms.installmentAmountCents || terms.monthlyAmountCents || finalTotalCents,
-        due_day: dueDay,
+        due_day: canonicalDueDay,
         first_due_date: effectiveStartDate,
         last_due_date: terms.lastDueDate,
         payment_method: paymentMethod,
@@ -2030,7 +2050,7 @@ export async function renewStudentPackage(
       .from("students")
       .update({
         package_id: newPackageId,
-        due_day: dueDay,
+        due_day: canonicalDueDay,
         updated_at: new Date().toISOString(),
       })
       .eq("id", studentId)

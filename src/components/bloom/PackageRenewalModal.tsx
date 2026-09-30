@@ -89,7 +89,7 @@ export function PackageRenewalModal({
   const [startDate, setStartDate] = useState<string>("");
   const [totalAmountCents, setTotalAmountCents] = useState<number>(240000);
   const [installmentCount, setInstallmentCount] = useState<number>(6);
-  const [dueDay, setDueDay] = useState<number>(5);
+  const [dueDay, setDueDay] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>("Pix");
   const [renewalNotes, setRenewalNotes] = useState<string>("");
   const [billingDurationType, setBillingDurationType] = useState<BillingDurationType>("continuous");
@@ -213,6 +213,10 @@ export function PackageRenewalModal({
   // Handle final submission with Idempotency Guard
   const handleConfirmRenewal = async () => {
     if (isSubmitting) return; // Guard against double click
+    if (!dueDay || !startDate) {
+      toast.error("Informe o dia e a data do primeiro vencimento.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -512,9 +516,12 @@ export function PackageRenewalModal({
                   <Input
                     type="number"
                     min={1}
-                    max={28}
-                    value={dueDay}
-                    onChange={(e) => setDueDay(parseInt(e.target.value || "5", 10))}
+                    max={31}
+                    value={dueDay ?? ""}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setDueDay(value >= 1 && value <= 31 ? value : null);
+                    }}
                   />
                 </div>
 
@@ -633,7 +640,13 @@ export function PackageRenewalModal({
             <Button
               type="button"
               size="sm"
-              onClick={() => setStep((s) => (s + 1) as any)}
+              onClick={() => {
+                if (step === 3 && (!dueDay || !startDate)) {
+                  toast.error("Informe o dia e a data do primeiro vencimento.");
+                  return;
+                }
+                setStep((s) => (s + 1) as any);
+              }}
               className="bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 text-xs font-bold gap-1 cursor-pointer"
             >
               Continuar <ArrowRight className="w-4 h-4" />
