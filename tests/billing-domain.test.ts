@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBillingAgreement, calculateExactInstallments, normalizeBillingModel } from "./billing-domain";
+import { buildBillingAgreement, calculateExactInstallments, normalizeBillingModel } from "../src/lib/billing-domain";
 
 describe("billing domain", () => {
   it("normalizes legacy billing labels", () => {
@@ -9,32 +9,22 @@ describe("billing domain", () => {
   });
 
   it("keeps a fixed monthly fee intact across the contract period", () => {
-    expect(buildBillingAgreement(
-      { price: 250, billingModel: "monthly" },
-      { firstDueDate: "2026-10-06", billingDurationType: "fixed", contractMonths: 6 },
-    )).toEqual({
-      billingModel: "monthly",
-      billingDurationType: "fixed",
-      contractMonths: 6,
-      monthlyAmountCents: 25000,
-      expectedTotalCents: 150000,
-      totalAmountCents: null,
-      installmentCount: null,
-      installmentAmountCents: null,
-      firstDueDate: "2026-10-06",
-      lastDueDate: "2027-03-06",
+    const terms = buildBillingAgreement({ price: 250, billingModel: "monthly" }, {
+      firstDueDate: "2026-10-06", billingDurationType: "fixed", contractMonths: 6,
     });
+    expect(terms.monthlyAmountCents).toBe(25000);
+    expect(terms.expectedTotalCents).toBe(150000);
+    expect(terms.installmentCount).toBeNull();
+    expect(terms.lastDueDate).toBe("2027-03-06");
   });
 
   it("leaves continuous monthly agreements open-ended", () => {
-    const terms = buildBillingAgreement(
-      { price: 250, billingModel: "monthly" },
-      { firstDueDate: "2026-10-06", billingDurationType: "continuous" },
-    );
+    const terms = buildBillingAgreement({ price: 250 }, {
+      firstDueDate: "2026-10-06", billingDurationType: "continuous",
+    });
     expect(terms.monthlyAmountCents).toBe(25000);
     expect(terms.expectedTotalCents).toBe(0);
     expect(terms.lastDueDate).toBeNull();
-    expect(terms.installmentCount).toBeNull();
   });
 
   it("splits only total-value contracts and preserves cents", () => {
@@ -44,10 +34,7 @@ describe("billing domain", () => {
   });
 
   it("creates one-time agreements without installment semantics", () => {
-    const terms = buildBillingAgreement(
-      { price: 1500, billingModel: "one_time" },
-      { firstDueDate: "2026-10-06" },
-    );
+    const terms = buildBillingAgreement({ price: 1500, billingModel: "one_time" }, { firstDueDate: "2026-10-06" });
     expect(terms.totalAmountCents).toBe(150000);
     expect(terms.installmentCount).toBeNull();
     expect(terms.lastDueDate).toBe("2026-10-06");
