@@ -1344,10 +1344,10 @@ function StudentsPage() {
         duration: Number(d.duration) || 60,
         lessons: Number(d.lessons) || 4,
         method: d.method || "Pix",
-        defaultInstallmentCount: Number(d.defaultInstallmentCount) || 1,
-        billingModel: d.billingModel,
-        billingDurationType: d.billingDurationType,
-        contractMonths: d.contractMonths,
+        defaultInstallmentCount: Number(d.default_installment_count) || 1,
+        billingModel: d.billing_model,
+        billingDurationType: d.billing_duration_type,
+        contractMonths: d.contract_months,
       })),
     );
   }, [packagesQuery.data]);

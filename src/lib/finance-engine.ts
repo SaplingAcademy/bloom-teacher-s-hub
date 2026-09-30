@@ -395,7 +395,8 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       } else if (billingModel === "one_time" && sp) {
         const oneTimeKey = `agreement_${sp.id}_one_time`;
         if (!existingKeys.has(oneTimeKey)) {
-          const dueDateStr = sp.first_due_date || todayStr;
+          const dueDateStr = sp.first_due_date;
+          if (!isValidBillingDate(dueDateStr) || !normalizeDueDay(sp.due_day)) return;
           newInvoiceRows.push({
             teacher_id: teacherId,
             student_id: student.id,
@@ -537,7 +538,8 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
           } else if (memberBillingModel === "one_time" && sp) {
             const oneTimeKey = `agreement_${sp.id}_one_time`;
             if (!existingKeys.has(oneTimeKey)) {
-              const oneTimeDueDate = sp.first_due_date || todayStr;
+              const oneTimeDueDate = sp.first_due_date;
+              if (!isValidBillingDate(oneTimeDueDate) || !normalizeDueDay(sp.due_day)) return;
               newInvoiceRows.push({
                 teacher_id: teacherId,
                 student_id: mem.student_id,
@@ -798,7 +800,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       student_id: studentId,
       package_id: packageId,
       teacher_id: teacherId,
-      started_at: firstDueDate || new Date().toISOString().split("T")[0],
+      started_at: firstDueDate,
       status: "active",
       total_amount_cents: totalAmountCents,
       installment_count: safeInstallmentCount,
@@ -1079,9 +1081,16 @@ export async function getStudentFinancialSummary(
     const isInstallment = billingModel === "installment_total";
     const agreementStart = spData.first_due_date || spData.started_at;
     const agreementEnd = spData.ended_at || spData.last_due_date || null;
+    const agreementCreatedAt = spData.created_at || "";
     const studentInvoices = allStudentInvoices.filter((invoice) => {
       if (invoice.studentPackageId) return invoice.studentPackageId === spData.id;
-      return Boolean(agreementStart && invoice.dueDate >= agreementStart && (!agreementEnd || invoice.dueDate <= agreementEnd));
+      const invoiceCreatedAt = invoice.createdAt || "";
+      return Boolean(
+        agreementStart
+        && invoice.dueDate >= agreementStart
+        && (!agreementEnd || invoice.dueDate <= agreementEnd)
+        && (!agreementCreatedAt || invoiceCreatedAt >= agreementCreatedAt),
+      );
     });
 
     const totalAmountCents = spData.expected_total_cents || spData.total_amount_cents || spData.monthly_amount_cents || 0;

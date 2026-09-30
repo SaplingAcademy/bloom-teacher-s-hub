@@ -165,6 +165,7 @@ export function PackageRenewalModal({
       defaultStart = currentSummary.nextDueDate;
     }
     setStartDate(defaultStart);
+    setDueDay(null);
   }, [isOpen, currentSummary]);
 
   // When selected package changes
