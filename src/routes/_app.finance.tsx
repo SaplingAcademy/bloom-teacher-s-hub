@@ -992,6 +992,41 @@ function FinancePage() {
                 </div>
               </div>
 
+              {pkgFreq === "Monthly" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-emerald-100/90">
+                    {lang === "pt" ? "Duração da cobrança" : "Billing duration"}
+                  </Label>
+                  <Select value={pkgBillingDurationType} onValueChange={(value) => setPkgBillingDurationType(value as "fixed" | "continuous")}>
+                    <SelectTrigger className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800">
+                      <SelectValue placeholder={lang === "pt" ? "Selecione" : "Select"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="continuous">{lang === "pt" ? "Contínua" : "Continuous"}</SelectItem>
+                      <SelectItem value="fixed">{lang === "pt" ? "Período determinado" : "Fixed period"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {pkgFreq === "Monthly" && pkgBillingDurationType === "fixed" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-emerald-100/90">
+                    {lang === "pt" ? "Duração contratual (meses)" : "Contract duration (months)"}
+                  </Label>
+                  <SafeNumberInput value={pkgContractMonths} onChange={setPkgContractMonths} required className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800" />
+                </div>
+              )}
+
+              {pkgFreq === "total" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-emerald-100/90">
+                    {lang === "pt" ? "Número de parcelas" : "Installment count"}
+                  </Label>
+                  <SafeNumberInput value={pkgInstallmentCount} onChange={setPkgInstallmentCount} required className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800" />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label

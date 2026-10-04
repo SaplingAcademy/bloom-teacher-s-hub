@@ -208,7 +208,13 @@ export function PackageRenewalModal({
 
   // Calculate schedule preview
   const selectedBillingModel = selectedPackage ? billingModelFromPackage(selectedPackage) : "monthly";
-  const previewTerms = selectedPackage ? buildBillingAgreement(
+  const canBuildPreview = Boolean(
+    selectedPackage
+    && startDate
+    && (selectedBillingModel !== "installment_total" || installmentCount > 0)
+    && (selectedBillingModel !== "monthly" || billingDurationType !== "fixed" || contractMonths > 0),
+  );
+  const previewTerms = canBuildPreview && selectedPackage ? buildBillingAgreement(
     { ...selectedPackage, price: selectedPackage.price / 100 },
     { firstDueDate: startDate, installmentCount, billingDurationType, contractMonths },
   ) : null;
@@ -221,6 +227,14 @@ export function PackageRenewalModal({
     if (isSubmitting) return; // Guard against double click
     if (!dueDay || !startDate) {
       toast.error("Informe o dia e a data do primeiro vencimento.");
+      return;
+    }
+    if (selectedBillingModel === "installment_total" && installmentCount < 1) {
+      toast.error("Informe o número de parcelas.");
+      return;
+    }
+    if (selectedBillingModel === "monthly" && billingDurationType === "fixed" && contractMonths < 1) {
+      toast.error("Informe a duração do contrato em meses.");
       return;
     }
     setIsSubmitting(true);
