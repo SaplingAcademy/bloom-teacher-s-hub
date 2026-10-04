@@ -44,34 +44,34 @@ export function PackageFormModal({
   const [name, setName] = useState("");
   const [price, setPrice] = useState<string>("");
   const [frequency, setFrequency] = useState<"total" | "Monthly" | "One-time">("Monthly");
-  const [duration, setDuration] = useState<string>("60");
+  const [duration, setDuration] = useState<string>("");
   const [lessons, setLessons] = useState<string>("4");
   const [method, setMethod] = useState("Pix");
-  const [defaultInstallmentCount, setDefaultInstallmentCount] = useState<string>("6");
+  const [defaultInstallmentCount, setDefaultInstallmentCount] = useState<string>("");
   const [billingDurationType, setBillingDurationType] = useState<BillingDurationType>("continuous");
-  const [contractMonths, setContractMonths] = useState<string>("6");
+  const [contractMonths, setContractMonths] = useState<string>("");
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name || "");
       setPrice(formatNumberToCurrencyInput(initialData.price, lang));
       setFrequency((initialData.frequency as any) || "Monthly");
-      setDuration(String(initialData.duration ?? 60));
+      setDuration(initialData.duration ? String(initialData.duration) : "");
       setLessons(String(initialData.lessons ?? 4));
       setMethod(initialData.method || "Pix");
-      setDefaultInstallmentCount(String(initialData.defaultInstallmentCount ?? 6));
+      setDefaultInstallmentCount(initialData.defaultInstallmentCount ? String(initialData.defaultInstallmentCount) : "");
       setBillingDurationType(initialData.billingDurationType || "continuous");
-      setContractMonths(String(initialData.contractMonths ?? 6));
+      setContractMonths(initialData.contractMonths ? String(initialData.contractMonths) : "");
     } else {
       setName("");
       setPrice("");
       setFrequency("Monthly");
-      setDuration("60");
+      setDuration("");
       setLessons("4");
       setMethod("Pix");
-      setDefaultInstallmentCount("6");
+      setDefaultInstallmentCount("");
       setBillingDurationType("continuous");
-      setContractMonths("6");
+      setContractMonths("");
     }
   }, [initialData, isOpen, lang]);
 
@@ -83,34 +83,31 @@ export function PackageFormModal({
     return rest.length ? `${intPart}.${rest.join("").slice(0, 2)}` : intPart;
   };
 
-  const handleNumericBlur = (
-    value: string,
-    setter: React.Dispatch<React.SetStateAction<string>>,
-    fallback: number
-  ) => {
-    const sanitized = sanitizeNumeric(value);
-    setter(sanitized === "" ? String(fallback) : sanitized);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     const numericPrice = parseCurrencyToNumber(price);
     const billingModel = normalizeBillingModel(frequency);
+    const lessonDurationMinutes = Number(duration);
+    const installments = Number(defaultInstallmentCount);
+    const fixedMonths = Number(contractMonths);
+    if (!lessonDurationMinutes || lessonDurationMinutes < 1) return;
+    if (billingModel === "installment_total" && (!installments || installments < 1)) return;
+    if (billingModel === "monthly" && billingDurationType === "fixed" && (!fixedMonths || fixedMonths < 1)) return;
 
     onSave({
       id: initialData?.id,
       name: name.trim(),
       price: numericPrice,
       frequency,
-      duration: Number(duration) || 60,
+      duration: lessonDurationMinutes,
       lessons: Number(lessons) || 1,
       method,
-      defaultInstallmentCount: frequency === "total" ? Number(defaultInstallmentCount) || 1 : 1,
+      defaultInstallmentCount: billingModel === "installment_total" ? installments : undefined,
       billingModel,
       billingDurationType: billingModel === "monthly" ? billingDurationType : undefined,
-      contractMonths: billingModel === "monthly" && billingDurationType === "fixed" ? Number(contractMonths) || 1 : undefined,
+      contractMonths: billingModel === "monthly" && billingDurationType === "fixed" ? fixedMonths : undefined,
     });
     onClose();
   };
@@ -168,7 +165,7 @@ export function PackageFormModal({
                     max={120}
                     value={contractMonths}
                     onChange={(e) => setContractMonths(sanitizeNumeric(e.target.value))}
-                    onBlur={() => handleNumericBlur(contractMonths, setContractMonths, 6)}
+                    required
                     className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
                   />
                 </div>
@@ -225,7 +222,6 @@ export function PackageFormModal({
                   min={1}
                   value={lessons}
                   onChange={(e) => setLessons(sanitizeNumeric(e.target.value))}
-                  onBlur={() => handleNumericBlur(lessons, setLessons, 4)}
                   required
                   className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
                 />
@@ -242,7 +238,6 @@ export function PackageFormModal({
                   step={15}
                   value={duration}
                   onChange={(e) => setDuration(sanitizeNumeric(e.target.value))}
-                  onBlur={() => handleNumericBlur(duration, setDuration, 60)}
                   required
                   className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
                 />
@@ -263,7 +258,7 @@ export function PackageFormModal({
                     max={24}
                     value={defaultInstallmentCount}
                     onChange={(e) => setDefaultInstallmentCount(sanitizeNumeric(e.target.value))}
-                    onBlur={() => handleNumericBlur(defaultInstallmentCount, setDefaultInstallmentCount, 6)}
+                    required
                     className="h-11 w-24 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold text-center"
                   />
                 <span className="text-xs text-stone-500 font-medium">
