@@ -419,7 +419,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         const sequenceNumber = sp?.first_due_date
           ? (currentYear - Number(sp.first_due_date.slice(0, 4))) * 12 + currentDate.getMonth() - (Number(sp.first_due_date.slice(5, 7)) - 1) + 1
           : 1;
-        const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
+        const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !(sp?.contract_duration_months ?? sp?.contract_months) || sequenceNumber <= (sp.contract_duration_months ?? sp.contract_months);
         if (!existingKeys.has(periodKey) && sequenceNumber >= 1 && withinFixedTerm) {
           const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
           const dueDay = normalizeDueDay(sp?.due_day);
@@ -435,7 +435,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             student_package_id: sp.id,
             charge_kind: "monthly_charge",
             sequence_number: sequenceNumber,
-            sequence_count: sp?.contract_months || null,
+            sequence_count: (sp?.contract_duration_months ?? sp?.contract_months) || null,
             invoice_number: invNumber,
             description: `Mensalidade ${pkgName} - ${student.full_name} | [Individual] | Period: ${currentPeriod}`,
             amount_cents: priceCents,
@@ -561,7 +561,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
             const sequenceNumber = sp?.first_due_date
               ? (currentYear - Number(sp.first_due_date.slice(0, 4))) * 12 + currentDate.getMonth() - (Number(sp.first_due_date.slice(5, 7)) - 1) + 1
               : 1;
-            const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !sp?.contract_months || sequenceNumber <= sp.contract_months;
+            const withinFixedTerm = sp?.billing_duration_type !== "fixed" || !(sp?.contract_duration_months ?? sp?.contract_months) || sequenceNumber <= (sp.contract_duration_months ?? sp.contract_months);
             if (!existingKeys.has(memberKey) && sequenceNumber >= 1 && withinFixedTerm) {
               const priceCents = sp?.monthly_amount_cents || sp?.total_amount_cents || (pkg ? Math.round(Number(pkg.price || 0) * 100) : 30000);
               const memberDueDay = normalizeDueDay(sp?.due_day);
@@ -577,7 +577,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
                 student_package_id: sp.id,
                 charge_kind: "monthly_charge",
                 sequence_number: sequenceNumber,
-                sequence_count: sp?.contract_months || null,
+                sequence_count: (sp?.contract_duration_months ?? sp?.contract_months) || null,
                 invoice_number: invNumber,
                 description: `Mensalidade ${cls.name} - ${memberStudent.full_name} [Por Aluno] | Period: ${currentPeriod}`,
                 amount_cents: priceCents,
@@ -1607,8 +1607,8 @@ export async function getStudentPackageHistory(
         ? `${formatCentsToBRL(monthlyAmountCents)} / mês`
         : formatCentsToBRL(totalAmountCents);
       const paymentTermsLabel = billingModel === "monthly"
-        ? sp.billing_duration_type === "fixed" && sp.contract_months
-          ? `${sp.contract_months} cobranças mensais de ${formatCentsToBRL(monthlyAmountCents)}`
+        ? sp.billing_duration_type === "fixed" && (sp.contract_duration_months ?? sp.contract_months)
+          ? `${(sp.contract_duration_months ?? sp.contract_months)} cobranças mensais de ${formatCentsToBRL(monthlyAmountCents)}`
           : `Cobrança mensal de ${formatCentsToBRL(monthlyAmountCents)}`
         : billingModel === "one_time"
           ? `Cobrança única de ${formatCentsToBRL(totalAmountCents)}`
