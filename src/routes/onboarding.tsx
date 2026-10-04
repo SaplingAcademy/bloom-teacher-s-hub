@@ -472,19 +472,22 @@ export function OnboardingPage() {
           teacher_id: userId,
           name: pkg.name,
           price: Number(pkg.price || 0), // STORED DIRECTLY IN REAIS (NOT CENTS)
-          lessons: pkg.lessons || 4,
-          duration: pkg.duration || 60,
-          frequency: pkg.frequency || "Monthly",
-          default_installment_count: pkg.defaultInstallmentCount || 1,
+          lessons: pkg.lessons,
+          lesson_duration_minutes: pkg.duration,
+          frequency: pkg.frequency,
+          default_installment_count: pkg.billingModel === "installment_total" ? pkg.defaultInstallmentCount : null,
           billing_model: pkg.billingModel,
-          billing_duration_type: pkg.billingModel === "monthly" ? pkg.billingDurationType || "continuous" : null,
-          contract_months: pkg.billingModel === "monthly" && pkg.billingDurationType === "fixed" ? pkg.contractMonths || null : null,
+          billing_duration_type: pkg.billingModel === "monthly" ? pkg.billingDurationType : null,
+          contract_duration_months: pkg.billingModel === "monthly" && pkg.billingDurationType === "fixed" ? pkg.contractMonths : null,
           method: "Pix",
         }));
 
         let { error: pkgError } = await supabase.from("packages").insert(pkgRows);
         if (pkgError && /column|schema cache/i.test(pkgError.message || "")) {
-          const legacyRows = pkgRows.map(({ billing_model, billing_duration_type, contract_months, ...row }) => row);
+          const legacyRows = pkgRows.map(({ billing_model, billing_duration_type, contract_duration_months, lesson_duration_minutes, ...row }) => ({
+            ...row,
+            duration: lesson_duration_minutes,
+          }));
           const legacyInsert = await supabase.from("packages").insert(legacyRows);
           pkgError = legacyInsert.error;
         }
@@ -1839,7 +1842,7 @@ function Step4PlansPackages({
                       <span>•</span>
                       <span>{formatReaisToBRL(pkg.price)}</span>
                       <span>•</span>
-                      <span>{pkg.duration || 60} min</span>
+                      <span>{pkg.duration} min</span>
                       {pkg.frequency === "total" && pkg.defaultInstallmentCount && pkg.defaultInstallmentCount > 1 && (
                         <>
                           <span>•</span>
