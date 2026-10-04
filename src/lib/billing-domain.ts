@@ -141,9 +141,11 @@ export function buildBillingAgreement(
 
   if (billingModel === "monthly") {
     const billingDurationType = normalizeDurationType(options.billingDurationType || pkg.billingDurationType);
-    const contractMonths = billingDurationType === "fixed"
-      ? Math.max(1, Math.round(options.contractMonths || pkg.contractMonths || 1))
-      : null;
+    const requestedContractMonths = options.contractMonths ?? pkg.contractMonths;
+    if (billingDurationType === "fixed" && (!requestedContractMonths || requestedContractMonths < 1)) {
+      throw new Error("Informe a duração do contrato em meses.");
+    }
+    const contractMonths = billingDurationType === "fixed" ? Math.round(requestedContractMonths as number) : null;
     return {
       billingModel,
       billingDurationType,
@@ -173,9 +175,11 @@ export function buildBillingAgreement(
     };
   }
 
-  const installmentCount = Math.max(1, Math.min(24, Math.round(
-    options.installmentCount || pkg.defaultInstallmentCount || 1,
-  )));
+  const requestedInstallmentCount = options.installmentCount ?? pkg.defaultInstallmentCount;
+  if (!requestedInstallmentCount || requestedInstallmentCount < 1) {
+    throw new Error("Informe o número de parcelas.");
+  }
+  const installmentCount = Math.max(1, Math.min(24, Math.round(requestedInstallmentCount)));
   const schedule = calculateExactInstallments(priceCents, installmentCount);
   return {
     billingModel,

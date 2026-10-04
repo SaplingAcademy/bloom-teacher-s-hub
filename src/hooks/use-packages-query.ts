@@ -38,13 +38,19 @@ export function usePackagesQuery(teacherId: string | undefined) {
         name: d.name,
         price: Number(d.price) || 0,
         frequency: d.frequency || "Monthly",
-        duration: Number(d.duration) || 60,
+        duration: Number(d.lesson_duration_minutes ?? d.duration) || 0,
         lessons: Number(d.lessons) || 4,
         method: d.method || "Pix",
-        defaultInstallmentCount: Number(d.default_installment_count) || 1,
+        defaultInstallmentCount: d.billing_model === "installment_total" && d.default_installment_count
+          ? Number(d.default_installment_count)
+          : 0,
         billingModel: d.billing_model || (String(d.frequency).toLowerCase() === "total" ? "installment_total" : String(d.frequency).toLowerCase().includes("one") ? "one_time" : "monthly"),
         billingDurationType: d.billing_duration_type || null,
-        contractMonths: d.contract_months ? Number(d.contract_months) : null,
+        contractMonths: d.contract_duration_months != null
+          ? Number(d.contract_duration_months)
+          : d.billing_model == null && d.contract_months != null
+            ? Number(d.contract_months)
+            : null,
       }));
     },
     enabled: Boolean(teacherId),

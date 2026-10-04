@@ -812,32 +812,11 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       snapshot_frequency: billingModel,
       billing_model: billingModel,
       billing_duration_type: billingDurationType,
-      contract_months: contractMonths,
+      contract_duration_months: contractMonths,
       monthly_amount_cents: monthlyAmountCents,
-      expected_total_cents: expectedTotalCents,
     };
 
-    let { data: inserted, error } = await supabase.from("student_packages").insert(canonicalRow).select("id").single();
-    if (error && /column|schema cache|null value.*installment_count/i.test(error.message || "")) {
-      const legacyAmount = billingModel === "monthly" ? monthlyAmountCents : totalAmountCents;
-      const legacyInsert = await supabase.from("student_packages").insert({
-        student_id: studentId,
-        package_id: packageId,
-        teacher_id: teacherId,
-        started_at: firstDueDate,
-        status: "active",
-        total_amount_cents: legacyAmount || 0,
-        installment_count: safeInstallmentCount || 1,
-        installment_amount_cents: billingModel === "monthly" ? monthlyAmountCents || 0 : scheduleInfo?.baseAmountCents || legacyAmount || 0,
-        due_day: canonicalDueDay,
-        first_due_date: firstDueDate,
-        last_due_date: lastDueDate,
-        payment_method: paymentMethod,
-        snapshot_frequency: billingModel,
-      }).select("id").single();
-      inserted = legacyInsert.data;
-      error = legacyInsert.error;
-    }
+    const { data: inserted, error } = await supabase.from("student_packages").insert(canonicalRow).select("id").single();
 
     if (error || !inserted) {
       console.error("[Student Save Failure]", {
@@ -1114,7 +1093,9 @@ export async function getStudentFinancialSummary(
           dueDay: spData.due_day,
           billingModel,
           installmentCount: spData.installment_count,
-          contractMonths: spData.billing_duration_type === "fixed" ? spData.contract_months : null,
+          contractMonths: spData.billing_duration_type === "fixed"
+            ? spData.contract_duration_months ?? spData.contract_months
+            : null,
           lastDueDate: spData.last_due_date,
           afterDate: todayStr,
         });
@@ -1967,14 +1948,14 @@ export async function renewStudentPackage(
         billingModel: newPkg.billing_model,
         frequency: newPkg.frequency,
         billingDurationType: newPkg.billing_duration_type,
-        contractMonths: newPkg.contract_months,
+        contractMonths: newPkg.contract_duration_months,
         defaultInstallmentCount: newPkg.default_installment_count,
       },
       {
         firstDueDate: effectiveStartDate,
         installmentCount,
         billingDurationType: billingDurationType || newPkg.billing_duration_type,
-        contractMonths: contractMonths ?? newPkg.contract_months,
+        contractMonths: contractMonths ?? newPkg.contract_duration_months,
       },
     );
     const finalTotalCents = terms.totalAmountCents || terms.monthlyAmountCents || 0;
@@ -2003,37 +1984,11 @@ export async function renewStudentPackage(
         renewed_from_id: currentSp?.id || null,
         billing_model: terms.billingModel,
         billing_duration_type: terms.billingDurationType,
-        contract_months: terms.contractMonths,
+        contract_duration_months: terms.contractMonths,
         monthly_amount_cents: terms.monthlyAmountCents,
-        expected_total_cents: terms.expectedTotalCents || null,
       })
       .select("id")
       .single();
-
-    if (insertErr && /column|schema cache|null value.*installment_count/i.test(insertErr.message || "")) {
-      const legacyInsert = await supabase.from("student_packages").insert({
-        student_id: studentId,
-        package_id: newPackageId,
-        teacher_id: teacherId,
-        started_at: effectiveStartDate,
-        status: "active",
-        total_amount_cents: finalTotalCents,
-        installment_count: terms.installmentCount || 1,
-        installment_amount_cents: terms.installmentAmountCents || terms.monthlyAmountCents || finalTotalCents,
-        due_day: canonicalDueDay,
-        first_due_date: effectiveStartDate,
-        last_due_date: terms.lastDueDate,
-        payment_method: paymentMethod,
-        snapshot_frequency: terms.billingModel,
-        snapshot_package_name: newPkg.name,
-        snapshot_package_price_cents: finalTotalCents,
-        change_type: changeType,
-        renewal_notes: renewalNotes || null,
-        renewed_from_id: currentSp?.id || null,
-      }).select("id").single();
-      insertedSp = legacyInsert.data;
-      insertErr = legacyInsert.error;
-    }
 
     if (insertErr || !insertedSp) {
       console.error("[FinanceEngine] Error creating renewed package agreement:", insertErr);

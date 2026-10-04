@@ -382,10 +382,13 @@ function FinancePage() {
 
   // Package Form State
   const [pkgName, setPkgName] = useState("");
-  const [pkgPrice, setPkgPrice] = useState<string>("300");
+  const [pkgPrice, setPkgPrice] = useState<string>("");
   const [pkgFreq, setPkgFreq] = useState<"total" | "Monthly" | "One-time">("total");
-  const [pkgDur, setPkgDur] = useState<number>(6);
-  const [pkgLessons, setPkgLessons] = useState<number>(4);
+  const [pkgDur, setPkgDur] = useState<number>(0);
+  const [pkgLessons, setPkgLessons] = useState<number>(0);
+  const [pkgInstallmentCount, setPkgInstallmentCount] = useState<number>(0);
+  const [pkgBillingDurationType, setPkgBillingDurationType] = useState<"fixed" | "continuous" | "">("");
+  const [pkgContractMonths, setPkgContractMonths] = useState<number>(0);
   const [pkgMethod, setPkgMethod] = useState("Pix");
   const [editingPkg, setEditingPkg] = useState<Package | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -429,6 +432,9 @@ function FinancePage() {
 
     try {
       const billingModel = normalizeBillingModel(pkgFreq);
+      if (!numericPrice || !pkgDur || !pkgLessons) return;
+      if (billingModel === "installment_total" && !pkgInstallmentCount) return;
+      if (billingModel === "monthly" && (!pkgBillingDurationType || (pkgBillingDurationType === "fixed" && !pkgContractMonths))) return;
       let { data, error } = await supabase
         .from("packages")
         .insert({
@@ -436,12 +442,13 @@ function FinancePage() {
           name: pkgName.trim(),
           price: numericPrice,
           frequency: pkgFreq,
-          duration: Number(pkgDur) || 60,
-          lessons: Number(pkgLessons) || 4,
+          lesson_duration_minutes: Number(pkgDur),
+          lessons: Number(pkgLessons),
           method: pkgMethod,
+          default_installment_count: billingModel === "installment_total" ? pkgInstallmentCount : null,
           billing_model: billingModel,
-          billing_duration_type: billingModel === "monthly" ? "continuous" : null,
-          contract_months: null,
+          billing_duration_type: billingModel === "monthly" ? pkgBillingDurationType : null,
+          contract_duration_months: billingModel === "monthly" && pkgBillingDurationType === "fixed" ? pkgContractMonths : null,
         })
         .select()
         .single();
@@ -452,8 +459,8 @@ function FinancePage() {
           name: pkgName.trim(),
           price: numericPrice,
           frequency: pkgFreq,
-          duration: Number(pkgDur) || 60,
-          lessons: Number(pkgLessons) || 4,
+          duration: Number(pkgDur),
+          lessons: Number(pkgLessons),
           method: pkgMethod,
         }).select().single();
         data = legacyInsert.data;
@@ -471,18 +478,23 @@ function FinancePage() {
           name: data.name,
           price: Number(data.price) || 0,
           frequency: data.frequency || "Monthly",
-          duration: Number(data.duration) || 60,
+          duration: Number(data.lesson_duration_minutes ?? data.duration) || 0,
           lessons: Number(data.lessons) || 4,
           method: data.method || "Pix",
-          defaultInstallmentCount: Number(data.default_installment_count) || 1,
+          defaultInstallmentCount: data.billing_model === "installment_total" ? Number(data.default_installment_count) || undefined : undefined,
           billingModel: data.billing_model || billingModel,
           billingDurationType: data.billing_duration_type || null,
-          contractMonths: data.contract_months ? Number(data.contract_months) : null,
+          contractMonths: data.contract_duration_months != null ? Number(data.contract_duration_months) : null,
         };
         refetchPackages();
         setIsPkgOpen(false);
         setPkgName("");
-        setPkgPrice("300");
+        setPkgPrice("");
+        setPkgDur(0);
+        setPkgLessons(0);
+        setPkgInstallmentCount(0);
+        setPkgBillingDurationType("");
+        setPkgContractMonths(0);
         toast.success(lang === "pt" ? "Pacote criado com sucesso!" : "Package created successfully!");
       }
     } catch (err: any) {
@@ -499,13 +511,13 @@ function FinancePage() {
           name: formData.name,
           price: formData.price,
           frequency: formData.frequency,
-          duration: formData.duration,
+          lesson_duration_minutes: formData.duration,
           lessons: formData.lessons,
           method: formData.method,
-          default_installment_count: formData.billingModel === "installment_total" ? formData.defaultInstallmentCount || 1 : 1,
+          default_installment_count: formData.billingModel === "installment_total" ? formData.defaultInstallmentCount : null,
           billing_model: formData.billingModel || normalizeBillingModel(formData.frequency),
-          billing_duration_type: formData.billingModel === "monthly" ? formData.billingDurationType || "continuous" : null,
-          contract_months: formData.billingModel === "monthly" && formData.billingDurationType === "fixed" ? formData.contractMonths || null : null,
+          billing_duration_type: formData.billingModel === "monthly" ? formData.billingDurationType : null,
+          contract_duration_months: formData.billingModel === "monthly" && formData.billingDurationType === "fixed" ? formData.contractMonths : null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", formData.id)
@@ -979,6 +991,41 @@ function FinancePage() {
                   />
                 </div>
               </div>
+
+              {pkgFreq === "Monthly" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-emerald-100/90">
+                    {lang === "pt" ? "Duração da cobrança" : "Billing duration"}
+                  </Label>
+                  <Select value={pkgBillingDurationType} onValueChange={(value) => setPkgBillingDurationType(value as "fixed" | "continuous")}>
+                    <SelectTrigger className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800">
+                      <SelectValue placeholder={lang === "pt" ? "Selecione" : "Select"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="continuous">{lang === "pt" ? "Contínua" : "Continuous"}</SelectItem>
+                      <SelectItem value="fixed">{lang === "pt" ? "Período determinado" : "Fixed period"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {pkgFreq === "Monthly" && pkgBillingDurationType === "fixed" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-emerald-100/90">
+                    {lang === "pt" ? "Duração contratual (meses)" : "Contract duration (months)"}
+                  </Label>
+                  <SafeNumberInput value={pkgContractMonths} onChange={setPkgContractMonths} required className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800" />
+                </div>
+              )}
+
+              {pkgFreq === "total" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-emerald-100/90">
+                    {lang === "pt" ? "Número de parcelas" : "Installment count"}
+                  </Label>
+                  <SafeNumberInput value={pkgInstallmentCount} onChange={setPkgInstallmentCount} required className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800" />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">

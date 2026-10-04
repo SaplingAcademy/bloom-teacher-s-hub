@@ -92,13 +92,13 @@ export function PackageRenewalModal({
 
   // Commercial Conditions State
   const [startDate, setStartDate] = useState<string>("");
-  const [totalAmountCents, setTotalAmountCents] = useState<number>(240000);
-  const [installmentCount, setInstallmentCount] = useState<number>(6);
+  const [totalAmountCents, setTotalAmountCents] = useState<number>(0);
+  const [installmentCount, setInstallmentCount] = useState<number>(0);
   const [dueDay, setDueDay] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>("Pix");
   const [renewalNotes, setRenewalNotes] = useState<string>("");
   const [billingDurationType, setBillingDurationType] = useState<BillingDurationType>("continuous");
-  const [contractMonths, setContractMonths] = useState<number>(6);
+  const [contractMonths, setContractMonths] = useState<number>(0);
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -121,12 +121,12 @@ export function PackageRenewalModal({
             name: pkg.name,
             price: Math.round((Number(pkg.price) || 0) * 100),
             frequency: pkg.frequency || "Monthly",
-            lessons: pkg.lessons || 4,
-            duration: pkg.duration || 6,
-            defaultInstallmentCount: pkg.default_installment_count || 1,
+            lessons: pkg.lessons || 0,
+            duration: pkg.lesson_duration_minutes ?? pkg.duration ?? 0,
+            defaultInstallmentCount: pkg.billing_model === "installment_total" ? pkg.default_installment_count ?? undefined : undefined,
             billingModel: pkg.billing_model,
             billingDurationType: pkg.billing_duration_type || null,
-            contractMonths: pkg.contract_months || null,
+            contractMonths: pkg.contract_duration_months ?? (pkg.billing_model == null ? pkg.contract_months : null),
           }));
           setCatalogPackages(formatted);
 
@@ -137,9 +137,9 @@ export function PackageRenewalModal({
               setSelectedPackageId(currentCatalogPkg.id);
               setSelectedPackage(currentCatalogPkg);
               setTotalAmountCents(currentCatalogPkg.price);
-              setInstallmentCount(currentCatalogPkg.defaultInstallmentCount || 1);
+              setInstallmentCount(currentCatalogPkg.defaultInstallmentCount || 0);
               setBillingDurationType(currentCatalogPkg.billingDurationType || "continuous");
-              setContractMonths(currentCatalogPkg.contractMonths || 6);
+              setContractMonths(currentCatalogPkg.contractMonths || 0);
             } else if (formatted.length > 0) {
               setSelectedPackageId(formatted[0].id);
               setSelectedPackage(formatted[0]);
@@ -180,9 +180,9 @@ export function PackageRenewalModal({
     if (found) {
       setSelectedPackage(found);
       setTotalAmountCents(found.price);
-      setInstallmentCount(found.defaultInstallmentCount || 1);
+      setInstallmentCount(found.defaultInstallmentCount || 0);
       setBillingDurationType(found.billingDurationType || "continuous");
-      setContractMonths(found.contractMonths || 6);
+      setContractMonths(found.contractMonths || 0);
     }
   };
 
@@ -208,7 +208,13 @@ export function PackageRenewalModal({
 
   // Calculate schedule preview
   const selectedBillingModel = selectedPackage ? billingModelFromPackage(selectedPackage) : "monthly";
-  const previewTerms = selectedPackage ? buildBillingAgreement(
+  const canBuildPreview = Boolean(
+    selectedPackage
+    && startDate
+    && (selectedBillingModel !== "installment_total" || installmentCount > 0)
+    && (selectedBillingModel !== "monthly" || billingDurationType !== "fixed" || contractMonths > 0),
+  );
+  const previewTerms = canBuildPreview && selectedPackage ? buildBillingAgreement(
     { ...selectedPackage, price: selectedPackage.price / 100 },
     { firstDueDate: startDate, installmentCount, billingDurationType, contractMonths },
   ) : null;
@@ -221,6 +227,14 @@ export function PackageRenewalModal({
     if (isSubmitting) return; // Guard against double click
     if (!dueDay || !startDate) {
       toast.error("Informe o dia e a data do primeiro vencimento.");
+      return;
+    }
+    if (selectedBillingModel === "installment_total" && installmentCount < 1) {
+      toast.error("Informe o número de parcelas.");
+      return;
+    }
+    if (selectedBillingModel === "monthly" && billingDurationType === "fixed" && contractMonths < 1) {
+      toast.error("Informe a duração do contrato em meses.");
       return;
     }
     setIsSubmitting(true);
@@ -514,7 +528,7 @@ export function PackageRenewalModal({
 
                  {selectedBillingModel === "monthly" && billingDurationType === "fixed" && <div className="space-y-1">
                    <Label className="text-xs font-bold">Duração Contratual (meses)</Label>
-                   <Input type="number" min={1} max={120} value={contractMonths} onChange={(e) => setContractMonths(Math.max(1, Number(e.target.value) || 1))} />
+                   <Input type="number" min={1} max={120} value={contractMonths || ""} onChange={(e) => setContractMonths(Number(e.target.value))} required />
                  </div>}
 
                 <div className="space-y-1">

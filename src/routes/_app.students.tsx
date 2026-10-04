@@ -1371,13 +1371,15 @@ function StudentsPage() {
         name: d.name,
         price: Number(d.price) || 0,
         frequency: d.frequency || "Monthly",
-        duration: Number(d.duration) || 60,
+        duration: Number(d.lesson_duration_minutes ?? d.duration) || 0,
         lessons: Number(d.lessons) || 4,
         method: d.method || "Pix",
-        defaultInstallmentCount: Number(d.default_installment_count) || 1,
+        defaultInstallmentCount: d.billing_model === "installment_total" && d.default_installment_count
+          ? Number(d.default_installment_count)
+          : undefined,
         billingModel: d.billing_model,
         billingDurationType: d.billing_duration_type,
-        contractMonths: d.contract_months,
+        contractMonths: d.contract_duration_months ?? (d.billing_model == null ? d.contract_months : null),
       })),
     );
   }, [packagesQuery.data]);
@@ -2887,9 +2889,9 @@ function StudentsPage() {
                           const selectedPkg = packages.find((p) => p.id === val);
                           if (selectedPkg) {
                             const defaultInst = billingModelFromPackage(selectedPkg) === "installment_total"
-                              ? selectedPkg.defaultInstallmentCount || 1
-                              : 1;
-                            setFormInstallmentCount(defaultInst);
+                              ? selectedPkg.defaultInstallmentCount
+                              : undefined;
+                            setFormInstallmentCount(defaultInst ?? 0);
                           }
                         }}
                       >
