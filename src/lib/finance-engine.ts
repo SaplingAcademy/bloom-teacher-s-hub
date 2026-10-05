@@ -1154,7 +1154,7 @@ export async function recordInvoicePayment(
   const { inv, payments } = await loadInvoiceWithPayments(invoiceId, teacherId);
   if (inv.status === "cancelled") throw new FinanceSyncError("Cobrança cancelada não pode ser marcada como paga.");
 
-  let revert: () => Promise<unknown>;
+  let revert: () => Promise<boolean>;
   if (payments.length > 0) {
     const previous = payments.map((p) => ({ id: p.id, received_at: p.received_at }));
     const { error } = await supabase
@@ -1163,7 +1163,10 @@ export async function recordInvoicePayment(
       .eq("invoice_id", invoiceId)
       .eq("teacher_id", teacherId);
     if (error) throw new FinanceSyncError("Não foi possível registrar o pagamento.", error);
-    revert = () => Promise.all(previous.map((p) => supabase.from("payments").update({ received_at: p.received_at }).eq("id", p.id)));
+    revert = async () => {
+      const results = await Promise.all(previous.map((p) => supabase.from("payments").update({ received_at: p.received_at }).eq("id", p.id)));
+      return results.every((r) => !r.error);
+    };
   } else {
     const { data: created, error } = await supabase
       .from("payments")
@@ -1178,7 +1181,7 @@ export async function recordInvoicePayment(
       .select("id")
       .single();
     if (error || !created) throw new FinanceSyncError("Não foi possível registrar o pagamento.", error);
-    revert = () => supabase.from("payments").delete().eq("id", created.id);
+    revert = async () => !(await supabase.from("payments").delete().eq("id", created.id)).error;
   }
 
   const { error: updateErr } = await supabase
@@ -1187,8 +1190,13 @@ export async function recordInvoicePayment(
     .eq("id", invoiceId)
     .eq("teacher_id", teacherId);
   if (updateErr) {
-    await revert();
-    throw new FinanceSyncError("Não foi possível marcar a cobrança como paga. Nada foi alterado.", updateErr);
+    const reverted = await revert();
+    throw new FinanceSyncError(
+      reverted
+        ? "Não foi possível marcar a cobrança como paga. Nada foi alterado."
+        : "Não foi possível marcar a cobrança como paga e o pagamento parcial não pôde ser revertido. Abra Cobranças e revise esta cobrança.",
+      updateErr,
+    );
   }
 }
 
@@ -1215,8 +1223,13 @@ export async function undoInvoicePayment(invoiceId: string, teacherId: string, t
     .eq("id", invoiceId)
     .eq("teacher_id", teacherId);
   if (updateErr) {
-    if (payments.length > 0) await supabase.from("payments").insert(payments);
-    throw new FinanceSyncError("Não foi possível desfazer o pagamento. Nada foi alterado.", updateErr);
+    const restored = payments.length === 0 || !(await supabase.from("payments").insert(payments)).error;
+    throw new FinanceSyncError(
+      restored
+        ? "Não foi possível desfazer o pagamento. Nada foi alterado."
+        : "Não foi possível desfazer o pagamento e o recebimento não pôde ser restaurado. Abra Cobranças e revise esta cobrança.",
+      updateErr,
+    );
   }
 }
 
