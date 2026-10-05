@@ -75,3 +75,34 @@ describe("billing domain", () => {
     expect(nextAgreementDueDate({ firstDueDate: "2026-10-31", dueDay: 31, billingModel: "monthly", contractMonths: 2, afterDate: "2026-12-01" })).toBeNull();
   });
 });
+
+import { buildAgreementChargeDrafts, agreementChargeKey } from "../src/lib/billing-domain";
+
+describe("buildAgreementChargeDrafts", () => {
+  const base = { id: "sp1", first_due_date: "2026-01-31", due_day: 31 };
+  it("monthly fixed generates every month with sequence", () => {
+    const d = buildAgreementChargeDrafts({ ...base, billing_model: "monthly", billing_duration_type: "fixed", contract_duration_months: 3, monthly_amount_cents: 50000 });
+    expect(d.map((x) => x.dueDate)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+    expect(d.every((x) => x.chargeKind === "monthly" && x.sequenceCount === 3 && x.amountCents === 50000)).toBe(true);
+  });
+  it("monthly continuous generates only the first charge", () => {
+    const d = buildAgreementChargeDrafts({ ...base, first_due_date: "2026-11-03", due_day: 3, billing_model: "monthly", billing_duration_type: "continuous", monthly_amount_cents: 50000 });
+    expect(d).toEqual([{ chargeKind: "monthly", sequenceNumber: 1, sequenceCount: null, dueDate: "2026-11-03", amountCents: 50000 }]);
+  });
+  it("installment_total supports up to 24 installments", () => {
+    const d = buildAgreementChargeDrafts({ ...base, billing_model: "installment_total", installment_count: 18, total_amount_cents: 100000 });
+    expect(d).toHaveLength(18);
+    expect(d.reduce((s, x) => s + x.amountCents, 0)).toBe(100000);
+    expect(d[17].sequenceCount).toBe(18);
+  });
+  it("one_time generates a single charge", () => {
+    const d = buildAgreementChargeDrafts({ ...base, billing_model: "one_time", total_amount_cents: 9000 });
+    expect(d).toEqual([{ chargeKind: "one_time", sequenceNumber: 1, sequenceCount: 1, dueDate: "2026-01-31", amountCents: 9000 }]);
+  });
+  it("legacy contracts are not reinterpreted", () => {
+    expect(buildAgreementChargeDrafts({ ...base, billing_model: null })).toEqual([]);
+  });
+  it("idempotency key is stable", () => {
+    expect(agreementChargeKey("sp1", "monthly", 2)).toBe("sp1|monthly|2");
+  });
+});

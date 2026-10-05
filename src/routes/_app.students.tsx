@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import {
   saveStudentEnrollmentAgreement,
+  FinanceSyncError,
   calculateLastDueDate,
   calculateInstallmentSchedule,
   getFirstDueDateFromDay,
@@ -1763,7 +1764,7 @@ function StudentsPage() {
       setIsModalOpen(false);
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
-      toast.error(i18nT("students.toastSaveError", lang));
+      toast.error(error instanceof FinanceSyncError ? error.message : i18nT("students.toastSaveError", lang));
     } finally {
       setIsSaving(false);
     }
