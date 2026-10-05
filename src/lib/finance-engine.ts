@@ -346,7 +346,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       { data: studentPackagesData },
       { data: classesData },
       { data: existingInvoicesData },
-    ] = results as any[];
+    ] = results as Array<{ data: any[] | null }>;
 
     const packagesMap = new Map<string, any>();
     (packagesData || []).forEach((pkg) => {
