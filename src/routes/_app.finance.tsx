@@ -4,7 +4,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import {
-  syncTeacherReceivables,
+  FinanceSyncError,
   markInvoiceAsPaid,
   updateInvoiceStatus,
   formatCentsToBRL,
