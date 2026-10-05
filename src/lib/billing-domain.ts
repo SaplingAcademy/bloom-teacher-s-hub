@@ -307,3 +307,52 @@ export function buildAgreementChargeDrafts(sp: AgreementChargeSource): Agreement
     amountCents,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Charge management (payments recorded by the teacher)
+// ---------------------------------------------------------------------------
+
+export type ManagedInvoiceStatus = "pending" | "overdue" | "paid" | "cancelled";
+
+/** Teacher's local calendar date (YYYY-MM-DD) — the browser runs in the teacher's timezone. */
+export function localDateString(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Stores a chosen calendar day as a timestamp anchored at 12:00 UTC, so the day
+ * never shifts in any timezone between UTC-11 and UTC+11. Always read back with
+ * paymentDateFromTimestamp (string slice), never through Date local conversion.
+ */
+export function paymentDateToTimestamp(date: string): string {
+  if (!isValidBillingDate(date)) throw new Error("Data de pagamento inválida.");
+  return `${date}T12:00:00.000Z`;
+}
+
+export function paymentDateFromTimestamp(value?: string | null): string | null {
+  if (!value) return null;
+  const day = value.substring(0, 10);
+  return isValidBillingDate(day) ? day : null;
+}
+
+/** Status of an unpaid charge, derived only from its due date. */
+export function unpaidStatusForDueDate(dueDate: string, today: string): "pending" | "overdue" {
+  return dueDate < today ? "overdue" : "pending";
+}
+
+/** Status after editing the due date: paid/cancelled stay as they are. */
+export function statusAfterDueDateChange(current: string, newDueDate: string, today: string): ManagedInvoiceStatus {
+  if (current === "paid" || current === "cancelled") return current;
+  return unpaidStatusForDueDate(newDueDate, today);
+}
+
+/** Unpaid charge due in the current month or earlier (candidate for "already paid?" on enrollment). */
+export function isPriorOrCurrentMonthOpenCharge(
+  invoice: { dueDate: string; status: string },
+  now: Date = new Date(),
+): boolean {
+  if (invoice.status === "paid" || invoice.status === "cancelled") return false;
+  if (!isValidBillingDate(invoice.dueDate)) return false;
+  const [year, month] = invoice.dueDate.split("-").map(Number);
+  return year * 12 + (month - 1) <= now.getFullYear() * 12 + now.getMonth();
+}

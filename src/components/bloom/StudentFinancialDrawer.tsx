@@ -10,11 +10,10 @@ import {
   FinancialTimelineEvent,
   PackageRenewalAlert,
   StudentFinancialSummary,
-  markInvoiceAsPaid,
-  updateInvoiceStatus,
   formatCentsToBRL,
 } from "@/lib/finance-engine";
-import { toast } from "sonner";
+import { ManageChargesTable } from "@/components/bloom/ManageChargesTable";
+import { useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import {
   Dialog,
   DialogContent,
@@ -67,12 +66,18 @@ export function StudentFinancialDrawer({
   onOpenRenewalModal,
 }: StudentFinancialDrawerProps) {
   const { lang } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"history" | "agreements" | "timeline">("history");
+  const [activeTab, setActiveTab] = useState<"charges" | "history" | "agreements" | "timeline">("charges");
   const [loading, setLoading] = useState<boolean>(true);
   const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
   const [agreements, setAgreements] = useState<PackageAgreementRecord[]>([]);
   const [timeline, setTimeline] = useState<FinancialTimelineEvent[]>([]);
   const [renewalAlert, setRenewalAlert] = useState<PackageRenewalAlert | null>(null);
+
+  const invalidateFinance = useInvalidateFinanceData(teacherId);
+  const handleChargesChanged = () => {
+    invalidateFinance();
+    loadData();
+  };
 
   const loadData = async () => {
     if (!teacherId || !studentId) return;
@@ -161,7 +166,18 @@ export function StudentFinancialDrawer({
           )}
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center gap-2 mt-5 border-t border-white/10 pt-4">
+          <div className="flex items-center gap-2 mt-5 border-t border-white/10 pt-4 flex-wrap">
+            <button
+              onClick={() => setActiveTab("charges")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "charges"
+                  ? "bg-[#F4EBE1] text-[#163020]"
+                  : "text-[#F4EBE1]/80 hover:bg-white/10"
+              }`}
+            >
+              {lang === "pt" ? "Cobranças" : "Charges"}
+            </button>
+
             <button
               onClick={() => setActiveTab("history")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -199,7 +215,9 @@ export function StudentFinancialDrawer({
 
         {/* Content Body */}
         <div className="p-6 space-y-6">
-          {loading ? (
+          {activeTab === "charges" ? (
+            <ManageChargesTable teacherId={teacherId} studentId={studentId} lang={lang} onChanged={handleChargesChanged} />
+          ) : loading ? (
             <div className="py-12 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Carregando histórico financeiro...
             </div>

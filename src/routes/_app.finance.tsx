@@ -44,7 +44,7 @@ import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { useFinanceInvoicesQuery, useTeacherExpensesQuery } from "@/hooks/use-finance-query";
+import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
 import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
 import { isInvoiceVisibleInLedger, normalizeBillingModel } from "@/lib/billing-domain";
@@ -570,6 +570,8 @@ function FinancePage() {
     }
   };
 
+  const invalidateFinanceData = useInvalidateFinanceData(user?.id);
+
   // Helper Change invoice payment status
   const handleStatusChange = async (invoiceId: string, newStatus: "paid" | "pending" | "overdue") => {
     if (!user) return;
@@ -580,7 +582,7 @@ function FinancePage() {
         await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
       }
       toast.success(lang === "pt" ? "Status atualizado com sucesso!" : "Status updated successfully!");
-      refetchInvoices();
+      invalidateFinanceData();
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível atualizar o status agora." : "Could not update status."));
     }

@@ -13,6 +13,11 @@ import {
   agreementChargeKey,
   buildAgreementChargeDrafts,
   normalizeInvoiceChargeKind,
+  localDateString,
+  paymentDateToTimestamp,
+  paymentDateFromTimestamp,
+  unpaidStatusForDueDate,
+  statusAfterDueDateChange,
 } from "@/lib/billing-domain";
 
 /** Extracts the real database error (code + message) so the teacher sees what actually failed. */
@@ -1113,84 +1118,240 @@ export async function getStudentFinancialSummary(
   }
 }
 
-/**
- * Mark a receivable/invoice as paid and log payment record in Supabase
- */
-export async function markInvoiceAsPaid(
-  invoiceId: string,
-  teacherId: string,
-  method: string = "Pix"
-): Promise<boolean> {
-  if (!invoiceId || !teacherId) return false;
+interface InvoicePaymentRow {
+  id: string;
+  teacher_id: string;
+  invoice_id: string;
+  amount_cents: number;
+  currency: string | null;
+  method: string | null;
+  received_at: string | null;
+}
 
-  try {
-    const { data: inv, error: invFetchErr } = await supabase
-      .from("invoices")
-      .select("*")
-      .eq("id", invoiceId)
-      .eq("teacher_id", teacherId)
-      .single();
-
-    if (invFetchErr || !inv) throw new Error("Invoice not found");
-
-    const paidAtStr = new Date().toISOString();
-
-    const { error: updateErr } = await supabase
-      .from("invoices")
-      .update({
-        status: "paid",
-        paid_at: paidAtStr,
-        updated_at: paidAtStr,
-      })
-      .eq("id", invoiceId);
-
-    if (updateErr) throw updateErr;
-
-    const { error: payErr } = await supabase.from("payments").insert({
-      teacher_id: teacherId,
-      invoice_id: invoiceId,
-      amount_cents: inv.amount_cents,
-      currency: inv.currency || "BRL",
-      method: method || "Pix",
-      received_at: paidAtStr,
-    });
-
-    if (payErr) {
-      console.warn("[FinanceEngine] Payment insert note:", payErr.message);
-    }
-
-    return true;
-  } catch (err) {
-    console.error("[FinanceEngine] Error marking invoice paid:", err);
-    return false;
-  }
+async function loadInvoiceWithPayments(invoiceId: string, teacherId: string) {
+  const [{ data: inv, error: invErr }, { data: pays, error: payErr }] = await Promise.all([
+    supabase.from("invoices").select("*").eq("id", invoiceId).eq("teacher_id", teacherId).single(),
+    supabase.from("payments").select("*").eq("invoice_id", invoiceId).eq("teacher_id", teacherId),
+  ]);
+  if (invErr || !inv) throw new FinanceSyncError("Cobrança não encontrada.", invErr);
+  if (payErr) throw new FinanceSyncError("Não foi possível ler os pagamentos da cobrança.", payErr);
+  return { inv, payments: (pays || []) as InvoicePaymentRow[] };
 }
 
 /**
- * Update payment status
+ * Records a payment on one invoice using the day chosen by the teacher.
+ * Keeps exactly one payments row per invoice (updates it if it already exists).
+ * If the invoice update fails, the payment change is reverted — never a paid invoice without payment, nor the reverse.
  */
-export async function updateInvoiceStatus(
+export async function recordInvoicePayment(
   invoiceId: string,
   teacherId: string,
-  newStatus: "pending" | "cancelled"
-): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from("invoices")
-      .update({
-        status: newStatus,
-        paid_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId)
-      .eq("teacher_id", teacherId);
+  paymentDate: string,
+  method?: string | null,
+): Promise<void> {
+  if (!invoiceId || !teacherId) throw new FinanceSyncError("Cobrança inválida.");
+  const paidAt = paymentDateToTimestamp(paymentDate);
+  const { inv, payments } = await loadInvoiceWithPayments(invoiceId, teacherId);
+  if (inv.status === "cancelled") throw new FinanceSyncError("Cobrança cancelada não pode ser marcada como paga.");
 
-    if (error) throw error;
-    return true;
-  } catch (err) {
-    console.error("[FinanceEngine] Error updating invoice status:", err);
-    return false;
+  let revert: () => Promise<boolean>;
+  if (payments.length > 0) {
+    const previous = payments.map((p) => ({ id: p.id, received_at: p.received_at }));
+    const { error } = await supabase
+      .from("payments")
+      .update({ received_at: paidAt, ...(method ? { method } : {}) })
+      .eq("invoice_id", invoiceId)
+      .eq("teacher_id", teacherId);
+    if (error) throw new FinanceSyncError("Não foi possível registrar o pagamento.", error);
+    revert = async () => {
+      const results = await Promise.all(previous.map((p) => supabase.from("payments").update({ received_at: p.received_at }).eq("id", p.id)));
+      return results.every((r) => !r.error);
+    };
+  } else {
+    const { data: created, error } = await supabase
+      .from("payments")
+      .insert({
+        teacher_id: teacherId,
+        invoice_id: invoiceId,
+        amount_cents: inv.amount_cents,
+        currency: inv.currency || "BRL",
+        method: method || "Pix",
+        received_at: paidAt,
+      })
+      .select("id")
+      .single();
+    if (error || !created) throw new FinanceSyncError("Não foi possível registrar o pagamento.", error);
+    revert = async () => !(await supabase.from("payments").delete().eq("id", created.id)).error;
   }
+
+  const { error: updateErr } = await supabase
+    .from("invoices")
+    .update({ status: "paid", paid_at: paidAt, updated_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .eq("teacher_id", teacherId);
+  if (updateErr) {
+    const reverted = await revert();
+    throw new FinanceSyncError(
+      reverted
+        ? "Não foi possível marcar a cobrança como paga. Nada foi alterado."
+        : "Não foi possível marcar a cobrança como paga e o pagamento parcial não pôde ser revertido. Abra Cobranças e revise esta cobrança.",
+      updateErr,
+    );
+  }
+}
+
+/** Changes the real payment day of an already paid invoice (paid_at + payments.received_at), without creating a new payment. */
+export async function updateInvoicePaymentDate(invoiceId: string, teacherId: string, paymentDate: string): Promise<void> {
+  const { inv } = await loadInvoiceWithPayments(invoiceId, teacherId);
+  if (inv.status !== "paid") throw new FinanceSyncError("Só é possível editar a data de uma cobrança paga.");
+  await recordInvoicePayment(invoiceId, teacherId, paymentDate);
+}
+
+/**
+ * Undoes a payment: removes its payments rows, clears paid_at and recomputes
+ * pending/overdue from the due date. Removed payments are restored if the invoice update fails.
+ */
+export async function undoInvoicePayment(invoiceId: string, teacherId: string, today: string = localDateString()): Promise<void> {
+  const { inv, payments } = await loadInvoiceWithPayments(invoiceId, teacherId);
+  if (payments.length > 0) {
+    const { error } = await supabase.from("payments").delete().eq("invoice_id", invoiceId).eq("teacher_id", teacherId);
+    if (error) throw new FinanceSyncError("Não foi possível remover o pagamento.", error);
+  }
+  const { error: updateErr } = await supabase
+    .from("invoices")
+    .update({ status: unpaidStatusForDueDate(inv.due_date, today), paid_at: null, updated_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .eq("teacher_id", teacherId);
+  if (updateErr) {
+    const restored = payments.length === 0 || !(await supabase.from("payments").insert(payments)).error;
+    throw new FinanceSyncError(
+      restored
+        ? "Não foi possível desfazer o pagamento. Nada foi alterado."
+        : "Não foi possível desfazer o pagamento e o recebimento não pôde ser restaurado. Abra Cobranças e revise esta cobrança.",
+      updateErr,
+    );
+  }
+}
+
+/** Changes the due date of ONE invoice only; other charges of the contract are never recalculated. */
+export async function updateInvoiceDueDate(
+  invoiceId: string,
+  teacherId: string,
+  newDueDate: string,
+  today: string = localDateString(),
+): Promise<void> {
+  if (!isValidBillingDate(newDueDate)) throw new FinanceSyncError("Informe um vencimento válido.");
+  const { inv } = await loadInvoiceWithPayments(invoiceId, teacherId);
+  const { error } = await supabase
+    .from("invoices")
+    .update({
+      due_date: newDueDate,
+      status: statusAfterDueDateChange(inv.status, newDueDate, today),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", invoiceId)
+    .eq("teacher_id", teacherId);
+  if (error) throw new FinanceSyncError("Não foi possível alterar o vencimento.", error);
+}
+
+/** Legacy entry points kept for the ledger buttons; both now throw on failure. */
+export async function markInvoiceAsPaid(invoiceId: string, teacherId: string, method: string = "Pix"): Promise<boolean> {
+  await recordInvoicePayment(invoiceId, teacherId, localDateString(), method);
+  return true;
+}
+
+export async function updateInvoiceStatus(invoiceId: string, teacherId: string, newStatus: "pending" | "cancelled"): Promise<boolean> {
+  if (newStatus === "pending") {
+    await undoInvoicePayment(invoiceId, teacherId);
+    return true;
+  }
+  const { error } = await supabase
+    .from("invoices")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .eq("teacher_id", teacherId);
+  if (error) throw new FinanceSyncError("Não foi possível cancelar a cobrança.", error);
+  return true;
+}
+
+export interface ManagedCharge {
+  id: string;
+  studentPackageId: string | null;
+  sequenceNumber: number | null;
+  sequenceCount: number | null;
+  chargeKind: string | null;
+  description: string;
+  dueDate: string;
+  amountCents: number;
+  status: "pending" | "overdue" | "paid" | "cancelled";
+  paymentDate: string | null;
+}
+
+export interface ManagedChargeGroup {
+  studentPackageId: string | null;
+  packageName: string;
+  isActive: boolean;
+  startedAt: string | null;
+  charges: ManagedCharge[];
+}
+
+/** All charges of a student grouped by contract (active first); legacy invoices without contract go to their own group. */
+export async function getStudentChargesByAgreement(teacherId: string, studentId: string): Promise<ManagedChargeGroup[]> {
+  const [{ data: sps, error: spErr }, { data: invs, error: invErr }] = await Promise.all([
+    supabase
+      .from("student_packages")
+      .select("id, status, started_at, created_at, packages(name)")
+      .eq("teacher_id", teacherId)
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select("*, payments(id, received_at)")
+      .eq("teacher_id", teacherId)
+      .eq("student_id", studentId)
+      .order("due_date", { ascending: true }),
+  ]);
+  if (spErr) throw new FinanceSyncError("Não foi possível carregar os contratos do aluno.", spErr);
+  if (invErr) throw new FinanceSyncError("Não foi possível carregar as cobranças do aluno.", invErr);
+
+  const today = localDateString();
+  const toCharge = (inv: any): ManagedCharge => {
+    const pay = (inv.payments || [])[0];
+    const status = inv.status === "paid" || inv.status === "cancelled"
+      ? inv.status
+      : unpaidStatusForDueDate(inv.due_date, today);
+    return {
+      id: inv.id,
+      studentPackageId: inv.student_package_id || null,
+      sequenceNumber: inv.sequence_number ?? null,
+      sequenceCount: inv.sequence_count ?? null,
+      chargeKind: inv.charge_kind ?? null,
+      description: inv.description || "",
+      dueDate: inv.due_date,
+      amountCents: inv.amount_cents || 0,
+      status,
+      paymentDate: status === "paid" ? paymentDateFromTimestamp(pay?.received_at || inv.paid_at) : null,
+    };
+  };
+
+  const charges = (invs || []).map(toCharge);
+  const groups: ManagedChargeGroup[] = (sps || [])
+    .map((sp: any) => ({
+      studentPackageId: sp.id as string,
+      packageName: (Array.isArray(sp.packages) ? sp.packages[0]?.name : sp.packages?.name) || "Contrato",
+      isActive: sp.status === "active",
+      startedAt: sp.started_at || null,
+      charges: charges.filter((c) => c.studentPackageId === sp.id),
+    }))
+    .filter((g) => g.charges.length > 0 || g.isActive)
+    .sort((a, b) => Number(b.isActive) - Number(a.isActive));
+
+  const known = new Set((sps || []).map((sp: any) => sp.id));
+  const unlinked = charges.filter((c) => !c.studentPackageId || !known.has(c.studentPackageId));
+  if (unlinked.length > 0) {
+    groups.push({ studentPackageId: null, packageName: "Cobranças sem contrato", isActive: false, startedAt: null, charges: unlinked });
+  }
+  return groups;
 }
 
 /**

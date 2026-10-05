@@ -16,3 +16,4 @@
 - [x] Adopt the manually added package and agreement billing fields for new records without changing history
 
 - [x] Livro Caixa: sincroniza sempre ao abrir, um contrato canônico por aluno, inserção idempotente (23505), erros reais e contratos com problema exibidos na tela.
+- [x] Gestão de cobranças: aba Cobranças, pagar/editar/desfazer, vencimento individual, pagamentos anteriores no cadastro

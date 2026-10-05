@@ -129,3 +129,50 @@ describe("isInvoiceVisibleInLedger", () => {
     expect(isInvoiceVisibleInLedger({ dueDate: "", status: "pending" }, now)).toBe(true);
   });
 });
+
+import {
+  isPriorOrCurrentMonthOpenCharge,
+  localDateString,
+  paymentDateFromTimestamp,
+  paymentDateToTimestamp,
+  statusAfterDueDateChange,
+  unpaidStatusForDueDate,
+} from "../src/lib/billing-domain";
+
+describe("charge management", () => {
+  it("keeps the chosen payment day in any timezone", () => {
+    const ts = paymentDateToTimestamp("2026-06-30");
+    expect(ts).toBe("2026-06-30T12:00:00.000Z");
+    expect(paymentDateFromTimestamp(ts)).toBe("2026-06-30");
+    // noon UTC is still the same calendar day from UTC-11 to UTC+11
+    const d = new Date(ts);
+    expect(new Date(d.getTime() - 11 * 3600e3).toISOString().slice(0, 10)).toBe("2026-06-30");
+    expect(new Date(d.getTime() + 11 * 3600e3).toISOString().slice(0, 10)).toBe("2026-06-30");
+    expect(() => paymentDateToTimestamp("2026-02-30")).toThrow();
+  });
+
+  it("recomputes unpaid status from the due date when undoing a payment", () => {
+    expect(unpaidStatusForDueDate("2026-09-10", "2026-10-05")).toBe("overdue");
+    expect(unpaidStatusForDueDate("2026-10-05", "2026-10-05")).toBe("pending");
+    expect(unpaidStatusForDueDate("2026-11-03", "2026-10-05")).toBe("pending");
+  });
+
+  it("editing a due date keeps paid as paid and moves overdue to pending when in the future", () => {
+    expect(statusAfterDueDateChange("paid", "2026-01-01", "2026-10-05")).toBe("paid");
+    expect(statusAfterDueDateChange("overdue", "2026-12-01", "2026-10-05")).toBe("pending");
+    expect(statusAfterDueDateChange("pending", "2026-09-01", "2026-10-05")).toBe("overdue");
+    expect(statusAfterDueDateChange("cancelled", "2026-12-01", "2026-10-05")).toBe("cancelled");
+  });
+
+  it("asks only about unpaid charges due this month or earlier", () => {
+    const now = new Date(2026, 9, 5);
+    expect(isPriorOrCurrentMonthOpenCharge({ dueDate: "2026-06-06", status: "overdue" }, now)).toBe(true);
+    expect(isPriorOrCurrentMonthOpenCharge({ dueDate: "2026-10-28", status: "pending" }, now)).toBe(true);
+    expect(isPriorOrCurrentMonthOpenCharge({ dueDate: "2026-11-06", status: "pending" }, now)).toBe(false);
+    expect(isPriorOrCurrentMonthOpenCharge({ dueDate: "2026-06-06", status: "paid" }, now)).toBe(false);
+  });
+
+  it("uses the local calendar date for today", () => {
+    expect(localDateString(new Date(2026, 0, 31, 23, 59))).toBe("2026-01-31");
+  });
+});
