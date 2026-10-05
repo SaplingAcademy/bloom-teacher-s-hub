@@ -200,3 +200,91 @@ export function getChargeKind(model: BillingModel): ChargeKind {
   if (model === "one_time") return "one_time";
   return "monthly_charge";
 }
+
+/** Values accepted by invoices.charge_kind. */
+export type InvoiceChargeKind = "monthly" | "installment" | "one_time";
+
+export interface AgreementChargeDraft {
+  chargeKind: InvoiceChargeKind;
+  sequenceNumber: number;
+  sequenceCount: number | null;
+  dueDate: string;
+  amountCents: number;
+}
+
+export interface AgreementChargeSource {
+  id?: string | null;
+  billing_model?: string | null;
+  billing_duration_type?: string | null;
+  contract_duration_months?: number | null;
+  monthly_amount_cents?: number | null;
+  total_amount_cents?: number | null;
+  installment_count?: number | null;
+  first_due_date?: string | null;
+  due_day?: number | null;
+}
+
+/** Maps stored charge_kind values (including the earlier "monthly_charge" spelling) to the canonical set. */
+export function normalizeInvoiceChargeKind(value?: string | null): InvoiceChargeKind | null {
+  if (value === "monthly" || value === "monthly_charge") return "monthly";
+  if (value === "installment") return "installment";
+  if (value === "one_time") return "one_time";
+  return null;
+}
+
+/** Idempotency key for a receivable generated from a contract. */
+export function agreementChargeKey(studentPackageId: string, kind: InvoiceChargeKind, sequenceNumber: number): string {
+  return `${studentPackageId}|${kind}|${sequenceNumber}`;
+}
+
+/**
+ * Receivables that must exist as soon as a canonical contract is created.
+ * Legacy contracts (billing_model NULL) return [] — they are never reinterpreted.
+ * Monthly continuous contracts only get their first charge here.
+ */
+export function buildAgreementChargeDrafts(sp: AgreementChargeSource): AgreementChargeDraft[] {
+  if (!sp.billing_model) return [];
+  const model = normalizeBillingModel(sp.billing_model);
+  const firstDueDate = sp.first_due_date;
+  const dueDay = normalizeDueDay(sp.due_day);
+  if (!isValidBillingDate(firstDueDate) || !dueDay) {
+    throw new Error("Contrato sem vencimento válido: não foi possível gerar as cobranças.");
+  }
+
+  if (model === "monthly") {
+    const amount = sp.monthly_amount_cents;
+    if (!amount || amount < 1) throw new Error("Contrato mensal sem valor mensal definido.");
+    if (normalizeDurationType(sp.billing_duration_type) === "fixed") {
+      const months = sp.contract_duration_months;
+      if (!months || months < 1) throw new Error("Contrato mensal fixo sem duração em meses.");
+      const count = Math.round(months);
+      return Array.from({ length: count }, (_, index) => ({
+        chargeKind: "monthly" as const,
+        sequenceNumber: index + 1,
+        sequenceCount: count,
+        dueDate: recurringBillingDate(firstDueDate, index, dueDay),
+        amountCents: amount,
+      }));
+    }
+    return [{ chargeKind: "monthly", sequenceNumber: 1, sequenceCount: null, dueDate: firstDueDate, amountCents: amount }];
+  }
+
+  if (model === "one_time") {
+    const amount = sp.total_amount_cents;
+    if (!amount || amount < 1) throw new Error("Contrato de pagamento único sem valor definido.");
+    return [{ chargeKind: "one_time", sequenceNumber: 1, sequenceCount: 1, dueDate: firstDueDate, amountCents: amount }];
+  }
+
+  const count = sp.installment_count ? Math.round(sp.installment_count) : 0;
+  if (count < 1 || count > 24) throw new Error("Contrato parcelado com número de parcelas inválido.");
+  const total = sp.total_amount_cents;
+  if (!total || total < 1) throw new Error("Contrato parcelado sem valor total definido.");
+  const schedule = calculateExactInstallments(total, count);
+  return schedule.map((amountCents, index) => ({
+    chargeKind: "installment" as const,
+    sequenceNumber: index + 1,
+    sequenceCount: count,
+    dueDate: recurringBillingDate(firstDueDate, index, dueDay),
+    amountCents,
+  }));
+}
