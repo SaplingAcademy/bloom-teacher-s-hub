@@ -2995,6 +2995,28 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
+                                    {lang === "pt" ? "Primeiro vencimento" : "First due date"}
+                                  </Label>
+                                  <Input
+                                    type="date"
+                                    value={formFirstDueDate}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setFormFirstDueDate(value);
+                                      const day = Number(value.split("-")[2]);
+                                      if (day >= 1 && day <= 31) setFormDueDay(day);
+                                    }}
+                                    className="h-10 rounded-xl border-border bg-white text-sm font-semibold"
+                                  />
+                                  <p className="text-[10px] text-muted-foreground leading-tight">
+                                    {lang === "pt"
+                                      ? "Contrato já em andamento? Informe a data da 1ª cobrança, mesmo que já tenha passado."
+                                      : "Contract already running? Enter the 1st charge date, even if it is in the past."}
+                                  </p>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-semibold text-foreground select-none">
                                     {lang === "pt" ? "Forma de Pagamento" : "Payment Method"}
                                   </Label>
                                   <Select value={formPaymentMethod} onValueChange={setFormPaymentMethod}>
@@ -3037,6 +3059,28 @@ function StudentsPage() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-semibold text-foreground select-none">
+                                    {lang === "pt" ? "Primeiro vencimento" : "First due date"}
+                                  </Label>
+                                  <Input
+                                    type="date"
+                                    value={formFirstDueDate}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setFormFirstDueDate(value);
+                                      const day = Number(value.split("-")[2]);
+                                      if (day >= 1 && day <= 31) setFormDueDay(day);
+                                    }}
+                                    className="h-10 rounded-xl border-border bg-white text-sm font-semibold"
+                                  />
+                                  <p className="text-[10px] text-muted-foreground leading-tight">
+                                    {lang === "pt"
+                                      ? "Contrato já em andamento? Informe a data da 1ª cobrança, mesmo que já tenha passado."
+                                      : "Contract already running? Enter the 1st charge date, even if it is in the past."}
+                                  </p>
                                 </div>
 
                                 <div className="space-y-1">

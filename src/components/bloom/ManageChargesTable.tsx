@@ -33,8 +33,11 @@ export function chargeLabel(c: ManagedCharge, lang: string): string {
   return c.sequenceCount ? `${base} ${c.sequenceNumber}/${c.sequenceCount}` : `${base} ${c.sequenceNumber}`;
 }
 
-function StatusBadge({ status, lang }: { status: ManagedCharge["status"]; lang: string }) {
+function StatusBadge({ status, dueDate, lang }: { status: ManagedCharge["status"]; dueDate: string; lang: string }) {
   const pt = lang === "pt";
+  if (status === "pending" && dueDate.slice(0, 7) > localDateString().slice(0, 7)) {
+    return <Badge variant="outline" className="text-[10px] font-bold bg-secondary text-secondary-foreground border-border">{pt ? "Futura" : "Upcoming"}</Badge>;
+  }
   const map = {
     paid: { label: pt ? "Paga" : "Paid", cls: "bg-primary/10 text-primary border-primary/30" },
     pending: { label: pt ? "Pendente" : "Pending", cls: "bg-muted text-muted-foreground border-border" },
@@ -153,7 +156,7 @@ export function ManageChargesTable({
                       <span className="font-bold text-foreground sm:col-span-2">{chargeLabel(c, lang)}</span>
                       <span className="text-muted-foreground">{pt ? "Venc." : "Due"} {formatChargeDate(c.dueDate, lang)}</span>
                       <span className="font-semibold text-foreground">{formatCentsToBRL(c.amountCents)}</span>
-                      <StatusBadge status={c.status} lang={lang} />
+                      <StatusBadge status={c.status} dueDate={c.dueDate} lang={lang} />
                       <span className="text-muted-foreground">{c.paymentDate ? `${pt ? "Pago em" : "Paid"} ${formatChargeDate(c.paymentDate, lang)}` : "—"}</span>
                     </div>
                     {editing ? (

@@ -176,3 +176,18 @@ describe("charge management", () => {
     expect(localDateString(new Date(2026, 0, 31, 23, 59))).toBe("2026-01-31");
   });
 });
+
+import { buildAgreementChargeDrafts as drafts6 } from "../src/lib/billing-domain";
+
+describe("contract already running (6 months, 4th month)", () => {
+  it("offers 1/6..4/6 in the popup and keeps all 6 for management", () => {
+    const all = drafts6({
+      id: "sp1", billing_model: "monthly", billing_duration_type: "fixed", contract_duration_months: 6,
+      monthly_amount_cents: 50000, first_due_date: "2026-07-05", due_day: 5,
+    });
+    expect(all.map((d) => `${d.sequenceNumber}/${d.sequenceCount}`)).toEqual(["1/6", "2/6", "3/6", "4/6", "5/6", "6/6"]);
+    const now = new Date(2026, 9, 5);
+    const eligible = all.filter((d) => isPriorOrCurrentMonthOpenCharge({ dueDate: d.dueDate, status: "pending" }, now));
+    expect(eligible.map((d) => d.sequenceNumber)).toEqual([1, 2, 3, 4]);
+  });
+});
