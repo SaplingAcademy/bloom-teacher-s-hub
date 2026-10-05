@@ -373,7 +373,7 @@ function FinancePage() {
   // TanStack Query Cache
   const { packages: queryPackages, refetch: refetchPackages } = usePackagesQuery(user?.id);
   const { expenses, setExpensesCache, refetch: refetchExpenses } = useTeacherExpensesQuery(user?.id);
-  const { invoices, isLoading: isLoadingInvoices, setInvoicesCache, refetch: refetchInvoices } = useFinanceInvoicesQuery(user?.id);
+  const { invoices, isLoading: isLoadingInvoices, error: invoicesError, setInvoicesCache, refetch: refetchInvoices } = useFinanceInvoicesQuery(user?.id);
   const packages: Package[] = queryPackages as Package[];
 
   // Dialog States
@@ -738,6 +738,13 @@ function FinancePage() {
               {isLoadingInvoices ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium animate-pulse">
                   {lang === "pt" ? "Carregando recebíveis dos alunos..." : "Loading student receivables..."}
+                </div>
+              ) : invoicesError ? (
+                <div role="alert" className="py-8 text-center text-xs font-medium text-destructive space-y-2">
+                  <p>{getFriendlyErrorMessage(invoicesError, lang === "pt" ? "Não foi possível carregar os recebíveis." : "Could not load receivables.")}</p>
+                  <button type="button" onClick={() => refetchInvoices()} className="underline">
+                    {lang === "pt" ? "Tentar novamente" : "Try again"}
+                  </button>
                 </div>
               ) : invoices.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium">
