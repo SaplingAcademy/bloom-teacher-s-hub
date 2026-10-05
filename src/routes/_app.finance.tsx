@@ -570,6 +570,8 @@ function FinancePage() {
     }
   };
 
+  const invalidateFinanceData = useInvalidateFinanceData(user?.id);
+
   // Helper Change invoice payment status
   const handleStatusChange = async (invoiceId: string, newStatus: "paid" | "pending" | "overdue") => {
     if (!user) return;
@@ -580,7 +582,7 @@ function FinancePage() {
         await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
       }
       toast.success(lang === "pt" ? "Status atualizado com sucesso!" : "Status updated successfully!");
-      refetchInvoices();
+      invalidateFinanceData();
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível atualizar o status agora." : "Could not update status."));
     }
