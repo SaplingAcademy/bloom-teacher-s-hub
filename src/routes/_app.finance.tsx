@@ -771,14 +771,14 @@ function FinancePage() {
                     {lang === "pt" ? "Tentar novamente" : "Try again"}
                   </button>
                 </div>
-              ) : invoices.length === 0 && syncIssues.length === 0 ? (
+              ) : ledgerInvoices.length === 0 && syncIssues.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium">
                   {lang === "pt"
                     ? "Nenhum recebível cadastrado ainda. Alunos com planos cadastrados aparecerão automaticamente aqui."
                     : "No receivables logged yet. Students with active billing agreements will appear here automatically."}
                 </div>
               ) : (
-                invoices.map((inv) => {
+                ledgerInvoices.map((inv) => {
                   const studentAlert = inv.studentId
                     ? expirationAlerts.find((a) => a.studentId === inv.studentId)
                     : null;
