@@ -238,6 +238,25 @@ export function agreementChargeKey(studentPackageId: string, kind: InvoiceCharge
 }
 
 /**
+ * Ledger visibility rule (display only — never affects generation or projections):
+ * - due this month or earlier AND not paid → visible (overdue stays until paid);
+ * - due in a future month → hidden until its month arrives;
+ * - paid → hidden from the main list (still available in the History).
+ * Month comparison uses the caller's local timezone.
+ */
+export function isInvoiceVisibleInLedger(
+  invoice: { dueDate: string; status: string },
+  now: Date = new Date(),
+): boolean {
+  if (invoice.status === "paid" || invoice.status === "cancelled") return false;
+  if (!isValidBillingDate(invoice.dueDate)) return true; // unknown date: fail open, never hide money
+  const [year, month] = invoice.dueDate.split("-").map(Number);
+  const dueMonthIndex = year * 12 + (month - 1);
+  const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
+  return dueMonthIndex <= currentMonthIndex;
+}
+
+/**
  * Receivables that must exist as soon as a canonical contract is created.
  * Legacy contracts (billing_model NULL) return [] — they are never reinterpreted.
  * Monthly continuous contracts only get their first charge here.

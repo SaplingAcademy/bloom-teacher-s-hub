@@ -106,3 +106,26 @@ describe("buildAgreementChargeDrafts", () => {
     expect(agreementChargeKey("sp1", "monthly", 2)).toBe("sp1|monthly|2");
   });
 });
+
+import { isInvoiceVisibleInLedger } from "../src/lib/billing-domain";
+
+describe("isInvoiceVisibleInLedger", () => {
+  const now = new Date(2026, 0, 15); // January 2026, local timezone
+  it("shows a pending charge due this month", () => {
+    expect(isInvoiceVisibleInLedger({ dueDate: "2026-01-10", status: "pending" }, now)).toBe(true);
+  });
+  it("keeps an unpaid charge from a previous month visible", () => {
+    expect(isInvoiceVisibleInLedger({ dueDate: "2025-12-10", status: "overdue" }, now)).toBe(true);
+  });
+  it("hides a charge due in a future month", () => {
+    expect(isInvoiceVisibleInLedger({ dueDate: "2026-02-10", status: "pending" }, now)).toBe(false);
+    expect(isInvoiceVisibleInLedger({ dueDate: "2027-01-01", status: "pending" }, now)).toBe(false);
+  });
+  it("hides paid charges from the main list", () => {
+    expect(isInvoiceVisibleInLedger({ dueDate: "2025-12-10", status: "paid" }, now)).toBe(false);
+    expect(isInvoiceVisibleInLedger({ dueDate: "2026-01-10", status: "paid" }, now)).toBe(false);
+  });
+  it("never hides a charge with an unreadable due date", () => {
+    expect(isInvoiceVisibleInLedger({ dueDate: "", status: "pending" }, now)).toBe(true);
+  });
+});

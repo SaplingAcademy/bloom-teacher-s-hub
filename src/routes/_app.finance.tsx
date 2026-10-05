@@ -47,7 +47,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
 import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
-import { normalizeBillingModel } from "@/lib/billing-domain";
+import { isInvoiceVisibleInLedger, normalizeBillingModel } from "@/lib/billing-domain";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -636,7 +636,11 @@ function FinancePage() {
     }
   };
 
-  // Computed KPIs directly from real invoices and expenses
+  // Main ledger list: current month + any unpaid past charges. Future charges stay in the
+  // database and keep feeding KPIs/projections, but only appear when their month arrives.
+  const ledgerInvoices = invoices.filter((inv) => isInvoiceVisibleInLedger(inv));
+
+  // Computed KPIs directly from real invoices and expenses (all invoices, including future)
   const totalReceivedCents = invoices
     .filter((inv) => inv.status === "paid")
     .reduce((sum, inv) => sum + inv.amountCents, 0);
@@ -767,14 +771,14 @@ function FinancePage() {
                     {lang === "pt" ? "Tentar novamente" : "Try again"}
                   </button>
                 </div>
-              ) : invoices.length === 0 && syncIssues.length === 0 ? (
+              ) : ledgerInvoices.length === 0 && syncIssues.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium">
                   {lang === "pt"
                     ? "Nenhum recebível cadastrado ainda. Alunos com planos cadastrados aparecerão automaticamente aqui."
                     : "No receivables logged yet. Students with active billing agreements will appear here automatically."}
                 </div>
               ) : (
-                invoices.map((inv) => {
+                ledgerInvoices.map((inv) => {
                   const studentAlert = inv.studentId
                     ? expirationAlerts.find((a) => a.studentId === inv.studentId)
                     : null;
