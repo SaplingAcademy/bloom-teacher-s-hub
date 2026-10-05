@@ -1275,6 +1275,8 @@ function StudentsPage() {
     queryClient.invalidateQueries({ queryKey: ["packages", teacherId] });
     queryClient.invalidateQueries({ queryKey: ["teacher-classes", teacherId] });
     queryClient.invalidateQueries({ queryKey: ["class-member-ids", teacherId] });
+    // Contract saves create receivables; the ledger must not keep showing a cached empty list.
+    queryClient.invalidateQueries({ queryKey: ["finance-invoices", teacherId] });
   };
 
   // Map raw rows -> UI model (re-runs on language change without refetching)

@@ -826,8 +826,7 @@ export async function createAgreementReceivables(teacherId: string, sp: any): Pr
     throw new FinanceSyncError((domainError as Error).message, domainError);
   }
   if (rows.length === 0) return;
-  const { error } = await supabase.from("invoices").insert(rows);
-  if (error) throw new FinanceSyncError("Não foi possível gerar as cobranças do contrato.", error);
+  await insertInvoicesIdempotent(teacherId, rows);
 }
 
 /**
