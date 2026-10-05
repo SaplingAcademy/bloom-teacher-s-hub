@@ -27,6 +27,7 @@ import {
   FinancialTimelineEvent,
 } from "@/lib/finance-engine";
 import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
+import { PriorPaymentsDialog } from "@/components/bloom/PriorPaymentsDialog";
 import { buildBillingAgreement, billingModelFromPackage } from "@/lib/billing-domain";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -573,6 +574,15 @@ function StudentsPage() {
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Student whose newly saved contract may have past/current-month charges to confirm as paid.
+  const pendingPriorPaymentsRef = useRef<string | null>(null);
+  const [priorPaymentsStudentId, setPriorPaymentsStudentId] = useState<string | null>(null);
+  const openPriorPaymentsIfNeeded = () => {
+    if (pendingPriorPaymentsRef.current) {
+      setPriorPaymentsStudentId(pendingPriorPaymentsRef.current);
+      pendingPriorPaymentsRef.current = null;
+    }
+  };
   const [editingStudentIdForModal, setEditingStudentIdForModal] = useState<string | null>(null);
   const [showNoPackagesPrompt, setShowNoPackagesPrompt] = useState(false);
   const pendingNewStudentOpenRef = useRef<(() => void) | null>(null);
@@ -835,6 +845,7 @@ function StudentsPage() {
     schedules: ScheduleInput[],
     isEdit: boolean,
   ) => {
+    pendingPriorPaymentsRef.current = null;
     let savedStudentData: any;
     if (isEdit && studentId) {
       const { data, error } = await supabase
@@ -992,6 +1003,7 @@ function StudentsPage() {
           const agreementErr = new Error("Failed to save student enrollment agreement snapshot");
           throw agreementErr;
         }
+        if (!financialTermsUnchanged) pendingPriorPaymentsRef.current = savedStudentId;
       } else if (isEdit) {
         // Deactivate active package assignment if package set to none
         await supabase
@@ -1133,6 +1145,7 @@ function StudentsPage() {
       }
 
       toast.success(i18nT("students.toastSaveSuccess", lang));
+      openPriorPaymentsIfNeeded();
 
       // Update state
       setStudents((prev) =>
@@ -1764,6 +1777,7 @@ function StudentsPage() {
       }
 
       setIsModalOpen(false);
+      openPriorPaymentsIfNeeded();
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
       toast.error(error instanceof FinanceSyncError ? error.message : i18nT("students.toastSaveError", lang));
@@ -3609,6 +3623,19 @@ function StudentsPage() {
       )}
 
       {/* PACKAGE RENEWAL MODAL FOR STUDENT PROFILE */}
+      {priorPaymentsStudentId && teacherId && (
+        <PriorPaymentsDialog
+          teacherId={teacherId}
+          studentId={priorPaymentsStudentId}
+          lang={lang}
+          onClose={() => setPriorPaymentsStudentId(null)}
+          onChanged={() => {
+            refreshStudentData();
+            queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", teacherId] });
+            queryClient.invalidateQueries({ queryKey: ["growth-data", teacherId] });
+          }}
+        />
+      )}
       {user && selectedStudentId && (
         <PackageRenewalModal
           isOpen={isStudentRenewalModalOpen}
