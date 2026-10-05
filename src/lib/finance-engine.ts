@@ -432,7 +432,6 @@ export async function syncTeacherReceivablesDetailed(
     const allStudents = studentsData || [];
     const studentsById = new Map<string, any>();
     allStudents.forEach((s) => studentsById.set(s.id, s));
-    const activeStudents = allStudents.filter((s) => s.status === "Active");
 
     // One contract per student: the newest canonical contract wins over legacy rows and older contracts
     // (a student may briefly have several "active" rows if retiring the previous one failed).
@@ -678,7 +677,7 @@ export async function syncTeacherReceivablesDetailed(
       };
     });
 
-    return mappedInvoices.sort((a, b) => (b.dueDate > a.dueDate ? 1 : -1));
+    return { invoices: mappedInvoices.sort((a, b) => (b.dueDate > a.dueDate ? 1 : -1)), issues };
   }
 }
 
