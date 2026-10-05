@@ -483,33 +483,46 @@ export async function syncTeacherReceivablesDetailed(
 
     const newInvoiceRows: any[] = [];
 
-    // --- A. Contract receivables (individual students and per-member class students) ---
+    // --- A. Contract receivables: every active canonical contract (one per student) ---
     const perMemberClassByStudent = new Map<string, any>();
+    const sharedClassStudentIds = new Set<string>();
     activeClasses.forEach((cls) => {
-      if ((cls.billing_mode || "per_member") === "shared_class") return;
+      const isShared = (cls.billing_mode || "per_member") === "shared_class";
       (cls.class_members || [])
         .filter((m: any) => m.status === "active")
         .forEach((m: any) => {
-          if (!perMemberClassByStudent.has(m.student_id)) perMemberClassByStudent.set(m.student_id, cls);
+          if (isShared) sharedClassStudentIds.add(m.student_id);
+          else if (!perMemberClassByStudent.has(m.student_id)) perMemberClassByStudent.set(m.student_id, cls);
         });
     });
 
-    activeStudents.forEach((student) => {
-      const sp = studentPackagesMap.get(student.id);
+    studentPackagesMap.forEach((sp, studentId) => {
       if (!sp?.billing_model) return; // legacy contracts are never reinterpreted
-      const memberClass = student.type === "Group" ? perMemberClassByStudent.get(student.id) : null;
-      if (student.type === "Group" && !memberClass) return; // billed by the class
+      const student = studentsById.get(studentId);
+      if (!student) return; // contract of a removed student
+      if (NON_BILLABLE_STUDENT_STATUSES.has(student.status)) return;
+      const memberClass = perMemberClassByStudent.get(studentId) || null;
+      // A group student billed only through a shared class charge must not be billed twice.
+      if (student.type === "Group" && !memberClass && sharedClassStudentIds.has(studentId)) return;
       const pkg = sp.package_id ? packagesMap.get(sp.package_id) : null;
-      const label = memberClass ? memberClass.name : pkg?.name || "Plano Personalizado";
-      newInvoiceRows.push(
-        ...buildMissingAgreementInvoices(teacherId, sp, {
-          studentName: student.full_name,
-          label,
-          modeTag: memberClass ? "[Por Aluno]" : "| [Individual]",
-          existingKeys: existingAgreementKeys,
-          todayStr,
-        }),
-      );
+      const label = memberClass && student.type === "Group" ? memberClass.name : pkg?.name || "Plano Personalizado";
+      try {
+        newInvoiceRows.push(
+          ...buildMissingAgreementInvoices(teacherId, sp, {
+            studentName: student.full_name,
+            label,
+            modeTag: memberClass && student.type === "Group" ? "[Por Aluno]" : "| [Individual]",
+            existingKeys: existingAgreementKeys,
+            todayStr,
+          }),
+        );
+      } catch (domainError) {
+        issues.push({
+          studentPackageId: sp.id,
+          studentName: student.full_name || "Aluno",
+          message: (domainError as Error).message,
+        });
+      }
     });
 
     // --- B. Shared class charges ---
