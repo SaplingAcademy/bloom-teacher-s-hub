@@ -14,3 +14,5 @@
 - [x] Escalate unresolved attendance after five days and deep-link to the exact lesson
 - [x] Validate future, current, overdue, resolved, absent, and cancelled scenarios
 - [x] Adopt the manually added package and agreement billing fields for new records without changing history
+
+- [x] Livro Caixa: sincroniza sempre ao abrir, um contrato canônico por aluno, inserção idempotente (23505), erros reais e contratos com problema exibidos na tela.

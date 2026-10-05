@@ -15,15 +15,79 @@ import {
   normalizeInvoiceChargeKind,
 } from "@/lib/billing-domain";
 
+/** Extracts the real database error (code + message) so the teacher sees what actually failed. */
+function describeFinanceCause(cause: unknown): string {
+  if (!cause) return "";
+  const c = cause as { code?: string; message?: string; details?: string; hint?: string };
+  const parts = [c.code, c.message, c.details].filter((p) => typeof p === "string" && p.trim().length > 0);
+  if (parts.length === 0 && cause instanceof Error) return cause.message;
+  return parts.join(" — ");
+}
+
 /** Financial read/write failure that must reach the UI (never swallowed into []). */
 export class FinanceSyncError extends Error {
   cause?: unknown;
+  /** Raw database detail (code/message) shown alongside the friendly message. */
+  detail: string;
   constructor(message: string, cause?: unknown) {
-    super(message);
+    const detail = describeFinanceCause(cause);
+    super(detail && detail !== message ? `${message} (${detail})` : message);
     this.name = "FinanceSyncError";
     this.cause = cause;
+    this.detail = detail;
     console.error(`[FinanceEngine] ${message}`, cause);
   }
+}
+
+/** A contract that could not produce its receivables during a sync (shown to the teacher). */
+export interface ReceivableSyncIssue {
+  studentPackageId: string;
+  studentName: string;
+  message: string;
+}
+
+const INVOICE_SELECT = "*, payments(id, amount_cents, received_at, method)";
+
+/**
+ * Inserts contract invoices without ever duplicating a charge.
+ * The database has a partial unique index on (student_package_id, charge_kind, sequence_number);
+ * PostgREST cannot target a partial index with ON CONFLICT, so a concurrent insert surfaces as 23505.
+ * In that case the existing keys are re-read and only the still-missing rows are inserted once more.
+ */
+async function insertInvoicesIdempotent(teacherId: string, rows: any[]): Promise<any[]> {
+  if (rows.length === 0) return [];
+  const first = await supabase.from("invoices").insert(rows).select(INVOICE_SELECT);
+  if (!first.error) return first.data || [];
+  if (first.error.code !== "23505") {
+    throw new FinanceSyncError("Não foi possível gerar os recebíveis.", first.error);
+  }
+
+  const packageIds = Array.from(new Set(rows.map((r) => r.student_package_id).filter(Boolean)));
+  const { data: existing, error: existingError } = packageIds.length
+    ? await supabase
+        .from("invoices")
+        .select("student_package_id, charge_kind, sequence_number")
+        .eq("teacher_id", teacherId)
+        .in("student_package_id", packageIds)
+    : { data: [], error: null };
+  if (existingError) throw new FinanceSyncError("Não foi possível verificar os recebíveis existentes.", existingError);
+
+  const existingKeys = new Set<string>();
+  (existing || []).forEach((inv: any) => {
+    const kind = normalizeInvoiceChargeKind(inv.charge_kind);
+    if (inv.student_package_id && kind && inv.sequence_number) {
+      existingKeys.add(agreementChargeKey(inv.student_package_id, kind, inv.sequence_number));
+    }
+  });
+  const remaining = rows.filter((r) => {
+    if (!r.student_package_id || !r.sequence_number) return true;
+    const kind = normalizeInvoiceChargeKind(r.charge_kind);
+    return !(kind && existingKeys.has(agreementChargeKey(r.student_package_id, kind, r.sequence_number)));
+  });
+  if (remaining.length === 0) return [];
+  const retry = await supabase.from("invoices").insert(remaining).select(INVOICE_SELECT);
+  if (retry.error) throw new FinanceSyncError("Não foi possível gerar os recebíveis.", retry.error);
+  return retry.data || [];
 }
 
 /** Builds invoice rows for a canonical contract that do not exist yet (idempotent). */
@@ -300,12 +364,24 @@ export function extractBillingMode(description?: string): "individual" | "per_me
   return "individual";
 }
 
+/** Student statuses whose active contracts do not generate new receivables. */
+const NON_BILLABLE_STUDENT_STATUSES = new Set(["Inactive", "Paused"]);
+
 /**
  * Deterministically sync receivables for an authenticated teacher using real Supabase data and per-enrollment agreements
  */
 export async function syncTeacherReceivables(teacherId: string): Promise<RealInvoice[]> {
-  if (!teacherId) return [];
+  const { invoices } = await syncTeacherReceivablesDetailed(teacherId);
+  return invoices;
+}
+
+/** Same as syncTeacherReceivables, but also returns contracts that could not generate receivables. */
+export async function syncTeacherReceivablesDetailed(
+  teacherId: string,
+): Promise<{ invoices: RealInvoice[]; issues: ReceivableSyncIssue[] }> {
+  if (!teacherId) return { invoices: [], issues: [] };
   {
+    const issues: ReceivableSyncIssue[] = [];
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = String(currentDate.getMonth() + 1).padStart(2, "0");
@@ -321,13 +397,13 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       supabase
         .from("students")
         .select("id, full_name, status, package_id, type, due_day")
-        .eq("teacher_id", teacherId)
-        .eq("status", "Active"),
+        .eq("teacher_id", teacherId),
       supabase
         .from("student_packages")
         .select("*")
         .eq("teacher_id", teacherId)
-        .eq("status", "active"),
+        .eq("status", "active")
+        .order("created_at", { ascending: true }),
       supabase
         .from("classes")
         .select("id, name, status, billing_mode, package_id, due_day, billing_amount, class_members(student_id, status)")
@@ -335,7 +411,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         .eq("status", "active"),
       supabase
         .from("invoices")
-        .select("*, payments(id, amount_cents, received_at)")
+        .select(INVOICE_SELECT)
         .eq("teacher_id", teacherId),
     ]);
     const failed = results.find((r) => r.error);
@@ -353,11 +429,18 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       packagesMap.set(pkg.id, pkg);
     });
 
-    const activeStudents = studentsData || [];
+    const allStudents = studentsData || [];
+    const studentsById = new Map<string, any>();
+    allStudents.forEach((s) => studentsById.set(s.id, s));
 
+    // One contract per student: the newest canonical contract wins over legacy rows and older contracts
+    // (a student may briefly have several "active" rows if retiring the previous one failed).
     const studentPackagesMap = new Map<string, any>();
     (studentPackagesData || []).forEach((sp) => {
-      studentPackagesMap.set(sp.student_id, sp);
+      const current = studentPackagesMap.get(sp.student_id);
+      if (!current || sp.billing_model || !current.billing_model) {
+        studentPackagesMap.set(sp.student_id, sp);
+      }
     });
 
     const activeClasses = classesData || [];
@@ -399,33 +482,46 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
 
     const newInvoiceRows: any[] = [];
 
-    // --- A. Contract receivables (individual students and per-member class students) ---
+    // --- A. Contract receivables: every active canonical contract (one per student) ---
     const perMemberClassByStudent = new Map<string, any>();
+    const sharedClassStudentIds = new Set<string>();
     activeClasses.forEach((cls) => {
-      if ((cls.billing_mode || "per_member") === "shared_class") return;
+      const isShared = (cls.billing_mode || "per_member") === "shared_class";
       (cls.class_members || [])
         .filter((m: any) => m.status === "active")
         .forEach((m: any) => {
-          if (!perMemberClassByStudent.has(m.student_id)) perMemberClassByStudent.set(m.student_id, cls);
+          if (isShared) sharedClassStudentIds.add(m.student_id);
+          else if (!perMemberClassByStudent.has(m.student_id)) perMemberClassByStudent.set(m.student_id, cls);
         });
     });
 
-    activeStudents.forEach((student) => {
-      const sp = studentPackagesMap.get(student.id);
+    studentPackagesMap.forEach((sp, studentId) => {
       if (!sp?.billing_model) return; // legacy contracts are never reinterpreted
-      const memberClass = student.type === "Group" ? perMemberClassByStudent.get(student.id) : null;
-      if (student.type === "Group" && !memberClass) return; // billed by the class
+      const student = studentsById.get(studentId);
+      if (!student) return; // contract of a removed student
+      if (NON_BILLABLE_STUDENT_STATUSES.has(student.status)) return;
+      const memberClass = perMemberClassByStudent.get(studentId) || null;
+      // A group student billed only through a shared class charge must not be billed twice.
+      if (student.type === "Group" && !memberClass && sharedClassStudentIds.has(studentId)) return;
       const pkg = sp.package_id ? packagesMap.get(sp.package_id) : null;
-      const label = memberClass ? memberClass.name : pkg?.name || "Plano Personalizado";
-      newInvoiceRows.push(
-        ...buildMissingAgreementInvoices(teacherId, sp, {
-          studentName: student.full_name,
-          label,
-          modeTag: memberClass ? "[Por Aluno]" : "| [Individual]",
-          existingKeys: existingAgreementKeys,
-          todayStr,
-        }),
-      );
+      const label = memberClass && student.type === "Group" ? memberClass.name : pkg?.name || "Plano Personalizado";
+      try {
+        newInvoiceRows.push(
+          ...buildMissingAgreementInvoices(teacherId, sp, {
+            studentName: student.full_name,
+            label,
+            modeTag: memberClass && student.type === "Group" ? "[Por Aluno]" : "| [Individual]",
+            existingKeys: existingAgreementKeys,
+            todayStr,
+          }),
+        );
+      } catch (domainError) {
+        issues.push({
+          studentPackageId: sp.id,
+          studentName: student.full_name || "Aluno",
+          message: (domainError as Error).message,
+        });
+      }
     });
 
     // --- B. Shared class charges ---
@@ -457,15 +553,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       existingKeys.add(classKey);
     });
 
-    let insertedInvoices: any[] = [];
-    if (newInvoiceRows.length > 0) {
-      const { data: inserted, error: insertError } = await supabase
-        .from("invoices")
-        .insert(newInvoiceRows)
-        .select("*, payments(id, amount_cents, received_at)");
-      if (insertError) throw new FinanceSyncError("Não foi possível gerar os recebíveis.", insertError);
-      insertedInvoices = inserted || [];
-    }
+    const insertedInvoices: any[] = await insertInvoicesIdempotent(teacherId, newInvoiceRows);
 
     const overdueIds = existingInvoices
       .filter((inv) => inv.status === "pending" && inv.due_date < todayStr)
@@ -480,7 +568,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
 
     // 6. Directly map invoices in memory from Promise.all data (Eliminates 2nd sequential DB query waterfall)
     const studentsMap = new Map<string, string>();
-    activeStudents.forEach((s) => studentsMap.set(s.id, s.full_name));
+    allStudents.forEach((s) => studentsMap.set(s.id, s.full_name));
 
     const studentPaidCounts = new Map<string, number>();
     const studentPaidSums = new Map<string, number>();
@@ -589,7 +677,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       };
     });
 
-    return mappedInvoices.sort((a, b) => (b.dueDate > a.dueDate ? 1 : -1));
+    return { invoices: mappedInvoices.sort((a, b) => (b.dueDate > a.dueDate ? 1 : -1)), issues };
   }
 }
 
@@ -738,8 +826,7 @@ export async function createAgreementReceivables(teacherId: string, sp: any): Pr
     throw new FinanceSyncError((domainError as Error).message, domainError);
   }
   if (rows.length === 0) return;
-  const { error } = await supabase.from("invoices").insert(rows);
-  if (error) throw new FinanceSyncError("Não foi possível gerar as cobranças do contrato.", error);
+  await insertInvoicesIdempotent(teacherId, rows);
 }
 
 /**
