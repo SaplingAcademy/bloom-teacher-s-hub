@@ -364,12 +364,24 @@ export function extractBillingMode(description?: string): "individual" | "per_me
   return "individual";
 }
 
+/** Student statuses whose active contracts do not generate new receivables. */
+const NON_BILLABLE_STUDENT_STATUSES = new Set(["Inactive", "Paused"]);
+
 /**
  * Deterministically sync receivables for an authenticated teacher using real Supabase data and per-enrollment agreements
  */
 export async function syncTeacherReceivables(teacherId: string): Promise<RealInvoice[]> {
-  if (!teacherId) return [];
+  const { invoices } = await syncTeacherReceivablesDetailed(teacherId);
+  return invoices;
+}
+
+/** Same as syncTeacherReceivables, but also returns contracts that could not generate receivables. */
+export async function syncTeacherReceivablesDetailed(
+  teacherId: string,
+): Promise<{ invoices: RealInvoice[]; issues: ReceivableSyncIssue[] }> {
+  if (!teacherId) return { invoices: [], issues: [] };
   {
+    const issues: ReceivableSyncIssue[] = [];
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = String(currentDate.getMonth() + 1).padStart(2, "0");
@@ -385,13 +397,13 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       supabase
         .from("students")
         .select("id, full_name, status, package_id, type, due_day")
-        .eq("teacher_id", teacherId)
-        .eq("status", "Active"),
+        .eq("teacher_id", teacherId),
       supabase
         .from("student_packages")
         .select("*")
         .eq("teacher_id", teacherId)
-        .eq("status", "active"),
+        .eq("status", "active")
+        .order("created_at", { ascending: true }),
       supabase
         .from("classes")
         .select("id, name, status, billing_mode, package_id, due_day, billing_amount, class_members(student_id, status)")
@@ -399,7 +411,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
         .eq("status", "active"),
       supabase
         .from("invoices")
-        .select("*, payments(id, amount_cents, received_at)")
+        .select(INVOICE_SELECT)
         .eq("teacher_id", teacherId),
     ]);
     const failed = results.find((r) => r.error);
@@ -417,11 +429,19 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
       packagesMap.set(pkg.id, pkg);
     });
 
-    const activeStudents = studentsData || [];
+    const allStudents = studentsData || [];
+    const studentsById = new Map<string, any>();
+    allStudents.forEach((s) => studentsById.set(s.id, s));
+    const activeStudents = allStudents.filter((s) => s.status === "Active");
 
+    // One contract per student: the newest canonical contract wins over legacy rows and older contracts
+    // (a student may briefly have several "active" rows if retiring the previous one failed).
     const studentPackagesMap = new Map<string, any>();
     (studentPackagesData || []).forEach((sp) => {
-      studentPackagesMap.set(sp.student_id, sp);
+      const current = studentPackagesMap.get(sp.student_id);
+      if (!current || sp.billing_model || !current.billing_model) {
+        studentPackagesMap.set(sp.student_id, sp);
+      }
     });
 
     const activeClasses = classesData || [];
