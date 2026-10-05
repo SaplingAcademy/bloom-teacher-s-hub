@@ -47,7 +47,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
 import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
-import { normalizeBillingModel } from "@/lib/billing-domain";
+import { isInvoiceVisibleInLedger, normalizeBillingModel } from "@/lib/billing-domain";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -636,7 +636,11 @@ function FinancePage() {
     }
   };
 
-  // Computed KPIs directly from real invoices and expenses
+  // Main ledger list: current month + any unpaid past charges. Future charges stay in the
+  // database and keep feeding KPIs/projections, but only appear when their month arrives.
+  const ledgerInvoices = invoices.filter((inv) => isInvoiceVisibleInLedger(inv));
+
+  // Computed KPIs directly from real invoices and expenses (all invoices, including future)
   const totalReceivedCents = invoices
     .filter((inv) => inv.status === "paid")
     .reduce((sum, inv) => sum + inv.amountCents, 0);
