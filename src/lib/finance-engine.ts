@@ -590,6 +590,7 @@ export async function syncTeacherReceivables(teacherId: string): Promise<RealInv
     });
 
     return mappedInvoices.sort((a, b) => (b.dueDate > a.dueDate ? 1 : -1));
+  }
 }
 
 /**
