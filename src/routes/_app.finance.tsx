@@ -373,7 +373,7 @@ function FinancePage() {
   // TanStack Query Cache
   const { packages: queryPackages, refetch: refetchPackages } = usePackagesQuery(user?.id);
   const { expenses, setExpensesCache, refetch: refetchExpenses } = useTeacherExpensesQuery(user?.id);
-  const { invoices, isLoading: isLoadingInvoices, error: invoicesError, setInvoicesCache, refetch: refetchInvoices } = useFinanceInvoicesQuery(user?.id);
+  const { invoices, syncIssues, isLoading: isLoadingInvoices, error: invoicesError, setInvoicesCache, refetch: refetchInvoices } = useFinanceInvoicesQuery(user?.id);
   const packages: Package[] = queryPackages as Package[];
 
   // Dialog States
@@ -734,6 +734,23 @@ function FinancePage() {
               </div>
             </div>
 
+            {!invoicesError && syncIssues.length > 0 && (
+              <div role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive space-y-1">
+                <p className="font-semibold">
+                  {lang === "pt"
+                    ? "Alguns contratos não geraram recebíveis:"
+                    : "Some contracts could not generate receivables:"}
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {syncIssues.map((issue) => (
+                    <li key={issue.studentPackageId}>
+                      <strong>{issue.studentName}</strong>: {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <ul className="mt-4 divide-y divide-border/60">
               {isLoadingInvoices ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium animate-pulse">
@@ -741,12 +758,16 @@ function FinancePage() {
                 </div>
               ) : invoicesError ? (
                 <div role="alert" className="py-8 text-center text-xs font-medium text-destructive space-y-2">
-                  <p>{getFriendlyErrorMessage(invoicesError, lang === "pt" ? "Não foi possível carregar os recebíveis." : "Could not load receivables.")}</p>
+                  <p>
+                    {invoicesError instanceof FinanceSyncError
+                      ? invoicesError.message
+                      : getFriendlyErrorMessage(invoicesError, lang === "pt" ? "Não foi possível carregar os recebíveis." : "Could not load receivables.")}
+                  </p>
                   <button type="button" onClick={() => refetchInvoices()} className="underline">
                     {lang === "pt" ? "Tentar novamente" : "Try again"}
                   </button>
                 </div>
-              ) : invoices.length === 0 ? (
+              ) : invoices.length === 0 && syncIssues.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium">
                   {lang === "pt"
                     ? "Nenhum recebível cadastrado ainda. Alunos com planos cadastrados aparecerão automaticamente aqui."
