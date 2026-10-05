@@ -73,3 +73,19 @@ export function useTeacherExpensesQuery(teacherId: string | undefined) {
     },
   };
 }
+
+/** Refreshes every view that depends on invoices/payments after a financial action. */
+export function useInvalidateFinanceData(teacherId: string | undefined) {
+  const queryClient = useQueryClient();
+  return () => {
+    if (!teacherId) return;
+    for (const key of [
+      FINANCE_INVOICES_QUERY_KEY(teacherId),
+      ["dashboard-metrics", teacherId],
+      ["growth-data", teacherId],
+      ["students", teacherId],
+    ]) {
+      queryClient.invalidateQueries({ queryKey: key });
+    }
+  };
+}
