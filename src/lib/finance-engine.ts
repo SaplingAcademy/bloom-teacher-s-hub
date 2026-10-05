@@ -666,7 +666,7 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       monthly_amount_cents: monthlyAmountCents,
     };
 
-    const { data: inserted, error } = await supabase.from("student_packages").insert(canonicalRow).select("id").single();
+    const { data: inserted, error } = await supabase.from("student_packages").insert(canonicalRow).select("*").single();
 
     if (error || !inserted) {
       console.error("[Student Save Failure]", {
@@ -680,6 +680,15 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       return false;
     }
 
+    // Generate this contract's receivables before retiring the previous contract.
+    // If they cannot be created, the brand-new contract is removed and the error reaches the UI.
+    try {
+      await createAgreementReceivables(teacherId, inserted);
+    } catch (receivablesError) {
+      await supabase.from("student_packages").delete().eq("id", inserted.id).eq("teacher_id", teacherId);
+      throw receivablesError;
+    }
+
     await supabase
       .from("student_packages")
       .update({ status: "inactive", ended_at: new Date().toISOString().split("T")[0] })
@@ -688,13 +697,48 @@ export async function saveStudentEnrollmentAgreement(agreement: {
       .eq("status", "active")
       .neq("id", inserted.id);
 
-    // Trigger immediate invoice sync
-    await syncTeacherReceivables(teacherId);
     return true;
   } catch (err) {
+    if (err instanceof FinanceSyncError) throw err;
     console.error("[FinanceEngine] Error saving enrollment agreement:", err);
     return false;
   }
+}
+
+/** Creates the initial receivables of one canonical contract, skipping any that already exist. */
+export async function createAgreementReceivables(teacherId: string, sp: any): Promise<void> {
+  if (!sp?.billing_model) return;
+  const [{ data: existing, error: existingError }, { data: student, error: studentError }, { data: pkg }] = await Promise.all([
+    supabase.from("invoices").select("student_package_id, charge_kind, sequence_number").eq("teacher_id", teacherId).eq("student_package_id", sp.id),
+    supabase.from("students").select("full_name, type").eq("id", sp.student_id).maybeSingle(),
+    sp.package_id
+      ? supabase.from("packages").select("name").eq("id", sp.package_id).maybeSingle()
+      : Promise.resolve({ data: null } as any),
+  ]);
+  if (existingError) throw new FinanceSyncError("Não foi possível verificar os recebíveis do contrato.", existingError);
+  if (studentError) throw new FinanceSyncError("Não foi possível carregar o aluno do contrato.", studentError);
+
+  const existingKeys = new Set<string>();
+  (existing || []).forEach((inv: any) => {
+    const kind = normalizeInvoiceChargeKind(inv.charge_kind);
+    if (kind && inv.sequence_number) existingKeys.add(agreementChargeKey(sp.id, kind, inv.sequence_number));
+  });
+
+  let rows: any[];
+  try {
+    rows = buildMissingAgreementInvoices(teacherId, sp, {
+      studentName: student?.full_name || "Aluno",
+      label: pkg?.name || "Plano Personalizado",
+      modeTag: student?.type === "Group" ? "[Por Aluno]" : "| [Individual]",
+      existingKeys,
+      todayStr: new Date().toISOString().split("T")[0],
+    });
+  } catch (domainError) {
+    throw new FinanceSyncError((domainError as Error).message, domainError);
+  }
+  if (rows.length === 0) return;
+  const { error } = await supabase.from("invoices").insert(rows);
+  if (error) throw new FinanceSyncError("Não foi possível gerar as cobranças do contrato.", error);
 }
 
 /**
@@ -1869,8 +1913,8 @@ export async function renewStudentPackage(
       .eq("id", studentId)
       .eq("teacher_id", teacherId);
 
-    // 9. Sync receivables immediately for new agreement
-    await syncTeacherReceivables(teacherId);
+    // 9. Create the new agreement's receivables immediately (errors propagate)
+    await createAgreementReceivables(teacherId, insertedSp);
 
     return {
       success: true,
