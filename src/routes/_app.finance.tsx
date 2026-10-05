@@ -44,7 +44,7 @@ import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { useFinanceInvoicesQuery, useTeacherExpensesQuery } from "@/hooks/use-finance-query";
+import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
 import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
 import { isInvoiceVisibleInLedger, normalizeBillingModel } from "@/lib/billing-domain";
