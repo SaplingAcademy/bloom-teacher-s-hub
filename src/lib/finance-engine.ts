@@ -554,15 +554,7 @@ export async function syncTeacherReceivablesDetailed(
       existingKeys.add(classKey);
     });
 
-    let insertedInvoices: any[] = [];
-    if (newInvoiceRows.length > 0) {
-      const { data: inserted, error: insertError } = await supabase
-        .from("invoices")
-        .insert(newInvoiceRows)
-        .select("*, payments(id, amount_cents, received_at)");
-      if (insertError) throw new FinanceSyncError("Não foi possível gerar os recebíveis.", insertError);
-      insertedInvoices = inserted || [];
-    }
+    const insertedInvoices: any[] = await insertInvoicesIdempotent(teacherId, newInvoiceRows);
 
     const overdueIds = existingInvoices
       .filter((inv) => inv.status === "pending" && inv.due_date < todayStr)
@@ -577,7 +569,7 @@ export async function syncTeacherReceivablesDetailed(
 
     // 6. Directly map invoices in memory from Promise.all data (Eliminates 2nd sequential DB query waterfall)
     const studentsMap = new Map<string, string>();
-    activeStudents.forEach((s) => studentsMap.set(s.id, s.full_name));
+    allStudents.forEach((s) => studentsMap.set(s.id, s.full_name));
 
     const studentPaidCounts = new Map<string, number>();
     const studentPaidSums = new Map<string, number>();
