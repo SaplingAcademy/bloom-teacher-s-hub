@@ -1880,12 +1880,20 @@ export async function renewStudentPackage(
         contract_duration_months: terms.contractMonths,
         monthly_amount_cents: terms.monthlyAmountCents,
       })
-      .select("id")
+      .select("*")
       .single();
 
     if (insertErr || !insertedSp) {
       console.error("[FinanceEngine] Error creating renewed package agreement:", insertErr);
       return { success: false, message: `Erro ao salvar nova renovação: ${insertErr?.message}` };
+    }
+
+    // Create the new agreement's receivables before retiring the previous one.
+    try {
+      await createAgreementReceivables(teacherId, insertedSp);
+    } catch (receivablesError: any) {
+      await supabase.from("student_packages").delete().eq("id", insertedSp.id).eq("teacher_id", teacherId);
+      return { success: false, message: receivablesError?.message || "Não foi possível gerar as cobranças do contrato." };
     }
 
     // Complete the previous agreement only after the replacement exists.
@@ -1912,9 +1920,6 @@ export async function renewStudentPackage(
       })
       .eq("id", studentId)
       .eq("teacher_id", teacherId);
-
-    // 9. Create the new agreement's receivables immediately (errors propagate)
-    await createAgreementReceivables(teacherId, insertedSp);
 
     return {
       success: true,
