@@ -15,15 +15,79 @@ import {
   normalizeInvoiceChargeKind,
 } from "@/lib/billing-domain";
 
+/** Extracts the real database error (code + message) so the teacher sees what actually failed. */
+function describeFinanceCause(cause: unknown): string {
+  if (!cause) return "";
+  const c = cause as { code?: string; message?: string; details?: string; hint?: string };
+  const parts = [c.code, c.message, c.details].filter((p) => typeof p === "string" && p.trim().length > 0);
+  if (parts.length === 0 && cause instanceof Error) return cause.message;
+  return parts.join(" — ");
+}
+
 /** Financial read/write failure that must reach the UI (never swallowed into []). */
 export class FinanceSyncError extends Error {
   cause?: unknown;
+  /** Raw database detail (code/message) shown alongside the friendly message. */
+  detail: string;
   constructor(message: string, cause?: unknown) {
-    super(message);
+    const detail = describeFinanceCause(cause);
+    super(detail && detail !== message ? `${message} (${detail})` : message);
     this.name = "FinanceSyncError";
     this.cause = cause;
+    this.detail = detail;
     console.error(`[FinanceEngine] ${message}`, cause);
   }
+}
+
+/** A contract that could not produce its receivables during a sync (shown to the teacher). */
+export interface ReceivableSyncIssue {
+  studentPackageId: string;
+  studentName: string;
+  message: string;
+}
+
+const INVOICE_SELECT = "*, payments(id, amount_cents, received_at, method)";
+
+/**
+ * Inserts contract invoices without ever duplicating a charge.
+ * The database has a partial unique index on (student_package_id, charge_kind, sequence_number);
+ * PostgREST cannot target a partial index with ON CONFLICT, so a concurrent insert surfaces as 23505.
+ * In that case the existing keys are re-read and only the still-missing rows are inserted once more.
+ */
+async function insertInvoicesIdempotent(teacherId: string, rows: any[]): Promise<any[]> {
+  if (rows.length === 0) return [];
+  const first = await supabase.from("invoices").insert(rows).select(INVOICE_SELECT);
+  if (!first.error) return first.data || [];
+  if (first.error.code !== "23505") {
+    throw new FinanceSyncError("Não foi possível gerar os recebíveis.", first.error);
+  }
+
+  const packageIds = Array.from(new Set(rows.map((r) => r.student_package_id).filter(Boolean)));
+  const { data: existing, error: existingError } = packageIds.length
+    ? await supabase
+        .from("invoices")
+        .select("student_package_id, charge_kind, sequence_number")
+        .eq("teacher_id", teacherId)
+        .in("student_package_id", packageIds)
+    : { data: [], error: null };
+  if (existingError) throw new FinanceSyncError("Não foi possível verificar os recebíveis existentes.", existingError);
+
+  const existingKeys = new Set<string>();
+  (existing || []).forEach((inv: any) => {
+    const kind = normalizeInvoiceChargeKind(inv.charge_kind);
+    if (inv.student_package_id && kind && inv.sequence_number) {
+      existingKeys.add(agreementChargeKey(inv.student_package_id, kind, inv.sequence_number));
+    }
+  });
+  const remaining = rows.filter((r) => {
+    if (!r.student_package_id || !r.sequence_number) return true;
+    const kind = normalizeInvoiceChargeKind(r.charge_kind);
+    return !(kind && existingKeys.has(agreementChargeKey(r.student_package_id, kind, r.sequence_number)));
+  });
+  if (remaining.length === 0) return [];
+  const retry = await supabase.from("invoices").insert(remaining).select(INVOICE_SELECT);
+  if (retry.error) throw new FinanceSyncError("Não foi possível gerar os recebíveis.", retry.error);
+  return retry.data || [];
 }
 
 /** Builds invoice rows for a canonical contract that do not exist yet (idempotent). */
