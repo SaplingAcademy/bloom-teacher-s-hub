@@ -373,6 +373,7 @@ export function OnboardingPage() {
   };
 
   const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
+    isDirtyRef.current = true;
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
