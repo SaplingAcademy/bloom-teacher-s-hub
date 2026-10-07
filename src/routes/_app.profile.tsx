@@ -1,3 +1,4 @@
+import { getUserItem, setUserItem } from "@/lib/user-storage";
 import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
 import { useState, useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -200,10 +201,19 @@ const translations = {
 function ProfilePage() {
   const { lang, setLang } = useLanguage();
   const { user, profile: authProfile, retryProfileSync } = useAuth();
-  const [localProfile, setLocalProfile] = useState<ProfileData>(() => {
-    const saved = localStorage.getItem("bloom.profile.data");
-    return saved ? JSON.parse(saved) : defaultProfile;
-  });
+  const [localProfile, setLocalProfile] = useState<ProfileData>(defaultProfile);
+  useEffect(() => {
+    if (!user?.id) {
+      setLocalProfile(defaultProfile);
+      return;
+    }
+    try {
+      const saved = getUserItem("bloom.profile.data", user.id);
+      setLocalProfile(saved ? { ...defaultProfile, ...JSON.parse(saved) } : defaultProfile);
+    } catch {
+      setLocalProfile(defaultProfile);
+    }
+  }, [user?.id]);
 
   const profile = {
     ...localProfile,
@@ -320,7 +330,7 @@ function ProfilePage() {
       website: editWebsite,
     };
     setLocalProfile(updated);
-    localStorage.setItem("bloom.profile.data", JSON.stringify(updated));
+    if (user?.id) setUserItem("bloom.profile.data", JSON.stringify(updated), user.id);
     setIsEditOpen(false);
 
     // Call setLang so language context updates immediately across the whole app

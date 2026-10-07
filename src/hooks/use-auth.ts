@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import { resolveTeacherName, sanitizeTeacherName, getMetadataName } from "@/lib/teacher-name";
+import { sanitizeTeacherName, getMetadataName } from "@/lib/teacher-name";
+import { ensureStorageOwner, getUserItem, setUserItem, purgeBloomLocalData } from "@/lib/user-storage";
 
 interface AuthContextType {
   user: User | null;
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       syncedUserRef.current = userId;
+      ensureStorageOwner(userId);
       try {
         console.log(`[useAuth] Fetching teacher profile from database for user: ${userId}`);
         let { data: teacherData, error: teacherError } = await supabase
@@ -208,31 +210,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
 
           console.log("[useAuth] Profile loaded/fetched from database:", profileData);
-          const savedProfileStr = localStorage.getItem("bloom.profile.data");
-          const currentProfile = savedProfileStr ? JSON.parse(savedProfileStr) : {};
+          // Cache is scoped to this user id; it never feeds the name or any DB write.
+          const savedProfileStr = getUserItem("bloom.profile.data", userId);
+          let currentProfile: Record<string, unknown> = {};
+          try {
+            currentProfile = savedProfileStr ? JSON.parse(savedProfileStr) : {};
+          } catch {
+            currentProfile = {};
+          }
           const metadataName = getMetadataName({ email: userEmail, user_metadata: userMetadata });
-          // Priority: profile record → auth metadata → cached local value. Never derived from e-mail.
-          const cleanProfileName =
-            sanitizeTeacherName(profileData.full_name, userEmail) ||
-            metadataName ||
-            sanitizeTeacherName(currentProfile.name, userEmail) ||
-            "";
+          // Priority: profile record → this user's Auth metadata. Never the browser cache or e-mail.
+          const storedName = sanitizeTeacherName(profileData.full_name, userEmail);
+          const cleanProfileName = storedName || metadataName || "";
 
-          // Heal records whose stored name is empty or was derived from the e-mail.
-          if (
-            cleanProfileName &&
-            sanitizeTeacherName(profileData.full_name, userEmail) === null &&
-            profileData.id
-          ) {
+          // Heal only from this user's own Auth metadata (server-verified).
+          if (!storedName && metadataName && profileData.id === userId) {
             const tableToHeal = usedLegacyFallback ? "profiles" : "teacher_profiles";
             const { error: healError } = await supabase
               .from(tableToHeal)
-              .update({ full_name: cleanProfileName })
-              .eq("id", profileData.id);
+              .update({ full_name: metadataName })
+              .eq("id", userId);
             if (healError) {
               console.warn("[useAuth] Could not persist canonical full_name:", healError.message);
             } else {
-              profileData = { ...profileData, full_name: cleanProfileName };
+              profileData = { ...profileData, full_name: metadataName };
             }
           }
 
@@ -240,13 +241,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...defaultProfile,
             ...currentProfile,
             name: cleanProfileName,
-            photo: profileData.avatar_url || currentProfile.photo || "",
+            photo: profileData.avatar_url || (currentProfile.photo as string) || "",
             preferred_language: profileData.preferred_language || "pt-BR",
             timezone: profileData.timezone || "America/Sao_Paulo",
           };
 
-          localStorage.setItem("bloom.profile.data", JSON.stringify(updatedProfile));
-          console.log("[useAuth] Profile created/loaded in localStorage:", updatedProfile);
+          setUserItem("bloom.profile.data", JSON.stringify(updatedProfile), userId);
 
           if (isCompleted) {
             localStorage.setItem("bloom.onboarding.completed", "true");
@@ -295,6 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("[useAuth] Checking initial session from Supabase...");
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        ensureStorageOwner(session.user.id);
         console.log("[useAuth] Initial session found/restored. User ID:", session.user.id);
         setSession(session);
         setUser(session.user);
@@ -321,6 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "[useAuth] Session created/restored on auth state change. User ID:",
           session.user.id,
         );
+        ensureStorageOwner(session.user.id);
         const sameUserAlreadySynced = syncCompletedRef.current === session.user.id;
         setSession(session);
         setUser(session.user);
@@ -341,6 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         console.log("[useAuth] No session found on auth state change.");
+        if (_event === "SIGNED_OUT") purgeBloomLocalData();
         syncedUserRef.current = null;
         syncCompletedRef.current = null;
         setProfile(null);
@@ -359,11 +362,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setLoading(true);
     syncedUserRef.current = null;
+    syncCompletedRef.current = null;
     setProfile(null);
     setAuthError(null);
     try {
       await supabase.auth.signOut();
     } finally {
+      purgeBloomLocalData();
       setUser(null);
       setSession(null);
       setLoading(false);

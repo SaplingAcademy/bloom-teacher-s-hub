@@ -737,26 +737,6 @@ function AuthPage() {
 
         if (data?.user) {
           console.log("[Auth] User created successfully:", data.user.id);
-          // Initialize user profile data in localStorage
-          const defaultProfile = {
-            photo: "",
-            name: name.trim() || "",
-            headline: "ESL Teacher / Language Coach",
-            bio:
-              lang === "pt"
-                ? "Professor de idiomas apaixonado por ensinar. Ajudando alunos a alcançarem a fluência."
-                : "Passionate language educator helping students achieve fluency.",
-            country: lang === "pt" ? "Brasil" : "Brazil",
-            teachingAreas: [],
-            subjectsTaught: [],
-            experience: 1,
-            linkedin: "",
-            twitter: "",
-            github: "",
-            website: "",
-          };
-          localStorage.setItem("bloom.profile.data", JSON.stringify(defaultProfile));
-          console.log("[Auth] Default profile created.");
 
           // Clear onboarding completed flag so they go to onboarding
           localStorage.removeItem("bloom.onboarding.completed");

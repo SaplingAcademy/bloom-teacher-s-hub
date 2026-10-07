@@ -1,3 +1,4 @@
+import { getUserItem, setUserItem, removeUserItem } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
@@ -244,28 +245,9 @@ export function OnboardingPage() {
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
 
-  const [currentStep, setCurrentStep] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const savedStep = localStorage.getItem("bloom.onboarding.step");
-      if (savedStep) {
-        const parsed = parseInt(savedStep, 10);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 8) return parsed;
-      }
-    }
-    return 0; // 0 = Welcome Introduction
-  });
-
-  const [data, setData] = useState<OnboardingData>(() => {
-    try {
-      const savedDraft = localStorage.getItem("bloom.onboarding.draft");
-      if (savedDraft) {
-        return normalizeOnboardingData(JSON.parse(savedDraft));
-      }
-    } catch (e) {
-      console.warn("Could not restore draft onboarding state", e);
-    }
-    return INITIAL_DATA;
-  });
+  // Draft/step are restored per user id inside the hydration effect below.
+  const [currentStep, setCurrentStep] = useState<number>(0); // 0 = Welcome Introduction
+  const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
 
   const [showHourlySkipModal, setShowHourlySkipModal] = useState(false);
   const [showSkipWarningModal, setShowSkipWarningModal] = useState(false);
@@ -295,6 +277,23 @@ export function OnboardingPage() {
     if (hydratedForRef.current === userId) return;
     hydratedForRef.current = userId;
 
+    // Restore only this user's local draft (scoped by user id).
+    let hasLocalStep = false;
+    try {
+      const savedDraft = getUserItem("bloom.onboarding.draft", userId);
+      setData(savedDraft ? normalizeOnboardingData(JSON.parse(savedDraft)) : INITIAL_DATA);
+      const savedStep = getUserItem("bloom.onboarding.step", userId);
+      const parsed = savedStep ? parseInt(savedStep, 10) : NaN;
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 8) {
+        setCurrentStep(parsed);
+        hasLocalStep = true;
+      } else {
+        setCurrentStep(0);
+      }
+    } catch (e) {
+      console.warn("Could not restore draft onboarding state", e);
+    }
+
     let isMounted = true;
     async function loadSavedOnboarding() {
       try {
@@ -311,8 +310,7 @@ export function OnboardingPage() {
             setData((prev) => normalizeOnboardingData({ ...prev, ...savedAnswers }));
           }
           if (typeof current_step === "number" && current_step >= 0 && current_step <= 8) {
-            const localStep = localStorage.getItem("bloom.onboarding.step");
-            if (!localStep) {
+            if (!hasLocalStep) {
               setCurrentStep(current_step);
             }
           }
@@ -331,12 +329,14 @@ export function OnboardingPage() {
   // Save progress automatically to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem("bloom.onboarding.draft", JSON.stringify(data));
-      localStorage.setItem("bloom.onboarding.step", String(currentStep));
+      const uid = hydrationUserId;
+      if (!uid || hydratedForRef.current !== uid) return;
+      setUserItem("bloom.onboarding.draft", JSON.stringify(data), uid);
+      setUserItem("bloom.onboarding.step", String(currentStep), uid);
     } catch (e) {
       console.warn("Draft auto-save error:", e);
     }
-  }, [data, currentStep]);
+  }, [data, currentStep, hydrationUserId]);
 
   // Auto-redirect to dashboard when final success screen is rendered
   useEffect(() => {
@@ -585,9 +585,9 @@ export function OnboardingPage() {
       });
       if (typeof window !== "undefined") {
         localStorage.setItem("bloom.onboarding.completed", "true");
-        localStorage.removeItem("bloom.onboarding.draft");
+        removeUserItem("bloom.onboarding.draft", user?.id ?? null);
         localStorage.removeItem("bloom.onboarding.skipped");
-        localStorage.removeItem("bloom.onboarding.step");
+        removeUserItem("bloom.onboarding.step", user?.id ?? null);
       }
 
       setIsSuccessView(true);
