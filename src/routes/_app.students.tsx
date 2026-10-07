@@ -1196,6 +1196,8 @@ function StudentsPage() {
                 color_key: data.color_key || editColorKey,
                 lastActive: data.updated_at,
                 packageId: data.package_id || undefined,
+                courseStartDate: coursePeriodFromStudent(data).startDate,
+                courseEndDate: coursePeriodFromStudent(data).endDate,
                 schedules: editSchedulesList,
                 scheduleDetails: editSchedulesList.length > 0 ? {
                   day: editSchedulesList[0].weekday,
@@ -1790,6 +1792,8 @@ function StudentsPage() {
         linkedGroupId: formLinkedGroupId || undefined,
         groupSize: formType === "Group" ? formGroupSize : undefined,
         packageId: formPackageId || undefined,
+        courseStartDate: coursePeriodFromStudent(data).startDate,
+        courseEndDate: coursePeriodFromStudent(data).endDate,
       };
 
       if (editingStudentIdForModal) {
