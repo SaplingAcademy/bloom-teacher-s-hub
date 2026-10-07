@@ -52,6 +52,7 @@ interface Props {
   focus?: CourseFocus;
   schedules?: LessonScheduleInput[];
   startDateStr?: string;
+  endDateStr?: string;
   totalPackageLessons?: number;
   lessons: StudentLesson[];
   onLessonsChange: (updatedLessons: StudentLesson[]) => void;
@@ -66,7 +67,8 @@ export function StudentLessonPlanTable({
   level = "B2",
   focus = "General English",
   schedules = [],
-  startDateStr = new Date().toISOString().split("T")[0],
+  startDateStr = "",
+  endDateStr = "",
   totalPackageLessons = 23,
   lessons,
   onLessonsChange,
@@ -321,6 +323,7 @@ export function StudentLessonPlanTable({
           focus={focus}
           initialSchedules={schedules}
           initialStartDate={startDateStr}
+          initialEndDate={endDateStr}
           packageLessonCount={totalPackageLessons}
           existingLessonsCount={lessons.length}
           onSuccess={(generated) => onLessonsChange(generated)}
@@ -781,6 +784,7 @@ export function StudentLessonPlanTable({
         focus={focus}
         initialSchedules={schedules}
         initialStartDate={startDateStr}
+          initialEndDate={endDateStr}
         packageLessonCount={totalPackageLessons}
         existingLessonsCount={lessons.length}
         onSuccess={(generated) => onLessonsChange(generated)}

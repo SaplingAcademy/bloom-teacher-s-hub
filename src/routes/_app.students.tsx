@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
+import { coursePeriodFromStudent } from "@/lib/lesson-plan-period";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
@@ -163,6 +164,8 @@ interface Student {
   notes?: string;
   color_key?: string;
   scheduleDetails?: ScheduleDetails;
+  courseStartDate?: string;
+  courseEndDate?: string;
   schedules?: ScheduleInput[];
   linkedGroupId?: string;
   lessonsRemaining?: number;
@@ -817,8 +820,8 @@ function StudentsPage() {
         setEditStartTime(selectedStudent.scheduleDetails.startTime);
         setEditDuration(selectedStudent.scheduleDetails.duration);
         setEditFrequency(selectedStudent.scheduleDetails.frequency);
-        setEditStartDate(selectedStudent.scheduleDetails.startDate);
-        setEditEndDate(selectedStudent.scheduleDetails.endDate || "");
+        setEditStartDate(selectedStudent.courseStartDate || "");
+        setEditEndDate(selectedStudent.courseEndDate || "");
         setEditTimezone(selectedStudent.scheduleDetails.timezone);
         setEditDeliveryMode(selectedStudent.scheduleDetails.deliveryMode);
         setEditLocationLink(selectedStudent.scheduleDetails.locationLink || "");
@@ -831,8 +834,8 @@ function StudentsPage() {
         setEditStartTime("09:00");
         setEditDuration(60);
         setEditFrequency("Weekly");
-        setEditStartDate(new Date().toISOString().split("T")[0]);
-        setEditEndDate("");
+        setEditStartDate(selectedStudent.courseStartDate || "");
+        setEditEndDate(selectedStudent.courseEndDate || "");
         setEditTimezone("America/Sao_Paulo");
         setEditDeliveryMode("Online");
         setEditLocationLink("");
@@ -865,6 +868,8 @@ function StudentsPage() {
           package_id: studentData.package_id,
           notes: studentData.notes,
           color_key: studentData.color_key || "default",
+          ...("start_date" in studentData ? { course_start_date: studentData.start_date || null } : {}),
+          ...("end_date" in studentData ? { course_end_date: studentData.end_date || null } : {}),
         })
         .eq("id", studentId)
         .select()
@@ -896,6 +901,8 @@ function StudentsPage() {
           package_id: studentData.package_id,
           notes: studentData.notes,
           color_key: studentData.color_key || "default",
+          ...("start_date" in studentData ? { course_start_date: studentData.start_date || null } : {}),
+          ...("end_date" in studentData ? { course_end_date: studentData.end_date || null } : {}),
         })
         .select()
         .single();
@@ -1349,8 +1356,8 @@ function StudentsPage() {
           startTime: firstS.start_time || "09:00",
           duration: 60,
           frequency: "Weekly",
-          startDate: "",
-          endDate: undefined,
+          startDate: coursePeriodFromStudent(d).startDate,
+          endDate: coursePeriodFromStudent(d).endDate || undefined,
           timezone: "America/Sao_Paulo",
           deliveryMode: "Online",
           locationLink: undefined,
@@ -1376,6 +1383,8 @@ function StudentsPage() {
         color_key: d.color_key || "default",
         groupSize: d.group_size || undefined,
         packageId: activePackageId,
+        courseStartDate: coursePeriodFromStudent(d).startDate,
+        courseEndDate: coursePeriodFromStudent(d).endDate,
         activeAgreement: activePkgAssignment ? {
           id: activePkgAssignment.id,
           packageId: activePkgAssignment.package_id,
@@ -1523,7 +1532,7 @@ function StudentsPage() {
     setFormColorKey(student.color_key || "default");
     setFormDueDay(student.activeAgreement?.dueDay ?? null);
     setFormFirstDueDate(student.activeAgreement?.firstDueDate || "");
-    initialStartDateRef.current = student.scheduleDetails?.startDate || null;
+    initialStartDateRef.current = student.courseStartDate || "";
     setFormPaymentMethod(student.activeAgreement?.paymentMethod || "Pix");
     setFormInstallmentCount(student.activeAgreement?.installmentCount || 1);
 
@@ -1559,8 +1568,8 @@ function StudentsPage() {
       setFormStartTime(student.scheduleDetails.startTime);
       setFormDuration(student.scheduleDetails.duration);
       setFormFrequency(student.scheduleDetails.frequency);
-      setFormStartDate(student.scheduleDetails.startDate);
-      setFormEndDate(student.scheduleDetails.endDate || "");
+      setFormStartDate(student.courseStartDate || "");
+      setFormEndDate(student.courseEndDate || "");
       setFormTimezone(student.scheduleDetails.timezone);
       setFormDeliveryMode(student.scheduleDetails.deliveryMode);
       setFormLocationLink(student.scheduleDetails.locationLink || "");
@@ -1570,8 +1579,8 @@ function StudentsPage() {
       setFormStartTime("09:00");
       setFormDuration(60);
       setFormFrequency("Weekly");
-      setFormStartDate(new Date().toISOString().split("T")[0]);
-      setFormEndDate("");
+      setFormStartDate(student.courseStartDate || "");
+      setFormEndDate(student.courseEndDate || "");
       setFormTimezone("America/Sao_Paulo");
       setFormDeliveryMode("Online");
       setFormLocationLink("");
@@ -2122,6 +2131,8 @@ function StudentsPage() {
               studentName={selectedStudent.name}
               teacherId={user?.id || ""}
               lessons={currentStudentLessons}
+              startDateStr={selectedStudent.courseStartDate || ""}
+              endDateStr={selectedStudent.courseEndDate || ""}
               onLessonsChange={(updated) => setCurrentStudentLessons(updated)}
             />
             <StudentClassLessonsHistory studentId={selectedStudent.id} isPt={lang === "pt"} />
