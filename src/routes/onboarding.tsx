@@ -1,5 +1,10 @@
 import { getUserItem, setUserItem, removeUserItem } from "@/lib/user-storage";
-import { sanitizeTeacherName } from "@/lib/teacher-name";
+import {
+  resolveInitialPreferredName,
+  toProfileFullName,
+  stripNameFromAnswers,
+  profileNameState,
+} from "@/lib/onboarding-name";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
@@ -306,8 +311,9 @@ export function OnboardingPage() {
 
         if (!isMounted || isDirtyRef.current) return;
         if (record?.answers) {
-          const { status, current_step, updated_at, preferredName: _ignored, ...savedAnswers } =
-            record.answers;
+          const { status, current_step, updated_at, ...savedAnswers } = stripNameFromAnswers(
+            record.answers
+          );
           if (savedAnswers && Object.keys(savedAnswers).length > 0) {
             setData((prev) => normalizeOnboardingData({ ...prev, ...savedAnswers }));
           }
@@ -331,11 +337,11 @@ export function OnboardingPage() {
           .eq("id", userId)
           .maybeSingle();
         if (!isMounted) return;
-        const realName = sanitizeTeacherName(prof?.full_name, user?.email ?? session?.user?.email);
-        if (!realName) return;
-        setData((prev) =>
-          (prev.preferredName ?? "").trim() ? prev : { ...prev, preferredName: realName }
-        );
+        const email = user?.email ?? session?.user?.email;
+        setData((prev) => {
+          const next = resolveInitialPreferredName(prev.preferredName, prof?.full_name, email);
+          return next === (prev.preferredName ?? "") ? prev : { ...prev, preferredName: next };
+        });
       } catch (err) {
         console.warn("[Onboarding] Error loading profile name:", err);
       }
@@ -372,7 +378,7 @@ export function OnboardingPage() {
     const userId = user?.id || session?.user?.id;
     if (!userId) return;
     // The name lives only in public.profiles.full_name — never in onboarding answers.
-    const { preferredName: _omitName, ...answersWithoutName } = data;
+    const answersWithoutName = stripNameFromAnswers(data);
     try {
       await supabase.from("onboarding").upsert(
         {
@@ -452,7 +458,7 @@ export function OnboardingPage() {
           ? [...data.languages.filter((l) => l !== "Other"), data.otherLanguage]
           : data.languages;
 
-      const preferredFullName = (data.preferredName ?? "").trim() || null;
+      const preferredFullName = toProfileFullName(data.preferredName);
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -607,8 +613,7 @@ export function OnboardingPage() {
         onboarding_completed: true,
         onboarding_status: "completed",
         languages_taught: finalLanguages,
-        full_name: preferredFullName,
-        name: preferredFullName ?? "",
+        ...profileNameState(preferredFullName),
       });
       if (typeof window !== "undefined") {
         localStorage.setItem("bloom.onboarding.completed", "true");
