@@ -1,3 +1,4 @@
+import { getUserItem, setUserItem } from "@/lib/user-storage";
 import { resolveTeacherFirstName } from "@/lib/teacher-name";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
@@ -424,7 +425,8 @@ function TodayPage() {
 
   // Load manual tasks from localStorage
   useEffect(() => {
-    const savedTasks = localStorage.getItem("bloom.dashboard.tasks");
+    const savedTasks = user?.id ? getUserItem("bloom.dashboard.tasks", user.id) : null;
+    if (!savedTasks) setManualTasks([]);
     if (savedTasks) {
       try {
         const parsed = JSON.parse(savedTasks);
@@ -467,7 +469,7 @@ function TodayPage() {
           return updatedT;
         });
         setManualTasks(migrated);
-        localStorage.setItem("bloom.dashboard.tasks", JSON.stringify(migrated));
+        if (user?.id) setUserItem("bloom.dashboard.tasks", JSON.stringify(migrated), user.id);
       } catch (e) {
         console.error("Failed to parse tasks", e);
       }
@@ -481,7 +483,7 @@ function TodayPage() {
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [user?.id]);
 
   // Timer interval for automatic deadline recalculations (every 30 seconds)
   useEffect(() => {
@@ -494,7 +496,7 @@ function TodayPage() {
   // Save manual tasks helper
   const saveManualTasks = (newTasks: Task[]) => {
     setManualTasks(newTasks);
-    localStorage.setItem("bloom.dashboard.tasks", JSON.stringify(newTasks));
+    if (user?.id) setUserItem("bloom.dashboard.tasks", JSON.stringify(newTasks), user.id);
   };
 
   // Toggle task complete status (with calendar timeline two-way sync)
