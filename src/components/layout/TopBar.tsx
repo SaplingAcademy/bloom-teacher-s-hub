@@ -1,5 +1,5 @@
 import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
-import { Menu, Search, Bell, Plus, Command, Globe, ChevronDown } from "lucide-react";
+import { Menu, Search, Bell, Plus, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "@tanstack/react-router";
