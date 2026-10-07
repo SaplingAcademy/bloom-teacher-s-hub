@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import {
   saveStudentEnrollmentAgreement,
+  updateStudentAgreementSchedule,
   FinanceSyncError,
   calculateLastDueDate,
   calculateInstallmentSchedule,
@@ -690,6 +691,7 @@ function StudentsPage() {
   const [formStartTime, setFormStartTime] = useState("09:00");
   const [formDuration, setFormDuration] = useState(60);
   const [formFrequency, setFormFrequency] = useState<"Weekly" | "Bi-weekly" | "Monthly">("Weekly");
+  const initialStartDateRef = useRef<string | null>(null);
   const [formStartDate, setFormStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [formEndDate, setFormEndDate] = useState("");
   const [formTimezone, setFormTimezone] = useState("America/Sao_Paulo");
@@ -981,7 +983,29 @@ function StudentsPage() {
           contractMonths: selectedPkg.contractMonths,
         });
 
-        const ok = financialTermsUnchanged || await saveStudentEnrollmentAgreement({
+        const samePackageScheduleChange = Boolean(
+          !financialTermsUnchanged
+          && existingAgreement?.id
+          && existingAgreement.packageId === selectedPackageId
+          && (existingAgreement.installmentCount || 1) === (formInstallmentCount || 1),
+        );
+        if (samePackageScheduleChange && existingAgreement?.id) {
+          // Same contract, corrected base date: UPDATE contract + existing invoices (no new student_package).
+          const startDateChanged = Boolean(
+            initialStartDateRef.current !== null
+            && studentData.start_date
+            && studentData.start_date !== initialStartDateRef.current,
+          );
+          await updateStudentAgreementSchedule({
+            teacherId: studentData.teacher_id,
+            studentPackageId: existingAgreement.id,
+            dueDay: formDueDay,
+            firstDueDate: formFirstDueDate,
+            paymentMethod: formPaymentMethod,
+            startedAt: startDateChanged ? studentData.start_date : null,
+          });
+        }
+        const ok = financialTermsUnchanged || samePackageScheduleChange || await saveStudentEnrollmentAgreement({
           teacherId: studentData.teacher_id,
           studentId: savedStudentId,
           packageId: selectedPackageId,
@@ -1003,7 +1027,7 @@ function StudentsPage() {
           const agreementErr = new Error("Failed to save student enrollment agreement snapshot");
           throw agreementErr;
         }
-        if (!financialTermsUnchanged) pendingPriorPaymentsRef.current = savedStudentId;
+        if (!financialTermsUnchanged && !samePackageScheduleChange) pendingPriorPaymentsRef.current = savedStudentId;
       } else if (isEdit) {
         // Deactivate active package assignment if package set to none
         await supabase
@@ -1290,6 +1314,9 @@ function StudentsPage() {
     queryClient.invalidateQueries({ queryKey: ["class-member-ids", teacherId] });
     // Contract saves create receivables; the ledger must not keep showing a cached empty list.
     queryClient.invalidateQueries({ queryKey: ["finance-invoices", teacherId] });
+    queryClient.invalidateQueries({ queryKey: ["finance-expenses", teacherId] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", teacherId] });
+    queryClient.invalidateQueries({ queryKey: ["growth-data", teacherId] });
   };
 
   // Map raw rows -> UI model (re-runs on language change without refetching)
@@ -1459,6 +1486,7 @@ function StudentsPage() {
     setFormColorKey("default");
     setFormDueDay(null);
     setFormFirstDueDate("");
+    initialStartDateRef.current = null;
 
     // Reset Schedule fields
     setFormClassFrequency(1);
@@ -1495,6 +1523,7 @@ function StudentsPage() {
     setFormColorKey(student.color_key || "default");
     setFormDueDay(student.activeAgreement?.dueDay ?? null);
     setFormFirstDueDate(student.activeAgreement?.firstDueDate || "");
+    initialStartDateRef.current = student.scheduleDetails?.startDate || null;
     setFormPaymentMethod(student.activeAgreement?.paymentMethod || "Pix");
     setFormInstallmentCount(student.activeAgreement?.installmentCount || 1);
 

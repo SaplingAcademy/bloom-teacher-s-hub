@@ -18,6 +18,8 @@ import {
   paymentDateFromTimestamp,
   unpaidStatusForDueDate,
   statusAfterDueDateChange,
+  normalizeBillingModel,
+  rescheduleAgreementInvoices,
 } from "@/lib/billing-domain";
 
 /** Extracts the real database error (code + message) so the teacher sees what actually failed. */
