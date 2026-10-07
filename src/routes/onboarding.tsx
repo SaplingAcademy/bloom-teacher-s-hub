@@ -1,4 +1,5 @@
 import { getUserItem, setUserItem, removeUserItem } from "@/lib/user-storage";
+import { sanitizeTeacherName } from "@/lib/teacher-name";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
@@ -305,7 +306,8 @@ export function OnboardingPage() {
 
         if (!isMounted || isDirtyRef.current) return;
         if (record?.answers) {
-          const { status, current_step, updated_at, ...savedAnswers } = record.answers;
+          const { status, current_step, updated_at, preferredName: _ignored, ...savedAnswers } =
+            record.answers;
           if (savedAnswers && Object.keys(savedAnswers).length > 0) {
             setData((prev) => normalizeOnboardingData({ ...prev, ...savedAnswers }));
           }
@@ -320,7 +322,26 @@ export function OnboardingPage() {
       }
     }
 
-    loadSavedOnboarding();
+    // Prefill the name only from this user's profiles.full_name (never from e-mail).
+    async function loadProfileName() {
+      try {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!isMounted) return;
+        const realName = sanitizeTeacherName(prof?.full_name, user?.email ?? session?.user?.email);
+        if (!realName) return;
+        setData((prev) =>
+          (prev.preferredName ?? "").trim() ? prev : { ...prev, preferredName: realName }
+        );
+      } catch (err) {
+        console.warn("[Onboarding] Error loading profile name:", err);
+      }
+    }
+
+    loadSavedOnboarding().then(loadProfileName);
     return () => {
       isMounted = false;
     };
@@ -350,12 +371,14 @@ export function OnboardingPage() {
   const savePartialProgress = async (status: "in_progress" | "skipped", stepNum: number) => {
     const userId = user?.id || session?.user?.id;
     if (!userId) return;
+    // The name lives only in public.profiles.full_name — never in onboarding answers.
+    const { preferredName: _omitName, ...answersWithoutName } = data;
     try {
       await supabase.from("onboarding").upsert(
         {
           teacher_id: userId,
           answers: {
-            ...data,
+            ...answersWithoutName,
             management_tool: data.managementTools?.[0] || data.managementTool || "none",
             management_tools: data.managementTools || ["none"],
             other_platform_text: data.otherPlatformText || "",
@@ -429,11 +452,13 @@ export function OnboardingPage() {
           ? [...data.languages.filter((l) => l !== "Other"), data.otherLanguage]
           : data.languages;
 
+      const preferredFullName = (data.preferredName ?? "").trim() || null;
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           onboarding_completed: true,
           languages_taught: finalLanguages,
+          full_name: preferredFullName,
         })
         .eq("id", userId);
 
@@ -582,6 +607,8 @@ export function OnboardingPage() {
         onboarding_completed: true,
         onboarding_status: "completed",
         languages_taught: finalLanguages,
+        full_name: preferredFullName,
+        name: preferredFullName ?? "",
       });
       if (typeof window !== "undefined") {
         localStorage.setItem("bloom.onboarding.completed", "true");
@@ -993,6 +1020,31 @@ function Step1AboutYou({
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {isPt ? "Passo 1 — Sobre você" : "Step 1 — About you"}
         </span>
+      </div>
+
+      {/* Preferred name (saved to profiles.full_name) */}
+      <div className="space-y-2">
+        <label
+          htmlFor="onboarding-preferred-name"
+          className="block text-lg sm:text-xl font-extrabold font-outfit text-stone-900"
+        >
+          {isPt
+            ? "Como você gostaria de ser chamado(a) na Bloom?"
+            : "What would you like to be called in Bloom?"}
+        </label>
+        <input
+          id="onboarding-preferred-name"
+          type="text"
+          autoComplete="given-name"
+          maxLength={80}
+          value={data.preferredName ?? ""}
+          onChange={(e) => updateData("preferredName", e.target.value)}
+          placeholder={isPt ? "Ex.: Débora" : "e.g. Débora"}
+          className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+        />
+      </div>
+
+      <div className="space-y-2">
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
           {isPt ? "Quais idiomas você ensina?" : "What language(s) do you teach?"}
         </h2>
