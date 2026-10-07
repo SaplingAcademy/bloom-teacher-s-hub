@@ -1819,6 +1819,7 @@ function StudentsPage() {
       }
 
       setIsModalOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["students", user?.id] });
       openPriorPaymentsIfNeeded();
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
