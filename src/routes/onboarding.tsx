@@ -608,7 +608,7 @@ export function OnboardingPage() {
         onboarding_status: "completed",
         languages_taught: finalLanguages,
         full_name: preferredFullName,
-        name: preferredFullName ?? undefined,
+        name: preferredFullName ?? "",
       });
       if (typeof window !== "undefined") {
         localStorage.setItem("bloom.onboarding.completed", "true");
