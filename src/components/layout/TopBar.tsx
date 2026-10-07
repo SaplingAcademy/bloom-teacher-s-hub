@@ -1,5 +1,5 @@
 import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
-import { Menu, Search, Bell, Plus, Command, Globe, ChevronDown } from "lucide-react";
+import { Menu, Search, Bell, Plus, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "@tanstack/react-router";
@@ -192,7 +192,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 onClick={() => setProfileDropdownOpen(false)}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
               >
-                <span>👤</span>
+                <User size={14} strokeWidth={2} className="text-muted-foreground shrink-0" aria-hidden="true" />
                 <span>{t("nav.profile")}</span>
               </Link>
               <Link
@@ -200,7 +200,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 onClick={() => setProfileDropdownOpen(false)}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
               >
-                <span>⚙️</span>
+                <Settings size={14} strokeWidth={2} className="text-muted-foreground shrink-0" aria-hidden="true" />
                 <span>{t("nav.settings")}</span>
               </Link>
 
@@ -213,7 +213,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
               >
-                <span>🚪</span>
+                <LogOut size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
                 <span>{t("common.logout")}</span>
               </button>
             </div>
