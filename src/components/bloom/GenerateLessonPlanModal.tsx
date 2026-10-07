@@ -136,7 +136,7 @@ export function GenerateLessonPlanModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, studentId, initialStartDate, teacherId]);
+  }, [isOpen, studentId, initialStartDate, initialEndDate, teacherId]);
 
   // Determine total lesson count to generate
   const getTargetLessonCount = (): number => {
