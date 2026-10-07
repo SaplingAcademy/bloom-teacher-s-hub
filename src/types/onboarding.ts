@@ -36,6 +36,8 @@ export interface OnboardingTimeOff {
 
 export interface OnboardingData {
   // Step 1 - About You
+  /** Preferred display name. Persisted only in public.profiles.full_name (local draft is UI state). */
+  preferredName?: string;
   languages: string[];
   otherLanguage?: string;
   managementTool?: string; // Legacy string for backward compatibility

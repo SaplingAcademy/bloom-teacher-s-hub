@@ -993,6 +993,31 @@ function Step1AboutYou({
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {isPt ? "Passo 1 — Sobre você" : "Step 1 — About you"}
         </span>
+      </div>
+
+      {/* Preferred name (saved to profiles.full_name) */}
+      <div className="space-y-2">
+        <label
+          htmlFor="onboarding-preferred-name"
+          className="block text-lg sm:text-xl font-extrabold font-outfit text-stone-900"
+        >
+          {isPt
+            ? "Como você gostaria de ser chamado(a) na Bloom?"
+            : "What would you like to be called in Bloom?"}
+        </label>
+        <input
+          id="onboarding-preferred-name"
+          type="text"
+          autoComplete="given-name"
+          maxLength={80}
+          value={data.preferredName ?? ""}
+          onChange={(e) => updateData("preferredName", e.target.value)}
+          placeholder={isPt ? "Ex.: Débora" : "e.g. Débora"}
+          className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+        />
+      </div>
+
+      <div className="space-y-2">
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
           {isPt ? "Quais idiomas você ensina?" : "What language(s) do you teach?"}
         </h2>
