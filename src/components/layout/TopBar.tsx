@@ -213,7 +213,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
               >
-                <span>🚪</span>
+                <LogOut size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
                 <span>{t("common.logout")}</span>
               </button>
             </div>
