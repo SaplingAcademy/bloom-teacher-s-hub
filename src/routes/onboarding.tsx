@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
@@ -281,10 +281,19 @@ export function OnboardingPage() {
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch saved onboarding answers from Supabase on mount if available
+  // Fetch saved onboarding answers ONCE per teacher. The Supabase session
+  // object is replaced on every token refresh (e.g. when the tab regains
+  // focus), so we key on the stable user id and never re-hydrate after the
+  // first load. Local edits (dirty form) always win over server data.
+  const hydrationUserId = user?.id || session?.user?.id || null;
+  const hydratedForRef = useRef<string | null>(null);
+  const isDirtyRef = useRef(false);
+
   useEffect(() => {
-    const userId = user?.id || session?.user?.id;
+    const userId = hydrationUserId;
     if (!userId) return;
+    if (hydratedForRef.current === userId) return;
+    hydratedForRef.current = userId;
 
     let isMounted = true;
     async function loadSavedOnboarding() {
@@ -295,7 +304,8 @@ export function OnboardingPage() {
           .eq("teacher_id", userId)
           .maybeSingle();
 
-        if (record?.answers && isMounted) {
+        if (!isMounted || isDirtyRef.current) return;
+        if (record?.answers) {
           const { status, current_step, updated_at, ...savedAnswers } = record.answers;
           if (savedAnswers && Object.keys(savedAnswers).length > 0) {
             setData((prev) => normalizeOnboardingData({ ...prev, ...savedAnswers }));
@@ -316,7 +326,7 @@ export function OnboardingPage() {
     return () => {
       isMounted = false;
     };
-  }, [user, session]);
+  }, [hydrationUserId]);
 
   // Save progress automatically to localStorage
   useEffect(() => {
