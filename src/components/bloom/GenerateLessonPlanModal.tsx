@@ -40,6 +40,7 @@ import { fetchTeacherTimeOff, TeacherTimeOff } from "@/lib/time-off-engine";
 import { CEFRLevel, CourseFocus } from "@/lib/calendar-sync";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/use-language";
+import { initialLessonPlanPeriod, clipToPeriod } from "@/lib/lesson-plan-period";
 
 interface Props {
   isOpen: boolean;
@@ -51,6 +52,7 @@ interface Props {
   focus?: CourseFocus;
   initialSchedules?: LessonScheduleInput[];
   initialStartDate?: string;
+  initialEndDate?: string;
   packageLessonCount?: number;
   existingLessonsCount?: number;
   onSuccess: (generatedLessons: StudentLesson[]) => void;
@@ -65,7 +67,8 @@ export function GenerateLessonPlanModal({
   level = "B2",
   focus = "General English",
   initialSchedules = [],
-  initialStartDate = new Date().toISOString().split("T")[0],
+  initialStartDate = "",
+  initialEndDate = "",
   packageLessonCount,
   existingLessonsCount = 0,
   onSuccess,
@@ -76,7 +79,8 @@ export function GenerateLessonPlanModal({
     packageLessonCount ? "package" : "23"
   );
   const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 23);
-  const [startDate, setStartDate] = useState<string>(initialStartDate);
+  const [startDate, setStartDate] = useState<string>(() => initialLessonPlanPeriod({ startDate: initialStartDate }).startDate);
+  const [endDate, setEndDate] = useState<string>(() => initialLessonPlanPeriod({ endDate: initialEndDate }).endDate);
   const [schedules, setSchedules] = useState<LessonScheduleInput[]>([]);
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -90,7 +94,9 @@ export function GenerateLessonPlanModal({
     if (!isOpen) return;
     let cancelled = false;
 
-    setStartDate(initialStartDate || new Date().toISOString().split("T")[0]);
+    const period = initialLessonPlanPeriod({ startDate: initialStartDate, endDate: initialEndDate });
+    setStartDate(period.startDate);
+    setEndDate(period.endDate);
 
     if (teacherId) {
       fetchTeacherTimeOff(teacherId).then((list) => {
@@ -130,7 +136,7 @@ export function GenerateLessonPlanModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, studentId, initialStartDate, teacherId]);
+  }, [isOpen, studentId, initialStartDate, initialEndDate, teacherId]);
 
   // Determine total lesson count to generate
   const getTargetLessonCount = (): number => {
@@ -221,14 +227,14 @@ export function GenerateLessonPlanModal({
     try {
       setIsGenerating(true);
 
-      const generated = generateLessonPlanOccurrences(
+      const generated = clipToPeriod(generateLessonPlanOccurrences(
         startDate,
         schedules,
         targetCount,
         studentId,
         teacherId,
         timeOffList
-      );
+      ), endDate);
 
       if (generated.length === 0) {
         throw new Error("Generation produced 0 lesson occurrences. Please check your selected weekdays and start date.");
@@ -396,6 +402,17 @@ export function GenerateLessonPlanModal({
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              className="h-10 text-sm font-mono bg-background border-border"
+            />
+            <Label htmlFor="end-date" className="text-xs font-semibold text-foreground pt-2 block">
+              {t("students.modalCourseEndDate")}
+            </Label>
+            <Input
+              id="end-date"
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
               className="h-10 text-sm font-mono bg-background border-border"
             />
           </div>
