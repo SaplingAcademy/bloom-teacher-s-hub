@@ -18,6 +18,8 @@ import {
   paymentDateFromTimestamp,
   unpaidStatusForDueDate,
   statusAfterDueDateChange,
+  normalizeBillingModel,
+  rescheduleAgreementInvoices,
 } from "@/lib/billing-domain";
 
 /** Extracts the real database error (code + message) so the teacher sees what actually failed. */
@@ -796,6 +798,68 @@ export async function saveStudentEnrollmentAgreement(agreement: {
     if (err instanceof FinanceSyncError) throw err;
     console.error("[FinanceEngine] Error saving enrollment agreement:", err);
     return false;
+  }
+}
+
+/**
+ * Corrects the schedule of the student's EXISTING active contract (same package).
+ * UPDATE only: never inserts a second student_package and never deletes/recreates invoices.
+ * started_at changes only when the teacher explicitly changed the start date.
+ */
+export async function updateStudentAgreementSchedule(input: {
+  teacherId: string;
+  studentPackageId: string;
+  dueDay: number;
+  firstDueDate: string;
+  paymentMethod: string;
+  startedAt?: string | null;
+  today?: string;
+}): Promise<void> {
+  const { teacherId, studentPackageId, firstDueDate, paymentMethod } = input;
+  const dueDay = normalizeDueDay(input.dueDay);
+  if (!dueDay || !isValidBillingDate(firstDueDate)) throw new FinanceSyncError("Informe um vencimento válido.");
+  const today = input.today || localDateString();
+
+  const { data: sp, error: spError } = await supabase
+    .from("student_packages").select("*").eq("id", studentPackageId).eq("teacher_id", teacherId).single();
+  if (spError || !sp) throw new FinanceSyncError("Contrato ativo não encontrado.", spError);
+
+  const { data: invoices, error: invError } = await supabase
+    .from("invoices").select("id, sequence_number, sequence_count, due_date, status")
+    .eq("teacher_id", teacherId).eq("student_package_id", studentPackageId);
+  if (invError) throw new FinanceSyncError("Não foi possível carregar as cobranças do contrato.", invError);
+
+  let updates;
+  try {
+    updates = rescheduleAgreementInvoices(invoices || [], firstDueDate, dueDay, today);
+  } catch (e) {
+    throw new FinanceSyncError((e as Error).message, e);
+  }
+
+  const model = sp.billing_model ? normalizeBillingModel(sp.billing_model) : null;
+  const count = model === "installment_total" ? sp.installment_count
+    : model === "monthly" && sp.billing_duration_type === "fixed" ? sp.contract_duration_months
+    : model === "one_time" ? 1 : null;
+  const lastDueDate = count && count > 0 ? recurringBillingDate(firstDueDate, Math.round(count) - 1, dueDay) : sp.last_due_date ?? null;
+
+  const spPatch: Record<string, unknown> = {
+    due_day: dueDay,
+    first_due_date: firstDueDate,
+    last_due_date: lastDueDate,
+    payment_method: paymentMethod,
+  };
+  if (input.startedAt && isValidBillingDate(input.startedAt)) spPatch.started_at = input.startedAt;
+
+  const { error: upError } = await supabase
+    .from("student_packages").update(spPatch).eq("id", studentPackageId).eq("teacher_id", teacherId);
+  if (upError) throw new FinanceSyncError("Não foi possível atualizar o vencimento do contrato.", upError);
+
+  const nowIso = new Date().toISOString();
+  for (const u of updates) {
+    const { error } = await supabase
+      .from("invoices").update({ due_date: u.dueDate, status: u.status, updated_at: nowIso })
+      .eq("id", u.id).eq("teacher_id", teacherId);
+    if (error) throw new FinanceSyncError("Não foi possível atualizar o vencimento das cobranças.", error);
   }
 }
 

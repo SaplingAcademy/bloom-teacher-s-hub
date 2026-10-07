@@ -356,3 +356,48 @@ export function isPriorOrCurrentMonthOpenCharge(
   const [year, month] = invoice.dueDate.split("-").map(Number);
   return year * 12 + (month - 1) <= now.getFullYear() * 12 + now.getMonth();
 }
+
+// ---------------------------------------------------------------------------
+// Schedule correction of an existing contract (same package, new base date)
+// ---------------------------------------------------------------------------
+
+export interface ScheduleInvoiceInput {
+  id: string;
+  sequence_number?: number | null;
+  due_date: string;
+  status?: string | null;
+}
+
+export interface ScheduleInvoiceUpdate {
+  id: string;
+  dueDate: string;
+  status: string;
+}
+
+/**
+ * Recomputes the due dates of a contract's existing invoices from a corrected
+ * base date. Never adds or removes invoices: only rows with a sequence_number
+ * are moved (sequence N -> month offset N-1). Paid/cancelled keep their status;
+ * unpaid ones become pending/overdue from the new due date. Returns only rows
+ * whose due date or status actually changes.
+ */
+export function rescheduleAgreementInvoices(
+  invoices: ScheduleInvoiceInput[],
+  firstDueDate: string,
+  dueDay: number,
+  today: string,
+): ScheduleInvoiceUpdate[] {
+  if (!isValidBillingDate(firstDueDate)) throw new Error("Primeiro vencimento obrigatório e inválido.");
+  const day = normalizeDueDay(dueDay);
+  if (!day) throw new Error("Dia de vencimento obrigatório e inválido.");
+  const updates: ScheduleInvoiceUpdate[] = [];
+  for (const inv of invoices) {
+    const seq = inv.sequence_number ? Math.round(inv.sequence_number) : 0;
+    if (seq < 1) continue;
+    const dueDate = recurringBillingDate(firstDueDate, seq - 1, day);
+    const current = String(inv.status || "pending");
+    const status = current === "paid" || current === "cancelled" ? current : unpaidStatusForDueDate(dueDate, today);
+    if (dueDate !== inv.due_date || status !== current) updates.push({ id: inv.id, dueDate, status });
+  }
+  return updates;
+}

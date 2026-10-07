@@ -17,3 +17,4 @@
 
 - [x] Livro Caixa: sincroniza sempre ao abrir, um contrato canônico por aluno, inserção idempotente (23505), erros reais e contratos com problema exibidos na tela.
 - [x] Gestão de cobranças: aba Cobranças, pagar/editar/desfazer, vencimento individual, pagamentos anteriores no cadastro
+- [x] Correção do cronograma de contrato existente: UPDATE do contrato e das cobranças, sem novo contrato; started_at só com Data de Início alterada

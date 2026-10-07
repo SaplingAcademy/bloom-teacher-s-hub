@@ -191,3 +191,35 @@ describe("contract already running (6 months, 4th month)", () => {
     expect(eligible.map((d) => d.sequenceNumber)).toEqual([1, 2, 3, 4]);
   });
 });
+
+import { rescheduleAgreementInvoices } from "../src/lib/billing-domain";
+
+describe("contract schedule correction (same contract, no new student_package)", () => {
+  const invs = [1, 2, 3, 4, 5, 6].map((n) => ({
+    id: `inv${n}`, sequence_number: n, due_date: `2026-${String(6 + n).padStart(2, "0")}-10`,
+    status: n === 1 ? "paid" : n <= 3 ? "overdue" : "pending",
+  }));
+  it("moves 10 -> 15 updating existing invoice ids only, never adding rows", () => {
+    const u = rescheduleAgreementInvoices(invs, "2026-07-15", 15, "2026-10-07");
+    expect(u.map((x) => x.id)).toEqual(["inv1", "inv2", "inv3", "inv4", "inv5", "inv6"]);
+    expect(u.map((x) => x.dueDate)).toEqual(["2026-07-15", "2026-08-15", "2026-09-15", "2026-10-15", "2026-11-15", "2026-12-15"]);
+    expect(u.length).toBeLessThanOrEqual(invs.length);
+  });
+  it("keeps paid as paid and recalculates unpaid status", () => {
+    const u = rescheduleAgreementInvoices(invs, "2026-09-15", 15, "2026-10-07");
+    const by = Object.fromEntries(u.map((x) => [x.id, x]));
+    expect(by.inv1.status).toBe("paid");
+    expect(by.inv2.status).toBe("pending"); // 2026-10-15 is future
+    expect(by.inv3.status).toBe("pending");
+  });
+  it("uses the last valid day for 29/30/31", () => {
+    const u = rescheduleAgreementInvoices(invs.slice(0, 4).map((i) => ({ ...i, status: "pending" })), "2027-01-31", 31, "2026-10-07");
+    expect(u.map((x) => x.dueDate)).toEqual(["2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30"]);
+    const leap = rescheduleAgreementInvoices([{ id: "a", sequence_number: 2, due_date: "x", status: "pending" }], "2028-01-30", 30, "2026-10-07");
+    expect(leap[0].dueDate).toBe("2028-02-29");
+  });
+  it("returns nothing when the schedule is unchanged", () => {
+    const same = invs.map((i) => ({ ...i, status: i.status === "overdue" ? "pending" : i.status }));
+    expect(rescheduleAgreementInvoices(same, "2026-07-10", 10, "2026-01-01")).toEqual([]);
+  });
+});
