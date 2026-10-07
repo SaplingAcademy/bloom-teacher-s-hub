@@ -2,8 +2,8 @@
  * Canonical resolution of the teacher's display name.
  *
  * Priority:
- *   1. teacher_profiles.full_name (or legacy profiles.full_name)
- *   2. Supabase Auth user metadata (full_name / name / display_name)
+ *   1. public.profiles.full_name — the single canonical persisted name
+ *   2. Supabase Auth user metadata (full_name / name / display_name), display only
  *   3. null  → callers render a neutral fallback
  *
  * The name is NEVER derived from the e-mail address.

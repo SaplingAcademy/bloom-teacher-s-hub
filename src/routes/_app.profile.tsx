@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { getUserItem, setUserItem } from "@/lib/user-storage";
 import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
 import { useState, useEffect } from "react";
@@ -340,25 +341,30 @@ function ProfilePage() {
     // Sync to database if user is logged in
     if (user?.id) {
       console.log("[Profile] Syncing updated profile to Supabase database...");
+      // public.profiles is the single canonical profile source; only real columns.
       const payload = {
         full_name: editName,
         avatar_url: editPhoto,
-        preferred_language: editLanguage,
         locale: editLanguage,
         timezone: editTimezone,
       };
 
-      Promise.all([
-        supabase.from("profiles").update(payload).eq("id", user.id),
-        supabase.from("teacher_profiles").update(payload).eq("id", user.id),
-      ]).then(([res1, res2]) => {
-        if (res1.error && res2.error) {
-          console.error("[Profile] Database update error:", res1.error || res2.error);
-        } else {
-          console.log("[Profile] Database update successful.");
-          retryProfileSync();
-        }
-      });
+      supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("[Profile] Database update error:", error);
+            toast.error(
+              targetLang === "pt"
+                ? `Não foi possível salvar o perfil: ${error.message}`
+                : `Could not save profile: ${error.message}`,
+            );
+          } else {
+            retryProfileSync();
+          }
+        });
     }
   };
 

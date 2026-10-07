@@ -33,7 +33,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Listen to Supabase auth session to sync preferred_language from user profile
+  // Listen to Supabase auth session to sync interface language from profiles.locale
   useEffect(() => {
     async function syncFromProfile() {
       try {
@@ -41,11 +41,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("preferred_language, locale")
+            .select("locale")
             .eq("id", user.id)
             .maybeSingle();
 
-          const dbLang = profile?.preferred_language || profile?.locale;
+          const dbLang = profile?.locale;
           if (dbLang) {
             const parsedLang: Language = String(dbLang).toLowerCase().startsWith("pt") ? "pt" : "en";
             setLangState(parsedLang);
@@ -75,7 +75,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         const prefVal = newLang === "pt" ? "pt-BR" : "en-US";
         await supabase
           .from("profiles")
-          .update({ preferred_language: prefVal, locale: prefVal })
+          .update({ locale: prefVal })
           .eq("id", user.id);
       }
     } catch (err) {
