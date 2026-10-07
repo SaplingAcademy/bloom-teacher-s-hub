@@ -35,7 +35,7 @@ export interface TeacherAvailabilitySnapshot {
   timeOff: TeacherTimeOff[];
   /** settings.default_class_duration */
   defaultDuration: number;
-  /** teacher_profiles.timezone — SINGLE source of truth for timezone */
+  /** profiles.timezone — SINGLE source of truth for timezone */
   timezone: string;
   /** true when the teacher has never configured any working day */
   isConfigured: boolean;
@@ -50,23 +50,16 @@ export function invalidateTeacherAvailability(teacherId?: string) {
   else cache.clear();
 }
 
-/** Reads the teacher timezone from teacher_profiles (fallback: profiles). Never invents a new source. */
+/** Reads the teacher timezone from public.profiles (single canonical source). */
 export async function fetchTeacherTimezone(teacherId: string): Promise<string> {
   if (!teacherId) return "America/Sao_Paulo";
   try {
     const { data } = await supabase
-      .from("teacher_profiles")
-      .select("timezone")
-      .eq("id", teacherId)
-      .maybeSingle();
-    if (data?.timezone) return data.timezone as string;
-
-    const { data: legacy } = await supabase
       .from("profiles")
       .select("timezone")
       .eq("id", teacherId)
       .maybeSingle();
-    if (legacy?.timezone) return legacy.timezone as string;
+    if (data?.timezone) return data.timezone as string;
   } catch (err) {
     console.warn("[teacher-availability] Could not read timezone:", err);
   }

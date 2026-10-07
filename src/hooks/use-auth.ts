@@ -46,228 +46,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const syncedUserRef = useRef<string | null>(null);
   const syncCompletedRef = useRef<string | null>(null);
 
+  /**
+   * Loads the teacher profile from public.profiles — the single canonical source.
+   * Never creates the row from the browser and never infers/heals the name:
+   * the row is created by the database on signup. A missing row is an error
+   * surfaced to the user with "Try again".
+   */
   const syncProfile = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (userId: string, userEmail?: string, userMetadata?: any) => {
       if (syncedUserRef.current === userId) {
-        console.log("[useAuth] Profile already synced in this session for user:", userId);
         return;
       }
       syncedUserRef.current = userId;
       ensureStorageOwner(userId);
       try {
-        console.log(`[useAuth] Fetching teacher profile from database for user: ${userId}`);
-        let { data: teacherData, error: teacherError } = await supabase
-          .from("teacher_profiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
+        const [{ data: profileRow, error: profileError }, { data: onboardingRecord }] =
+          await Promise.all([
+            supabase
+              .from("profiles")
+              .select(
+                "id, full_name, avatar_url, bio, languages_taught, timezone, locale, onboarding_completed, created_at, updated_at",
+              )
+              .eq("id", userId)
+              .maybeSingle(),
+            supabase.from("onboarding").select("answers").eq("teacher_id", userId).maybeSingle(),
+          ]);
 
-        let profileData = teacherData;
-        let isTableMissing = teacherError?.code === "PGRST205" || teacherError?.message?.includes("relation \"public.teacher_profiles\" does not exist");
-        let usedLegacyFallback = false;
-
-        if (teacherError && (isTableMissing || teacherError.code !== "PGRST116")) {
-          // If teacher_profiles table does not exist or fetch failed with other error, attempt profiles legacy fallback
-          console.warn("[useAuth] Failed to fetch from teacher_profiles. Trying legacy profiles fallback...", teacherError.message);
-          const { data: legacyProfile, error: legacyError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", userId)
-            .single();
-
-          if (!legacyError && legacyProfile) {
-            profileData = {
-              ...legacyProfile,
-              preferred_language: legacyProfile.preferred_language || legacyProfile.locale || "pt-BR",
-            };
-            usedLegacyFallback = true;
-            console.log("[useAuth] Legacy profiles loaded successfully:", profileData);
-          } else if (legacyError?.code === "PGRST205" || legacyError?.message?.includes("relation \"public.profiles\" does not exist")) {
-             // Both missing, set flag
-             isTableMissing = true;
-          }
+        if (profileError) throw profileError;
+        if (!profileRow) {
+          throw new Error(
+            "Perfil não encontrado para esta conta. Tente novamente em instantes ou entre em contato com o suporte.",
+          );
         }
-
-        if ((teacherError && !usedLegacyFallback) || !profileData) {
-          const isNotFoundError =
-            teacherError &&
-            (teacherError.code === "PGRST116" ||
-              teacherError.message?.includes("multiple (or no) rows"));
-
-          if (isNotFoundError || isTableMissing || !profileData) {
-            console.log(
-              `[useAuth] Profile not found. Creating automatic profile for user on ${isTableMissing ? 'profiles' : 'teacher_profiles'}:`,
-              userId,
-            );
-
-            const rawMetadataName =
-              userMetadata?.full_name ||
-              userMetadata?.name ||
-              (userMetadata?.display_name && !userMetadata.display_name.includes("@") ? userMetadata.display_name : "");
-            const fullName = rawMetadataName || "";
-            const avatarUrl = userMetadata?.avatar_url || userMetadata?.picture || "";
-
-            const targetTable = isTableMissing ? "profiles" : "teacher_profiles";
-            let insertedData: any = null;
-            let insertError: any = null;
-
-            if (isTableMissing) {
-              const { data, error } = await supabase
-                .from("profiles")
-                .insert({
-                  id: userId,
-                  full_name: fullName,
-                  avatar_url: avatarUrl,
-                  locale: "pt-BR",
-                  timezone: "America/Sao_Paulo",
-                  onboarding_completed: false,
-                })
-                .select()
-                .single();
-              insertedData = data;
-              insertError = error;
-            } else {
-              const { data, error } = await supabase
-                .from("teacher_profiles")
-                .insert({
-                  id: userId,
-                  full_name: fullName,
-                  avatar_url: avatarUrl,
-                  preferred_language: "pt-BR",
-                  timezone: "America/Sao_Paulo",
-                })
-                .select()
-                .single();
-              insertedData = data;
-              insertError = error;
-            }
-
-            if (insertError) {
-              console.error(
-                `[useAuth] Failed to create profile automatically on ${targetTable}:`,
-                insertError,
-              );
-              setAuthError(insertError as unknown as Error);
-              throw insertError;
-            } else {
-              console.log(
-                `[useAuth] Automatic profile created successfully on ${targetTable}:`,
-                insertedData,
-              );
-              profileData = {
-                ...insertedData,
-                preferred_language: insertedData.preferred_language || insertedData.locale || "pt-BR",
-              };
-              setAuthError(null);
-            }
-          } else {
-            console.error(
-              "[useAuth] Teacher profile fetch failed with database error:",
-              teacherError,
-            );
-            setAuthError(teacherError as unknown as Error);
-            throw teacherError;
-          }
-        }
-
-        // Fetch onboarding status and teaching languages in parallel (they are independent).
-        const [{ data: legacyData }, { data: onboardingRecord }] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("onboarding_completed, languages_taught")
-            .eq("id", userId)
-            .maybeSingle(),
-          supabase
-            .from("onboarding")
-            .select("answers")
-            .eq("teacher_id", userId)
-            .maybeSingle(),
-        ]);
 
         const onboardingAnswers = onboardingRecord?.answers || {};
         const isCompleted =
-          Boolean(legacyData?.onboarding_completed) ||
-          onboardingAnswers.status === "completed";
+          Boolean(profileRow.onboarding_completed) || onboardingAnswers.status === "completed";
         const onboardingStatus =
-          onboardingAnswers.status ||
-          (isCompleted ? "completed" : "not_started");
-
+          onboardingAnswers.status || (isCompleted ? "completed" : "not_started");
         const languagesTaught =
-          Array.isArray(legacyData?.languages_taught) && legacyData.languages_taught.length > 0
-            ? legacyData.languages_taught
+          Array.isArray(profileRow.languages_taught) && profileRow.languages_taught.length > 0
+            ? profileRow.languages_taught
             : Array.isArray(onboardingAnswers.languages) && onboardingAnswers.languages.length > 0
               ? onboardingAnswers.languages
               : [];
+        const locale = profileRow.locale || "pt-BR";
 
-        if (profileData) {
-          // Merge onboarding_completed, onboarding_status, and languages_taught into profileData for frontend compatibility
-          profileData = {
-            ...profileData,
-            onboarding_completed: isCompleted,
-            onboarding_status: onboardingStatus,
-            languages_taught: languagesTaught,
-          };
+        const profileData = {
+          ...profileRow,
+          // Derived for UI compatibility only; persisted column is `locale`.
+          preferred_language: locale,
+          onboarding_completed: isCompleted,
+          onboarding_status: onboardingStatus,
+          languages_taught: languagesTaught,
+        };
 
-          console.log("[useAuth] Profile loaded/fetched from database:", profileData);
-          // Cache is scoped to this user id; it never feeds the name or any DB write.
-          const savedProfileStr = getUserItem("bloom.profile.data", userId);
-          let currentProfile: Record<string, unknown> = {};
-          try {
-            currentProfile = savedProfileStr ? JSON.parse(savedProfileStr) : {};
-          } catch {
-            currentProfile = {};
-          }
-          const metadataName = getMetadataName({ email: userEmail, user_metadata: userMetadata });
-          // Priority: profile record → this user's Auth metadata. Never the browser cache or e-mail.
-          const storedName = sanitizeTeacherName(profileData.full_name, userEmail);
-          const cleanProfileName = storedName || metadataName || "";
+        // Cache is scoped to this user id; it never feeds the name or any DB write.
+        const savedProfileStr = getUserItem("bloom.profile.data", userId);
+        let currentProfile: Record<string, unknown> = {};
+        try {
+          currentProfile = savedProfileStr ? JSON.parse(savedProfileStr) : {};
+        } catch {
+          currentProfile = {};
+        }
+        // Display name: profiles.full_name → this user's Auth metadata → empty (neutral UI fallback).
+        const displayName =
+          sanitizeTeacherName(profileRow.full_name, userEmail) ||
+          getMetadataName({ email: userEmail, user_metadata: userMetadata }) ||
+          "";
 
-          // Heal only from this user's own Auth metadata (server-verified).
-          if (!storedName && metadataName && profileData.id === userId) {
-            const tableToHeal = usedLegacyFallback ? "profiles" : "teacher_profiles";
-            const { error: healError } = await supabase
-              .from(tableToHeal)
-              .update({ full_name: metadataName })
-              .eq("id", userId);
-            if (healError) {
-              console.warn("[useAuth] Could not persist canonical full_name:", healError.message);
-            } else {
-              profileData = { ...profileData, full_name: metadataName };
-            }
-          }
+        const updatedProfile = {
+          ...defaultProfile,
+          ...currentProfile,
+          name: displayName,
+          photo: profileRow.avatar_url || (currentProfile.photo as string) || "",
+          preferred_language: locale,
+          timezone: profileRow.timezone || "America/Sao_Paulo",
+        };
+        setUserItem("bloom.profile.data", JSON.stringify(updatedProfile), userId);
 
-          const updatedProfile = {
-            ...defaultProfile,
-            ...currentProfile,
-            name: cleanProfileName,
-            photo: profileData.avatar_url || (currentProfile.photo as string) || "",
-            preferred_language: profileData.preferred_language || "pt-BR",
-            timezone: profileData.timezone || "America/Sao_Paulo",
-          };
-
-          setUserItem("bloom.profile.data", JSON.stringify(updatedProfile), userId);
-
-          if (isCompleted) {
-            localStorage.setItem("bloom.onboarding.completed", "true");
-            localStorage.removeItem("bloom.onboarding.skipped");
-            console.log("[useAuth] Onboarding status loaded: completed");
-          } else if (onboardingStatus === "skipped") {
-            localStorage.setItem("bloom.onboarding.skipped", "true");
-            localStorage.removeItem("bloom.onboarding.completed");
-            console.log("[useAuth] Onboarding status loaded: skipped");
-          } else {
-            localStorage.removeItem("bloom.onboarding.completed");
-            console.log("[useAuth] Onboarding status loaded: pending");
-          }
+        if (isCompleted) {
+          localStorage.setItem("bloom.onboarding.completed", "true");
+          localStorage.removeItem("bloom.onboarding.skipped");
+        } else if (onboardingStatus === "skipped") {
+          localStorage.setItem("bloom.onboarding.skipped", "true");
+          localStorage.removeItem("bloom.onboarding.completed");
+        } else {
+          localStorage.removeItem("bloom.onboarding.completed");
+        }
 
         syncCompletedRef.current = userId;
         setProfile(profileData);
-          setAuthError(null);
-        }
+        setAuthError(null);
       } catch (err: unknown) {
-        console.error("[useAuth] Error in syncProfile:", err);
-        const errorObj = err instanceof Error ? err : new Error(String(err));
+        console.error("[useAuth] Error loading profile:", err);
+        // Allow "Try again" to re-run the load for this user.
+        syncedUserRef.current = null;
+        const errorObj =
+          err instanceof Error
+            ? err
+            : new Error((err as { message?: string })?.message || String(err));
         setAuthError(errorObj);
         throw errorObj;
       }
