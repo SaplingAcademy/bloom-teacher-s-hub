@@ -33,7 +33,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Listen to Supabase auth session to sync preferred_language from user profile
+  // Listen to Supabase auth session to sync interface language from profiles.locale
   useEffect(() => {
     async function syncFromProfile() {
       try {
