@@ -934,7 +934,8 @@ function ProfilePage() {
               </button>
               <button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:bg-primary/95 cursor-pointer shadow-sm px-4"
+                disabled={savingProfile}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:bg-primary/95 cursor-pointer shadow-sm px-4 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {t.saveChanges}
               </button>
