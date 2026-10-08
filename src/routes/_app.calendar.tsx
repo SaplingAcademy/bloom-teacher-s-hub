@@ -220,7 +220,7 @@ const getStatusStyles = (status: TimelineStatus) => {
 };
 
 function CalendarPage() {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatStatus, formatWeekday } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { availability: requestedAvailability, eventId: requestedEventId } = Route.useSearch();
