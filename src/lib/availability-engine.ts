@@ -53,154 +53,65 @@ export function convertOnboardingToWorkingAvailability(data: any): WorkingAvaila
 }
 
 /**
- * Initializes working availability from onboarding data ONLY if the teacher doesn't already have real working availability.
- * Preserves existing availability if present.
- */
-export async function initializeAvailabilityFromOnboarding(
-  teacherId: string,
-  onboardingData: any
-): Promise<{ success: boolean; initialized: boolean; error?: string }> {
-  if (!teacherId) return { success: false, initialized: false, error: "Teacher ID missing" };
-
-  try {
-    // 1. Check if teacher already has working_availability in Supabase
-    const { data: existingSettings } = await supabase
-      .from("settings")
-      .select("working_availability")
-      .eq("teacher_id", teacherId)
-      .maybeSingle();
-
-    const existingAvail = existingSettings?.working_availability as WorkingAvailability[] | undefined;
-
-    // If existing availability is non-empty and has at least 1 enabled day, PRESERVE IT
-    if (existingAvail && Array.isArray(existingAvail) && existingAvail.length > 0) {
-      const hasEnabledDay = existingAvail.some((a) => a.enabled);
-      if (hasEnabledDay) {
-        console.log("[availability-engine] Teacher already has configured working availability. Preserving existing.");
-        return { success: true, initialized: false };
-      }
-    }
-
-    // 2. Check if onboarding data has working days
-    const workingDays = onboardingData?.workingDays || onboardingData?.working_days || [];
-    if (!workingDays || workingDays.length === 0) {
-      console.log("[availability-engine] Onboarding data has no working days. Skipping availability initialization.");
-      return { success: true, initialized: false };
-    }
-
-    // 3. Convert onboarding schedule to WorkingAvailability[] and save
-    const newAvail = convertOnboardingToWorkingAvailability(onboardingData);
-    const saveRes = await saveTeacherWorkingAvailability(teacherId, newAvail);
-
-    return { success: saveRes.success, initialized: true, error: saveRes.error };
-  } catch (err: any) {
-    console.error("[availability-engine] Error initializing working availability from onboarding:", err);
-    return { success: false, initialized: false, error: err?.message || String(err) };
-  }
-}
-
-/**
- * Fetch teacher working availability from Supabase settings (with LocalStorage fallback)
- * Returns [] if teacher has not configured working availability yet.
+ * Fetch teacher working availability. settings.working_availability is the only
+ * operational source: no browser cache, no backfill from onboarding answers.
+ * Returns [] when the teacher has not configured it yet.
  */
 export async function fetchTeacherWorkingAvailability(
   teacherId: string
 ): Promise<WorkingAvailability[]> {
   if (!teacherId) return [];
-
-  // LocalStorage check first for immediate cache
-  const localCache = typeof localStorage !== "undefined" ? localStorage.getItem(`bloom.working_availability.${teacherId}`) : null;
-  let cachedData: WorkingAvailability[] | null = null;
-  if (localCache) {
-    try {
-      cachedData = JSON.parse(localCache);
-    } catch (e) {
-      console.error("[availability-engine] Error parsing cached working availability:", e);
-    }
+  // Drop the legacy per-teacher cache so it can never shadow the server value.
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(`bloom.working_availability.${teacherId}`);
   }
-
   try {
     const { data, error } = await supabase
       .from("settings")
       .select("working_availability")
       .eq("teacher_id", teacherId)
       .maybeSingle();
-
-    if (!error && data && data.working_availability && Array.isArray(data.working_availability) && data.working_availability.length > 0) {
-      const serverAvail = data.working_availability as WorkingAvailability[];
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(`bloom.working_availability.${teacherId}`, JSON.stringify(serverAvail));
-      }
-      return serverAvail;
+    if (error) {
+      console.warn("[availability-engine] fetch error:", error.message);
+      return [];
     }
-
-    // SAFE BACKFILL FOR EXISTING USERS WHO COMPLETED ONBOARDING:
-    // If working_availability is empty, check if onboarding table has answers
-    const { data: onboardingRes } = await supabase
-      .from("onboarding")
-      .select("answers")
-      .eq("teacher_id", teacherId)
-      .maybeSingle();
-
-    if (onboardingRes?.answers) {
-      const ans = onboardingRes.answers;
-      if (ans.working_days && ans.working_days.length > 0) {
-        const backfilled = convertOnboardingToWorkingAvailability({
-          workingDays: ans.working_days,
-          sameAvailabilityAllDays: ans.same_availability_all_days,
-          unifiedAvailability: ans.unified_availability,
-          customAvailability: ans.custom_availability,
-        });
-        await saveTeacherWorkingAvailability(teacherId, backfilled);
-        return backfilled;
-      }
-    }
+    const avail = data?.working_availability;
+    return Array.isArray(avail) ? (avail as WorkingAvailability[]) : [];
   } catch (err) {
-    console.warn("[availability-engine] Error fetching working availability from server:", err);
+    console.warn("[availability-engine] fetch unexpected error:", err);
+    return [];
   }
-
-  return cachedData || [];
 }
 
 /**
- * Save teacher working availability to Supabase settings & LocalStorage
+ * Save teacher working availability to settings.working_availability.
+ * Every database error is returned to the caller — never swallowed.
  */
 export async function saveTeacherWorkingAvailability(
   teacherId: string,
   availability: WorkingAvailability[]
 ): Promise<{ success: boolean; error?: string }> {
   if (!teacherId) return { success: false, error: "ID de professor inválido." };
-
-  // Always sync LocalStorage
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(`bloom.working_availability.${teacherId}`, JSON.stringify(availability));
-  }
-
   try {
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("settings")
       .select("id")
       .eq("teacher_id", teacherId)
       .maybeSingle();
+    if (lookupError) return { success: false, error: lookupError.message };
 
-    if (existing) {
-      await supabase
-        .from("settings")
-        .update({ working_availability: availability })
-        .eq("teacher_id", teacherId);
-    } else {
-      await supabase
-        .from("settings")
-        .insert({
-          teacher_id: teacherId,
-          working_availability: availability,
-        });
-    }
-
+    const { error } = existing
+      ? await supabase
+          .from("settings")
+          .update({ working_availability: availability })
+          .eq("teacher_id", teacherId)
+      : await supabase
+          .from("settings")
+          .insert({ teacher_id: teacherId, working_availability: availability });
+    if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err: any) {
-    console.warn("[availability-engine] Note on server sync for working availability:", err?.message || err);
-    return { success: true };
+    return { success: false, error: err?.message || String(err) };
   }
 }
 

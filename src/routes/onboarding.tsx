@@ -10,7 +10,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
-import { initializeAvailabilityFromOnboarding } from "@/lib/availability-engine";
+import {
+  convertOnboardingToWorkingAvailability,
+  saveTeacherWorkingAvailability,
+} from "@/lib/availability-engine";
+import { parseMoneyBRL, saveMonthlyGoal } from "@/lib/growth-engine";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -141,7 +145,7 @@ const INITIAL_DATA: OnboardingData = {
   timeOff: [],
   lessonTypes: ["Individual"],
   packages: [],
-  monthlyGoal: "12000",
+  monthlyGoal: "",
   monthlyExpense: "",
   knowsHourlyRate: null,
   hourlyRate: "",
@@ -530,18 +534,13 @@ export function OnboardingPage() {
         }
       }
 
-      // 4. Populate business_goals table for monthly revenue goal
-      if (data.monthlyGoal) {
-        const goalValue = parseFloat(data.monthlyGoal.replace(/[^0-9.]/g, "")) || 12000;
-        const { error: goalError } = await supabase.from("business_goals").insert({
-          teacher_id: userId,
-          title: isPt ? "Meta de Faturamento Mensal" : "Monthly Revenue Goal",
-          target_value: goalValue,
-          current_value: 0,
-          metric_name: "monthly_revenue",
-        });
-        if (goalError) {
-          console.warn("[Onboarding] Business goals insert warning:", goalError.message);
+      // 4. Monthly revenue goal → business_goals (single operational source).
+      // Empty or invalid input means "goal not defined yet"; nothing is invented.
+      const goalValue = parseMoneyBRL(data.monthlyGoal);
+      if (goalValue !== null && goalValue > 0) {
+        const goalRes = await saveMonthlyGoal(userId, goalValue);
+        if (!goalRes.success) {
+          throw new Error(goalRes.error || "monthly goal save failed");
         }
       }
 
@@ -563,10 +562,13 @@ export function OnboardingPage() {
         console.warn("[Onboarding] Settings update warning:", settingsError.message);
       }
 
-      // Initialize working availability from onboarding answers (safe: preserves existing if set)
-      const availRes = await initializeAvailabilityFromOnboarding(userId, data);
+      // Working availability → settings.working_availability, exactly as chosen now.
+      const availRes = await saveTeacherWorkingAvailability(
+        userId,
+        convertOnboardingToWorkingAvailability(data)
+      );
       if (!availRes.success) {
-        console.warn("[Onboarding] Working availability initialization warning:", availRes.error);
+        throw new Error(availRes.error || "working availability save failed");
       }
 
       // 5b. Recurring pauses → settings.rest_blocks (existing source of truth)

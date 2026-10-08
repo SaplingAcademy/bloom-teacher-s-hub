@@ -35,18 +35,32 @@ export function formatBRL(value: number): string {
 }
 
 /**
- * Parse a BRL string or plain number string into a numeric value.
- * Handles "R$ 10.000,00", "10000,00", "10000.00", "10000".
+ * Strict BRL parser. Accepts "10000", "10.000", "10.000,00", "10000,00",
+ * "R$ 10.000,00", "10000.50". Returns null when the input is empty/invalid.
  */
-export function parseBRL(raw: string): number {
-  let cleaned = raw.replace(/R\$\s?/g, "").trim();
-  if (cleaned.includes(".") && cleaned.includes(",")) {
-    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
-  } else if (cleaned.includes(",")) {
-    cleaned = cleaned.replace(",", ".");
+export function parseMoneyBRL(raw: string | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null;
+  let s = String(raw).replace(/R\$/gi, "").replace(/\s/g, "").trim();
+  if (!s) return null;
+  if (!/^\d[\d.,]*$/.test(s)) return null;
+  if (s.includes(",")) {
+    // pt-BR: dots are thousands separators, comma is decimal
+    if ((s.match(/,/g) || []).length > 1) return null;
+    const [int, dec] = s.split(",");
+    if (int.includes(".") && !/^\d{1,3}(\.\d{3})+$/.test(int)) return null;
+    if (!/^\d{0,2}$/.test(dec)) return null;
+    s = int.replace(/\./g, "") + (dec ? "." + dec : "");
+  } else if (s.includes(".")) {
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+    else if (!/^\d+\.\d{1,2}$/.test(s)) return null;
   }
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : Math.max(0, parsed);
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Lenient wrapper kept for existing callers: invalid input → 0. */
+export function parseBRL(raw: string): number {
+  return parseMoneyBRL(raw) ?? 0;
 }
 
 /**
@@ -97,13 +111,16 @@ export async function saveMonthlyGoal(
   const safeValue = Math.max(1, Math.round(value * 100) / 100);
 
   try {
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("business_goals")
       .select("id")
       .eq("teacher_id", teacherId)
       .eq("metric_name", "monthly_revenue")
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (lookupError) return { success: false, error: lookupError.message };
 
     if (existing?.id) {
       const { error } = await supabase
