@@ -322,7 +322,7 @@ const getStatusStyles = (status: string) => {
 };
 
 const formatCategoryDisplay = (catStr?: string, lang: "en" | "pt" = "pt"): string => {
-  if (!catStr) return tr("auditUi.other");
+  if (!catStr) return i18nT("auditUi.other", lang);
   const c = catStr.trim();
   if (lang === "pt") {
     switch (c) {
@@ -341,7 +341,7 @@ const formatCategoryDisplay = (catStr?: string, lang: "en" | "pt" = "pt"): strin
 };
 
 const formatMethodDisplay = (methodStr?: string, lang: "en" | "pt" = "pt"): string => {
-  if (!methodStr) return tr("auditUi.card");
+  if (!methodStr) return i18nT("auditUi.card", lang);
   const m = methodStr.trim();
   if (lang === "pt") {
     switch (m) {

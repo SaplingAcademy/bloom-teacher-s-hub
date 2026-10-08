@@ -326,7 +326,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
           : `Your task "${task.title}" is due in ${minsRounded} minutes.`;
 
       toast.warning(message, {
-        description: tr("auditUi.urgentTask"),
+        description: i18nT("auditUi.urgentTask"),
       });
       state.dueSoonSent = true;
       updated = true;
@@ -342,7 +342,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
           : `Your task "${task.title}" is overdue.`;
 
       toast.error(message, {
-        description: tr("auditUi.overdueTask"),
+        description: i18nT("auditUi.overdueTask"),
       });
       state.overdueSent = true;
       updated = true;

@@ -148,7 +148,7 @@ function mapSupabaseAuthError(err: any, lang: "pt" | "en"): string {
 
 function AuthPage() {
   const { user, loading: authLoading, profile, setLocalUser } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
   const {
@@ -262,7 +262,7 @@ function AuthPage() {
       console.log("[Resend] Failed: No email address found.");
       setResendStatus("error");
       setResendErrorMessage(
-        t("auditUi.emailAddressNotFound")
+        tr("auditUi.emailAddressNotFound")
       );
       return;
     }
@@ -295,7 +295,7 @@ function AuthPage() {
 
       setResendStatus("success");
       toast.success(
-        t("auditUi.confirmationEmailResentSuccessfully"),
+        tr("auditUi.confirmationEmailResentSuccessfully"),
       );
       startCooldown();
     } catch (err: any) {
@@ -305,13 +305,13 @@ function AuthPage() {
       // Handle and distinguish errors
       let errMsg = "";
       if (err.status === 429 || err.message?.toLowerCase().includes("rate limit") || err.message?.toLowerCase().includes("too many")) {
-        errMsg = t("auditUi.tooManyRequestsPleaseWaitBeforeTrying");
+        errMsg = tr("auditUi.tooManyRequestsPleaseWaitBeforeTrying");
       } else if (err.message?.toLowerCase().includes("already confirmed") || err.message?.toLowerCase().includes("verified")) {
-        errMsg = t("auditUi.thisEmailIsAlreadyConfirmedPleaseTry");
+        errMsg = tr("auditUi.thisEmailIsAlreadyConfirmedPleaseTry");
       } else if (typeof window !== "undefined" && !window.navigator.onLine) {
-        errMsg = t("auditUi.connectionErrorPleaseCheckYourInternetConnection");
+        errMsg = tr("auditUi.connectionErrorPleaseCheckYourInternetConnection");
       } else {
-        errMsg = err.message || (t("auditUi.failedToSendEmail"));
+        errMsg = err.message || (tr("auditUi.failedToSendEmail"));
       }
 
       setResendErrorMessage(errMsg);
@@ -360,9 +360,9 @@ function AuthPage() {
     resetSuccess: i18nT("auth.resetSuccess", lang, "Password reset link sent to your email."),
     loadingText: i18nT("common.loading", lang),
     brandingTitle: "Bloom",
-    brandingSubtitle: t("auditUi.theAllInOneWorkspaceBuiltFor"),
-    brandingStatTeachers: t("auditUi.everyPartOfYourBusinessAllIn"),
-    brandingStatClasses: t("auditUi.studentsSchedulingLessonsAndFinancesGrowingTogether"),
+    brandingSubtitle: tr("auditUi.theAllInOneWorkspaceBuiltFor"),
+    brandingStatTeachers: tr("auditUi.everyPartOfYourBusinessAllIn"),
+    brandingStatClasses: tr("auditUi.studentsSchedulingLessonsAndFinancesGrowingTogether"),
     confirmPasswordLabel: i18nT("auth.confirmPasswordLabel", lang),
     confirmPasswordPlaceholder: i18nT("auth.confirmPasswordPlaceholder", lang),
     passwordsDontMatch: i18nT("auth.reqMatch", lang),
@@ -498,17 +498,17 @@ function AuthPage() {
         console.error("[Auth] Callback error received:", decodedError);
 
         let friendlyMsg =
-          t("auditUi.theConfirmationLinkIsInvalidOrHas");
+          tr("auditUi.theConfirmationLinkIsInvalidOrHas");
 
         if (decodedError.toLowerCase().includes("expired")) {
           friendlyMsg =
-            t("auditUi.theConfirmationLinkHasExpiredPleaseRequest");
+            tr("auditUi.theConfirmationLinkHasExpiredPleaseRequest");
         } else if (
           decodedError.toLowerCase().includes("already") ||
           decodedError.toLowerCase().includes("used")
         ) {
           friendlyMsg =
-            t("auditUi.thisEmailHasAlreadyBeenConfirmedOr");
+            tr("auditUi.thisEmailHasAlreadyBeenConfirmedOr");
         }
 
         setConfirmationErrorMsg(friendlyMsg);
@@ -535,8 +535,8 @@ function AuthPage() {
           console.error("[Auth] Code exchange error:", err);
           setConfirmationErrorMsg(
             err.message?.toLowerCase().includes("expired")
-              ? (t("auditUi.theConfirmationLinkHasExpiredPleaseRequest"))
-              : (t("auditUi.failedToValidateConfirmationLink"))
+              ? (tr("auditUi.theConfirmationLinkHasExpiredPleaseRequest"))
+              : (tr("auditUi.failedToValidateConfirmationLink"))
           );
           setView("confirmed_error");
         } finally {
@@ -565,7 +565,7 @@ function AuthPage() {
         } catch (err: any) {
           console.error("[Auth] Token hash verification error:", err);
           setConfirmationErrorMsg(
-            t("auditUi.confirmationLinkIsExpiredOrInvalid")
+            tr("auditUi.confirmationLinkIsExpiredOrInvalid")
           );
           setView("confirmed_error");
         } finally {
@@ -633,7 +633,7 @@ function AuthPage() {
             setConfirmationEmail(email);
             setView("unconfirmed");
             toast.error(
-              t("auditUi.pleaseConfirmYourEmailBeforeLoggingIn"),
+              tr("auditUi.pleaseConfirmYourEmailBeforeLoggingIn"),
             );
             return;
           }
@@ -679,7 +679,7 @@ function AuthPage() {
         ) {
           console.error("Signup failed: password criteria not met");
           throw new Error(
-            t("auditUi.thePasswordDoesNotMeetAllSecurity"),
+            tr("auditUi.thePasswordDoesNotMeetAllSecurity"),
           );
         }
         console.log("[Auth] Calling Supabase Auth signUp...");
@@ -713,7 +713,7 @@ function AuthPage() {
             console.log("[Auth] Auto-confirmed or active session found. Redirecting to app...");
             setLocalUser(data.user);
             toast.success(
-              t("auditUi.accountCreatedSuccessfully"),
+              tr("auditUi.accountCreatedSuccessfully"),
             );
             navigate({ to: "/" });
           } else {
@@ -722,13 +722,13 @@ function AuthPage() {
             setConfirmationEmail(email);
             setView("unconfirmed");
             toast.success(
-              t("auditUi.registrationSuccessfulPleaseConfirmYourEmail"),
+              tr("auditUi.registrationSuccessfulPleaseConfirmYourEmail"),
             );
           }
         } else {
           console.error("[Auth] Supabase signUp returned no error, but data.user is missing.");
           throw new Error(
-            t("auditUi.accountCreationFailedPleaseTryAgain"),
+            tr("auditUi.accountCreationFailedPleaseTryAgain"),
           );
         }
       } else if (view === "reset") {
@@ -792,7 +792,7 @@ function AuthPage() {
         {/* Center content */}
         <div className="max-w-md my-auto relative z-10 space-y-6">
           <h1 className="font-outfit font-extrabold text-4xl lg:text-5xl leading-tight">
-            {t("auditUi.growYourLanguageSchool")}
+            {tr("auditUi.growYourLanguageSchool")}
           </h1>
           <p className="text-emerald-100/80 text-lg font-medium leading-relaxed">
             {t.brandingSubtitle}
@@ -812,7 +812,7 @@ function AuthPage() {
         <div className="text-xs text-emerald-300/50 relative z-10 flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
           <span>
-            {t("auditUi.yourDataIsProtectedWithSecureIndividual")}
+            {tr("auditUi.yourDataIsProtectedWithSecureIndividual")}
           </span>
         </div>
       </div>
@@ -839,22 +839,22 @@ function AuthPage() {
               {view === "signup" && t.titleSignUp}
               {view === "reset" && t.titleReset}
               {view === "unconfirmed" &&
-                (t("auditUi.confirmYourEmail"))}
+                (tr("auditUi.confirmYourEmail"))}
               {view === "confirmed_success" &&
-                (t("auditUi.emailConfirmed"))}
+                (tr("auditUi.emailConfirmed"))}
               {view === "confirmed_error" &&
-                (t("auditUi.confirmationLink"))}
+                (tr("auditUi.confirmationLink"))}
             </h2>
             <p className="text-sm text-muted-foreground font-medium">
               {view === "signin" && t.subtitleSignIn}
               {view === "signup" && t.subtitleSignUp}
               {view === "reset" && t.subtitleReset}
               {view === "unconfirmed" &&
-                (t("auditUi.almostThereWeNeedYouToConfirm"))}
+                (tr("auditUi.almostThereWeNeedYouToConfirm"))}
               {view === "confirmed_success" &&
-                (t("auditUi.yourBloomAccountIsReadyNowJust"))}
+                (tr("auditUi.yourBloomAccountIsReadyNowJust"))}
               {view === "confirmed_error" &&
-                (t("auditUi.couldNotValidateYourConfirmationLink"))}
+                (tr("auditUi.couldNotValidateYourConfirmationLink"))}
             </p>
           </div>
 
@@ -918,17 +918,17 @@ function AuthPage() {
                 </div>
                 <div className="space-y-1.5">
                   <h3 className="font-outfit font-extrabold text-2xl text-[#163020]">
-                    {t("auditUi.emailConfirmed")}
+                    {tr("auditUi.emailConfirmed")}
                   </h3>
                   <p className="text-sm text-emerald-950/80 font-medium leading-relaxed max-w-sm mx-auto">
-                    {t("auditUi.yourBloomAccountIsReadyNowJust")}
+                    {tr("auditUi.yourBloomAccountIsReadyNowJust")}
                   </p>
                 </div>
 
                 <div className="inline-flex items-center gap-2 bg-emerald-100/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-emerald-800">
                   <span className="h-2 w-2 rounded-full bg-emerald-600 animate-ping" />
                   <span>
-                    {t("auditUi.redirectingToLogin")}
+                    {tr("auditUi.redirectingToLogin")}
                   </span>
                 </div>
               </div>
@@ -938,7 +938,7 @@ function AuthPage() {
                 onClick={handleContinueToLogin}
                 className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163020] text-white hover:bg-emerald-950 font-bold text-sm shadow-md transition-all cursor-pointer"
               >
-                <span>{t("auditUi.logInToBloom")}</span>
+                <span>{tr("auditUi.logInToBloom")}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -950,11 +950,11 @@ function AuthPage() {
                 </div>
                 <div className="space-y-1.5">
                   <h3 className="font-outfit font-extrabold text-xl text-rose-900">
-                    {t("auditUi.invalidOrExpiredConfirmationLink")}
+                    {tr("auditUi.invalidOrExpiredConfirmationLink")}
                   </h3>
                   <p className="text-sm text-rose-700 font-medium leading-relaxed">
                     {confirmationErrorMsg ||
-                      (t("auditUi.unableToConfirmYourEmailWithThis"))}
+                      (tr("auditUi.unableToConfirmYourEmailWithThis"))}
                   </p>
                 </div>
               </div>
@@ -968,7 +968,7 @@ function AuthPage() {
                   }}
                   className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163020] text-white hover:bg-emerald-950 font-bold text-sm shadow-md transition-colors cursor-pointer"
                 >
-                  <span>{t("auditUi.backToLogin")}</span>
+                  <span>{tr("auditUi.backToLogin")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
 
@@ -981,7 +981,7 @@ function AuthPage() {
                   className="w-full flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-foreground hover:bg-secondary/45 font-bold text-sm shadow-sm transition-all cursor-pointer"
                 >
                   <span>
-                    {t("auditUi.resendConfirmationEmail")}
+                    {tr("auditUi.resendConfirmationEmail")}
                   </span>
                 </button>
               </div>
@@ -1208,7 +1208,7 @@ function AuthPage() {
                     };
                   }
                   return {
-                    name: t("auditUi.email"),
+                    name: tr("auditUi.email"),
                     url: "mailto:",
                   };
                 };
@@ -1223,13 +1223,13 @@ function AuthPage() {
                       </div>
                       <div className="space-y-1">
                         <h3 className="font-outfit font-bold text-xl text-[#33411B]">
-                          {t("auditUi.almostThere")}
+                          {tr("auditUi.almostThere")}
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           {confirmationEmail ? (
-                            t("auditUi.weSentAConfirmationEmailTo")
+                            tr("auditUi.weSentAConfirmationEmailTo")
                           ) : (
-                            t("auditUi.weSentAConfirmationEmailToThe")
+                            tr("auditUi.weSentAConfirmationEmailToThe")
                           )}
                         </p>
                       </div>
@@ -1241,7 +1241,7 @@ function AuthPage() {
                           </div>
                           <div className="flex-1 text-left">
                             <p className="text-[10px] text-muted-foreground font-semibold tracking-wide uppercase">
-                              {t("auditUi.confirmationEmail")}
+                              {tr("auditUi.confirmationEmail")}
                             </p>
                             <p className="text-sm font-bold text-[#33411B] select-all break-all leading-tight">
                               {confirmationEmail}
@@ -1252,7 +1252,7 @@ function AuthPage() {
 
                       {confirmationEmail && (
                         <p className="text-xs text-muted-foreground leading-relaxed pt-1">
-                          {t("auditUi.justClickTheLinkSentToActivate")}
+                          {tr("auditUi.justClickTheLinkSentToActivate")}
                         </p>
                       )}
 
@@ -1268,14 +1268,14 @@ function AuthPage() {
                     {/* Status banners */}
                     {resendStatus === "success" && (
                       <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 font-semibold animate-in fade-in duration-200 text-center">
-                        {t("auditUi.confirmationEmailSentSuccessfully")}
+                        {tr("auditUi.confirmationEmailSentSuccessfully")}
                       </div>
                     )}
 
                     {resendStatus === "error" && (
                       <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800 font-semibold space-y-1 animate-in fade-in duration-200 text-left">
                         <p>
-                          {t("auditUi.unableToSendTheConfirmationEmailPlease")}
+                          {tr("auditUi.unableToSendTheConfirmationEmailPlease")}
                         </p>
                         {resendErrorMessage && (
                           <p className="text-[10px] text-rose-600/90 font-mono font-normal">
@@ -1294,7 +1294,7 @@ function AuthPage() {
                         className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#33411B] text-white hover:bg-[#33411B]/90 font-bold text-sm shadow-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {resendStatus === "sending" ? (
-                          <span>{t("auditUi.sending")}</span>
+                          <span>{tr("auditUi.sending")}</span>
                         ) : cooldownTime > 0 ? (
                           <span>
                             {lang === "pt" 
@@ -1304,7 +1304,7 @@ function AuthPage() {
                         ) : (
                           <>
                             <span>
-                              {t("auditUi.resendConfirmationEmail")}
+                              {tr("auditUi.resendConfirmationEmail")}
                             </span>
                             <ArrowRight className="h-4 w-4" />
                           </>
@@ -1329,7 +1329,7 @@ function AuthPage() {
                         onClick={() => setView("signin")}
                         className="w-full text-center text-sm font-semibold text-[#33411B]/80 hover:text-[#33411B] hover:underline bg-transparent py-2 transition-all cursor-pointer"
                       >
-                        {t("auditUi.backToLogin")}
+                        {tr("auditUi.backToLogin")}
                       </button>
                     </div>
                   </>
