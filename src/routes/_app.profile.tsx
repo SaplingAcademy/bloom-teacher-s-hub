@@ -287,16 +287,35 @@ function ProfilePage() {
     loadCommunity();
   }, [loadCommunity]);
 
+  const handleAddExpertise = () => {
+    const value = newExpertise.trim();
+    if (!value) return;
+    if (!editExpertise.some((a) => a.toLowerCase() === value.toLowerCase())) {
+      setEditExpertise([...editExpertise, value]);
+    }
+    setNewExpertise("");
+  };
+
+  const handleRemoveExpertise = (area: string) => {
+    setEditExpertise(editExpertise.filter((a) => a !== area));
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
     const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+    const yearsValue = editYears.trim() === "" ? null : Number.parseInt(editYears.trim(), 10);
+    const years = yearsValue === null || Number.isNaN(yearsValue) ? null : Math.min(Math.max(yearsValue, 0), 80);
     const payload = {
       full_name: editName.trim() || null,
       avatar_url: editPhoto || null,
       bio: editBio.trim() || null,
       locale: editLanguage,
       timezone: editTimezone,
+      professional_headline: editHeadline.trim() || null,
+      country: editCountry.trim() || null,
+      years_experience: years,
+      expertise_areas: editExpertise.length > 0 ? editExpertise : null,
     };
     const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     if (error) {
