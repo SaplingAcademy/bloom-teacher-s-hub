@@ -217,6 +217,11 @@ export const translations: Record<Language, TranslationDictionary> = {
           Other: "Outro",
         },
         paymentMethods: {
+          Pix: "Pix",
+          "Cartão de Crédito": "Cartão de Crédito",
+          Boleto: "Boleto",
+          "Transferência Bancária": "Transferência Bancária",
+          Dinheiro: "Dinheiro",
           PIX: "PIX",
           "Bank transfer": "Transferência Bancária",
           "Bank Transfer": "Transferência Bancária",
@@ -1101,6 +1106,11 @@ export const translations: Record<Language, TranslationDictionary> = {
           Other: "Other",
         },
         paymentMethods: {
+          Pix: "Pix",
+          "Cartão de Crédito": "Credit card",
+          Boleto: "Boleto (bank slip)",
+          "Transferência Bancária": "Bank transfer",
+          Dinheiro: "Cash",
           PIX: "PIX",
           "Bank transfer": "Bank transfer",
           "Bank Transfer": "Bank Transfer",

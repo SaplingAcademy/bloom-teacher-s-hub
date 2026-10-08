@@ -1977,7 +1977,7 @@ function Step5Finances({
             type="text"
             value={data.monthlyExpense}
             onChange={(e) => updateData("monthlyExpense", e.target.value)}
-            placeholder="500 (opcional)"
+            placeholder={t("onboardingUi.optionalAmountPh")}
             className="w-full h-12 pl-12 pr-4 rounded-2xl border border-stone-300 bg-white text-stone-800 font-semibold text-base focus:outline-none focus:ring-2 focus:ring-emerald-700"
           />
         </div>

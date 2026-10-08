@@ -92,7 +92,8 @@ export const uiTranslations = {
       "packagesCreated": "Pacotes Criados",
       "monthlyGoal": "Meta Mensal",
       "managementTools": "Ferramentas de Gestão",
-      "paymentMethods": "Formas de Pagamento"
+      "paymentMethods": "Formas de Pagamento",
+      "optionalAmountPh": "500 (opcional)"
     },
     "packageForm": {
       "editPackage": "Editar Pacote",
@@ -317,7 +318,8 @@ export const uiTranslations = {
       "packagesCreated": "Packages Created",
       "monthlyGoal": "Monthly Goal",
       "managementTools": "Management Tools",
-      "paymentMethods": "Payment Methods"
+      "paymentMethods": "Payment Methods",
+      "optionalAmountPh": "500 (optional)"
     },
     "packageForm": {
       "editPackage": "Edit Package",
