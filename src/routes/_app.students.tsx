@@ -3215,14 +3215,14 @@ function StudentsPage() {
               </div>
 
               {/* BLOCK 4: Agenda das Aulas */}
-              <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
-                <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
-                  <Calendar className="h-4 w-4 text-[#33411B]" />
+              <div className="bg-sidebar border border-sidebar-border/60 p-5 rounded-2xl shadow-sm space-y-4">
+                <div className="flex items-center gap-2 font-outfit text-sm font-bold text-sidebar-foreground border-b border-sidebar-border/60 pb-2 select-none">
+                  <Calendar className="h-4 w-4 text-sidebar-foreground" />
                   {lang === "pt" ? "Agenda das Aulas" : "Class Schedule"}
                 </div>
 
                 {formType === "Group" && (
-                  <div className="space-y-3 rounded-xl border border-border bg-secondary/10 p-3">
+                  <div className="space-y-3 rounded-xl border border-border bg-white p-3">
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold text-foreground select-none">
                         {lang === "pt" ? "Opção de Agenda do Grupo" : "Group Schedule Option"}
@@ -3290,7 +3290,7 @@ function StudentsPage() {
 
                     {/* Frequency selector */}
                     <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-foreground select-none">
+                      <Label className="text-xs font-semibold text-sidebar-foreground select-none">
                         {lang === "pt" ? "Quantidade de aulas por semana" : "Classes per week"}
                       </Label>
                       <div className="flex gap-2 flex-wrap">
@@ -3314,7 +3314,7 @@ function StudentsPage() {
                     {/* Global fields: frequency, start date, end date, timezone */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <Label htmlFor="std-frequency" className="text-xs font-semibold text-foreground select-none">
+                        <Label htmlFor="std-frequency" className="text-xs font-semibold text-sidebar-foreground select-none">
                           {lang === "pt" ? "Frequência" : "Recurrence"}
                         </Label>
                         <Select value={formFrequency} onValueChange={(val) => setFormFrequency(val as any)}>
@@ -3330,7 +3330,7 @@ function StudentsPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <Label htmlFor="std-tz" className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
+                        <Label htmlFor="std-tz" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
                           {lang === "pt" ? "Fuso Horário" : "Time Zone"}
                         </Label>
                         <Input
@@ -3345,7 +3345,7 @@ function StudentsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <Label htmlFor="std-startdate" className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
+                        <Label htmlFor="std-startdate" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
                           {lang === "pt" ? "Data de Início" : "Start Date"} <span className="text-[#ED7034] font-bold">*</span>
                         </Label>
                         <Input
@@ -3359,7 +3359,7 @@ function StudentsPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <Label htmlFor="std-enddate" className="text-xs font-semibold text-foreground select-none">
+                        <Label htmlFor="std-enddate" className="text-xs font-semibold text-sidebar-foreground select-none">
                           {lang === "pt" ? "Data de Término" : "End Date (Opcional)"}
                         </Label>
                         <Input
@@ -3376,7 +3376,7 @@ function StudentsPage() {
                     {formSchedulesList.map((sch, idx) => (
                       <div
                         key={idx}
-                        className="rounded-xl border border-border/60 bg-secondary/5 p-4 space-y-3"
+                        className="rounded-xl border border-border/60 bg-white p-4 space-y-3"
                       >
                         <p className="text-xs font-bold text-[#33411B] select-none">
                           {lang === "pt" ? `Aula ${idx + 1}` : `Class ${idx + 1}`}
