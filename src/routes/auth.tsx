@@ -120,36 +120,35 @@ type AuthView =
   | "confirmed_error";
 
 function mapSupabaseAuthError(err: any, lang: "pt" | "en"): string {
+  const tr = (key: string) => i18nT(key, lang);
   if (!err) return "";
   const msg = err.message?.toLowerCase() || "";
   const status = err.status;
 
   if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
-    return lang === "pt" ? "E-mail ou senha incorretos." : "Invalid email or password.";
+    return tr("auditUi.invalidEmailOrPassword");
   }
   if (msg.includes("email not confirmed")) {
-    return lang === "pt" ? "E-mail ainda não confirmado. Verifique sua caixa de entrada." : "Email not verified yet. Please check your inbox.";
+    return tr("auditUi.emailNotVerifiedYetPleaseCheckYour");
   }
   if (msg.includes("signup is disabled") || msg.includes("signups not allowed")) {
-    return lang === "pt"
-      ? "O cadastro público está desativado. O Bloom está em fase de Closed Alpha para convidados."
-      : "Public registration is disabled. Bloom is currently in Closed Alpha for invited teachers.";
+    return tr("auditUi.publicRegistrationIsDisabledBloomIsCurrently");
   }
   if (status === 429 || msg.includes("rate limit") || msg.includes("too many requests")) {
-    return lang === "pt" ? "Muitas solicitações em sequência. Por favor, aguarde." : "Too many requests. Please wait before trying again.";
+    return tr("auditUi.tooManyRequestsPleaseWaitBeforeTrying");
   }
   if (msg.includes("token has expired") || msg.includes("invalid token") || msg.includes("link is invalid")) {
-    return lang === "pt" ? "O link de confirmação expirou ou é inválido." : "The link has expired or is invalid.";
+    return tr("auditUi.theLinkHasExpiredOrIsInvalid");
   }
   if (msg.includes("user already registered") || msg.includes("already registered")) {
-    return lang === "pt" ? "Este e-mail já está cadastrado. Tente fazer login." : "This email is already registered. Please try logging in.";
+    return tr("auditUi.thisEmailIsAlreadyRegisteredPleaseTry");
   }
-  return err.message || (lang === "pt" ? "Erro ao processar autenticação." : "Authentication error.");
+  return err.message || (tr("auditUi.authenticationError"));
 }
 
 function AuthPage() {
   const { user, loading: authLoading, profile, setLocalUser } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
   const {
@@ -263,9 +262,7 @@ function AuthPage() {
       console.log("[Resend] Failed: No email address found.");
       setResendStatus("error");
       setResendErrorMessage(
-        lang === "pt"
-          ? "Endereço de e-mail não disponível."
-          : "Email address not found."
+        tr("auditUi.emailAddressNotFound")
       );
       return;
     }
@@ -298,9 +295,7 @@ function AuthPage() {
 
       setResendStatus("success");
       toast.success(
-        lang === "pt"
-          ? "E-mail de confirmação reenviado com sucesso!"
-          : "Confirmation email resent successfully!",
+        tr("auditUi.confirmationEmailResentSuccessfully"),
       );
       startCooldown();
     } catch (err: any) {
@@ -310,19 +305,13 @@ function AuthPage() {
       // Handle and distinguish errors
       let errMsg = "";
       if (err.status === 429 || err.message?.toLowerCase().includes("rate limit") || err.message?.toLowerCase().includes("too many")) {
-        errMsg = lang === "pt"
-          ? "Muitas solicitações. Por favor, aguarde antes de tentar novamente."
-          : "Too many requests. Please wait before trying again.";
+        errMsg = tr("auditUi.tooManyRequestsPleaseWaitBeforeTrying");
       } else if (err.message?.toLowerCase().includes("already confirmed") || err.message?.toLowerCase().includes("verified")) {
-        errMsg = lang === "pt"
-          ? "Este e-mail já foi confirmado. Tente fazer login."
-          : "This email is already confirmed. Please try logging in.";
+        errMsg = tr("auditUi.thisEmailIsAlreadyConfirmedPleaseTry");
       } else if (typeof window !== "undefined" && !window.navigator.onLine) {
-        errMsg = lang === "pt"
-          ? "Erro de conexão. Verifique sua internet."
-          : "Connection error. Please check your internet connection.";
+        errMsg = tr("auditUi.connectionErrorPleaseCheckYourInternetConnection");
       } else {
-        errMsg = err.message || (lang === "pt" ? "Erro ao enviar e-mail." : "Failed to send email.");
+        errMsg = err.message || (tr("auditUi.failedToSendEmail"));
       }
 
       setResendErrorMessage(errMsg);
@@ -371,15 +360,9 @@ function AuthPage() {
     resetSuccess: i18nT("auth.resetSuccess", lang, "Password reset link sent to your email."),
     loadingText: i18nT("common.loading", lang),
     brandingTitle: "Bloom",
-    brandingSubtitle: lang === "pt"
-      ? "O espaço de trabalho completo criado para professores de idiomas independentes."
-      : "The all-in-one workspace built for independent language teachers.",
-    brandingStatTeachers: lang === "pt"
-      ? "Todas as ramificações do seu negócio em um só lugar."
-      : "Every part of your business, all in one place.",
-    brandingStatClasses: lang === "pt"
-      ? "Alunos, agenda, aulas e finanças crescendo juntas."
-      : "Students, scheduling, lessons, and finances growing together.",
+    brandingSubtitle: tr("auditUi.theAllInOneWorkspaceBuiltFor"),
+    brandingStatTeachers: tr("auditUi.everyPartOfYourBusinessAllIn"),
+    brandingStatClasses: tr("auditUi.studentsSchedulingLessonsAndFinancesGrowingTogether"),
     confirmPasswordLabel: i18nT("auth.confirmPasswordLabel", lang),
     confirmPasswordPlaceholder: i18nT("auth.confirmPasswordPlaceholder", lang),
     passwordsDontMatch: i18nT("auth.reqMatch", lang),
@@ -515,23 +498,17 @@ function AuthPage() {
         console.error("[Auth] Callback error received:", decodedError);
 
         let friendlyMsg =
-          lang === "pt"
-            ? "O link de confirmação é inválido ou expirou."
-            : "The confirmation link is invalid or has expired.";
+          tr("auditUi.theConfirmationLinkIsInvalidOrHas");
 
         if (decodedError.toLowerCase().includes("expired")) {
           friendlyMsg =
-            lang === "pt"
-              ? "O link de confirmação expirou. Por favor, solicite um novo e-mail."
-              : "The confirmation link has expired. Please request a new email.";
+            tr("auditUi.theConfirmationLinkHasExpiredPleaseRequest");
         } else if (
           decodedError.toLowerCase().includes("already") ||
           decodedError.toLowerCase().includes("used")
         ) {
           friendlyMsg =
-            lang === "pt"
-              ? "Este e-mail já foi confirmado ou o link já foi utilizado."
-              : "This email has already been confirmed or the link was already used.";
+            tr("auditUi.thisEmailHasAlreadyBeenConfirmedOr");
         }
 
         setConfirmationErrorMsg(friendlyMsg);
@@ -558,12 +535,8 @@ function AuthPage() {
           console.error("[Auth] Code exchange error:", err);
           setConfirmationErrorMsg(
             err.message?.toLowerCase().includes("expired")
-              ? (lang === "pt"
-                  ? "O link de confirmação expirou. Por favor, solicite um novo e-mail."
-                  : "The confirmation link has expired. Please request a new email.")
-              : (lang === "pt"
-                  ? "Não foi possível validar o link de confirmação."
-                  : "Failed to validate confirmation link.")
+              ? (tr("auditUi.theConfirmationLinkHasExpiredPleaseRequest"))
+              : (tr("auditUi.failedToValidateConfirmationLink"))
           );
           setView("confirmed_error");
         } finally {
@@ -592,9 +565,7 @@ function AuthPage() {
         } catch (err: any) {
           console.error("[Auth] Token hash verification error:", err);
           setConfirmationErrorMsg(
-            lang === "pt"
-              ? "O link de confirmação expirou ou é inválido."
-              : "Confirmation link is expired or invalid."
+            tr("auditUi.confirmationLinkIsExpiredOrInvalid")
           );
           setView("confirmed_error");
         } finally {
@@ -662,9 +633,7 @@ function AuthPage() {
             setConfirmationEmail(email);
             setView("unconfirmed");
             toast.error(
-              lang === "pt"
-                ? "Por favor, confirme seu e-mail antes de acessar."
-                : "Please confirm your email before logging in.",
+              tr("auditUi.pleaseConfirmYourEmailBeforeLoggingIn"),
             );
             return;
           }
@@ -710,9 +679,7 @@ function AuthPage() {
         ) {
           console.error("Signup failed: password criteria not met");
           throw new Error(
-            lang === "pt"
-              ? "A senha não atende a todos os requisitos de segurança."
-              : "The password does not meet all security requirements.",
+            tr("auditUi.thePasswordDoesNotMeetAllSecurity"),
           );
         }
         console.log("[Auth] Calling Supabase Auth signUp...");
@@ -746,7 +713,7 @@ function AuthPage() {
             console.log("[Auth] Auto-confirmed or active session found. Redirecting to app...");
             setLocalUser(data.user);
             toast.success(
-              lang === "pt" ? "Conta criada com sucesso!" : "Account created successfully!",
+              tr("auditUi.accountCreatedSuccessfully"),
             );
             navigate({ to: "/" });
           } else {
@@ -755,17 +722,13 @@ function AuthPage() {
             setConfirmationEmail(email);
             setView("unconfirmed");
             toast.success(
-              lang === "pt"
-                ? "Cadastro realizado! Por favor, confirme seu e-mail."
-                : "Registration successful! Please confirm your email.",
+              tr("auditUi.registrationSuccessfulPleaseConfirmYourEmail"),
             );
           }
         } else {
           console.error("[Auth] Supabase signUp returned no error, but data.user is missing.");
           throw new Error(
-            lang === "pt"
-              ? "Não foi possível criar a conta. Por favor, tente novamente."
-              : "Account creation failed. Please try again.",
+            tr("auditUi.accountCreationFailedPleaseTryAgain"),
           );
         }
       } else if (view === "reset") {
@@ -778,7 +741,7 @@ function AuthPage() {
       }
     } catch (err: any) {
       console.error("[Auth] Auth error caught in form handler:", err);
-      const userMsg = mapSupabaseAuthError(err, lang === "pt" ? "pt" : "en");
+      const userMsg = mapSupabaseAuthError(err, lang);
       toast.error(userMsg);
     } finally {
       console.log("Auth process completed (finally block triggered). Setting loading to false.");
@@ -829,7 +792,7 @@ function AuthPage() {
         {/* Center content */}
         <div className="max-w-md my-auto relative z-10 space-y-6">
           <h1 className="font-outfit font-extrabold text-4xl lg:text-5xl leading-tight">
-            {lang === "pt" ? "Cultive sua escola de idiomas" : "Grow your language school"}
+            {tr("auditUi.growYourLanguageSchool")}
           </h1>
           <p className="text-emerald-100/80 text-lg font-medium leading-relaxed">
             {t.brandingSubtitle}
@@ -849,9 +812,7 @@ function AuthPage() {
         <div className="text-xs text-emerald-300/50 relative z-10 flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
           <span>
-            {lang === "pt"
-              ? "Seus dados protegidos com acesso individual e seguro."
-              : "Your data is protected with secure, individual access."}
+            {tr("auditUi.yourDataIsProtectedWithSecureIndividual")}
           </span>
         </div>
       </div>
@@ -878,28 +839,22 @@ function AuthPage() {
               {view === "signup" && t.titleSignUp}
               {view === "reset" && t.titleReset}
               {view === "unconfirmed" &&
-                (lang === "pt" ? "Confirme seu e-mail" : "Confirm your email")}
+                (tr("auditUi.confirmYourEmail"))}
               {view === "confirmed_success" &&
-                (lang === "pt" ? "E-mail confirmado! 🌱" : "Email confirmed! 🌱")}
+                (tr("auditUi.emailConfirmed"))}
               {view === "confirmed_error" &&
-                (lang === "pt" ? "Link de confirmação ⚠️" : "Confirmation link ⚠️")}
+                (tr("auditUi.confirmationLink"))}
             </h2>
             <p className="text-sm text-muted-foreground font-medium">
               {view === "signin" && t.subtitleSignIn}
               {view === "signup" && t.subtitleSignUp}
               {view === "reset" && t.subtitleReset}
               {view === "unconfirmed" &&
-                (lang === "pt"
-                  ? "Quase lá! Precisamos que você confirme seu e-mail para continuar."
-                  : "Almost there! We need you to confirm your email to continue.")}
+                (tr("auditUi.almostThereWeNeedYouToConfirm"))}
               {view === "confirmed_success" &&
-                (lang === "pt"
-                  ? "Sua conta Bloom está pronta. Agora é só entrar para começar."
-                  : "Your Bloom account is ready. Now just log in to start.")}
+                (tr("auditUi.yourBloomAccountIsReadyNowJust"))}
               {view === "confirmed_error" &&
-                (lang === "pt"
-                  ? "Não foi possível validar seu link de confirmação."
-                  : "Could not validate your confirmation link.")}
+                (tr("auditUi.couldNotValidateYourConfirmationLink"))}
             </p>
           </div>
 
@@ -963,19 +918,17 @@ function AuthPage() {
                 </div>
                 <div className="space-y-1.5">
                   <h3 className="font-outfit font-extrabold text-2xl text-[#163020]">
-                    {lang === "pt" ? "E-mail confirmado! 🌱" : "Email confirmed! 🌱"}
+                    {tr("auditUi.emailConfirmed")}
                   </h3>
                   <p className="text-sm text-emerald-950/80 font-medium leading-relaxed max-w-sm mx-auto">
-                    {lang === "pt"
-                      ? "Sua conta Bloom está pronta. Agora é só entrar para começar."
-                      : "Your Bloom account is ready. Now just log in to start."}
+                    {tr("auditUi.yourBloomAccountIsReadyNowJust")}
                   </p>
                 </div>
 
                 <div className="inline-flex items-center gap-2 bg-emerald-100/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-emerald-800">
                   <span className="h-2 w-2 rounded-full bg-emerald-600 animate-ping" />
                   <span>
-                    {lang === "pt" ? "Redirecionando para o login..." : "Redirecting to login..."}
+                    {tr("auditUi.redirectingToLogin")}
                   </span>
                 </div>
               </div>
@@ -985,7 +938,7 @@ function AuthPage() {
                 onClick={handleContinueToLogin}
                 className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163020] text-white hover:bg-emerald-950 font-bold text-sm shadow-md transition-all cursor-pointer"
               >
-                <span>{lang === "pt" ? "Entrar na Bloom" : "Log in to Bloom"}</span>
+                <span>{tr("auditUi.logInToBloom")}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -997,15 +950,11 @@ function AuthPage() {
                 </div>
                 <div className="space-y-1.5">
                   <h3 className="font-outfit font-extrabold text-xl text-rose-900">
-                    {lang === "pt"
-                      ? "Link de confirmação inválido ou expirado"
-                      : "Invalid or expired confirmation link"}
+                    {tr("auditUi.invalidOrExpiredConfirmationLink")}
                   </h3>
                   <p className="text-sm text-rose-700 font-medium leading-relaxed">
                     {confirmationErrorMsg ||
-                      (lang === "pt"
-                        ? "Não foi possível confirmar seu e-mail com este link. Ele pode ter expirado ou já ter sido utilizado."
-                        : "Unable to confirm your email with this link. It may have expired or already been used.")}
+                      (tr("auditUi.unableToConfirmYourEmailWithThis"))}
                   </p>
                 </div>
               </div>
@@ -1019,7 +968,7 @@ function AuthPage() {
                   }}
                   className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163020] text-white hover:bg-emerald-950 font-bold text-sm shadow-md transition-colors cursor-pointer"
                 >
-                  <span>{lang === "pt" ? "Voltar para o Login" : "Back to Login"}</span>
+                  <span>{tr("auditUi.backToLogin")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
 
@@ -1032,7 +981,7 @@ function AuthPage() {
                   className="w-full flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-foreground hover:bg-secondary/45 font-bold text-sm shadow-sm transition-all cursor-pointer"
                 >
                   <span>
-                    {lang === "pt" ? "Reenviar e-mail de confirmação" : "Resend confirmation email"}
+                    {tr("auditUi.resendConfirmationEmail")}
                   </span>
                 </button>
               </div>
@@ -1259,7 +1208,7 @@ function AuthPage() {
                     };
                   }
                   return {
-                    name: lang === "pt" ? "E-mail" : "Email",
+                    name: tr("auditUi.email"),
                     url: "mailto:",
                   };
                 };
@@ -1274,17 +1223,13 @@ function AuthPage() {
                       </div>
                       <div className="space-y-1">
                         <h3 className="font-outfit font-bold text-xl text-[#33411B]">
-                          {lang === "pt" ? "Quase lá! 🌱" : "Almost there! 🌱"}
+                          {tr("auditUi.almostThere")}
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           {confirmationEmail ? (
-                            lang === "pt"
-                              ? "Enviamos um e-mail de confirmação para:"
-                              : "We sent a confirmation email to:"
+                            tr("auditUi.weSentAConfirmationEmailTo")
                           ) : (
-                            lang === "pt"
-                              ? "Enviamos um e-mail de confirmação para o endereço usado durante o cadastro."
-                              : "We sent a confirmation email to the address used during registration."
+                            tr("auditUi.weSentAConfirmationEmailToThe")
                           )}
                         </p>
                       </div>
@@ -1296,7 +1241,7 @@ function AuthPage() {
                           </div>
                           <div className="flex-1 text-left">
                             <p className="text-[10px] text-muted-foreground font-semibold tracking-wide uppercase">
-                              {lang === "pt" ? "E-mail de Confirmação" : "Confirmation Email"}
+                              {tr("auditUi.confirmationEmail")}
                             </p>
                             <p className="text-sm font-bold text-[#33411B] select-all break-all leading-tight">
                               {confirmationEmail}
@@ -1307,9 +1252,7 @@ function AuthPage() {
 
                       {confirmationEmail && (
                         <p className="text-xs text-muted-foreground leading-relaxed pt-1">
-                          {lang === "pt"
-                            ? "Basta clicar no link enviado para ativar sua conta e começar a usar a Bloom."
-                            : "Just click the link sent to activate your account and start using Bloom."}
+                          {tr("auditUi.justClickTheLinkSentToActivate")}
                         </p>
                       )}
 
@@ -1325,16 +1268,14 @@ function AuthPage() {
                     {/* Status banners */}
                     {resendStatus === "success" && (
                       <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 font-semibold animate-in fade-in duration-200 text-center">
-                        {lang === "pt" ? "✓ E-mail de confirmação enviado com sucesso." : "✓ Confirmation email sent successfully."}
+                        {tr("auditUi.confirmationEmailSentSuccessfully")}
                       </div>
                     )}
 
                     {resendStatus === "error" && (
                       <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800 font-semibold space-y-1 animate-in fade-in duration-200 text-left">
                         <p>
-                          {lang === "pt" 
-                            ? "⚠️ Não foi possível enviar o e-mail de confirmação. Tente novamente." 
-                            : "⚠️ Unable to send the confirmation email. Please try again."}
+                          {tr("auditUi.unableToSendTheConfirmationEmailPlease")}
                         </p>
                         {resendErrorMessage && (
                           <p className="text-[10px] text-rose-600/90 font-mono font-normal">
@@ -1353,7 +1294,7 @@ function AuthPage() {
                         className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-[#33411B] text-white hover:bg-[#33411B]/90 font-bold text-sm shadow-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {resendStatus === "sending" ? (
-                          <span>{lang === "pt" ? "Enviando..." : "Sending..."}</span>
+                          <span>{tr("auditUi.sending")}</span>
                         ) : cooldownTime > 0 ? (
                           <span>
                             {lang === "pt" 
@@ -1363,7 +1304,7 @@ function AuthPage() {
                         ) : (
                           <>
                             <span>
-                              {lang === "pt" ? "Reenviar e-mail de confirmação" : "Resend confirmation email"}
+                              {tr("auditUi.resendConfirmationEmail")}
                             </span>
                             <ArrowRight className="h-4 w-4" />
                           </>
@@ -1388,7 +1329,7 @@ function AuthPage() {
                         onClick={() => setView("signin")}
                         className="w-full text-center text-sm font-semibold text-[#33411B]/80 hover:text-[#33411B] hover:underline bg-transparent py-2 transition-all cursor-pointer"
                       >
-                        {lang === "pt" ? "Voltar para o Login" : "Back to Login"}
+                        {tr("auditUi.backToLogin")}
                       </button>
                     </div>
                   </>

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MessagesSquare } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
+import { useLanguage } from "@/hooks/use-language";
 
 export const Route = createFileRoute("/_app/messages")({
   head: () => ({
@@ -9,20 +10,25 @@ export const Route = createFileRoute("/_app/messages")({
       { name: "description", content: "Async student communication and announcements." },
     ],
   }),
-  component: () => (
+  component: MessagesPage,
+});
+
+function MessagesPage() {
+  const { t } = useLanguage();
+  return (
     <ModulePlaceholder
-      eyebrow="Workspace"
-      title="Messages"
-      description="Async communication and announcements with students — focused, not another chat app to babysit."
+      eyebrow={t("nav.workspace")}
+      title={t("nav.messages")}
+      description={t("auditUi.asyncCommunicationAndAnnouncementsWithStudentsFocusedNot")}
       icon={MessagesSquare}
-      goal="Keep student communication organized and professional, separate from your personal WhatsApp."
+      goal={t("auditUi.keepStudentCommunicationOrganizedAndProfessionalSeparateFrom")}
       planned={[
-        "Per-student threads tied to their profile",
-        "Announcements to a group or all students",
-        "Message templates for common replies",
-        "Share resources and homework in a thread",
-        "Later: WhatsApp and email integration",
+        t("auditUi.perStudentThreadsTiedToTheirProfile"),
+        t("auditUi.announcementsToAGroupOrAllStudents"),
+        t("auditUi.messageTemplatesForCommonReplies"),
+        t("auditUi.shareResourcesAndHomeworkInAThread"),
+        t("auditUi.laterWhatsappAndEmailIntegration"),
       ]}
     />
-  ),
-});
+  );
+}

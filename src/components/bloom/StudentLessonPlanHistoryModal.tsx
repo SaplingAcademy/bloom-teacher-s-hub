@@ -22,6 +22,8 @@ import {
   fetchLessonPlanDocuments,
   LessonPlanDocument,
 } from "@/lib/lesson-plan-documents";
+import { useLanguage } from "@/hooks/use-language";
+import { fmt } from "@/lib/i18n";
 
 interface Props {
   isOpen: boolean;
@@ -64,6 +66,7 @@ function attendanceClass(status?: string | null) {
 
 /** Documento histórico: mesma planilha do plano ativo, em modo somente leitura. */
 function PlanDocumentSheet({ doc }: { doc: LessonPlanDocument }) {
+  const { t, formatStatus } = useLanguage();
   const lessons = useMemo(
     () =>
       [...(doc.snapshot || [])].sort(
@@ -80,19 +83,19 @@ function PlanDocumentSheet({ doc }: { doc: LessonPlanDocument }) {
             <tr>
               <th className="py-3 px-3 w-12 text-center border-r border-white/10">#</th>
               <th className="py-3 px-4 w-14 text-center border-r border-white/10">OK</th>
-              <th className="py-3 px-4 w-32 border-r border-white/10">Data</th>
-              <th className="py-3 px-3 w-24 border-r border-white/10">Horário</th>
-              <th className="py-3 px-4 w-56 border-r border-white/10">Conteúdo</th>
-              <th className="py-3 px-4 w-40 border-r border-white/10">Homework</th>
-              <th className="py-3 px-4 w-32 border-r border-white/10">Presença</th>
-              <th className="py-3 px-4 border-r border-white/10">Notas / Anexos</th>
+              <th className="py-3 px-4 w-32 border-r border-white/10">{t("globalUi.date")}</th>
+              <th className="py-3 px-3 w-24 border-r border-white/10">{t("globalUi.time")}</th>
+              <th className="py-3 px-4 w-56 border-r border-white/10">{t("globalUi.content")}</th>
+              <th className="py-3 px-4 w-40 border-r border-white/10">{t("globalUi.homework")}</th>
+              <th className="py-3 px-4 w-32 border-r border-white/10">{t("globalUi.attendance")}</th>
+              <th className="py-3 px-4 border-r border-white/10">{t("globalUi.notesAttachments")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60 text-foreground">
             {lessons.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
-                  Este documento não possui aulas registradas.
+                  {t("globalUi.documentHasNoLessons")}
                 </td>
               </tr>
             ) : (
@@ -123,9 +126,9 @@ function PlanDocumentSheet({ doc }: { doc: LessonPlanDocument }) {
                       {l.homework?.trim() ? (
                         l.homework
                       ) : l.homework_posted === true ? (
-                        "Entregue"
+                        t("globalUi.delivered")
                       ) : l.homework_posted === false ? (
-                        "Pendente"
+                        t("globalUi.pending")
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -135,7 +138,7 @@ function PlanDocumentSheet({ doc }: { doc: LessonPlanDocument }) {
                         variant="outline"
                         className={`text-[10px] font-semibold ${attendanceClass(l.attendance_status)}`}
                       >
-                        {attendanceLabel[l.attendance_status || ""] || "—"}
+                        {formatStatus(l.attendance_status) || attendanceLabel[l.attendance_status || ""] || "—"}
                       </Badge>
                     </td>
                     <td className="py-2 px-4 text-xs space-y-1">
@@ -148,7 +151,7 @@ function PlanDocumentSheet({ doc }: { doc: LessonPlanDocument }) {
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-border bg-muted/40 text-[11px]"
                             >
                               <Paperclip className="w-3 h-3" />
-                              {a.title || a.file_name || "Anexo"}
+                              {a.title || a.file_name || t("globalUi.attachment")}
                             </span>
                           ))}
                         </div>
@@ -175,6 +178,7 @@ export function StudentLessonPlanHistoryModal({
   studentName,
   refreshKey = 0,
 }: Props) {
+  const { t, lang } = useLanguage();
   const [documents, setDocuments] = useState<LessonPlanDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [openDoc, setOpenDoc] = useState<LessonPlanDocument | null>(null);
@@ -201,14 +205,14 @@ export function StudentLessonPlanHistoryModal({
             ) : (
               <>
                 <Layers className="w-5 h-5 text-primary" />
-                Histórico de Planos
+                {t("globalUi.planHistory")}
               </>
             )}
           </DialogTitle>
           <DialogDescription>
             {openDoc
-              ? `Documento fechado em ${formatDate(openDoc.completed_at)} — somente leitura.`
-              : `Planos de aula concluídos de ${studentName}. Cada documento é um plano completo.`}
+              ? fmt(t("globalUi.documentClosedOn"), formatDate(openDoc.completed_at))
+              : fmt(t("globalUi.completedPlansFor"), studentName)}
           </DialogDescription>
         </DialogHeader>
 
@@ -222,31 +226,30 @@ export function StudentLessonPlanHistoryModal({
                 className="gap-2 h-9 text-xs font-semibold"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Voltar ao histórico
+                {t("globalUi.backToHistory")}
               </Button>
               <Badge variant="outline" className="text-[11px] font-semibold">
-                {openDoc.lesson_count} {openDoc.lesson_count === 1 ? "aula" : "aulas"}
+                {fmt(openDoc.lesson_count === 1 ? t("globalUi.lessonCount") : t("globalUi.lessonsCount"), openDoc.lesson_count)}
               </Badge>
               <Badge variant="outline" className="text-[11px] font-semibold">
                 {formatDate(openDoc.period_start)} – {formatDate(openDoc.period_end)}
               </Badge>
               <Badge className="bg-primary/10 text-primary border-primary/20 text-[11px] font-semibold">
-                Concluído
+                {t("globalUi.completed")}
               </Badge>
             </div>
             <PlanDocumentSheet doc={openDoc} />
           </div>
         ) : isLoading ? (
           <div className="py-16 flex items-center justify-center text-muted-foreground gap-2 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" /> Carregando histórico...
+            <Loader2 className="w-4 h-4 animate-spin" /> {t("globalUi.loadingHistory")}
           </div>
         ) : documents.length === 0 ? (
           <div className="py-14 text-center space-y-2">
             <FileText className="w-9 h-9 text-muted-foreground/60 mx-auto" />
-            <p className="text-sm font-semibold text-foreground">Nenhum plano concluído ainda</p>
+            <p className="text-sm font-semibold text-foreground">{t("globalUi.noCompletedPlans")}</p>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Ao clicar em “Concluir Plano”, o plano atual é fechado e arquivado aqui como um
-              documento completo, com todas as aulas preservadas.
+              {t("globalUi.completedPlanExplanation")}
             </p>
           </div>
         ) : (
@@ -263,18 +266,18 @@ export function StudentLessonPlanHistoryModal({
                       {doc.title}
                     </span>
                     <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold">
-                      Concluído
+                      {t("globalUi.completed")}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       <CalendarDays className="w-3 h-3" />
-                      Período: {formatDate(doc.period_start)} – {formatDate(doc.period_end)}
+                      {t("globalUi.period")}: {formatDate(doc.period_start)} – {formatDate(doc.period_end)}
                     </span>
-                    <span>Criado em {formatDate(doc.plan_created_at)}</span>
-                    <span>Concluído em {formatDate(doc.completed_at)}</span>
+                    <span>{t("globalUi.createdOn")} {formatDate(doc.plan_created_at)}</span>
+                    <span>{t("globalUi.completedOn")} {formatDate(doc.completed_at)}</span>
                     <span className="font-semibold text-foreground">
-                      {doc.lesson_count} {doc.lesson_count === 1 ? "aula" : "aulas"}
+                      {fmt(doc.lesson_count === 1 ? t("globalUi.lessonCount") : t("globalUi.lessonsCount"), doc.lesson_count)}
                     </span>
                   </div>
                 </div>
@@ -286,7 +289,7 @@ export function StudentLessonPlanHistoryModal({
                   className="h-9 text-xs font-bold gap-2 shrink-0"
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  Abrir Plano
+                  {t("globalUi.openPlan")}
                 </Button>
               </div>
             ))}

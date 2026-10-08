@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/hooks/use-language";
 
 interface AttentionQueueWidgetProps {
   teacherId?: string;
@@ -33,6 +34,7 @@ export function AttentionQueueWidget({
   maxItems = 6,
   className = "",
 }: AttentionQueueWidgetProps) {
+  const { t } = useLanguage();
   const [items, setItems] = useState<AttentionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -57,10 +59,10 @@ export function AttentionQueueWidget({
         .eq("id", taskId);
 
       if (error) {
-        toast.error("Erro ao concluir tarefa");
+        toast.error(t("errors.generic"));
         return;
       }
-      toast.success("Tarefa concluída!");
+      toast.success(t("globalUi.taskCompleted"));
     }
     setItems((prev) => prev.filter((i) => i.id !== itemId));
   };
@@ -71,7 +73,7 @@ export function AttentionQueueWidget({
     const res = await retryFailedAutomation(eventId);
     setRetryingId(null);
     if (res.success) {
-      toast.success("Automação executada novamente com sucesso!");
+      toast.success(t("globalUi.automationRetried"));
       loadQueue();
     } else {
       toast.error(toUserMessage(res.error, i18nT("errors.reprocess", currentLanguage())));
@@ -110,7 +112,7 @@ export function AttentionQueueWidget({
           </div>
           <div>
             <h3 className="font-semibold text-base text-card-foreground flex items-center gap-2">
-              Precisa de atenção
+              {t("globalUi.attentionTitle")}
               {items.length > 0 && (
                 <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-none font-bold">
                   {items.length}
@@ -118,27 +120,27 @@ export function AttentionQueueWidget({
               )}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Ações pendentes e automações que exigem acompanhamento do professor
+              {t("globalUi.attentionSubtitle")}
             </p>
           </div>
         </div>
 
         <Button variant="ghost" size="sm" onClick={loadQueue} disabled={loading} className="h-8 gap-1 text-xs">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          Atualizar
+          {t("globalUi.refresh")}
         </Button>
       </div>
 
       {loading ? (
         <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-          <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Carregando fila de atenção...
+          <RefreshCw className="w-4 h-4 animate-spin text-primary" /> {t("globalUi.loadingAttention")}
         </div>
       ) : displayedItems.length === 0 ? (
         <div className="py-8 text-center rounded-lg border border-dashed border-border bg-muted/20">
           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
-          <p className="font-medium text-sm text-card-foreground">Tudo em dia!</p>
+          <p className="font-medium text-sm text-card-foreground">{t("globalUi.allUpToDate")}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Nenhum lead pendente ou automação com falha no momento.
+            {t("globalUi.noAttentionItems")}
           </p>
         </div>
       ) : (
@@ -164,7 +166,7 @@ export function AttentionQueueWidget({
                           : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px]"
                       }
                     >
-                      {item.urgency === "high" ? "Urgente" : "Pendente"}
+                      {item.urgency === "high" ? t("globalUi.urgent") : t("globalUi.pending")}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{item.reason}</p>
@@ -184,14 +186,14 @@ export function AttentionQueueWidget({
                     onClick={() => handleRetry(item.automationEventId, item.id)}
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${retryingId === item.automationEventId ? "animate-spin" : ""}`} />
-                    Tentar novamente
+                    {t("globalUi.tryAgain")}
                   </Button>
                 ) : item.category === "package_renewal" ? (
                   <a
                     href={item.targetUrl}
                     className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-amber-600 hover:bg-amber-700 text-white shadow-sm h-8 px-3 text-xs gap-1 cursor-pointer"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Renovar pacote
+                    <RefreshCw className="w-3.5 h-3.5" /> {t("globalUi.renewPackage")}
                   </a>
                 ) : (
                   <>
@@ -202,7 +204,7 @@ export function AttentionQueueWidget({
                         className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                         onClick={() => handleDismissTask(item.taskId, item.id)}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Concluir
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> {t("globalUi.complete")}
                       </Button>
                     )}
 
@@ -211,9 +213,9 @@ export function AttentionQueueWidget({
                         size="sm"
                         variant="secondary"
                         className="h-8 text-xs gap-1"
-                        onClick={() => onNavigateToLead(item.leadId!)}
+                        onClick={() => item.leadId && onNavigateToLead(item.leadId)}
                       >
-                        Abrir lead <ArrowRight className="w-3.5 h-3.5" />
+                        {t("globalUi.openLead")} <ArrowRight className="w-3.5 h-3.5" />
                       </Button>
                     )}
                   </>

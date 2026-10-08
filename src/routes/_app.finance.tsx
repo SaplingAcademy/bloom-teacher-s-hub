@@ -1,4 +1,4 @@
-import { formatOnboardingPaymentMethod } from "@/lib/i18n";
+import { formatOnboardingPaymentMethod, t as i18nT } from "@/lib/i18n";
 import { toUserMessage } from "@/lib/user-error";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
@@ -322,7 +322,7 @@ const getStatusStyles = (status: string) => {
 };
 
 const formatCategoryDisplay = (catStr?: string, lang: "en" | "pt" = "pt"): string => {
-  if (!catStr) return lang === "pt" ? "Outros" : "Other";
+  if (!catStr) return i18nT("auditUi.other", lang);
   const c = catStr.trim();
   if (lang === "pt") {
     switch (c) {
@@ -341,7 +341,7 @@ const formatCategoryDisplay = (catStr?: string, lang: "en" | "pt" = "pt"): strin
 };
 
 const formatMethodDisplay = (methodStr?: string, lang: "en" | "pt" = "pt"): string => {
-  if (!methodStr) return lang === "pt" ? "Cartão" : "Card";
+  if (!methodStr) return i18nT("auditUi.card", lang);
   const m = methodStr.trim();
   if (lang === "pt") {
     switch (m) {
@@ -368,7 +368,7 @@ const formatMethodDisplay = (methodStr?: string, lang: "en" | "pt" = "pt"): stri
 
 function FinancePage() {
   const { user } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<"Ledger" | "Packages" | "Expenses">("Ledger");
 
@@ -456,7 +456,7 @@ function FinancePage() {
         .single();
 
       if (error) {
-        toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível criar o pacote agora." : "Could not create package."));
+        toast.error(getFriendlyErrorMessage(error, tr("auditUi.couldNotCreatePackage")));
         return;
       }
 
@@ -483,10 +483,10 @@ function FinancePage() {
         setPkgInstallmentCount(0);
         setPkgBillingDurationType("");
         setPkgContractMonths(0);
-        toast.success(lang === "pt" ? "Pacote criado com sucesso!" : "Package created successfully!");
+        toast.success(tr("auditUi.packageCreatedSuccessfully"));
       }
     } catch (err: any) {
-      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível criar o pacote agora." : "Could not create package."));
+      toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotCreatePackage")));
     }
   };
 
@@ -514,16 +514,16 @@ function FinancePage() {
         .single();
 
       if (error) {
-        toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível atualizar o pacote agora." : "Could not update package."));
+        toast.error(getFriendlyErrorMessage(error, tr("auditUi.couldNotUpdatePackage")));
         return;
       }
 
       if (data) {
         refetchPackages();
-        toast.success(lang === "pt" ? "Pacote atualizado com sucesso!" : "Package updated successfully!");
+        toast.success(tr("auditUi.packageUpdatedSuccessfully"));
       }
     } catch (err: any) {
-      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível atualizar o pacote agora." : "Could not update package."));
+      toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotUpdatePackage")));
     }
   };
 
@@ -565,10 +565,10 @@ function FinancePage() {
       setIsExpOpen(false);
       setExpDesc("");
       setExpNotes("");
-      toast.success(lang === "pt" ? "Despesa salva com sucesso!" : "Expense saved successfully!");
+      toast.success(tr("auditUi.expenseSavedSuccessfully"));
     } catch (err: any) {
       console.error("[Finance] Error saving expense:", err);
-      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível salvar a despesa agora." : "Could not save expense."));
+      toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotSaveExpense")));
     }
   };
 
@@ -583,10 +583,10 @@ function FinancePage() {
       } else {
         await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
       }
-      toast.success(lang === "pt" ? "Status atualizado com sucesso!" : "Status updated successfully!");
+      toast.success(tr("auditUi.statusUpdatedSuccessfully"));
       invalidateFinanceData();
     } catch (err: any) {
-      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível atualizar o status agora." : "Could not update status."));
+      toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotUpdateStatus")));
     }
   };
 
@@ -603,9 +603,7 @@ function FinancePage() {
 
       if (activeAssignments && activeAssignments.length > 0) {
         toast.error(
-          lang === "pt"
-            ? "Este pacote está atribuído a um aluno ativo e não pode ser excluído."
-            : "This package is currently assigned to an active student and cannot be deleted."
+          tr("auditUi.thisPackageIsCurrentlyAssignedToAn")
         );
         return;
       }
@@ -617,14 +615,14 @@ function FinancePage() {
         .eq("teacher_id", user.id);
 
       if (error) {
-        toast.error(getFriendlyErrorMessage(error, lang === "pt" ? "Não foi possível excluir o pacote agora." : "Could not delete package."));
+        toast.error(getFriendlyErrorMessage(error, tr("auditUi.couldNotDeletePackage")));
         return;
       }
 
       refetchPackages();
-      toast.success(lang === "pt" ? "Pacote excluído com sucesso!" : "Package deleted successfully!");
+      toast.success(tr("auditUi.packageDeletedSuccessfully"));
     } catch (err: any) {
-      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível excluir o pacote agora." : "Could not delete package."));
+      toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotDeletePackage")));
     }
   };
 
@@ -633,10 +631,10 @@ function FinancePage() {
     try {
       await deleteTeacherExpenseRemote(user.id, id);
       setExpensesCache((prev) => prev.filter((e) => e.id !== id));
-      toast.success(lang === "pt" ? "Despesa excluída com sucesso!" : "Expense deleted successfully!");
+      toast.success(tr("auditUi.expenseDeletedSuccessfully"));
     } catch (err: any) {
       console.error("[Finance] Error deleting expense:", err);
-      toast.error(getFriendlyErrorMessage(err, lang === "pt" ? "Não foi possível excluir a despesa agora." : "Could not delete expense."));
+      toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotDeleteExpense")));
     }
   };
 
@@ -745,9 +743,7 @@ function FinancePage() {
             {!invoicesError && syncIssues.length > 0 && (
               <div role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive space-y-1">
                 <p className="font-semibold">
-                  {lang === "pt"
-                    ? "Alguns contratos não geraram recebíveis:"
-                    : "Some contracts could not generate receivables:"}
+                  {tr("auditUi.someContractsCouldNotGenerateReceivables")}
                 </p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   {syncIssues.map((issue) => (
@@ -762,22 +758,20 @@ function FinancePage() {
             <ul className="mt-4 divide-y divide-border/60">
               {isLoadingInvoices ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium animate-pulse">
-                  {lang === "pt" ? "Carregando recebíveis dos alunos..." : "Loading student receivables..."}
+                  {tr("auditUi.loadingStudentReceivables")}
                 </div>
               ) : invoicesError ? (
                 <div role="alert" className="py-8 text-center text-xs font-medium text-destructive space-y-2">
                   <p>
-                    {getFriendlyErrorMessage(invoicesError, lang === "pt" ? "Não foi possível carregar os recebíveis." : "Could not load receivables.")}
+                    {getFriendlyErrorMessage(invoicesError, tr("auditUi.couldNotLoadReceivables"))}
                   </p>
                   <button type="button" onClick={() => refetchInvoices()} className="underline">
-                    {lang === "pt" ? "Tentar novamente" : "Try again"}
+                    {tr("auditUi.tryAgain")}
                   </button>
                 </div>
               ) : ledgerInvoices.length === 0 && syncIssues.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium">
-                  {lang === "pt"
-                    ? "Nenhum recebível cadastrado ainda. Alunos com planos cadastrados aparecerão automaticamente aqui."
-                    : "No receivables logged yet. Students with active billing agreements will appear here automatically."}
+                  {tr("auditUi.noReceivablesLoggedYetStudentsWithActive")}
                 </div>
               ) : (
                 ledgerInvoices.map((inv) => {
@@ -950,7 +944,7 @@ function FinancePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="pkg-freq" className="text-xs font-semibold text-emerald-100/90">
-                    {lang === "pt" ? "Modelo de Cobrança" : "Billing Model"}
+                    {tr("auditUi.billingModel")}
                   </Label>
                   <Select value={pkgFreq} onValueChange={(val) => setPkgFreq(val as any)}>
                     <SelectTrigger
@@ -961,13 +955,13 @@ function FinancePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="total">
-                        {lang === "pt" ? "Valor total do curso" : "Total course value"}
+                        {tr("auditUi.totalCourseValue")}
                       </SelectItem>
                       <SelectItem value="Monthly">
-                        {lang === "pt" ? "Mensalidade" : "Monthly fee"}
+                        {tr("auditUi.monthlyFee")}
                       </SelectItem>
                       <SelectItem value="One-time">
-                        {lang === "pt" ? "Aula avulsa" : "One-time / Per lesson"}
+                        {tr("auditUi.oneTimePerLesson")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -976,16 +970,10 @@ function FinancePage() {
                 <div className="space-y-1">
                   <Label htmlFor="pkg-price" className="text-xs font-semibold text-emerald-100/90">
                     {pkgFreq === "total"
-                      ? lang === "pt"
-                        ? "Valor total do curso (R$)"
-                        : "Total course value ($)"
+                      ? tr("auditUi.totalCourseValue2")
                       : pkgFreq === "Monthly"
-                      ? lang === "pt"
-                        ? "Valor mensal (R$)"
-                        : "Monthly price ($)"
-                      : lang === "pt"
-                      ? "Valor (R$)"
-                      : "Price ($)"}
+                      ? tr("auditUi.monthlyPrice")
+                      : tr("auditUi.price")}
                   </Label>
                   <CurrencyInput
                     id="pkg-price"
@@ -1001,15 +989,15 @@ function FinancePage() {
               {pkgFreq === "Monthly" && (
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold text-emerald-100/90">
-                    {lang === "pt" ? "Duração da cobrança" : "Billing duration"}
+                    {tr("auditUi.billingDuration")}
                   </Label>
                   <Select value={pkgBillingDurationType} onValueChange={(value) => setPkgBillingDurationType(value as "fixed" | "continuous")}>
                     <SelectTrigger className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800">
-                      <SelectValue placeholder={lang === "pt" ? "Selecione" : "Select"} />
+                      <SelectValue placeholder={tr("auditUi.select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="continuous">{lang === "pt" ? "Contínua" : "Continuous"}</SelectItem>
-                      <SelectItem value="fixed">{lang === "pt" ? "Período determinado" : "Fixed period"}</SelectItem>
+                      <SelectItem value="continuous">{tr("auditUi.continuous")}</SelectItem>
+                      <SelectItem value="fixed">{tr("auditUi.fixedPeriod")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1018,7 +1006,7 @@ function FinancePage() {
               {pkgFreq === "Monthly" && pkgBillingDurationType === "fixed" && (
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold text-emerald-100/90">
-                    {lang === "pt" ? "Duração contratual (meses)" : "Contract duration (months)"}
+                    {tr("auditUi.contractDurationMonths")}
                   </Label>
                   <SafeNumberInput value={pkgContractMonths} onChange={setPkgContractMonths} required className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800" />
                 </div>
@@ -1027,7 +1015,7 @@ function FinancePage() {
               {pkgFreq === "total" && (
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold text-emerald-100/90">
-                    {lang === "pt" ? "Número de parcelas" : "Installment count"}
+                    {tr("auditUi.installmentCount")}
                   </Label>
                   <SafeNumberInput value={pkgInstallmentCount} onChange={setPkgInstallmentCount} required className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800" />
                 </div>
@@ -1039,7 +1027,7 @@ function FinancePage() {
                     htmlFor="pkg-duration"
                     className="text-xs font-semibold text-emerald-100/90"
                   >
-                    {lang === "pt" ? "Duração da aula (min)" : "Lesson duration (min)"}
+                    {tr("auditUi.lessonDurationMin")}
                   </Label>
                   <SafeNumberInput
                     id="pkg-duration"
@@ -1117,7 +1105,7 @@ function FinancePage() {
                             setIsEditModalOpen(true);
                           }}
                           className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-secondary transition-colors cursor-pointer"
-                          title={lang === "pt" ? "Editar Pacote" : "Edit Package"}
+                          title={tr("auditUi.editPackage")}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -1134,7 +1122,7 @@ function FinancePage() {
                       {formatReaisToBRL(pkg.price)}
                       <span className="text-xs text-muted-foreground font-medium">
                         {" "}
-                        / {(pkg.frequency as string) === "total" || (pkg.frequency as string) === "Valor total do curso" ? (lang === "pt" ? "valor total" : "total value") : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
+                        / {(pkg.frequency as string) === "total" || (pkg.frequency as string) === "Valor total do curso" ? (tr("auditUi.totalValue")) : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
                       </span>
                     </p>
                   </div>
@@ -1209,14 +1197,14 @@ function FinancePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Software">{lang === "pt" ? "Software" : "Software"}</SelectItem>
-                        <SelectItem value="Marketing">{lang === "pt" ? "Marketing" : "Marketing"}</SelectItem>
-                        <SelectItem value="Rent">{lang === "pt" ? "Aluguel" : "Rent"}</SelectItem>
-                        <SelectItem value="Equipment">{lang === "pt" ? "Equipamentos" : "Equipment"}</SelectItem>
-                        <SelectItem value="Internet">{lang === "pt" ? "Internet" : "Internet"}</SelectItem>
-                        <SelectItem value="Books">{lang === "pt" ? "Livros / Materiais" : "Books"}</SelectItem>
-                        <SelectItem value="Taxes">{lang === "pt" ? "Impostos" : "Taxes"}</SelectItem>
-                        <SelectItem value="Other">{lang === "pt" ? "Outros" : "Other"}</SelectItem>
+                        <SelectItem value="Software">{tr("auditUi.software")}</SelectItem>
+                        <SelectItem value="Marketing">{tr("auditUi.marketing")}</SelectItem>
+                        <SelectItem value="Rent">{tr("auditUi.rent")}</SelectItem>
+                        <SelectItem value="Equipment">{tr("auditUi.equipment")}</SelectItem>
+                        <SelectItem value="Internet">{tr("auditUi.internet")}</SelectItem>
+                        <SelectItem value="Books">{tr("auditUi.books")}</SelectItem>
+                        <SelectItem value="Taxes">{tr("auditUi.taxes")}</SelectItem>
+                        <SelectItem value="Other">{tr("auditUi.other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1251,10 +1239,10 @@ function FinancePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Card">{lang === "pt" ? "Cartão de Crédito" : "Credit Card"}</SelectItem>
+                        <SelectItem value="Card">{tr("auditUi.creditCard")}</SelectItem>
                         <SelectItem value="Pix">Pix</SelectItem>
-                        <SelectItem value="Bank Transfer">{lang === "pt" ? "Transferência Bancária" : "Bank Transfer"}</SelectItem>
-                        <SelectItem value="Cash">{lang === "pt" ? "Dinheiro" : "Cash"}</SelectItem>
+                        <SelectItem value="Bank Transfer">{tr("auditUi.bankTransfer")}</SelectItem>
+                        <SelectItem value="Cash">{tr("auditUi.cash")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1309,7 +1297,7 @@ function FinancePage() {
                         id="exp-notes"
                         value={expNotes}
                         onChange={(e) => setExpNotes(e.target.value)}
-                        placeholder={lang === "pt" ? "Anotações..." : "Notes..."}
+                        placeholder={tr("auditUi.notes")}
                         className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
                       />
                     </div>
@@ -1325,7 +1313,7 @@ function FinancePage() {
                       id="exp-notes"
                       value={expNotes}
                       onChange={(e) => setExpNotes(e.target.value)}
-                      placeholder={lang === "pt" ? "Anotações..." : "Notes..."}
+                      placeholder={tr("auditUi.notes")}
                       className="h-10 rounded-xl bg-white text-gray-900 border-emerald-800 placeholder:text-gray-400 focus-visible:ring-white focus-visible:ring-offset-emerald-900"
                     />
                   </div>
@@ -1351,7 +1339,7 @@ function FinancePage() {
                 </div>
                 <div className="text-left sm:text-right shrink-0">
                   <span className="text-[10px] uppercase font-extrabold tracking-widest text-muted-foreground block">
-                    {lang === "pt" ? "Total de Despesas" : "Total Expenses"}
+                    {tr("auditUi.totalExpenses")}
                   </span>
                   <span className="font-display text-2xl font-extrabold text-foreground">
                     {formatCentsToBRL(totalExpensesCents)}
@@ -1362,9 +1350,7 @@ function FinancePage() {
               <ul className="mt-5 divide-y divide-border/60">
                 {expenses.length === 0 ? (
                   <div className="py-12 text-center text-xs text-muted-foreground font-medium">
-                    {lang === "pt"
-                      ? "Nenhuma despesa lançada ainda. Registre seus custos operacionais ao lado."
-                      : "No expenses logged yet. Log your operational expenses on the left."}
+                    {tr("auditUi.noExpensesLoggedYetLogYourOperational")}
                   </div>
                 ) : (
                   expenses.map((exp) => {
@@ -1400,7 +1386,7 @@ function FinancePage() {
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             {exp.date} • {formatMethodDisplay(exp.method, lang)} {exp.notes ? `• ${exp.notes}` : ""}
-                            {isPeriod && exp.endDate ? ` • ${lang === "pt" ? "até" : "until"} ${exp.endDate}` : ""}
+                            {isPeriod && exp.endDate ? ` • ${tr("auditUi.until")} ${exp.endDate}` : ""}
                           </p>
                         </div>
 

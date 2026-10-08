@@ -106,7 +106,7 @@ export const Route = createFileRoute("/_app/calendar")({
 });
 
 // Translation dictionary
-const t = {
+const calendarTranslations = {
   en: {
     langToggle: "PT",
     title: "Teaching Calendar",
@@ -220,7 +220,7 @@ const getStatusStyles = (status: TimelineStatus) => {
 };
 
 function CalendarPage() {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { availability: requestedAvailability, eventId: requestedEventId } = Route.useSearch();
@@ -382,7 +382,7 @@ function CalendarPage() {
   const handleManualSyncAgenda = async () => {
     if (!user) return;
     setIsSyncingAgenda(true);
-    toast.info(lang === "pt" ? "Sincronizando agenda com o banco de dados..." : "Syncing schedule with database...");
+    toast.info(t("auditUi.syncingScheduleWithDatabase"));
 
     try {
       // 1. Fetch all current teacher students
@@ -399,7 +399,7 @@ function CalendarPage() {
       }
 
       if (!studentsData || studentsData.length === 0) {
-        toast.info(lang === "pt" ? "Nenhum aluno encontrado para este professor." : "No students found for this teacher.");
+        toast.info(t("auditUi.noStudentsFoundForThisTeacher"));
         setIsSyncingAgenda(false);
         return;
       }
@@ -646,7 +646,7 @@ function CalendarPage() {
             status: data.status as TimelineStatus,
           };
           setEvents((prev) => [...prev, createdEvt]);
-          toast.success(lang === "pt" ? "Aula agendada com sucesso!" : "Class scheduled successfully!");
+          toast.success(t("auditUi.classScheduledSuccessfully"));
         }
       } catch (err) {
         console.error("Failed to create class:", err);
@@ -794,9 +794,7 @@ function CalendarPage() {
   // Classroom Timeline state transitions
   const updateEventStatus = (eventId: string, newStatus: TimelineStatus) => {
     const isSeriesChange = window.confirm(
-      lang === "pt"
-        ? "Deseja aplicar a alteração de status a toda a série recorrente de aulas?"
-        : "Do you want to apply this status change to the entire recurring series of classes?",
+      t("auditUi.doYouWantToApplyThisStatus"),
     );
 
     const targetEvent = events.find((e) => e.id === eventId);
@@ -864,9 +862,7 @@ function CalendarPage() {
   // Reschedule single or series
   const handleReschedule = (eventId: string, newDateStr: string, newTimeStr: string) => {
     const isSeriesChange = window.confirm(
-      lang === "pt"
-        ? "Aplicar reagendamento a toda a série recorrente?"
-        : "Reschedule the entire recurring series?",
+      t("auditUi.rescheduleTheEntireRecurringSeries"),
     );
 
     const targetEvent = events.find((e) => e.id === eventId);
@@ -903,15 +899,13 @@ function CalendarPage() {
     if (updatedSelected) {
       setSelectedEvent(updatedSelected);
     }
-    alert(lang === "pt" ? "Reagendado com sucesso!" : "Rescheduled successfully!");
+    alert(t("auditUi.rescheduledSuccessfully"));
   };
 
   // Cancel class or series
   const handleCancelClass = (eventId: string) => {
     const isSeriesChange = window.confirm(
-      lang === "pt"
-        ? "Cancelar toda a série recorrente de aulas?"
-        : "Cancel the entire recurring series of classes?",
+      t("auditUi.cancelTheEntireRecurringSeriesOfClasses"),
     );
 
     const targetEvent = events.find((e) => e.id === eventId);
@@ -928,7 +922,7 @@ function CalendarPage() {
 
     updateEventsState(updatedEventsList);
     setSelectedEvent(null);
-    alert(lang === "pt" ? "Aula cancelada com sucesso." : "Class cancelled successfully.");
+    alert(t("auditUi.classCancelledSuccessfully"));
   };
 
   const handleUpdateNotes = () => {
@@ -941,7 +935,7 @@ function CalendarPage() {
     });
     updateEventsState(updated);
     setSelectedEvent({ ...selectedEvent, notes: notesText });
-    alert(lang === "pt" ? "Anotações salvas!" : "Notes saved!");
+    alert(t("auditUi.notesSaved"));
   };
 
   const handleSaveHomework = () => {
@@ -956,9 +950,7 @@ function CalendarPage() {
     setSelectedEvent({ ...selectedEvent, homeworkTitle: hwTitle, status: "Homework Sent" });
     setHwTitle("");
     alert(
-      lang === "pt"
-        ? "Lição de casa enviada e status atualizado!"
-        : "Homework sent and status updated!",
+      t("auditUi.homeworkSentAndStatusUpdated"),
     );
   };
 
@@ -983,9 +975,9 @@ function CalendarPage() {
     });
     updateEventsState(updated);
     setSelectedEvent({ ...selectedEvent, attendanceRecorded: true, attendanceStatus: attStatus });
-      toast.success(lang === "pt" ? "Presença registrada!" : "Attendance recorded!");
+      toast.success(t("auditUi.attendanceRecorded"));
     } catch {
-      toast.error(lang === "pt" ? "Erro ao registrar presença." : "Failed to record attendance.");
+      toast.error(t("auditUi.failedToRecordAttendance"));
     }
   };
 
@@ -1000,10 +992,10 @@ function CalendarPage() {
     updateEventsState(updated);
     setSelectedEvent({ ...selectedEvent, lessonPlanUrl: lessonUrl, status: "Lesson Ready" });
     setLessonUrl("");
-    alert(lang === "pt" ? "Plano de aula vinculado!" : "Lesson plan linked!");
+    alert(t("auditUi.lessonPlanLinked"));
   };
 
-  const currentTranslation = t[lang];
+  const currentTranslation = calendarTranslations[lang];
 
   // Hours for grid display in week/day view (08:00 to 21:00)
   // Grid shading source: teacher availability snapshot (single source of truth)
@@ -1077,9 +1069,7 @@ function CalendarPage() {
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
             <span className="text-sm font-semibold">
-              {lang === "pt"
-                ? "Não foi possível carregar a agenda do Supabase."
-                : "Failed to load schedule from Supabase."}
+              {t("auditUi.failedToLoadScheduleFromSupabase")}
             </span>
           </div>
           <Button
@@ -1089,7 +1079,7 @@ function CalendarPage() {
             className="h-8 border-destructive/30 text-destructive hover:bg-destructive/20"
           >
             <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-            {lang === "pt" ? "Tentar novamente" : "Retry"}
+            {t("auditUi.retry")}
           </Button>
         </div>
       )}
@@ -1360,7 +1350,7 @@ function CalendarPage() {
                       return (
                         <div
                           key={dayIdx}
-                          title={unavailable ? (lang === "pt" ? "Fora da disponibilidade" : "Outside availability") : undefined}
+                          title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
                           className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] ${
                             unavailable
                               ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
@@ -1396,19 +1386,19 @@ function CalendarPage() {
                               {/* Small status indicator pill */}
                               <div className="text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
                                 {evt.status === "Needs Preparation" &&
-                                  (lang === "pt" ? "Prep Necessária" : "Prep Needed")}
+                                  (t("auditUi.prepNeeded"))}
                                 {evt.status === "Lesson Ready" &&
-                                  (lang === "pt" ? "Pronta" : "Ready")}
+                                  (t("auditUi.ready"))}
                                 {evt.status === "Homework Pending" &&
-                                  (lang === "pt" ? "Tarefa Pendente" : "Hw Pending")}
+                                  (t("auditUi.hwPending"))}
                                 {evt.status === "Homework Sent" &&
-                                  (lang === "pt" ? "Tarefa Enviada" : "Hw Sent")}
+                                  (t("auditUi.hwSent"))}
                                 {evt.status === "Feedback Pending" &&
-                                  (lang === "pt" ? "Feedback Pendente" : "Fb Pending")}
+                                  (t("auditUi.fbPending"))}
                                 {evt.status === "Completed" &&
-                                  (lang === "pt" ? "Concluída" : "Completed")}
+                                  (t("auditUi.completed"))}
                                 {evt.status === "Closed" &&
-                                  (lang === "pt" ? "Arquivada" : "Closed")}
+                                  (t("auditUi.closed"))}
                               </div>
                             </div>
                           );
@@ -1445,12 +1435,8 @@ function CalendarPage() {
                       {cellEvents.length === 0 ? (
                         <span className="text-[11px] text-muted-foreground/40 italic ml-2">
                           {unavailable
-                            ? lang === "pt"
-                              ? "Indisponível"
-                              : "Unavailable"
-                            : lang === "pt"
-                              ? "Livre"
-                              : "Free"}
+                            ? t("auditUi.unavailable")
+                            : t("auditUi.free")}
                         </span>
                       ) : (
                         cellEvents.map((evt) => {
@@ -1929,7 +1915,7 @@ function CalendarPage() {
         <DialogContent className="max-w-md rounded-2xl p-6">
           <DialogHeader className="border-b border-border pb-3">
             <DialogTitle className="font-display text-lg font-bold text-foreground">
-              {lang === "pt" ? "Agendar Nova Aula" : "Schedule Class"}
+              {t("auditUi.scheduleClass")}
             </DialogTitle>
           </DialogHeader>
 
@@ -1937,7 +1923,7 @@ function CalendarPage() {
             {/* Student Selector */}
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-foreground">
-                {lang === "pt" ? "Selecionar Aluno (Opcional)" : "Select Student (Optional)"}
+                {t("auditUi.selectStudentOptional")}
               </Label>
               {studentsList.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border p-3 text-center space-y-2 bg-secondary/20">
@@ -1955,7 +1941,7 @@ function CalendarPage() {
                     }}
                   >
                     <User className="w-3.5 h-3.5 mr-1.5" />
-                    {lang === "pt" ? "Cadastrar aluno" : "Add Student"}
+                    {t("auditUi.addStudent")}
                   </Button>
                 </div>
               ) : (
@@ -1973,11 +1959,11 @@ function CalendarPage() {
                   }}
                 >
                   <SelectTrigger className="h-10 rounded-xl">
-                    <SelectValue placeholder={lang === "pt" ? "Escolha um aluno ou digite abaixo..." : "Choose a student or enter custom name..."} />
+                    <SelectValue placeholder={t("auditUi.chooseAStudentOrEnterCustomName")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">
-                      {lang === "pt" ? "Nenhum (Evento Pessoal / Outro)" : "None (Personal Event / Other)"}
+                      {t("auditUi.nonePersonalEventOther")}
                     </SelectItem>
                     {studentsList.map((st) => (
                       <SelectItem key={st.id} value={st.id}>
@@ -1992,7 +1978,7 @@ function CalendarPage() {
             {/* Student / Event Name */}
             <div className="space-y-1">
               <Label htmlFor="add-name" className="text-xs font-semibold text-foreground">
-                {lang === "pt" ? "Nome do Aluno ou Evento" : "Student or Event Name"}
+                {t("auditUi.studentOrEventName")}
               </Label>
               <Input
                 id="add-name"

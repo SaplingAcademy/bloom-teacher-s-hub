@@ -248,7 +248,7 @@ const translations = {
 };
 
 function GrowthPage() {
-  const { lang } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -405,9 +405,7 @@ function GrowthPage() {
     const parsed = parseBRL(editGoalInputValue);
     if (!parsed || parsed <= 0) {
       toast.error(
-        lang === "pt"
-          ? "Insira um valor de meta válido maior que zero."
-          : "Please enter a valid goal greater than zero."
+        tr("auditUi.pleaseEnterAValidGoalGreaterThan")
       );
       return;
     }
@@ -418,7 +416,7 @@ function GrowthPage() {
       setMonthlyGoal(parsed);
       setIsEditGoalOpen(false);
       toast.success(
-        lang === "pt" ? "Meta mensal salva com sucesso!" : "Monthly goal saved successfully!"
+        tr("auditUi.monthlyGoalSavedSuccessfully")
       );
     } else {
       toast.error(toUserMessage(res.error, i18nT("errors.saveGoal", lang)));
@@ -607,9 +605,7 @@ function GrowthPage() {
     };
     localStorage.setItem("bloom.pricing.goal", JSON.stringify(goalData));
     alert(
-      lang === "pt"
-        ? "Meta de precificação salva com sucesso!"
-        : "Pricing goal successfully saved!",
+      tr("auditUi.pricingGoalSuccessfullySaved"),
     );
   };
 
@@ -682,12 +678,10 @@ function GrowthPage() {
               </div>
               <div className="space-y-1 max-w-sm">
                 <h4 className="font-display text-base font-bold text-foreground">
-                  {lang === "pt" ? "Defina sua meta mensal" : "Set your monthly goal"}
+                  {tr("auditUi.setYourMonthlyGoal")}
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {lang === "pt"
-                    ? "Adicione sua meta para acompanhar o crescimento da sua receita."
-                    : "Add your monthly target to track revenue growth and scale your business."}
+                  {tr("auditUi.addYourMonthlyTargetToTrackRevenue")}
                 </p>
               </div>
               <Button
@@ -695,7 +689,7 @@ function GrowthPage() {
                 className="mt-1 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95"
               >
                 <PlusCircle className="mr-1.5 h-4 w-4" />
-                {lang === "pt" ? "Definir meta" : "Set goal"}
+                {tr("auditUi.setGoal")}
               </Button>
             </div>
           </div>
@@ -713,7 +707,7 @@ function GrowthPage() {
                 title="Editar meta mensal"
               >
                 <Pencil className="h-3.5 w-3.5" />
-                <span>{lang === "pt" ? "Editar meta" : "Edit goal"}</span>
+                <span>{tr("auditUi.editGoal")}</span>
               </button>
             </div>
 
@@ -744,7 +738,7 @@ function GrowthPage() {
                     {metrics.progressPct}%
                   </span>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                    {lang === "pt" ? "meta" : "goal"}
+                    {tr("auditUi.goal")}
                   </span>
                 </div>
               </div>
@@ -755,7 +749,7 @@ function GrowthPage() {
                   <button
                     onClick={() => navigate({ to: "/finance" })}
                     className="hover:text-primary transition-colors cursor-pointer text-left"
-                    title={lang === "pt" ? "Clique para ver faturamento detalhado no Financeiro" : "Click to view detailed revenue in Finance"}
+                    title={tr("auditUi.clickToViewDetailedRevenueInFinance")}
                   >
                     {formatBRL(mrrData.totalMRR)}
                   </button>
@@ -768,11 +762,11 @@ function GrowthPage() {
                   <div className="space-y-0.5">
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-center sm:justify-start">
                       <CheckCircle2 className="h-4 w-4" />
-                      <span>{lang === "pt" ? "Meta atingida 🌱" : "Goal reached 🌱"}</span>
+                      <span>{tr("auditUi.goalReached")}</span>
                     </p>
                     {metrics.overage > 0 && (
                       <p className="text-[11px] font-semibold text-muted-foreground">
-                        {formatBRL(metrics.overage)} {lang === "pt" ? "acima da meta." : "above target."}
+                        {formatBRL(metrics.overage)} {tr("auditUi.aboveTarget")}
                       </p>
                     )}
                   </div>
@@ -793,7 +787,7 @@ function GrowthPage() {
                             ? `Para atingir sua meta, faltam aproximadamente `
                             : `To reach your goal, you need approximately `}
                           <strong className="font-extrabold text-foreground">
-                            {metrics.studentGap} {metrics.studentGap === 1 ? (lang === "pt" ? "aluno" : "student") : (lang === "pt" ? "alunos" : "students")}
+                            {metrics.studentGap} {metrics.studentGap === 1 ? (tr("auditUi.student")) : (tr("auditUi.students"))}
                           </strong>
                           {lang === "pt"
                             ? ` com ticket semelhante ao atual (${formatBRL(metrics.avgTicket)}/mês).`
@@ -812,18 +806,14 @@ function GrowthPage() {
                               </span>
                             </p>
                             <p className="text-[10px] opacity-90 font-normal">
-                              {lang === "pt"
-                                ? "Para atingir a meta apenas com novos alunos, talvez seja necessário ampliar sua disponibilidade de trabalho, reduzir horários de descanso ou aumentar o ticket médio."
-                                : "To reach your goal with new students, you may need to expand working hours, reduce rest blocks, or increase your average ticket."}
+                              {tr("auditUi.toReachYourGoalWithNewStudents")}
                             </p>
                           </div>
                         )}
                       </>
                     ) : (
                       <p className="font-medium opacity-90 text-[11px]">
-                        {lang === "pt"
-                          ? "Cadastre seus primeiros alunos e pacotes para a Bloom estimar quantos novos alunos você precisa para atingir sua meta."
-                          : "Add your active students and package contracts so Bloom can estimate how many new students you need to reach your goal."}
+                        {tr("auditUi.addYourActiveStudentsAndPackageContracts")}
                       </p>
                     )}
                   </div>
@@ -850,14 +840,10 @@ function GrowthPage() {
               </div>
               <div className="space-y-1 max-w-sm">
                 <h4 className="font-display text-base font-bold text-foreground">
-                  {lang === "pt"
-                    ? "Configure sua disponibilidade para calcular sua capacidade de aulas."
-                    : "Configure your availability to calculate your teaching capacity."}
+                  {tr("auditUi.configureYourAvailabilityToCalculateYourTeaching")}
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {lang === "pt"
-                    ? "Defina seus dias e horários de trabalho para a Bloom calcular suas vagas e taxa de ocupação."
-                    : "Set your weekly working days and hours so Bloom can compute your slots and occupancy rate."}
+                  {tr("auditUi.setYourWeeklyWorkingDaysAndHours")}
                 </p>
               </div>
               <Button
@@ -865,7 +851,7 @@ function GrowthPage() {
                 className="mt-1 rounded-xl bg-accent text-xs font-bold text-accent-foreground shadow-sm hover:bg-accent/90 cursor-pointer"
               >
                 <Clock className="mr-1.5 h-4 w-4" />
-                {lang === "pt" ? "Configurar disponibilidade" : "Configure availability"}
+                {tr("auditUi.configureAvailability")}
               </Button>
             </div>
           </div>
@@ -881,7 +867,7 @@ function GrowthPage() {
                 onClick={() => setIsAvailabilityModalOpen(true)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 cursor-pointer"
               >
-                <span>{lang === "pt" ? "Configurar disponibilidade" : "Configure availability"}</span>
+                <span>{tr("auditUi.configureAvailability")}</span>
                 <ArrowRight className="h-3 w-3" />
               </button>
             </div>
@@ -892,12 +878,12 @@ function GrowthPage() {
               </span>
               <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
                 {t.capacitySubtitle} ({capacityData.occupancyPct}%{" "}
-                {lang === "pt" ? "ocupados" : "occupied"})
+                {tr("auditUi.occupied")})
               </span>
             </div>
 
             <div className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {capacityData.totalRemainingSlots} {lang === "pt" ? "horários disponíveis" : "slots available"}
+              {capacityData.totalRemainingSlots} {tr("auditUi.slotsAvailable")}
             </div>
 
             {/* Slots Availability Breakdown for working days only */}
@@ -987,12 +973,10 @@ function GrowthPage() {
         <div className="mb-6">
           <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
-            {lang === "pt" ? "Simulador de Valor Hora" : "Hourly Rate Simulator"}
+            {tr("auditUi.hourlyRateSimulator")}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            {lang === "pt"
-              ? "Descubra qual valor cobrar por hora para atingir sua meta financeira líquida de forma realista."
-              : "Discover how much to charge per teaching hour to realistically hit your net financial goal."}
+            {tr("auditUi.discoverHowMuchToChargePerTeaching")}
           </p>
         </div>
 
@@ -1006,7 +990,7 @@ function GrowthPage() {
                   htmlFor="sim-income"
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
-                  {lang === "pt" ? "Renda Mensal Líquida" : "Desired Net Income"}
+                  {tr("auditUi.desiredNetIncome")}
                   <span className="text-[10px] text-muted-foreground font-medium opacity-85">
                     (Take-home)
                   </span>
@@ -1022,7 +1006,7 @@ function GrowthPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="sim-currency" className="text-xs font-semibold text-foreground">
-                  {lang === "pt" ? "Moeda" : "Currency"}
+                  {tr("auditUi.currency")}
                 </Label>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger id="sim-currency" className="h-10 rounded-xl">
@@ -1045,9 +1029,9 @@ function GrowthPage() {
                   htmlFor="sim-workhrs"
                   className="text-[11px] font-semibold text-foreground block"
                 >
-                  {lang === "pt" ? "Horas totais de trabalho / semana" : "Total Work Hours / Week"}
+                  {tr("auditUi.totalWorkHoursWeek")}
                   <span className="text-[9px] text-muted-foreground block leading-tight mt-0.5">
-                    ({lang === "pt" ? "Jornada total desejada" : "Desired total workload"})
+                    ({tr("auditUi.desiredTotalWorkload")})
                   </span>
                 </Label>
                 <SafeNumberInput
@@ -1069,9 +1053,9 @@ function GrowthPage() {
                   htmlFor="sim-teachhrs"
                   className="text-[11px] font-semibold text-foreground block"
                 >
-                  {lang === "pt" ? "Horas reservadas para aulas / semana" : "Hours Reserved for Lessons / Week"}
+                  {tr("auditUi.hoursReservedForLessonsWeek")}
                   <span className="text-[9px] text-muted-foreground block leading-tight mt-0.5">
-                    ({lang === "pt" ? "Tempo para dar aulas" : "Paid teaching slots"})
+                    ({tr("auditUi.paidTeachingSlots")})
                   </span>
                 </Label>
                 <SafeNumberInput
@@ -1082,9 +1066,7 @@ function GrowthPage() {
                   onChange={(val) => {
                     if (val > workHoursPerWeek) {
                       toast.error(
-                        lang === "pt"
-                          ? "Suas horas de aula não podem ultrapassar sua jornada total de trabalho."
-                          : "Teaching hours cannot exceed total work hours."
+                        tr("auditUi.teachingHoursCannotExceedTotalWorkHours")
                       );
                       setTeachHoursPerWeek(workHoursPerWeek);
                     } else {
@@ -1100,13 +1082,11 @@ function GrowthPage() {
                   htmlFor="sim-weeks"
                   className="text-[11px] font-semibold text-foreground flex items-center justify-between"
                 >
-                  <span>{lang === "pt" ? "Semanas médias / mês" : "Average Weeks / Month"}</span>
+                  <span>{tr("auditUi.averageWeeksMonth")}</span>
                   <span
                     className="cursor-help text-muted-foreground hover:text-foreground"
                     title={
-                      lang === "pt"
-                        ? "Usamos uma média anual (52 semanas / 12 meses = 4,33) para deixar a projeção mensal mais realista."
-                        : "We use an annual average (52 weeks / 12 months = 4.33) for a realistic monthly projection."
+                      tr("auditUi.weUseAnAnnualAverage52Weeks")
                     }
                   >
                     <Info className="h-3 w-3 inline-block" />
@@ -1122,7 +1102,7 @@ function GrowthPage() {
                   className="h-10 rounded-xl"
                 />
                 <span className="text-[9px] text-muted-foreground block leading-none">
-                  ({lang === "pt" ? "Média anual: 4,33" : "Annual avg: 4.33"})
+                  ({tr("auditUi.annualAvg433")})
                 </span>
               </div>
             </div>
@@ -1131,7 +1111,7 @@ function GrowthPage() {
             <div className="space-y-2 p-4 rounded-xl bg-secondary/35 border border-border/50">
               <div className="flex justify-between items-center text-xs font-semibold text-foreground">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/90">
-                  {lang === "pt" ? "Proporção da Jornada Destinada a Aulas" : "Workload Split for Lessons"}
+                  {tr("auditUi.workloadSplitForLessons")}
                 </span>
                 <span className="text-primary font-extrabold text-xs">
                   {teachHoursPerWeek}h / {workHoursPerWeek}h (
@@ -1153,11 +1133,11 @@ function GrowthPage() {
 
               <div className="text-[11px] text-muted-foreground leading-relaxed pt-0.5">
                 <p className="font-medium text-foreground/80">
-                  💡 {Math.max(0, workHoursPerWeek - teachHoursPerWeek)}h {lang === "pt" ? "semanais ficam disponíveis para preparação, administração e outras atividades." : "weekly hours remain available for preparation, admin, and business tasks."}
+                  💡 {Math.max(0, workHoursPerWeek - teachHoursPerWeek)}h {tr("auditUi.weeklyHoursRemainAvailableForPreparationAdmin")}
                 </p>
                 {Math.round((teachHoursPerWeek / (workHoursPerWeek || 1)) * 100) > 75 && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
-                    ⚠️ {lang === "pt" ? "Você reservou mais de 75% da sua jornada para aulas. Certifique-se de ter tempo suficiente para preparo de aulas e gestão." : "You allocated over 75% of your workload to lessons. Ensure adequate time for prep and management."}
+                    ⚠️ {tr("auditUi.youAllocatedOver75OfYourWorkload")}
                   </p>
                 )}
               </div>
@@ -1171,9 +1151,7 @@ function GrowthPage() {
                 className="w-full flex items-center justify-between p-3.5 text-xs font-bold text-foreground hover:bg-secondary/40 transition-colors"
               >
                 <span>
-                  {lang === "pt"
-                    ? "Configurações Avançadas (Custos & Reserva)"
-                    : "Advanced settings (Costs & Margins)"}
+                  {tr("auditUi.advancedSettingsCostsMargins")}
                 </span>
                 <span>{advancedExpanded ? "▲" : "▼"}</span>
               </button>
@@ -1187,14 +1165,12 @@ function GrowthPage() {
                       className="text-xs font-semibold text-foreground flex items-center justify-between"
                     >
                       <span>
-                        {lang === "pt"
-                          ? "Despesas Operacionais Mensais"
-                          : "Monthly Business Expenses"}
+                        {tr("auditUi.monthlyBusinessExpenses")}
                       </span>
                       <span className="text-[10px] font-bold text-muted-foreground">
                         {isManualExpenses
-                          ? (lang === "pt" ? "Estimativa manual" : "Manual estimate")
-                          : (lang === "pt" ? "Dado real do Finance" : "Real Finance data")}
+                          ? (tr("auditUi.manualEstimate"))
+                          : (tr("auditUi.realFinanceData"))}
                       </span>
                     </Label>
                     <SafeNumberInput
@@ -1210,7 +1186,7 @@ function GrowthPage() {
                   <div className="grid grid-cols-2 gap-4 items-start">
                     <div className="space-y-1">
                       <Label htmlFor="sim-tax" className="text-xs font-semibold text-foreground">
-                        {lang === "pt" ? "Reserva Fiscal & Taxas" : "Tax & Payment Fees %"}
+                        {tr("auditUi.taxPaymentFees")}
                       </Label>
                       <div className="relative">
                         <SafeNumberInput
@@ -1229,7 +1205,7 @@ function GrowthPage() {
 
                     <div className="space-y-1">
                       <Label htmlFor="sim-safety" className="text-xs font-semibold text-foreground">
-                        {lang === "pt" ? "Margem de Segurança" : "Safety Margin %"}
+                        {tr("auditUi.safetyMargin")}
                       </Label>
                       <div className="relative">
                         <SafeNumberInput
@@ -1253,36 +1229,36 @@ function GrowthPage() {
             {/* Suggestions Banner */}
             <div className="rounded-xl border border-border/80 bg-primary-soft/30 p-4 space-y-1.5">
               <h5 className="text-[10px] font-bold uppercase tracking-wider text-primary">
-                {lang === "pt" ? "Dados Atuais Sugeridos" : "Current Business Data"}
+                {tr("auditUi.currentBusinessData")}
               </h5>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-semibold text-foreground/80">
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {lang === "pt" ? "Alunos Ativos" : "Active Students"}
+                    {tr("auditUi.activeStudents")}
                   </span>
                   <span>{currentStudentsCount}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {lang === "pt" ? "Receita Recorrente" : "Current MRR"}
+                    {tr("auditUi.currentMrr")}
                   </span>
                   <span>
-                    {currentMRR > 0 ? formatBRL(currentMRR) : (lang === "pt" ? "R$ 0" : "$0")}
+                    {currentMRR > 0 ? formatBRL(currentMRR) : (tr("auditUi.0"))}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {lang === "pt" ? "Valor Hora Médio" : "Avg Hourly Rate"}
+                    {tr("auditUi.avgHourlyRate")}
                   </span>
                   <span>
                     {currentAvgHourlyRate > 0
                       ? `${currency} ${currentAvgHourlyRate}/h`
-                      : (lang === "pt" ? "Dados insuficientes" : "No data")}
+                      : (tr("auditUi.noData"))}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {lang === "pt" ? "Agenda Ocupada" : "Agenda Occupied"}
+                    {tr("auditUi.agendaOccupied")}
                   </span>
                   <span>{capacityData.occupancyPct}%</span>
                 </div>
@@ -1296,7 +1272,7 @@ function GrowthPage() {
                 onClick={async () => {
                   if (!user) return;
                   if (incomeGoal <= 0) {
-                    toast.error(lang === "pt" ? "Insira uma meta válida." : "Please enter a valid goal.");
+                    toast.error(tr("auditUi.pleaseEnterAValidGoal"));
                     return;
                   }
                   setIsSavingGoal(true);
@@ -1305,9 +1281,7 @@ function GrowthPage() {
                   if (res.success) {
                     setMonthlyGoal(incomeGoal);
                     toast.success(
-                      lang === "pt"
-                        ? "Salvo como sua nova meta mensal com sucesso!"
-                        : "Saved as your official monthly goal!"
+                      tr("auditUi.savedAsYourOfficialMonthlyGoal")
                     );
                   } else {
                     toast.error(toUserMessage(res.error, i18nT("errors.saveGoal", lang)));
@@ -1317,7 +1291,7 @@ function GrowthPage() {
                 className="flex-1 inline-flex h-10 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/95 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSavingGoal ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-                {lang === "pt" ? "Salvar como Minha Meta" : "Save as My Pricing Goal"}
+                {tr("auditUi.saveAsMyPricingGoal")}
               </button>
               <button
                 type="button"
@@ -1336,11 +1310,11 @@ function GrowthPage() {
                   setExpenses(realExpenses);
                   setTaxPercent(15);
                   setSafetyMarginPercent(10);
-                  toast.info(lang === "pt" ? "Simulador redefinido para dados reais." : "Simulator reset to real data.");
+                  toast.info(tr("auditUi.simulatorResetToRealData"));
                 }}
                 className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-secondary cursor-pointer transition-all"
               >
-                {lang === "pt" ? "Redefinir" : "Reset"}
+                {tr("auditUi.reset")}
               </button>
             </div>
           </div>
@@ -1378,12 +1352,12 @@ function GrowthPage() {
                   {/* Recommended rate badge */}
                   <div className="text-center py-4 border-b border-lilac-foreground/20 space-y-1">
                     <span className="text-[10px] uppercase font-extrabold tracking-widest opacity-80 block">
-                      {lang === "pt" ? "Valor Hora Recomendado" : "Recommended Hourly Rate"}
+                      {tr("auditUi.recommendedHourlyRate")}
                     </span>
                     <h3 className="font-display text-4xl font-extrabold text-white">
                       {currency} {recHourlyRate}{" "}
                       <span className="text-sm font-semibold opacity-90">
-                        /{lang === "pt" ? "hora" : "hour"}
+                        /{tr("auditUi.hour")}
                       </span>
                     </h3>
                     <p className="text-[11px] opacity-80 pt-1">
@@ -1397,13 +1371,11 @@ function GrowthPage() {
                   <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 flex items-center gap-1">
-                        <span>{lang === "pt" ? "Valor Mínimo Sustentável" : "Min Sustainable Rate"}</span>
+                        <span>{tr("auditUi.minSustainableRate")}</span>
                         <span
                           className="cursor-help opacity-70 hover:opacity-100"
                           title={
-                            lang === "pt"
-                              ? "O menor valor médio por hora que cobre seus custos e reservas, sem considerar sua meta de renda desejada."
-                              : "The lowest hourly rate that covers operating costs and margins, excluding net income."
+                            tr("auditUi.theLowestHourlyRateThatCoversOperating")
                           }
                         >
                           <Info className="h-3 w-3 inline-block" />
@@ -1416,7 +1388,7 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {lang === "pt" ? "Faturamento Necessário" : "Required Gross Revenue"}
+                        {tr("auditUi.requiredGrossRevenue")}
                       </span>
                       <span className="text-sm font-bold text-white">
                         {currency} {grossNeeded.toLocaleString()}/{t.month}
@@ -1425,20 +1397,18 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {lang === "pt" ? "Aulas Faturáveis/Mês" : "Billable Hours/Month"}
+                        {tr("auditUi.billableHoursMonth")}
                       </span>
                       <span className="text-sm font-bold text-white">{monthlyBillableHours}h</span>
                     </div>
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 flex items-center gap-1">
-                        <span>{lang === "pt" ? "Ocupação da Capacidade Reservada" : "Reserved Capacity Occupancy"}</span>
+                        <span>{tr("auditUi.reservedCapacityOccupancy")}</span>
                         <span
                           className="cursor-help opacity-70 hover:opacity-100"
                           title={
-                            lang === "pt"
-                              ? "Percentual das suas horas reservadas para aulas que já estão ocupadas por aulas agendadas."
-                              : "Percentage of your reserved lesson hours currently occupied by scheduled classes."
+                            tr("auditUi.percentageOfYourReservedLessonHoursCurrently")
                           }
                         >
                           <Info className="h-3 w-3 inline-block" />
@@ -1451,7 +1421,7 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {lang === "pt" ? "Média Atual" : "Current Rate"}
+                        {tr("auditUi.currentRate")}
                       </span>
                       <span className="text-sm font-bold text-white">
                         {currentAvgHourlyRate > 0 ? `${currency} ${currentAvgHourlyRate}/h` : "—"}
@@ -1460,7 +1430,7 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {lang === "pt" ? "Diferença Necessária" : "Required Difference"}
+                        {tr("auditUi.requiredDifference")}
                       </span>
                       <span className="text-sm font-bold text-white">
                         {currentAvgHourlyRate > 0
@@ -1483,7 +1453,7 @@ function GrowthPage() {
                         <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-300" />
                         <div className="space-y-1.5 flex-1">
                           <p className="font-bold text-amber-200">
-                            {lang === "pt" ? "Disponibilidade no Calendário Exige Ajuste" : "Calendar Availability Alert"}
+                            {tr("auditUi.calendarAvailabilityAlert")}
                           </p>
                           <p className="opacity-95 text-[11px] leading-normal">
                             {lang === "pt"
@@ -1496,7 +1466,7 @@ function GrowthPage() {
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-[11px] font-bold transition-colors cursor-pointer"
                           >
                             <Clock className="w-3.5 h-3.5" />
-                            <span>{lang === "pt" ? "Revisar disponibilidade" : "Review availability"}</span>
+                            <span>{tr("auditUi.reviewAvailability")}</span>
                           </button>
                         </div>
                       </>
@@ -1505,7 +1475,7 @@ function GrowthPage() {
                         <CheckCircle className="h-4.5 w-4.5 shrink-0 text-emerald-300" />
                         <div>
                           <p className="font-bold text-emerald-200">
-                            {lang === "pt" ? "✓ Sua disponibilidade comporta essa meta de aulas." : "✓ Goal Fits Calendar Availability."}
+                            {tr("auditUi.goalFitsCalendarAvailability")}
                           </p>
                           <p className="opacity-95 text-[11px] leading-normal mt-0.5">
                             {lang === "pt"
@@ -1520,12 +1490,10 @@ function GrowthPage() {
                   {/* Student Projections estimate box */}
                   <div className="rounded-xl bg-white/5 border border-white/15 p-3.5 space-y-2 text-white">
                     <h5 className="text-[10px] uppercase font-bold tracking-wider opacity-90">
-                      {lang === "pt" ? "Projeções Estimadas de Alunos" : "Student Projections"}
+                      {tr("auditUi.studentProjections")}
                     </h5>
                     <p className="text-[11px] leading-snug opacity-95">
-                      {lang === "pt"
-                        ? "Para atingir esta meta, você precisará de aproximadamente:"
-                        : "To reach this goal, you would need approximately:"}
+                      {tr("auditUi.toReachThisGoalYouWouldNeed")}
                     </p>
                     <ul className="text-xs list-disc list-inside space-y-1 font-medium pl-1">
                       <li>
@@ -1534,7 +1502,7 @@ function GrowthPage() {
                           : `${weeklyVIPsNeeded} weekly VIP students at the recommended rate of ${currency} ${recHourlyRate}`}
                       </li>
                       <li className="list-none italic opacity-70 text-[10px] pl-3">
-                        — {lang === "pt" ? "ou" : "or"} —
+                        — {tr("auditUi.or")} —
                       </li>
                       <li>
                         {lang === "pt"
@@ -1561,7 +1529,7 @@ function GrowthPage() {
 
           const scenarios = [
             {
-              name: lang === "pt" ? "Precificação Atual" : "Current Pricing",
+              name: tr("auditUi.currentPricing"),
               rate: currentAvgHourlyRate,
               mrr: currentMRR,
               hours: Math.round(currentMRR / (currentAvgHourlyRate || 1)),
@@ -1575,7 +1543,7 @@ function GrowthPage() {
               ),
             },
             {
-              name: lang === "pt" ? "Precificação Mínima" : "Min Sustainable",
+              name: tr("auditUi.minSustainable"),
               rate: minHourlyRate,
               mrr: incomeGoal + expenses,
               hours: monthlyBillableHours,
@@ -1583,7 +1551,7 @@ function GrowthPage() {
               occupancy: Math.round((teachHoursPerWeek / (availableWeeklySlots || 1)) * 100),
             },
             {
-              name: lang === "pt" ? "Precificação Recomendada" : "Recommended",
+              name: tr("auditUi.recommended"),
               rate: recHourlyRate,
               mrr: grossNeeded,
               hours: monthlyBillableHours,
@@ -1595,9 +1563,7 @@ function GrowthPage() {
           return (
             <div className="mt-6 rounded-xl border border-border bg-card p-5 md:p-6 shadow-sm space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                {lang === "pt"
-                  ? "Comparativo de Cenários de Precificação"
-                  : "Pricing Scenarios Comparison"}
+                {tr("auditUi.pricingScenariosComparison")}
               </h4>
               <div className="grid gap-4 sm:grid-cols-3 items-stretch">
                 {scenarios.map((sc, index) => (
@@ -1619,15 +1585,15 @@ function GrowthPage() {
                         </span>
                       </p>
                       <p>
-                        {lang === "pt" ? "Horas/Mês" : "Hours/Month"}:{" "}
+                        {tr("auditUi.hoursMonth")}:{" "}
                         <span className="text-foreground">{sc.hours}h</span>
                       </p>
                       <p>
-                        {lang === "pt" ? "Estimativa Alunos" : "Est. Students"}:{" "}
+                        {tr("auditUi.estStudents")}:{" "}
                         <span className="text-foreground">{sc.students}</span>
                       </p>
                       <p>
-                        {lang === "pt" ? "Ocupação" : "Occupancy"}:{" "}
+                        {tr("auditUi.occupancy")}:{" "}
                         <span className="text-foreground">{sc.occupancy}%</span>
                       </p>
                     </div>
@@ -1713,7 +1679,7 @@ function GrowthPage() {
             <div className="flex items-center gap-2">
               <Badge className="bg-primary hover:bg-primary">5</Badge>
               <span className="text-sm font-bold text-foreground">
-                {lang === "pt" ? "Contatos / Leads" : "Leads"}
+                {tr("auditUi.leads")}
               </span>
             </div>
             <span className="text-xs text-muted-foreground font-semibold">100%</span>
@@ -1722,7 +1688,7 @@ function GrowthPage() {
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
             <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              80% {lang === "pt" ? "conv." : "conv."}
+              80% {tr("auditUi.conv")}
             </span>
           </div>
 
@@ -1731,7 +1697,7 @@ function GrowthPage() {
             <div className="flex items-center gap-2">
               <Badge className="bg-primary hover:bg-primary">4</Badge>
               <span className="text-sm font-bold text-foreground">
-                {lang === "pt" ? "Contatados" : "Contacted"}
+                {tr("auditUi.contacted")}
               </span>
             </div>
             <span className="text-xs text-muted-foreground font-semibold">80%</span>
@@ -1740,7 +1706,7 @@ function GrowthPage() {
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
             <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              50% {lang === "pt" ? "conv." : "conv."}
+              50% {tr("auditUi.conv")}
             </span>
           </div>
 
@@ -1749,7 +1715,7 @@ function GrowthPage() {
             <div className="flex items-center gap-2">
               <Badge className="bg-primary hover:bg-primary">2</Badge>
               <span className="text-sm font-bold text-foreground">
-                {lang === "pt" ? "Aulas Experimentais" : "Trial"}
+                {tr("auditUi.trial")}
               </span>
             </div>
             <span className="text-xs text-muted-foreground font-semibold">40%</span>
@@ -1758,7 +1724,7 @@ function GrowthPage() {
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
             <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              100% {lang === "pt" ? "conv." : "conv."}
+              100% {tr("auditUi.conv")}
             </span>
           </div>
 
@@ -1769,7 +1735,7 @@ function GrowthPage() {
                 28
               </Badge>
               <span className="text-sm font-bold">
-                {lang === "pt" ? "Alunos Ativos" : "Active Students"}
+                {tr("auditUi.activeStudents")}
               </span>
             </div>
             <span className="text-xs font-bold">40%</span>
@@ -1782,13 +1748,13 @@ function GrowthPage() {
         <DialogContent className="max-w-md rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">
-              {lang === "pt" ? "Editar Meta Mensal" : "Edit Monthly Goal"}
+              {tr("auditUi.editMonthlyGoal")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveGoalSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label htmlFor="monthly-goal-input" className="text-xs font-semibold text-foreground">
-                {lang === "pt" ? "Meta mensal de faturamento (R$)" : "Monthly Revenue Target (R$)"}
+                {tr("auditUi.monthlyRevenueTargetR")}
               </Label>
               <Input
                 id="monthly-goal-input"
@@ -1800,9 +1766,7 @@ function GrowthPage() {
                 autoFocus
               />
               <p className="text-[11px] text-muted-foreground">
-                {lang === "pt"
-                  ? "Defina o valor mensal desejado de faturamento bruto em R$."
-                  : "Set your target gross monthly revenue in R$."}
+                {tr("auditUi.setYourTargetGrossMonthlyRevenueIn")}
               </p>
             </div>
 
@@ -1813,7 +1777,7 @@ function GrowthPage() {
                 onClick={() => setIsEditGoalOpen(false)}
                 className="rounded-xl"
               >
-                {lang === "pt" ? "Cancelar" : "Cancel"}
+                {tr("auditUi.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -1821,7 +1785,7 @@ function GrowthPage() {
                 className="rounded-xl bg-primary text-primary-foreground font-semibold"
               >
                 {isSavingGoal ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                {lang === "pt" ? "Salvar Meta" : "Save Goal"}
+                {tr("auditUi.saveGoal")}
               </Button>
             </div>
           </form>
