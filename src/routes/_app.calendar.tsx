@@ -106,7 +106,7 @@ export const Route = createFileRoute("/_app/calendar")({
 });
 
 // Translation dictionary
-const t = {
+const calendarTranslations = {
   en: {
     langToggle: "PT",
     title: "Teaching Calendar",
@@ -995,7 +995,7 @@ function CalendarPage() {
     alert(t("auditUi.lessonPlanLinked"));
   };
 
-  const currentTranslation = t[lang];
+  const currentTranslation = calendarTranslations[lang];
 
   // Hours for grid display in week/day view (08:00 to 21:00)
   // Grid shading source: teacher availability snapshot (single source of truth)
