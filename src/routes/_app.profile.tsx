@@ -244,8 +244,10 @@ function ProfilePage() {
     );
     const pts = Number(rankRes.data?.points ?? 0);
     setPoints(pts);
-    const pos = rankRes.data?.rank;
-    setRankPosition(pts > 0 && typeof pos === "number" && pos > 0 ? pos : null);
+    const leaderboard = (rankRpcRes.data || []) as Array<{ teacher_id: string; ranking_position: number }>;
+    const mine = leaderboard.find((row) => row.teacher_id === userId);
+    const pos = mine ? Number(mine.ranking_position) : null;
+    setRankPosition(pts > 0 && pos !== null && Number.isFinite(pos) && pos > 0 ? pos : null);
     setCommentsWritten(commentsRes.count ?? 0);
   }, [userId, t.loadError]);
 
