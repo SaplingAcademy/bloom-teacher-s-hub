@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { reportUserError } from "@/lib/user-error";
 import { resolveTeacherName } from "@/lib/teacher-name";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,6 +36,7 @@ import {
   Lightbulb,
   FileText,
   Clock,
+  Camera,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
