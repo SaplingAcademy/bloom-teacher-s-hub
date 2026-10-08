@@ -15,7 +15,7 @@ export class UserFacingError extends Error {
 
 const TECHNICAL_PATTERNS: RegExp[] = [
   /pgrst/i,
-  /\b(?:0[0-9A-Z]|2[0-9A-Z]|3[0-9A-Z]|4[0-9A-Z]|5[0-9A-Z]|P0|XX)[0-9A-Z]{3}\b(?=.*\d)/, // SQLSTATE-like codes (23505, 42P10…)
+  /\b(?:\d{5}|\d{2}[A-Z]\d{2}|P0\d{3}|XX\d{3})\b/, // SQLSTATE codes (23505, 42P10…)
   /duplicate key/i,
   /violates/i,
   /constraint/i,
