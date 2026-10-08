@@ -1,7 +1,7 @@
 import { toast } from "sonner";
-import { getUserItem, setUserItem } from "@/lib/user-storage";
-import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
-import { useState, useEffect } from "react";
+import { reportUserError } from "@/lib/user-error";
+import { resolveTeacherName } from "@/lib/teacher-name";
+import { useState, useEffect, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,63 +62,6 @@ export const Route = createFileRoute("/_app/profile")({
   component: ProfilePage,
 });
 
-interface ProfileData {
-  photo: string;
-  name: string;
-  headline: string;
-  bio: string;
-  country: string;
-  teachingAreas: string[];
-  subjectsTaught: string[];
-  experience: number;
-  linkedin: string;
-  twitter: string;
-  github: string;
-  website: string;
-}
-
-const defaultProfile: ProfileData = {
-  photo: "",
-  name: "Mariana Ramos",
-  headline: "Senior ESL & English Language Coach",
-  bio: "Passionate educator with over 8 years of experience. Specializing in curriculum development, communicative methodologies, and student-centered coaching. Helping learners achieve professional fluency.",
-  country: "Brazil",
-  teachingAreas: ["Adult Education", "Business English", "Exam Preparation"],
-  subjectsTaught: ["General English", "Professional Writing", "IELTS / TOEFL Prep"],
-  experience: 8,
-  linkedin: "https://linkedin.com/in/marianaramos",
-  twitter: "https://twitter.com/marianaramos",
-  github: "",
-  website: "https://marianaramos.bloom.im",
-};
-
-const defaultPosts = [
-  {
-    id: "p1",
-    authorName: "Maria Silva",
-    category: "Question",
-    title: "How do you teach Present Perfect to beginners?",
-    content:
-      "I have a class of adult Spanish speakers who are struggling with the transition between past simple and present perfect. Any specific timeline diagrams or games that have worked well for you?",
-    tags: ["Grammar", "Adults", "Spanish Speakers"],
-    likes: 12,
-    commentsCount: 3,
-    timeAgo: "2 hours ago",
-  },
-  {
-    id: "p2",
-    authorName: "Lucas Meyer",
-    category: "Tip",
-    title: "A speaking activity my students absolutely love",
-    content:
-      "I started doing '1-Minute Elevator Pitches' where students receive a random crazy invention (e.g. solar-powered umbrella) and have to sell it to the class in exactly 60 seconds. It forces them to bypass translation and speak dynamically!",
-    tags: ["Speaking", "Fluency", "Icebreaker"],
-    likes: 24,
-    commentsCount: 1,
-    timeAgo: "4 hours ago",
-  },
-];
-
 const translations = {
   en: {
     langToggle: "PT",
@@ -155,7 +98,18 @@ const translations = {
     socialLinks: "Social Links",
     saveChanges: "Save Changes",
     cancel: "Cancel",
-    xp: "XP",
+    xp: "points",
+    languagesTaught: "Languages taught",
+    noLanguages: "No languages taught added yet.",
+    noBio: "No bio added yet.",
+    notRanked: "Not ranked yet",
+    comingSoon: "Coming soon",
+    postsCreated2: "Discussions published",
+    watersReceived: "Waters received",
+    commentsWritten: "Comments written",
+    saveError: "Could not save your profile. Please try again.",
+    postSaveError: "Could not save this discussion. Please try again.",
+    loadError: "Could not load your community data.",
   },
   pt: {
     langToggle: "EN",
@@ -192,209 +146,136 @@ const translations = {
     socialLinks: "Links Sociais",
     saveChanges: "Salvar Alterações",
     cancel: "Cancelar",
-    xp: "XP",
+    xp: "pontos",
+    languagesTaught: "Idiomas que leciona",
+    noLanguages: "Nenhum idioma de ensino informado ainda.",
+    noBio: "Nenhuma biografia adicionada ainda.",
+    notRanked: "Ainda sem posição no ranque",
+    comingSoon: "Em breve",
+    postsCreated2: "Discussões publicadas",
+    watersReceived: "Regadas recebidas",
+    commentsWritten: "Comentários escritos",
+    saveError: "Não foi possível salvar o perfil. Tente novamente.",
+    postSaveError: "Não foi possível salvar a discussão. Tente novamente.",
+    loadError: "Não foi possível carregar seus dados da comunidade.",
   },
 };
 
 function ProfilePage() {
   const { lang, setLang, t: tr } = useLanguage();
   const { user, profile: authProfile, retryProfileSync } = useAuth();
-  const [localProfile, setLocalProfile] = useState<ProfileData>(defaultProfile);
-  useEffect(() => {
-    if (!user?.id) {
-      setLocalProfile(defaultProfile);
-      return;
-    }
-    try {
-      const saved = getUserItem("bloom.profile.data", user.id);
-      setLocalProfile(saved ? { ...defaultProfile, ...JSON.parse(saved) } : defaultProfile);
-    } catch {
-      setLocalProfile(defaultProfile);
-    }
-  }, [user?.id]);
+  const t = translations[lang];
 
   const profile = {
-    ...localProfile,
-    name: resolveTeacherName(authProfile, user) || sanitizeTeacherName(localProfile.name, user?.email) || "",
-    photo: (authProfile?.avatar_url as string) || localProfile.photo,
-    preferred_language: (authProfile?.preferred_language as string) || "pt-BR",
-    timezone: (authProfile?.timezone as string) || "America/Sao_Paulo",
+    name: resolveTeacherName(authProfile, user) || "",
+    photo: (authProfile?.avatar_url as string) || "",
+    bio: (authProfile?.bio as string) || "",
+    languagesTaught: (Array.isArray(authProfile?.languages_taught)
+      ? authProfile.languages_taught
+      : []) as string[],
+    preferred_language: (authProfile?.locale as string) || (authProfile?.preferred_language as string) || "",
+    timezone: (authProfile?.timezone as string) || "",
   };
 
   const [posts, setPosts] = useState<any[]>([]);
+  const [points, setPoints] = useState(0);
+  const [rankPosition, setRankPosition] = useState<number | null>(null);
+  const [commentsWritten, setCommentsWritten] = useState(0);
 
-  // Edit Profile States
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editName, setEditName] = useState(profile.name);
-  const [editHeadline, setEditHeadline] = useState(profile.headline);
   const [editBio, setEditBio] = useState(profile.bio);
-  const [editCountry, setEditCountry] = useState(profile.country);
-  const [editAreas, setEditAreas] = useState(profile.teachingAreas.join(", "));
-  const [editSubjects, setEditSubjects] = useState(profile.subjectsTaught.join(", "));
-  const [editExperience, setEditExperience] = useState(profile.experience);
-  const [editLinkedin, setEditLinkedin] = useState(profile.linkedin);
-  const [editTwitter, setEditTwitter] = useState(profile.twitter);
-  const [editGithub, setEditGithub] = useState(profile.github);
-  const [editWebsite, setEditWebsite] = useState(profile.website);
   const [editPhoto, setEditPhoto] = useState(profile.photo);
   const [editLanguage, setEditLanguage] = useState(profile.preferred_language || "pt-BR");
   const [editTimezone, setEditTimezone] = useState(profile.timezone || "America/Sao_Paulo");
 
-  // Sync form states with database profile
-  useEffect(() => {
-    if (authProfile) {
-      setEditName(resolveTeacherName(authProfile, user) || "");
-      setEditPhoto(authProfile.avatar_url || "");
-      setEditLanguage(authProfile.preferred_language || "pt-BR");
-      setEditTimezone(authProfile.timezone || "America/Sao_Paulo");
-    }
-  }, [authProfile]);
+  const resetForm = useCallback(() => {
+    setEditName(resolveTeacherName(authProfile, user) || "");
+    setEditPhoto((authProfile?.avatar_url as string) || "");
+    setEditBio((authProfile?.bio as string) || "");
+    setEditLanguage((authProfile?.locale as string) || "pt-BR");
+    setEditTimezone((authProfile?.timezone as string) || "America/Sao_Paulo");
+  }, [authProfile, user]);
 
-  // Edit Discussion States
+  useEffect(() => {
+    if (authProfile) resetForm();
+  }, [authProfile, resetForm]);
+
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editPostTitle, setEditPostTitle] = useState("");
   const [editPostContent, setEditPostContent] = useState("");
-
-  // View Discussion Modal
   const [viewingPost, setViewingPost] = useState<any | null>(null);
 
-  const t = translations[lang];
+  const userId = user?.id;
 
-  // Seeding post and loading list from shared community posts database
-  useEffect(() => {
-    const stored = localStorage.getItem("bloom.community.posts");
-    let currentPosts = [];
-    if (stored) {
-      currentPosts = JSON.parse(stored);
-    } else {
-      currentPosts = [...defaultPosts];
-    }
-
-    const userHasPosts = currentPosts.some(
-      (p: any) =>
-        p.authorName === "You (Teacher)" ||
-        p.authorName === "Você (Professor)" ||
-        p.authorName === profile.name,
-    );
-
-    if (!userHasPosts) {
-      const seedPost = {
-        id: "p-my-seed",
-        authorName: "You (Teacher)",
-        category: "Tip" as const,
-        title: "Designing Interactive Lesson Slides that Boost Engagement",
-        content:
-          "I started using collaborative slide templates where students match items and drag-and-drop elements during live online sessions. It significantly improved camera-on time and talking time!",
-        tags: ["Engagement", "Online Teaching", "Methodology"],
-        likes: 18,
-        commentsCount: 2,
-        timeAgo: "2 days ago",
-        commentsList: [
-          {
-            id: "cm-1",
-            authorName: "Lucas Meyer",
-            content: "This works incredibly well. Drag-and-drop keeps their attention focused.",
-            timeAgo: "1 day ago",
-          },
-        ],
-      };
-      currentPosts = [seedPost, ...currentPosts];
-      localStorage.setItem("bloom.community.posts", JSON.stringify(currentPosts));
-    }
-    setPosts(currentPosts);
-  }, [profile.name]);
-
-  // Save profile changes
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    const updated: ProfileData = {
-      photo: editPhoto,
-      name: editName,
-      headline: editHeadline,
-      bio: editBio,
-      country: editCountry,
-      teachingAreas: editAreas
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      subjectsTaught: editSubjects
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      experience: Number(editExperience) || 0,
-      linkedin: editLinkedin,
-      twitter: editTwitter,
-      github: editGithub,
-      website: editWebsite,
-    };
-    setLocalProfile(updated);
-    if (user?.id) setUserItem("bloom.profile.data", JSON.stringify(updated), user.id);
-    setIsEditOpen(false);
-
-    // Call setLang so language context updates immediately across the whole app
-    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
-    setLang(targetLang);
-
-    // Sync to database if user is logged in
-    if (user?.id) {
-      console.log("[Profile] Syncing updated profile to Supabase database...");
-      // public.profiles is the single canonical profile source; only real columns.
-      const payload = {
-        full_name: editName,
-        avatar_url: editPhoto,
-        locale: editLanguage,
-        timezone: editTimezone,
-      };
-
+  const loadCommunity = useCallback(async () => {
+    if (!userId) return;
+    const [postsRes, rankRes, commentsRes] = await Promise.all([
       supabase
-        .from("profiles")
-        .update(payload)
-        .eq("id", user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error("[Profile] Database update error:", error);
-            toast.error(
-              targetLang === "pt"
-                ? `Não foi possível salvar o perfil: ${error.message}`
-                : `Could not save profile: ${error.message}`,
-            );
-          } else {
-            retryProfileSync();
-          }
-        });
+        .from("community_posts")
+        .select("id, title, content, tags, created_at, updated_at")
+        .eq("author_id", userId)
+        .order("created_at", { ascending: false }),
+      supabase.from("ranking").select("points, rank").eq("teacher_id", userId).maybeSingle(),
+      supabase.from("comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
+    ]);
+    if (postsRes.error || rankRes.error) {
+      reportUserError(postsRes.error || rankRes.error, t.loadError);
     }
-  };
+    const rows = (postsRes.data || []) as any[];
+    const ids = rows.map((r) => r.id);
+    const waters: Record<string, number> = {};
+    const commentCounts: Record<string, number> = {};
+    if (ids.length > 0) {
+      const [rx, cm] = await Promise.all([
+        supabase.from("reactions").select("post_id").eq("type", "water").in("post_id", ids),
+        supabase.from("comments").select("post_id").in("post_id", ids),
+      ]);
+      (rx.data || []).forEach((r: any) => (waters[r.post_id] = (waters[r.post_id] || 0) + 1));
+      (cm.data || []).forEach((c: any) => (commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1));
+    }
+    setPosts(
+      rows.map((r) => ({
+        ...r,
+        waterCount: waters[r.id] || 0,
+        commentsCount: commentCounts[r.id] || 0,
+      })),
+    );
+    const pts = Number(rankRes.data?.points ?? 0);
+    setPoints(pts);
+    const pos = rankRes.data?.rank;
+    setRankPosition(pts > 0 && typeof pos === "number" && pos > 0 ? pos : null);
+    setCommentsWritten(commentsRes.count ?? 0);
+  }, [userId, t.loadError]);
 
-  // Sync state variables back if modal was cancelled
-  const handleCancelProfileEdit = () => {
-    setEditPhoto(profile.photo);
-    setEditName(profile.name);
-    setEditLanguage(profile.preferred_language || "pt-BR");
-    setEditTimezone(profile.timezone || "America/Sao_Paulo");
-    setEditHeadline(profile.headline);
-    setEditBio(profile.bio);
-    setEditCountry(profile.country);
-    setEditAreas(profile.teachingAreas.join(", "));
-    setEditSubjects(profile.subjectsTaught.join(", "));
-    setEditExperience(profile.experience);
-    setEditLinkedin(profile.linkedin);
-    setEditTwitter(profile.twitter);
-    setEditGithub(profile.github);
-    setEditWebsite(profile.website);
+  useEffect(() => {
+    loadCommunity();
+  }, [loadCommunity]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+    const payload = {
+      full_name: editName.trim() || null,
+      avatar_url: editPhoto || null,
+      bio: editBio.trim() || null,
+      locale: editLanguage,
+      timezone: editTimezone,
+    };
+    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+    if (error) {
+      toast.error(reportUserError(error, t.saveError));
+      return;
+    }
+    setLang(targetLang);
     setIsEditOpen(false);
+    retryProfileSync();
   };
 
-  // CRUD on Posts
-  const handleDeletePost = (postId: string) => {
-    if (
-      confirm(
-        tr("auditUi.areYouSureYouWantToDelete"),
-      )
-    ) {
-      const updated = posts.filter((p: any) => p.id !== postId);
-      setPosts(updated);
-      localStorage.setItem("bloom.community.posts", JSON.stringify(updated));
-    }
+  const handleCancelProfileEdit = () => {
+    resetForm();
+    setIsEditOpen(false);
   };
 
   const handleStartEditPost = (post: any) => {
@@ -403,38 +284,26 @@ function ProfilePage() {
     setEditPostContent(post.content || "");
   };
 
-  const handleSaveEditPost = (e: React.FormEvent) => {
+  const handleSaveEditPost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPost) return;
-    const updated = posts.map((p: any) => {
-      if (p.id === editingPost.id) {
-        return {
-          ...p,
-          title: editPostTitle,
-          content: editPostContent,
-        };
-      }
-      return p;
-    });
-    setPosts(updated);
-    localStorage.setItem("bloom.community.posts", JSON.stringify(updated));
+    if (!editingPost || !userId) return;
+    const { error } = await supabase
+      .from("community_posts")
+      .update({ title: editPostTitle, content: editPostContent })
+      .eq("id", editingPost.id)
+      .eq("author_id", userId);
+    if (error) {
+      toast.error(reportUserError(error, t.postSaveError));
+      return;
+    }
     setEditingPost(null);
+    loadCommunity();
   };
 
-  // Filters posts to only display user created discussions
-  const myDiscussions = posts.filter(
-    (p: any) =>
-      p.authorName === "You (Teacher)" ||
-      p.authorName === "Você (Professor)" ||
-      p.authorName === profile.name,
-  );
-
-  // Dynamic user statistics calculation
-  const myPostsCount = myDiscussions.length;
-  const myCommentsCount = 12; // Static base + simulated
-  const helpfulAnswers = 8;
-  const likesReceived = myDiscussions.reduce((sum, p) => sum + (p.likes || 0), 0) + 42; // Dynamic + base
-  const resourcesPublished = 3;
+  const myDiscussions = posts;
+  const watersReceived = posts.reduce((sum, p) => sum + (p.waterCount || 0), 0);
+  const formatDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US") : "";
 
   return (
     <div className="space-y-6">
@@ -455,7 +324,7 @@ function ProfilePage() {
                 />
               ) : (
                 <div className="h-28 w-28 rounded-2xl bg-gradient-lilac flex items-center justify-center font-display text-3xl font-extrabold text-lilac-foreground border border-border/80">
-                  {profile.name
+                  {(profile.name || "?")
                     .split(" ")
                     .map((n: string) => n[0])
                     .join("")
@@ -469,113 +338,40 @@ function ProfilePage() {
                 <h2 className="font-display text-2xl font-extrabold text-foreground">
                   {profile.name}
                 </h2>
-                <p className="text-sm font-semibold text-primary mt-0.5">{profile.headline}</p>
                 <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-muted-foreground mt-2 font-medium">
                   <span className="flex items-center gap-1">
-                    <Globe className="h-3.5 w-3.5" />
-                    {profile.country}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="h-3.5 w-3.5" />
-                    {profile.experience} {tr("auditUi.yearsExp")}
-                  </span>
-                  <span className="flex items-center gap-1">
                     <User className="h-3.5 w-3.5" />
-                    {profile.preferred_language === "pt-BR"
+                    {profile.preferred_language.startsWith("pt")
                       ? tr("auditUi.portuguese")
                       : tr("auditUi.english")}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {profile.timezone}
-                  </span>
+                  {profile.timezone && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {profile.timezone}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">{profile.bio}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {profile.bio || <span className="italic">{t.noBio}</span>}
+              </p>
 
-              {/* Badges areas */}
               <div className="space-y-2 pt-2 border-t border-border/50">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
-                    {tr("auditUi.teachingAreas")}
-                  </span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
+                  {t.languagesTaught}
+                </span>
+                {profile.languagesTaught.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {profile.teachingAreas.map((area, idx) => (
-                      <Badge
-                        key={idx}
-                        variant="secondary"
-                        className="text-[10px] py-0 px-2 font-bold bg-secondary/80"
-                      >
-                        {area}
+                    {profile.languagesTaught.map((l, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-[10px] py-0 px-2 font-bold bg-secondary/80">
+                        {l}
                       </Badge>
                     ))}
                   </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
-                    {tr("auditUi.subjectsTaught")}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {profile.subjectsTaught.map((sub, idx) => (
-                      <Badge
-                        key={idx}
-                        variant="outline"
-                        className="text-[10px] py-0 px-2 font-semibold"
-                      >
-                        {sub}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Social Links */}
-              <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-border/50">
-                {profile.linkedin && (
-                  <a
-                    href={profile.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Linkedin className="h-3.5 w-3.5" />
-                    LinkedIn
-                  </a>
-                )}
-                {profile.twitter && (
-                  <a
-                    href={profile.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Twitter className="h-3.5 w-3.5" />
-                    Twitter
-                  </a>
-                )}
-                {profile.github && (
-                  <a
-                    href={profile.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Github className="h-3.5 w-3.5" />
-                    GitHub
-                  </a>
-                )}
-                {profile.website && (
-                  <a
-                    href={profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Link className="h-3.5 w-3.5" />
-                    Website
-                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{t.noLanguages}</p>
                 )}
               </div>
             </div>
@@ -592,8 +388,9 @@ function ProfilePage() {
           {/* FUTURE-READY visual roadmap sections */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
             <div className="flex border-b border-border/60 pb-1 overflow-x-auto gap-4">
-              <span className="text-xs font-bold text-primary border-b-2 border-primary pb-2 shrink-0 cursor-pointer">
+              <span className="text-xs font-semibold text-muted-foreground/60 pb-2 shrink-0 cursor-not-allowed flex items-center gap-1">
                 {tr("auditUi.achievementsBadges")}
+                <Lock className="h-2.5 w-2.5" />
               </span>
               <span className="text-xs font-semibold text-muted-foreground/60 pb-2 shrink-0 cursor-not-allowed flex items-center gap-1">
                 {tr("auditUi.portfolioLessons")}
@@ -605,58 +402,9 @@ function ProfilePage() {
               </span>
             </div>
 
-            {/* Achievements Content */}
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-border/70 p-3 bg-secondary/5 space-y-1.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px]">🎖️</span>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] font-bold py-0">
-                    Unlocked
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {tr("auditUi.founder")}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tr("auditUi.earlyPioneerMemberOfBloom")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/70 p-3 bg-secondary/5 space-y-1.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px]">✍️</span>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] font-bold py-0">
-                    Unlocked
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {tr("auditUi.discussionMentor")}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tr("auditUi.publishedTopicsInTheCommunity")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-dashed border-border/80 p-3 opacity-60 space-y-1.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px]">⭐️</span>
-                  <Badge variant="outline" className="text-[8px] font-bold py-0">
-                    Locked
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {tr("auditUi.starCreator")}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tr("auditUi.sell10ResourcesOnMarketplace")}
-                  </p>
-                </div>
-              </div>
+            <div className="mt-5 text-center py-6 border border-dashed border-border rounded-xl">
+              <Lock className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground font-medium">{t.comingSoon}</p>
             </div>
           </div>
         </div>
@@ -675,7 +423,11 @@ function ProfilePage() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {t.rank}
                 </p>
-                <p className="text-3xl font-extrabold text-primary mt-1">#18</p>
+                {rankPosition ? (
+                  <p className="text-3xl font-extrabold text-primary mt-1">#{rankPosition}</p>
+                ) : (
+                  <p className="text-sm font-semibold text-muted-foreground mt-1">{t.notRanked}</p>
+                )}
               </div>
 
               <div>
@@ -683,27 +435,9 @@ function ProfilePage() {
                   {t.communityScore}
                 </p>
                 <p className="text-2xl font-extrabold text-foreground mt-1">
-                  2,480 <span className="text-xs font-medium text-muted-foreground">{t.xp}</span>
+                  {points.toLocaleString(lang === "pt" ? "pt-BR" : "en-US")}{" "}
+                  <span className="text-xs font-medium text-muted-foreground">{t.xp}</span>
                 </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-muted-foreground mb-1.5">
-                  <span>{t.progress}</span>
-                  <span className="font-bold text-foreground">{t.nextRank}: Top 10</span>
-                </div>
-                <div className="font-mono text-lg text-primary tracking-tight select-none">
-                  ████████░░{" "}
-                  <span className="text-xs font-sans font-bold text-muted-foreground ml-1.5">
-                    80%
-                  </span>
-                </div>
-                <div className="w-full bg-secondary h-2.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="bg-primary h-full rounded-full transition-all duration-300"
-                    style={{ width: "80%" }}
-                  ></div>
-                </div>
               </div>
             </div>
           </div>
@@ -719,28 +453,18 @@ function ProfilePage() {
 
             <ul className="mt-4 divide-y divide-border/40 text-xs font-semibold">
               <li className="flex justify-between items-center py-3">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🌱</span> {tr("auditUi.ideasWateredByCommunity")}
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">{likesReceived || 42}</span>
+                <span className="text-muted-foreground">{t.postsCreated2}</span>
+                <span className="text-foreground font-bold text-sm">{posts.length}</span>
               </li>
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🤝</span> {tr("auditUi.teachersHelped")}
+                  <span>🌱</span> {t.watersReceived}
                 </span>
-                <span className="text-foreground font-bold text-sm">{helpfulAnswers || 18}</span>
+                <span className="text-primary font-extrabold text-sm">{watersReceived}</span>
               </li>
               <li className="flex justify-between items-center py-3">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>✅</span> {tr("auditUi.acceptedSolutions")}
-                </span>
-                <span className="text-foreground font-bold text-sm">{helpfulAnswers > 0 ? Math.floor(helpfulAnswers / 2) : 5}</span>
-              </li>
-              <li className="flex justify-between items-center py-3">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>📚</span> {tr("auditUi.resourcesShared")}
-                </span>
-                <span className="text-foreground font-bold text-sm">{resourcesPublished || 12}</span>
+                <span className="text-muted-foreground">{t.commentsWritten}</span>
+                <span className="text-foreground font-bold text-sm">{commentsWritten}</span>
               </li>
             </ul>
           </div>
@@ -771,8 +495,6 @@ function ProfilePage() {
               <thead>
                 <tr className="border-b border-border/80 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
                   <th className="pb-3 pl-2">{tr("auditUi.publicationTitle")}</th>
-                  <th className="pb-3">{tr("auditUi.category")}</th>
-                  <th className="pb-3 text-center">{tr("auditUi.version")}</th>
                   <th className="pb-3 text-center">{tr("auditUi.waterings")}</th>
                   <th className="pb-3 text-right pr-2">{tr("auditUi.actions")}</th>
                 </tr>
@@ -788,37 +510,13 @@ function ProfilePage() {
                         >
                           {post.title}
                         </p>
-                        {post.isAcceptedSolution && (
-                          <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
-                            ✅ Solução Aceita
-                          </Badge>
-                        )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 font-medium flex items-center gap-2">
-                        <span>Criado: {post.timeAgo || "Recente"}</span>
-                        {post.last_edited_at && (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            • Editado em: {new Date(post.last_edited_at).toLocaleDateString("pt-BR")}
-                          </span>
-                        )}
+                      <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                        {formatDate(post.created_at)}
                       </p>
                     </td>
-                    <td className="py-3.5">
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] py-0 font-bold bg-secondary/80"
-                      >
-                        {post.category === "Question" && (tr("auditUi.question"))}
-                        {post.category === "Tip" && (tr("auditUi.tip"))}
-                        {post.category === "Need Help" && (tr("auditUi.help"))}
-                        {post.category === "Resource" && (tr("auditUi.resource"))}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 text-center font-bold text-muted-foreground">
-                      v{post.version_number || 1}
-                    </td>
-                    <td className="py-3.5 text-center font-bold text-emerald-600 dark:text-emerald-400">
-                      🌱 {post.likes || post.waterCount || 0}
+                    <td className="py-3.5 text-center font-bold text-primary">
+                      🌱 {post.waterCount || 0}
                     </td>
                     <td className="py-3.5 text-right pr-2">
                       <div className="flex items-center justify-end gap-1.5">
@@ -856,7 +554,7 @@ function ProfilePage() {
           </DialogHeader>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 pt-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4">
               <div className="space-y-1">
                 <Label htmlFor="edit-name" className="text-xs font-semibold text-foreground">
                   {t.fullName}
@@ -865,23 +563,10 @@ function ProfilePage() {
                   id="edit-name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  required
                   className="h-10 rounded-xl"
                 />
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="edit-headline" className="text-xs font-semibold text-foreground">
-                  {t.headline}
-                </Label>
-                <Input
-                  id="edit-headline"
-                  value={editHeadline}
-                  onChange={(e) => setEditHeadline(e.target.value)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
             </div>
 
             <div className="space-y-1">
@@ -892,128 +577,8 @@ function ProfilePage() {
                 id="edit-bio"
                 value={editBio}
                 onChange={(e) => setEditBio(e.target.value)}
-                required
                 className="h-10 rounded-xl"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="edit-country" className="text-xs font-semibold text-foreground">
-                  {t.country}
-                </Label>
-                <Input
-                  id="edit-country"
-                  value={editCountry}
-                  onChange={(e) => setEditCountry(e.target.value)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="edit-experience" className="text-xs font-semibold text-foreground">
-                  {t.experience}
-                </Label>
-                <Input
-                  id="edit-experience"
-                  type="number"
-                  value={editExperience}
-                  onChange={(e) => setEditExperience(Number(e.target.value) || 0)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="edit-areas" className="text-xs font-semibold text-foreground">
-                {t.teachingAreas}
-              </Label>
-              <Input
-                id="edit-areas"
-                value={editAreas}
-                onChange={(e) => setEditAreas(e.target.value)}
-                placeholder="e.g. Adult Education, Business English"
-                required
-                className="h-10 rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="edit-subjects" className="text-xs font-semibold text-foreground">
-                {t.subjectsTaught}
-              </Label>
-              <Input
-                id="edit-subjects"
-                value={editSubjects}
-                onChange={(e) => setEditSubjects(e.target.value)}
-                placeholder="e.g. General English, Professional Writing"
-                required
-                className="h-10 rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2 border-t border-border/50 pt-3">
-              <h4 className="text-xs font-bold text-foreground">{t.socialLinks}</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-linkedin"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    LinkedIn
-                  </Label>
-                  <Input
-                    id="edit-linkedin"
-                    value={editLinkedin}
-                    onChange={(e) => setEditLinkedin(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-twitter"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    Twitter / X
-                  </Label>
-                  <Input
-                    id="edit-twitter"
-                    value={editTwitter}
-                    onChange={(e) => setEditTwitter(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-github"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    GitHub
-                  </Label>
-                  <Input
-                    id="edit-github"
-                    value={editGithub}
-                    onChange={(e) => setEditGithub(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-website"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    Website
-                  </Label>
-                  <Input
-                    id="edit-website"
-                    value={editWebsite}
-                    onChange={(e) => setEditWebsite(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="space-y-2 border-t border-border/50 pt-3">
@@ -1144,18 +709,18 @@ function ProfilePage() {
                   variant="secondary"
                   className="text-[10px] shrink-0 font-bold bg-secondary/80"
                 >
-                  {viewingPost.category}
+                  {(viewingPost.tags || []).join(", ")}
                 </Badge>
               </DialogHeader>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-full bg-gradient-lilac flex items-center justify-center font-display text-[9px] font-extrabold text-lilac-foreground">
-                    {profile.name.substring(0, 2).toUpperCase()}
+                    {(profile.name || "?").substring(0, 2).toUpperCase()}
                   </div>
                   <span className="text-xs font-bold text-foreground">{profile.name}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    • {viewingPost.timeAgo || "Recently"}
+                    • {formatDate(viewingPost.created_at)}
                   </span>
                 </div>
 
@@ -1166,7 +731,7 @@ function ProfilePage() {
                 <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground pt-1">
                   <span className="flex items-center gap-1">
                     <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                    {viewingPost.likes || 0} {tr("auditUi.likes")}
+                    🌱 {viewingPost.waterCount || 0}
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
