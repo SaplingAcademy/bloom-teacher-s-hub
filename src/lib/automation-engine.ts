@@ -817,18 +817,19 @@ export async function convertLeadToStudentAutomation(params: {
 
     // 2. If schedules provided, insert student_schedules and trigger 8-week calendar event generation
     if (schedules.length > 0 && studentId) {
-      const scheduleRows = schedules.map((sch) => ({
-        student_id: studentId,
-        weekday: sch.weekday,
-        start_time: formatTimeHHMMSS(sch.startTime),
-        end_time: calculateEndTime(sch.startTime, sch.duration || 60),
-      }));
+      const { insertStudentSchedules } = await import("@/lib/student-schedules");
+      // Plain INSERT: several lessons may share a weekday (no student_id+weekday uniqueness).
+      const insertedRows = await insertStudentSchedules(
+        studentId,
+        schedules.map((s: any) => ({
+          weekday: s.weekday,
+          startTime: s.startTime,
+          duration: s.duration || 60,
+          deliveryMode: s.deliveryMode === "In person" ? "In person" : "Online",
+          locationLink: s.locationLink || s.meetingUrl || "",
+        })),
+      );
 
-      await supabase.from("student_schedules").upsert(scheduleRows, {
-        onConflict: "student_id,weekday",
-      });
-
-      // Synchronize 8-week calendar events
       const { syncStudentSchedulesToSupabaseEvents } = await import("@/lib/calendar-sync");
       await syncStudentSchedulesToSupabaseEvents(
         studentId,
@@ -837,11 +838,7 @@ export async function convertLeadToStudentAutomation(params: {
         level as any,
         focus as any,
         "Private",
-        schedules.map((s) => ({
-          weekday: s.weekday,
-          startTime: s.startTime,
-          duration: s.duration,
-        }))
+        insertedRows,
       );
     }
 
