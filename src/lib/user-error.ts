@@ -98,3 +98,23 @@ export function reportUserError(error: unknown, fallback?: string, context?: str
   if (error) console.error(`[Bloom error]${context ? ` ${context}` : ""}`, error);
   return toUserMessage(error, fallback);
 }
+
+let guardInstalled = false;
+
+/**
+ * Safety net: wraps sonner's toast.error so any string/error that slipped through
+ * without explicit handling is sanitized. Success toasts are untouched.
+ */
+export function installToastErrorGuard(toastApi: { error: (message: any, data?: any) => any }) {
+  if (guardInstalled) return;
+  guardInstalled = true;
+  const original = toastApi.error.bind(toastApi);
+  toastApi.error = (message: any, data?: any) => {
+    if (typeof message === "string" || message instanceof Error) {
+      const safe = toUserMessage(message);
+      if (safe !== message) console.error("[Bloom error] technical toast sanitized:", message);
+      return original(safe, data);
+    }
+    return original(message, data);
+  };
+}
