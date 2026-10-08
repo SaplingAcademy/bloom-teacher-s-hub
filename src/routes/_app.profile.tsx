@@ -445,6 +445,23 @@ function ProfilePage() {
                   <p className="text-xs text-muted-foreground italic">{t.noLanguages}</p>
                 )}
               </div>
+
+              <div className="space-y-2 pt-2 border-t border-border/50">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
+                  {t.expertiseAreas}
+                </span>
+                {profile.expertiseAreas.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.expertiseAreas.map((area, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-[10px] py-0 px-2 font-bold bg-secondary/80">
+                        {area}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{t.noExpertise}</p>
+                )}
+              </div>
             </div>
 
             <button
