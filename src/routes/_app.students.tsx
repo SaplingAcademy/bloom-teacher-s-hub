@@ -2863,8 +2863,8 @@ function StudentsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Private">Private</SelectItem>
-                        <SelectItem value="Group">Group</SelectItem>
+                        <SelectItem value="Private">{formatStatus("Private")}</SelectItem>
+                        <SelectItem value="Group">{formatStatus("Group")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3047,9 +3047,9 @@ function StudentsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="Pix">Pix</SelectItem>
-                                      <SelectItem value="Bank Transfer">Boleto / Transferência</SelectItem>
-                                      <SelectItem value="Credit Card">Cartão de Crédito</SelectItem>
-                                      <SelectItem value="Cash">Dinheiro</SelectItem>
+                                      <SelectItem value="Bank Transfer">{formatStatus("Bank Transfer")}</SelectItem>
+                                      <SelectItem value="Credit Card">{formatStatus("Credit Card")}</SelectItem>
+                                      <SelectItem value="Cash">{formatStatus("Cash")}</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -3113,9 +3113,9 @@ function StudentsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="Pix">Pix</SelectItem>
-                                      <SelectItem value="Bank Transfer">Boleto / Transferência</SelectItem>
-                                      <SelectItem value="Credit Card">Cartão de Crédito</SelectItem>
-                                      <SelectItem value="Cash">Dinheiro</SelectItem>
+                                      <SelectItem value="Bank Transfer">{formatStatus("Bank Transfer")}</SelectItem>
+                                      <SelectItem value="Credit Card">{formatStatus("Credit Card")}</SelectItem>
+                                      <SelectItem value="Cash">{formatStatus("Cash")}</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>

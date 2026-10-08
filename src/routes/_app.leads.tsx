@@ -1019,12 +1019,9 @@ function LeadsPage() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="English">Inglês (English)</SelectItem>
-                    <SelectItem value="Spanish">Espanhol (Español)</SelectItem>
-                    <SelectItem value="French">Francês (Français)</SelectItem>
-                    <SelectItem value="German">Alemão (Deutsch)</SelectItem>
-                    <SelectItem value="Italian">Italiano</SelectItem>
-                    <SelectItem value="Portuguese">Português (para estrangeiros)</SelectItem>
+                    {(["English", "Spanish", "French", "German", "Italian", "Portuguese"] as const).map((language) => (
+                      <SelectItem key={language} value={language}>{formatLanguageLabel(language, lang)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1039,12 +1036,9 @@ function LeadsPage() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="A1">A1 - Iniciante</SelectItem>
-                    <SelectItem value="A2">A2 - Básico</SelectItem>
-                    <SelectItem value="B1">B1 - Intermediário</SelectItem>
-                    <SelectItem value="B2">B2 - Usuário Independente</SelectItem>
-                    <SelectItem value="C1">C1 - Avançado</SelectItem>
-                    <SelectItem value="C2">C2 - Proficiente</SelectItem>
+                    {(["A1", "A2", "B1", "B2", "C1", "C2"] as const).map((level) => (
+                      <SelectItem key={level} value={level}>{formatStatus(level)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1057,12 +1051,9 @@ function LeadsPage() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General English">Inglês Geral</SelectItem>
-                    <SelectItem value="Business">Business / Profissional</SelectItem>
-                    <SelectItem value="Conversation">Conversação</SelectItem>
-                    <SelectItem value="Exam Prep">Preparatório para Exames</SelectItem>
-                    <SelectItem value="Travel">Viagens</SelectItem>
-                    <SelectItem value="Kids / Teens">Kids & Teens</SelectItem>
+                    {(["General English", "Business", "Conversation", "Exam Prep", "Travel", "Kids / Teens"] as const).map((focus) => (
+                      <SelectItem key={focus} value={focus}>{formatStatus(focus)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

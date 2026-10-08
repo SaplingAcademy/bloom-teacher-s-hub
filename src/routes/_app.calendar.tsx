@@ -1883,7 +1883,7 @@ function CalendarPage() {
                     />
                   </div>
                 ) : (
-                  <span className="text-xs text-muted-foreground/60 italic pr-8">Closed</span>
+                  <span className="text-xs text-muted-foreground/60 italic pr-8">{t("calendarUi.closed")}</span>
                 )}
               </div>
             ))}
@@ -1891,14 +1891,14 @@ function CalendarPage() {
             <div className="flex items-center justify-end gap-2 pt-4">
               <DialogClose asChild>
                 <button className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-card px-4 text-xs font-bold text-foreground transition-all hover:bg-secondary cursor-pointer">
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </DialogClose>
               <button
                 onClick={handleSaveAvail}
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 cursor-pointer"
               >
-                Save Availability
+                {t("calendarUi.saveAvailability")}
               </button>
             </div>
           </div>
@@ -1923,7 +1923,7 @@ function CalendarPage() {
               {studentsList.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border p-3 text-center space-y-2 bg-secondary/20">
                   <p className="text-xs text-muted-foreground">
-                    {lang === "pt" ? "Você ainda não cadastrou nenhum aluno." : "You haven't added any students yet."}
+                    {t("calendarUi.noStudents")}
                   </p>
                   <Button
                     type="button"
@@ -1979,7 +1979,7 @@ function CalendarPage() {
                 id="add-name"
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
-                placeholder="e.g. Lucas Meyer / Reunião"
+                placeholder={t("calendarUi.namePlaceholder")}
                 required
                 className="h-10 rounded-xl"
               />
@@ -1989,7 +1989,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-date" className="text-xs font-semibold text-foreground">
-                  Date
+                  {t("calendarUi.date")}
                 </Label>
                 <Input
                   id="add-date"
@@ -2003,7 +2003,7 @@ function CalendarPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="add-time" className="text-xs font-semibold text-foreground">
-                  Start Time
+                  {t("calendarUi.startTime")}
                 </Label>
                 <Input
                   id="add-time"
@@ -2020,7 +2020,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-duration" className="text-xs font-semibold text-foreground">
-                  Duration (Minutes)
+                  {t("calendarUi.durationMinutes")}
                 </Label>
                 <Select
                   value={String(addDuration)}
@@ -2041,15 +2041,15 @@ function CalendarPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="add-type" className="text-xs font-semibold text-foreground">
-                  Class Type
+                  {t("calendarUi.classType")}
                 </Label>
                 <Select value={addType} onValueChange={(val: any) => setAddType(val)}>
                   <SelectTrigger id="add-type" className="h-10 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Private">Private</SelectItem>
-                    <SelectItem value="Group">Group</SelectItem>
+                    <SelectItem value="Private">{formatStatus("Private")}</SelectItem>
+                    <SelectItem value="Group">{formatStatus("Group")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2059,7 +2059,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-level" className="text-xs font-semibold text-foreground">
-                  CEFR Level
+                  {t("calendarUi.cefrLevel")}
                 </Label>
                 <Select value={addLevel} onValueChange={(val: any) => setAddLevel(val)}>
                   <SelectTrigger id="add-level" className="h-10 rounded-xl">
@@ -2078,21 +2078,21 @@ function CalendarPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="add-focus" className="text-xs font-semibold text-foreground">
-                  Course Focus
+                  {t("calendarUi.courseFocus")}
                 </Label>
                 <Select value={addFocus} onValueChange={(val: any) => setAddFocus(val)}>
                   <SelectTrigger id="add-focus" className="h-10 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General English">General English</SelectItem>
-                    <SelectItem value="Business English">Business English</SelectItem>
-                    <SelectItem value="Travel">Travel</SelectItem>
-                    <SelectItem value="Conversation">Conversation</SelectItem>
+                    <SelectItem value="General English">{formatStatus("General English")}</SelectItem>
+                    <SelectItem value="Business English">{formatStatus("Business English")}</SelectItem>
+                    <SelectItem value="Travel">{formatStatus("Travel")}</SelectItem>
+                    <SelectItem value="Conversation">{formatStatus("Conversation")}</SelectItem>
                     <SelectItem value="IELTS">IELTS</SelectItem>
                     <SelectItem value="TOEFL">TOEFL</SelectItem>
                     <SelectItem value="Cambridge">Cambridge</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Other">{formatStatus("Other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2102,7 +2102,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-mode" className="text-xs font-semibold text-foreground">
-                  Format
+                  {t("calendarUi.format")}
                 </Label>
                 <Select value={addMode} onValueChange={(val: any) => setAddMode(val)}>
                   <SelectTrigger id="add-mode" className="h-10 rounded-xl">
@@ -2110,14 +2110,14 @@ function CalendarPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Online">Online</SelectItem>
-                    <SelectItem value="In person">In person</SelectItem>
+                    <SelectItem value="In person">{formatStatus("In person")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1">
                 <Label htmlFor="add-link" className="text-xs font-semibold text-foreground">
-                  Meeting Link / Location
+                  {t("calendarUi.meetingLinkLocation")}
                 </Label>
                 <Input
                   id="add-link"
@@ -2135,14 +2135,14 @@ function CalendarPage() {
                   type="button"
                   className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </DialogClose>
               <button
                 type="submit"
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all cursor-pointer"
               >
-                Schedule Class
+                {t("calendarUi.scheduleClass")}
               </button>
             </div>
           </form>

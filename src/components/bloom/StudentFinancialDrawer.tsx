@@ -65,7 +65,7 @@ export function StudentFinancialDrawer({
   financialSummary,
   onOpenRenewalModal,
 }: StudentFinancialDrawerProps) {
-  const { lang } = useLanguage();
+  const { lang, t, formatStatus } = useLanguage();
   const [activeTab, setActiveTab] = useState<"charges" | "history" | "agreements" | "timeline">("charges");
   const [loading, setLoading] = useState<boolean>(true);
   const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
@@ -293,7 +293,7 @@ export function StudentFinancialDrawer({
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2">
                         <Package className="w-4 h-4 text-emerald-600" />
-                        Pacote Atual
+                        {t("auditUi.currentPackage")}
                       </h4>
 
                       <div className="p-5 rounded-2xl border-2 border-emerald-600/40 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-3 shadow-sm">
@@ -303,7 +303,7 @@ export function StudentFinancialDrawer({
                               {currentAgreement.packageName}
                             </span>
                             <p className="text-xs text-muted-foreground">
-                              Vigência: {currentAgreement.startedAt.split("-").reverse().join("/")} até {currentAgreement.endedAt ? currentAgreement.endedAt.split("-").reverse().join("/") : "Em andamento"}
+                              {t("auditUi.term")}: {currentAgreement.startedAt.split("-").reverse().join("/")} {t("auditUi.until")} {currentAgreement.endedAt ? currentAgreement.endedAt.split("-").reverse().join("/") : t("auditUi.ongoing")}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -318,22 +318,22 @@ export function StudentFinancialDrawer({
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-2 border-t border-emerald-200/60 dark:border-emerald-900/40">
                           <div>
-                             <span className="text-muted-foreground block">{currentAgreement.billingModel === "monthly" ? "Mensalidade" : "Valor"}</span>
+                             <span className="text-muted-foreground block">{currentAgreement.billingModel === "monthly" ? t("auditUi.monthlyFee") : t("auditUi.value")}</span>
                              <strong className="text-foreground">{currentAgreement.agreementValueLabel}</strong>
                           </div>
                           <div>
-                             <span className="text-muted-foreground block">Condição</span>
+                             <span className="text-muted-foreground block">{t("auditUi.terms")}</span>
                              <strong className="text-foreground">{currentAgreement.paymentTermsLabel}</strong>
                           </div>
                           <div>
-                            <span className="text-muted-foreground block">Progresso</span>
+                            <span className="text-muted-foreground block">{t("auditUi.progress")}</span>
                             <strong className="text-emerald-700 dark:text-emerald-400">
                               {currentAgreement.progressLabel}
                             </strong>
                           </div>
                           <div>
-                            <span className="text-muted-foreground block">Pagamento</span>
-                            <strong className="text-foreground">{currentAgreement.paymentMethod}</strong>
+                            <span className="text-muted-foreground block">{t("auditUi.payment")}</span>
+                            <strong className="text-foreground">{formatStatus(currentAgreement.paymentMethod)}</strong>
                           </div>
                         </div>
                       </div>
@@ -344,12 +344,12 @@ export function StudentFinancialDrawer({
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                       <History className="w-4 h-4 text-stone-500" />
-                      Pacotes Anteriores
+                      {t("auditUi.previousPackages")}
                     </h4>
 
                     {pastAgreements.length === 0 ? (
                       <p className="text-xs text-muted-foreground italic py-2">
-                        Nenhum contrato anterior registrado.
+                        {t("auditUi.noPreviousAgreement")}
                       </p>
                     ) : (
                       <div className="space-y-3 divide-y divide-border/40">
