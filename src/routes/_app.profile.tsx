@@ -185,6 +185,15 @@ function ProfilePage() {
       : []) as string[],
     preferred_language: (authProfile?.locale as string) || (authProfile?.preferred_language as string) || "",
     timezone: (authProfile?.timezone as string) || "",
+    headline: (authProfile?.professional_headline as string) || "",
+    country: (authProfile?.country as string) || "",
+    yearsExperience:
+      authProfile?.years_experience === null || authProfile?.years_experience === undefined
+        ? null
+        : Number(authProfile.years_experience),
+    expertiseAreas: (Array.isArray(authProfile?.expertise_areas)
+      ? authProfile.expertise_areas
+      : []) as string[],
   };
 
   const [posts, setPosts] = useState<any[]>([]);
@@ -198,6 +207,13 @@ function ProfilePage() {
   const [editPhoto, setEditPhoto] = useState(profile.photo);
   const [editLanguage, setEditLanguage] = useState(profile.preferred_language || "pt-BR");
   const [editTimezone, setEditTimezone] = useState(profile.timezone || "America/Sao_Paulo");
+  const [editHeadline, setEditHeadline] = useState(profile.headline);
+  const [editCountry, setEditCountry] = useState(profile.country);
+  const [editYears, setEditYears] = useState(
+    profile.yearsExperience === null ? "" : String(profile.yearsExperience),
+  );
+  const [editExpertise, setEditExpertise] = useState<string[]>(profile.expertiseAreas);
+  const [newExpertise, setNewExpertise] = useState("");
 
   const resetForm = useCallback(() => {
     setEditName(resolveTeacherName(authProfile, user) || "");
@@ -205,6 +221,12 @@ function ProfilePage() {
     setEditBio((authProfile?.bio as string) || "");
     setEditLanguage((authProfile?.locale as string) || "pt-BR");
     setEditTimezone((authProfile?.timezone as string) || "America/Sao_Paulo");
+    setEditHeadline((authProfile?.professional_headline as string) || "");
+    setEditCountry((authProfile?.country as string) || "");
+    const yrs = authProfile?.years_experience;
+    setEditYears(yrs === null || yrs === undefined ? "" : String(yrs));
+    setEditExpertise(Array.isArray(authProfile?.expertise_areas) ? authProfile.expertise_areas : []);
+    setNewExpertise("");
   }, [authProfile, user]);
 
   useEffect(() => {
