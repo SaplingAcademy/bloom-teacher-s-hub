@@ -97,7 +97,7 @@ const KANBAN_STAGES = [
 
 function LeadsPage() {
   const { user } = useAuth();
-  const { t, formatStatus } = useLanguage();
+  const { lang, t, formatStatus } = useLanguage();
   const { languages: teacherLanguages, hasConfiguredLanguages, formatLanguageLabel } = useTeacherLanguages();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
@@ -546,7 +546,7 @@ function LeadsPage() {
                               handleRegisterInteraction(lead);
                             }}
                           >
-                            <MessageSquare className="w-3 h-3" /> Registrar Interação
+                            <MessageSquare className="w-3 h-3" /> {t("leadsUi.registerInteraction")}
                           </Button>
                         )}
                       </div>
@@ -564,13 +564,13 @@ function LeadsPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-xs text-muted-foreground font-semibold border-b border-border">
                 <tr>
-                  <th className="p-3.5">Nome do Lead</th>
-                  <th className="p-3.5">Contato</th>
-                  <th className="p-3.5">Estágio</th>
-                  <th className="p-3.5">Idioma / Nível</th>
-                  <th className="p-3.5">Valor Potencial</th>
-                  <th className="p-3.5">Origem</th>
-                  <th className="p-3.5 text-right">Ações</th>
+                  <th className="p-3.5">{t("leadsUi.leadName")}</th>
+                  <th className="p-3.5">{t("leadsUi.contact")}</th>
+                  <th className="p-3.5">{t("leadsUi.stage")}</th>
+                  <th className="p-3.5">{t("leadsUi.languageAndLevel")}</th>
+                  <th className="p-3.5">{t("leads.potentialValueLabel")}</th>
+                  <th className="p-3.5">{t("leadsUi.source")}</th>
+                  <th className="p-3.5 text-right">{t("leadsUi.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -583,7 +583,7 @@ function LeadsPage() {
                     </td>
                     <td className="p-3.5">
                       <Badge variant="outline" className="text-xs">
-                        {lead.stage}
+                        {formatStatus(lead.stage)}
                       </Badge>
                     </td>
                     <td className="p-3.5 text-xs">
@@ -595,7 +595,7 @@ function LeadsPage() {
                     <td className="p-3.5 text-xs capitalize">{lead.source || "-"}</td>
                     <td className="p-3.5 text-right">
                       <Button size="sm" variant="outline" onClick={() => setSelectedLead(lead)} className="h-8 text-xs">
-                        Ver Detalhes
+                        {t("leadsUi.viewDetails")}
                       </Button>
                     </td>
                   </tr>
@@ -611,20 +611,20 @@ function LeadsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" /> Adicionar Novo Lead
+              <UserPlus className="w-5 h-5 text-primary" /> {t("leads.createNewLeadTitle")}
             </DialogTitle>
             <DialogDescription>
-              Cadastre um novo contato. A automação Bloom criará tarefas de acompanhamento automaticamente.
+              {t("leadsUi.createDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateLead} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="full_name">Nome Completo *</Label>
+              <Label htmlFor="full_name">{t("leads.fullNameLabel")} *</Label>
               <Input
                 id="full_name"
                 required
-                placeholder="Ex: Mariana Silva"
+                placeholder={t("leadsUi.namePlaceholder")}
                 value={newLeadForm.full_name}
                 onChange={(e) => setNewLeadForm({ ...newLeadForm, full_name: e.target.value })}
               />
@@ -632,7 +632,7 @@ function LeadsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="phone">WhatsApp / Telefone</Label>
+                <Label htmlFor="phone">{t("leads.phoneLabel")}</Label>
                 <Input
                   id="phone"
                   placeholder="(11) 99999-9999"
@@ -642,7 +642,7 @@ function LeadsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="email">{t("leads.emailLabel")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -655,7 +655,7 @@ function LeadsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Origem do Contato</Label>
+                <Label>{t("leads.sourceLabel")}</Label>
                 <Select
                   value={newLeadForm.source}
                   onValueChange={(val) => setNewLeadForm({ ...newLeadForm, source: val })}
@@ -664,15 +664,15 @@ function LeadsPage() {
                   <SelectContent>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="website">Site / Form</SelectItem>
-                    <SelectItem value="referral">Indicação</SelectItem>
-                    <SelectItem value="other">Outro</SelectItem>
+                    <SelectItem value="website">{t("leadsUi.websiteForm")}</SelectItem>
+                    <SelectItem value="referral">{t("leadsUi.referral")}</SelectItem>
+                    <SelectItem value="other">{t("leadsUi.other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label>Idioma de Interesse</Label>
+                <Label>{t("leadsUi.languageOfInterest")}</Label>
                 <Select
                   value={newLeadForm.language_studied}
                   onValueChange={(val) => setNewLeadForm({ ...newLeadForm, language_studied: val })}
@@ -682,12 +682,12 @@ function LeadsPage() {
                     {hasConfiguredLanguages ? (
                       teacherLanguages.map((langItem) => (
                         <SelectItem key={langItem} value={langItem}>
-                          {formatLanguageLabel(langItem, "pt")}
+                          {formatLanguageLabel(langItem, lang)}
                         </SelectItem>
                       ))
                     ) : (
                       <SelectItem value={newLeadForm.language_studied || "English"}>
-                        {formatLanguageLabel(newLeadForm.language_studied || "English", "pt")}
+                        {formatLanguageLabel(newLeadForm.language_studied || "English", lang)}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -696,10 +696,10 @@ function LeadsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Observações Iniciais</Label>
+              <Label htmlFor="notes">{t("leadsUi.initialNotes")}</Label>
               <Textarea
                 id="notes"
-                placeholder="Ex: Quer aprender inglês para negócios e viagem em outubro."
+                placeholder={t("leadsUi.notesPlaceholder")}
                 rows={2}
                 value={newLeadForm.notes}
                 onChange={(e) => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
@@ -708,10 +708,10 @@ function LeadsPage() {
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Criando..." : "Salvar Lead"}
+                {submitting ? t("leadsUi.creating") : t("leads.saveLeadBtn")}
               </Button>
             </DialogFooter>
           </form>
@@ -726,7 +726,7 @@ function LeadsPage() {
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-xl font-bold">{selectedLead.full_name}</DialogTitle>
                 <Badge variant="outline" className="text-xs px-2.5 py-0.5">
-                  {selectedLead.stage}
+                  {formatStatus(selectedLead.stage)}
                 </Badge>
               </div>
               <DialogDescription>
@@ -738,36 +738,36 @@ function LeadsPage() {
               {/* Quick Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-muted/40 p-3.5 rounded-lg border border-border text-xs">
                 <div>
-                  <span className="text-muted-foreground block">Telefone</span>
+                  <span className="text-muted-foreground block">{t("leads.phoneLabel")}</span>
                   <span className="font-medium text-card-foreground">{selectedLead.phone || "Não informado"}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block">E-mail</span>
+                  <span className="text-muted-foreground block">{t("leads.emailLabel")}</span>
                   <span className="font-medium text-card-foreground truncate block">{selectedLead.email || "Não informado"}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block">Idioma / Nível</span>
+                  <span className="text-muted-foreground block">{t("leadsUi.languageAndLevel")}</span>
                   <span className="font-medium text-card-foreground">{selectedLead.language_studied || "Inglês"} ({selectedLead.level || "A1"})</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block">Valor Potencial</span>
+                  <span className="text-muted-foreground block">{t("leads.potentialValueLabel")}</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
                     {selectedLead.potential_value ? formatReaisToBRL(selectedLead.potential_value) : "Pendente"}
                   </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block">Origem</span>
+                  <span className="text-muted-foreground block">{t("leadsUi.source")}</span>
                   <span className="font-medium text-card-foreground capitalize">{selectedLead.source || "Manual"}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block">Modalidade</span>
+                  <span className="text-muted-foreground block">{t("leadsUi.modality")}</span>
                   <span className="font-medium text-card-foreground">{selectedLead.modality || "Online"}</span>
                 </div>
               </div>
 
               {/* Action Buttons Bar */}
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações de Automação Interna</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("leadsUi.automationActions")}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     size="sm"
@@ -775,7 +775,7 @@ function LeadsPage() {
                     className="h-9 text-xs justify-start gap-2"
                     onClick={() => handleRegisterInteraction(selectedLead)}
                   >
-                    <MessageSquare className="w-4 h-4 text-amber-500" /> Registrar Interação
+                    <MessageSquare className="w-4 h-4 text-amber-500" /> {t("leadsUi.registerInteraction")}
                   </Button>
 
                   <Button
@@ -787,7 +787,7 @@ function LeadsPage() {
                       setIsTrialOpen(true);
                     }}
                   >
-                    <Calendar className="w-4 h-4 text-purple-500" /> Agendar Exp. na Agenda
+                    <Calendar className="w-4 h-4 text-purple-500" /> {t("leadsUi.scheduleTrial")}
                   </Button>
 
                   <Button
@@ -799,7 +799,7 @@ function LeadsPage() {
                       setIsProposalOpen(true);
                     }}
                   >
-                    <FileText className="w-4 h-4 text-blue-500" /> Registrar Proposta
+                    <FileText className="w-4 h-4 text-blue-500" /> {t("leads.recordProposal")}
                   </Button>
 
                   <Button
@@ -808,7 +808,7 @@ function LeadsPage() {
                     className="h-9 text-xs justify-start gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={() => openConvertModal(selectedLead)}
                   >
-                    <UserCheck className="w-4 h-4" /> Converter em Aluno
+                    <UserCheck className="w-4 h-4" /> {t("leads.convertToStudent")}
                   </Button>
                 </div>
               </div>
@@ -816,12 +816,12 @@ function LeadsPage() {
               {/* Bloom Activity History */}
               <div className="space-y-3 pt-2">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Histórico de Automação Bloom
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> {t("leadsUi.automationHistory")}
                 </h4>
 
                 {activities.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic bg-muted/20 p-3 rounded-lg border border-dashed border-border">
-                    Nenhuma ação de automação registrada para este lead ainda.
+                    {t("leadsUi.noAutomation")}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -850,7 +850,7 @@ function LeadsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-purple-500" /> Agendar Aula Experimental
+              <Calendar className="w-5 h-5 text-purple-500" /> {t("leads.trialLesson")}
             </DialogTitle>
             <DialogDescription>
               Agende a aula experimental para {selectedLead?.full_name}. Isso criará o evento na Agenda e gerará as tarefas de confirmação.
@@ -860,7 +860,7 @@ function LeadsPage() {
           <form onSubmit={handleScheduleTrial} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="trial_date">Data *</Label>
+                <Label htmlFor="trial_date">{t("leads.trialDateLabel")} *</Label>
                 <Input
                   id="trial_date"
                   type="date"
@@ -871,7 +871,7 @@ function LeadsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="trial_time">Horário *</Label>
+                <Label htmlFor="trial_time">{t("leads.trialTimeLabel")} *</Label>
                 <Input
                   id="trial_time"
                   type="time"
@@ -884,10 +884,10 @@ function LeadsPage() {
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsTrialOpen(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Agendando..." : "Confirmar Agendamento"}
+                {submitting ? t("leadsUi.scheduling") : t("leads.confirmTrialBtn")}
               </Button>
             </DialogFooter>
           </form>
@@ -899,7 +899,7 @@ function LeadsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" /> Registrar Proposta
+              <FileText className="w-5 h-5 text-blue-500" /> {t("leads.recordProposal")}
             </DialogTitle>
             <DialogDescription>
               Selecione o pacote ou insira o valor potencial oferecido a {selectedLead?.full_name}.
@@ -908,7 +908,7 @@ function LeadsPage() {
 
           <form onSubmit={handleRecordProposal} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Pacote Selecionado</Label>
+              <Label>{t("leads.packageLabel")}</Label>
               <Select
                 value={proposalForm.package_id}
                 onValueChange={(val) => {
@@ -919,7 +919,7 @@ function LeadsPage() {
                   });
                 }}
               >
-                <SelectTrigger><SelectValue placeholder="Selecione um pacote..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("leadsUi.selectPackage")} /></SelectTrigger>
                 <SelectContent>
                   {packages.map((pkg) => {
                     const isTotal = pkg.frequency === "total" || pkg.frequency === "Valor total do curso" || (pkg.frequency && pkg.frequency.toLowerCase().includes("total"));
@@ -956,10 +956,10 @@ function LeadsPage() {
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsProposalOpen(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Salvando..." : "Salvar Proposta"}
+                {submitting ? t("availabilityUi.saving") : t("leads.saveProposalBtn")}
               </Button>
             </DialogFooter>
           </form>
@@ -971,7 +971,7 @@ function LeadsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <UserCheck className="w-5 h-5" /> Converter Lead em Aluno
+              <UserCheck className="w-5 h-5" /> {t("leads.convertToStudent")}
             </DialogTitle>
             <DialogDescription>
               Bloom preencheu os dados com base no lead. Ao confirmar, o aluno será cadastrado, os horários e a Agenda dos próximos 2 meses serão gerados de forma transacional.
@@ -981,7 +981,7 @@ function LeadsPage() {
           <form onSubmit={handleConvertLead} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="convert_name">Nome Completo *</Label>
+                <Label htmlFor="convert_name">{t("leads.fullNameLabel")} *</Label>
                 <Input
                   id="convert_name"
                   required
@@ -991,7 +991,7 @@ function LeadsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="convert_email">E-mail</Label>
+                <Label htmlFor="convert_email">{t("leads.emailLabel")}</Label>
                 <Input
                   id="convert_email"
                   type="email"
@@ -1003,7 +1003,7 @@ function LeadsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="convert_phone">Telefone / WhatsApp</Label>
+                <Label htmlFor="convert_phone">{t("leads.phoneLabel")}</Label>
                 <Input
                   id="convert_phone"
                   value={convertForm.phone}
@@ -1012,7 +1012,7 @@ function LeadsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="convert_language">Idioma Estudado</Label>
+                <Label htmlFor="convert_language">{t("leadsUi.languageStudied")}</Label>
                 <Select
                   value={convertForm.language_studied}
                   onValueChange={(val) => setConvertForm({ ...convertForm, language_studied: val })}
@@ -1032,7 +1032,7 @@ function LeadsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="convert_level">Nível (CEFR)</Label>
+                <Label htmlFor="convert_level">{t("leadsUi.cefrLevel")}</Label>
                 <Select
                   value={convertForm.level}
                   onValueChange={(val) => setConvertForm({ ...convertForm, level: val })}
@@ -1050,7 +1050,7 @@ function LeadsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="convert_focus">Foco do Curso</Label>
+                <Label htmlFor="convert_focus">{t("leadsUi.courseFocus")}</Label>
                 <Select
                   value={convertForm.focus}
                   onValueChange={(val) => setConvertForm({ ...convertForm, focus: val })}
@@ -1069,12 +1069,12 @@ function LeadsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Pacote do Aluno</Label>
+              <Label>{t("leadsUi.studentPackage")}</Label>
               <Select
                 value={convertForm.package_id}
                 onValueChange={(val) => setConvertForm({ ...convertForm, package_id: val })}
               >
-                <SelectTrigger><SelectValue placeholder="Selecione um pacote..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("leadsUi.selectPackage")} /></SelectTrigger>
                 <SelectContent>
                   {packages.map((pkg) => {
                     const isTotal = pkg.frequency === "total" || pkg.frequency === "Valor total do curso" || (pkg.frequency && pkg.frequency.toLowerCase().includes("total"));
@@ -1092,10 +1092,10 @@ function LeadsPage() {
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsConvertOpen(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                {submitting ? "Convertendo..." : "Confirmar Conversão"}
+                {submitting ? t("leadsUi.converting") : t("leads.confirmConvertBtn")}
               </Button>
             </DialogFooter>
           </form>
