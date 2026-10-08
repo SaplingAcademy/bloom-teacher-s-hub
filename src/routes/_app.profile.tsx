@@ -216,7 +216,8 @@ function ProfilePage() {
         .select("id, title, content, tags, created_at, updated_at")
         .eq("author_id", userId)
         .order("created_at", { ascending: false }),
-      supabase.from("ranking").select("points, rank").eq("teacher_id", userId).maybeSingle(),
+      supabase.from("ranking").select("points").eq("teacher_id", userId).maybeSingle(),
+      supabase.rpc("get_community_leaderboard", { period_type: "all", result_limit: 1000 }),
       supabase.from("comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
     ]);
     if (postsRes.error || rankRes.error) {
