@@ -77,7 +77,7 @@ function Avatar({ name, url, size = 9 }: { name: string | null | undefined; url?
   const cls = size === 9 ? "h-9 w-9 text-xs" : "h-7 w-7 text-[10px]";
   if (url) return <img src={url} alt={name ?? ""} className={`${cls} rounded-full object-cover shrink-0`} />;
   return (
-    <div className={`${cls} rounded-full bg-tertiary/20 text-foreground font-semibold flex items-center justify-center shrink-0`}>
+    <div className={`${cls} rounded-full bg-lilac-soft text-foreground font-semibold flex items-center justify-center shrink-0`}>
       {initials(name)}
     </div>
   );
@@ -308,7 +308,7 @@ function CommunityPage() {
       : pos === 2
         ? "bg-primary text-primary-foreground"
         : pos === 3
-          ? "bg-tertiary text-tertiary-foreground"
+          ? "bg-lilac text-lilac-foreground"
           : "bg-muted text-muted-foreground";
 
   return (
