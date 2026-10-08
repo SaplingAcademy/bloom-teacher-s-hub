@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { Language, t as translate, formatStatusLabel as formatStatus, formatWeekdayName as formatWeekday } from "@/lib/i18n";
+import { Language, detectLanguage, matchLanguage, languageToLocale, t as translate, formatStatusLabel as formatStatus, formatWeekdayName as formatWeekday } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 
 interface LanguageContextProps {
@@ -10,78 +10,81 @@ interface LanguageContextProps {
   formatWeekday: (day: string | undefined | null, short?: boolean) => string;
 }
 
+const LANG_KEY = "bloom.dashboard.lang";
+const LANG_MANUAL_KEY = "bloom.dashboard.lang.manual";
+
 const LanguageContext = createContext<LanguageContextProps | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>("pt"); // Default to Portuguese for Bloom Brazil
+  // SSR-safe initial value; the real language is resolved after hydration.
+  const [lang, setLangState] = useState<Language>("pt");
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("bloom.dashboard.lang");
-      if (saved === "en" || saved === "pt") {
-        setLangState(saved);
-      } else {
-        const browserLang = window.navigator.language || "";
-        if (browserLang.toLowerCase().startsWith("pt")) {
-          setLangState("pt");
-          localStorage.setItem("bloom.dashboard.lang", "pt");
-        } else {
-          setLangState("pt"); // Default platform preference is Portuguese
-          localStorage.setItem("bloom.dashboard.lang", "pt");
-        }
-      }
-    }
+  const applyLang = useCallback((next: Language) => {
+    setLangState(next);
+    if (typeof window !== "undefined") localStorage.setItem(LANG_KEY, next);
   }, []);
 
-  // Listen to Supabase auth session to sync interface language from profiles.locale
+  // 1) Before any account preference is known: a manual choice made on this
+  //    device wins, otherwise the browser/device locale decides.
   useEffect(() => {
-    async function syncFromProfile() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("locale")
-            .eq("id", user.id)
-            .maybeSingle();
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem(LANG_KEY);
+    const manual = localStorage.getItem(LANG_MANUAL_KEY) === "1";
+    const savedLang = matchLanguage(saved);
+    if (manual && savedLang) {
+      applyLang(savedLang);
+    } else {
+      const nav = window.navigator;
+      applyLang(detectLanguage(nav.languages?.length ? nav.languages : [nav.language]));
+    }
+  }, [applyLang]);
 
-          const dbLang = profile?.locale;
-          if (dbLang) {
-            const parsedLang: Language = String(dbLang).toLowerCase().startsWith("pt") ? "pt" : "en";
-            setLangState(parsedLang);
-            if (typeof window !== "undefined") {
-              localStorage.setItem("bloom.dashboard.lang", parsedLang);
-            }
-          }
-        }
+  // 2) Once signed in, profiles.locale (the teacher's saved choice) prevails.
+  useEffect(() => {
+    let active = true;
+    async function syncFromProfile(userId: string | undefined) {
+      if (!userId) return;
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("locale")
+          .eq("id", userId)
+          .maybeSingle();
+        const dbLang = matchLanguage(profile?.locale);
+        if (active && dbLang) applyLang(dbLang);
       } catch (err) {
         console.warn("[useLanguage] Error syncing profile language:", err);
       }
     }
-    syncFromProfile();
-  }, []);
+    supabase.auth.getUser().then(({ data }) => syncFromProfile(data.user?.id));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") syncFromProfile(session?.user?.id);
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [applyLang]);
 
+  // Manual choice: remembered on this device and saved to profiles.locale.
   const setLang = useCallback(async (newLang: Language) => {
-    setLangState(newLang);
+    applyLang(newLang);
     if (typeof window !== "undefined") {
-      localStorage.setItem("bloom.dashboard.lang", newLang);
+      localStorage.setItem(LANG_MANUAL_KEY, "1");
       window.dispatchEvent(new Event("storage"));
     }
-
-    // Persist to user profile in Supabase if logged in
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const prefVal = newLang === "pt" ? "pt-BR" : "en-US";
         await supabase
           .from("profiles")
-          .update({ locale: prefVal })
+          .update({ locale: languageToLocale(newLang) })
           .eq("id", user.id);
       }
     } catch (err) {
       console.warn("[useLanguage] Error persisting language to profile:", err);
     }
-  }, []);
+  }, [applyLang]);
 
   const t = useCallback((key: string, fallback?: string) => {
     return translate(key, lang, fallback);

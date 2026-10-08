@@ -10,7 +10,7 @@
 
 const OWNER_KEY = "bloom.storage.owner";
 /** Device-level preferences that are not personal data and survive logout. */
-const DEVICE_KEYS = new Set(["bloom.dashboard.lang", "bloom_sidebar_pinned"]);
+const DEVICE_KEYS = new Set(["bloom.dashboard.lang", "bloom.dashboard.lang.manual", "bloom_sidebar_pinned"]);
 
 let currentUserId: string | null = null;
 

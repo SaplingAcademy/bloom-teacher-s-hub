@@ -1,3 +1,4 @@
+import { formatOnboardingPaymentMethod } from "@/lib/i18n";
 import { toUserMessage } from "@/lib/user-error";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
@@ -1079,9 +1080,9 @@ function FinancePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Pix">Pix</SelectItem>
-                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="Credit Card">Credit Card</SelectItem>
-                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Bank Transfer">{formatOnboardingPaymentMethod("Bank Transfer", lang)}</SelectItem>
+                    <SelectItem value="Credit Card">{formatOnboardingPaymentMethod("Credit Card", lang)}</SelectItem>
+                    <SelectItem value="Cash">{formatOnboardingPaymentMethod("Cash", lang)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1146,7 +1147,7 @@ function FinancePage() {
                        {pkg.duration} min
                     </span>
                     <Badge variant="outline" className="text-[8px] py-0 px-1 font-bold">
-                      {pkg.method}
+                      {formatOnboardingPaymentMethod(pkg.method, lang)}
                     </Badge>
                   </div>
                 </div>

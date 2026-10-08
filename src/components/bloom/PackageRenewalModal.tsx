@@ -1,3 +1,4 @@
+import { fmt, formatOnboardingFrequency, formatOnboardingPaymentMethod } from "@/lib/i18n";
 import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
@@ -82,7 +83,8 @@ export function PackageRenewalModal({
   currentSummary,
   onRenewalCompleted,
 }: PackageRenewalModalProps) {
-  const { t, formatStatus } = useLanguage();
+  const { t, formatStatus, lang } = useLanguage();
+  const tr = t;
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [catalogPackages, setCatalogPackages] = useState<CatalogPackage[]>([]);
@@ -222,21 +224,21 @@ export function PackageRenewalModal({
   ) : null;
   const safeCount = previewTerms?.installmentCount || 1;
   const { baseAmountCents } = calculateInstallmentSchedule(previewTerms?.totalAmountCents || totalAmountCents, safeCount);
-  const lastDueDateStr = previewTerms?.lastDueDate || (billingDurationType === "continuous" ? "Sem término" : startDate);
+  const lastDueDateStr = previewTerms?.lastDueDate || (billingDurationType === "continuous" ? null : startDate);
 
   // Handle final submission with Idempotency Guard
   const handleConfirmRenewal = async () => {
     if (isSubmitting) return; // Guard against double click
     if (!dueDay || !startDate) {
-      toast.error("Informe o dia e a data do primeiro vencimento.");
+      toast.error(tr("packageRenewal.errDueDate"));
       return;
     }
     if (selectedBillingModel === "installment_total" && installmentCount < 1) {
-      toast.error("Informe o número de parcelas.");
+      toast.error(tr("packageRenewal.errInstallments"));
       return;
     }
     if (selectedBillingModel === "monthly" && billingDurationType === "fixed" && contractMonths < 1) {
-      toast.error("Informe a duração do contrato em meses.");
+      toast.error(tr("packageRenewal.errMonths"));
       return;
     }
     setIsSubmitting(true);
@@ -299,7 +301,7 @@ export function PackageRenewalModal({
             </div>
 
             <Badge variant="outline" className="border-emerald-400/40 text-emerald-300 text-[10px] font-bold">
-              Etapa {step} de 4
+              {fmt(tr("packageRenewal.stepOf"), step)}
             </Badge>
           </div>
 
@@ -325,31 +327,31 @@ export function PackageRenewalModal({
 
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <span className="text-muted-foreground font-medium block">Aluno</span>
+                    <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lStudent")}</span>
                     <strong className="text-foreground text-sm">{studentName}</strong>
                   </div>
                   <div>
-                    <span className="text-muted-foreground font-medium block">Pacote Atual</span>
+                    <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lCurrentPackage")}</span>
                     <strong className="text-foreground text-sm">{currentPkgDisplay}</strong>
                   </div>
                   <div>
-                    <span className="text-muted-foreground font-medium block">Valor do Contrato</span>
+                    <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lContractAmount")}</span>
                     <span className="font-bold text-foreground">{currentTotalFormatted}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground font-medium block">Forma de Pagamento</span>
+                    <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lPaymentMethod")}</span>
                     <span className="font-bold text-foreground">{currentInstallmentDisplay}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground font-medium block">Término do Pacote</span>
+                    <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lPackageEnd")}</span>
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
                       {formatAgreementDate(currentSummary?.nextDueDate)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground font-medium block">Progresso</span>
+                    <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lProgress")}</span>
                     <span className="font-bold text-stone-700">
-                      {currentSummary?.progressLabel || "Em andamento"}
+                      {currentSummary?.progressLabel || tr("packageRenewal.inProgress")}
                     </span>
                   </div>
                 </div>
@@ -360,7 +362,7 @@ export function PackageRenewalModal({
                   <Sparkles className="w-4 h-4" /> Garantia Bloom de Histórico Imutável
                 </p>
                 <p>
-                  Ao renovar, o contrato anterior será marcado como <strong>concluído</strong> e preservará todos os pagamentos e faturas antigas intactas.
+                  {tr("packageRenewal.renewNoteA")} <strong>{tr("packageRenewal.renewNoteB")}</strong> {tr("packageRenewal.renewNoteC")}
                 </p>
               </div>
             </div>
@@ -370,7 +372,7 @@ export function PackageRenewalModal({
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <Label className="text-sm font-bold text-foreground">Como deseja continuar?</Label>
+                <Label className="text-sm font-bold text-foreground">{tr("packageRenewal.lHowWouldYouLikeToContinue")}</Label>
                 <p className="text-xs text-muted-foreground">
                   Escolha se vai manter as mesmas condições ou realizar uma alteração de plano.
                 </p>
@@ -392,7 +394,7 @@ export function PackageRenewalModal({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-foreground">Renovar com o mesmo pacote</span>
+                    <span className="font-bold text-sm text-foreground">{tr("packageRenewal.lRenewWithTheSamePackage")}</span>
                     {renewalType === "same" && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -410,7 +412,7 @@ export function PackageRenewalModal({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-foreground">Trocar de pacote</span>
+                    <span className="font-bold text-sm text-foreground">{tr("packageRenewal.lSwitchPackage")}</span>
                     {renewalType === "change" && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -422,13 +424,13 @@ export function PackageRenewalModal({
               {/* Package Selection list when Trocar de pacote is selected */}
               {renewalType === "change" && (
                 <div className="space-y-3 pt-2">
-                  <Label className="text-xs font-bold text-foreground">Selecione o Novo Pacote do Catálogo:</Label>
+                  <Label className="text-xs font-bold text-foreground">{tr("packageRenewal.lSelectTheNewPackageFromTheCa")}</Label>
                   {loadingPackages ? (
                     <div className="py-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
                       <RefreshCw className="w-4 h-4 animate-spin" /> Carregando pacotes ativos...
                     </div>
                   ) : catalogPackages.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">Nenhum outro pacote cadastrado no catálogo.</p>
+                    <p className="text-xs text-muted-foreground italic">{tr("packageRenewal.lNoOtherPackageInTheCatalog")}</p>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                       {catalogPackages.map((pkg) => (
@@ -444,7 +446,7 @@ export function PackageRenewalModal({
                           <div className="space-y-0.5">
                             <span className="text-foreground font-bold text-sm">{pkg.name}</span>
                             <span className="text-muted-foreground block text-[11px]">
-                              {pkg.lessons} aulas • Frequência: {pkg.frequency}
+                              {fmt(tr("packageRenewal.pkgLine"), pkg.lessons, formatOnboardingFrequency(pkg.frequency, lang))}
                             </span>
                           </div>
                           <div className="text-right">
@@ -466,17 +468,17 @@ export function PackageRenewalModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div>
-                  <h4 className="font-bold text-sm text-foreground">Condições do Novo Contrato</h4>
-                  <p className="text-xs text-muted-foreground">Configure parcelamento, vencimento e data de início.</p>
+                  <h4 className="font-bold text-sm text-foreground">{tr("packageRenewal.lNewContractTerms")}</h4>
+                  <p className="text-xs text-muted-foreground">{tr("packageRenewal.lSetInstallmentsDueDateAndSta")}</p>
                 </div>
                 <Badge variant={changeBadgeVariant} className="text-xs font-bold px-2.5 py-1">
-                  {changeClassification}
+                  {tr(`packageRenewal.change.${changeClassification}`)}
                 </Badge>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold">Data de Início da Renovação</Label>
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lRenewalStartDate")}</Label>
                   <Input
                     type="date"
                     value={startDate}
@@ -489,7 +491,7 @@ export function PackageRenewalModal({
                 </div>
 
                  <div className="space-y-1">
-                   <Label className="text-xs font-bold">{selectedBillingModel === "monthly" ? "Valor Mensal (R$)" : selectedBillingModel === "one_time" ? "Valor da Cobrança (R$)" : "Valor Total do Pacote (R$)"}</Label>
+                   <Label className="text-xs font-bold">{selectedBillingModel === "monthly" ? tr("packageRenewal.monthlyAmountBrl") : selectedBillingModel === "one_time" ? tr("packageRenewal.chargeAmountBrl") : tr("packageRenewal.totalAmountBrl")}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -499,7 +501,7 @@ export function PackageRenewalModal({
                 </div>
 
                  {selectedBillingModel === "installment_total" && <div className="space-y-1">
-                  <Label className="text-xs font-bold">Número de Parcelas do Novo Contrato</Label>
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lNumberOfInstallments")}</Label>
                   <Select
                     value={String(installmentCount)}
                     onValueChange={(val) => setInstallmentCount(parseInt(val, 10))}
@@ -518,23 +520,23 @@ export function PackageRenewalModal({
                  </div>}
 
                  {selectedBillingModel === "monthly" && <div className="space-y-1">
-                   <Label className="text-xs font-bold">Duração da Cobrança</Label>
+                   <Label className="text-xs font-bold">{tr("packageRenewal.lBillingDuration")}</Label>
                    <Select value={billingDurationType} onValueChange={(value) => setBillingDurationType(value as BillingDurationType)}>
                      <SelectTrigger><SelectValue /></SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="continuous">Contínua — até cancelamento</SelectItem>
-                       <SelectItem value="fixed">Período determinado</SelectItem>
+                       <SelectItem value="continuous">{tr("packageRenewal.continuous")}</SelectItem>
+                       <SelectItem value="fixed">{tr("packageRenewal.fixed")}</SelectItem>
                      </SelectContent>
                    </Select>
                  </div>}
 
                  {selectedBillingModel === "monthly" && billingDurationType === "fixed" && <div className="space-y-1">
-                   <Label className="text-xs font-bold">Duração Contratual (meses)</Label>
+                   <Label className="text-xs font-bold">{tr("packageRenewal.lContractLengthMonths")}</Label>
                    <Input type="number" min={1} max={120} value={contractMonths || ""} onChange={(e) => setContractMonths(Number(e.target.value))} required />
                  </div>}
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold">Dia do Vencimento Mensal</Label>
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lMonthlyDueDay")}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -548,25 +550,25 @@ export function PackageRenewalModal({
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold">Meio de Pagamento</Label>
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lPaymentMethod")}</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Pix">Pix</SelectItem>
-                      <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                      <SelectItem value="Boleto">Boleto</SelectItem>
-                      <SelectItem value="Transferência Bancária">Transferência Bancária</SelectItem>
-                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Pix">{formatOnboardingPaymentMethod("Pix", lang)}</SelectItem>
+                      <SelectItem value="Cartão de Crédito">{formatOnboardingPaymentMethod("Cartão de Crédito", lang)}</SelectItem>
+                      <SelectItem value="Boleto">{formatOnboardingPaymentMethod("Boleto", lang)}</SelectItem>
+                      <SelectItem value="Transferência Bancária">{formatOnboardingPaymentMethod("Transferência Bancária", lang)}</SelectItem>
+                      <SelectItem value="Dinheiro">{formatOnboardingPaymentMethod("Dinheiro", lang)}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold">Observações de Renovação</Label>
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lRenewalNotes")}</Label>
                   <Input
-                    placeholder="Ex: Condição especial acordada via WhatsApp"
+                    placeholder={tr("packageRenewal.notesPh")}
                     value={renewalNotes}
                     onChange={(e) => setRenewalNotes(e.target.value)}
                   />
@@ -586,46 +588,46 @@ export function PackageRenewalModal({
               <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-sm text-xs">
                 <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border">
                   <div>
-                    <span className="text-muted-foreground block">Aluno</span>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lStudent")}</span>
                     <strong className="text-foreground text-sm">{studentName}</strong>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Tipo de Alteração</span>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lChangeType")}</span>
                     <Badge variant={changeBadgeVariant} className="font-bold mt-0.5">
-                      {changeClassification}
+                      {tr(`packageRenewal.change.${changeClassification}`)}
                     </Badge>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground block">Pacote Anterior</span>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lPreviousPackage")}</span>
                     <span className="font-semibold text-stone-700 dark:text-stone-300">{currentPkgName}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Novo Pacote</span>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lNewPackage")}</span>
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
                       {selectedPackage?.name || currentPkgName}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-muted-foreground block">Data de Início</span>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lStartDate")}</span>
                     <span className="font-bold text-foreground">{formatAgreementDate(startDate)}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">{selectedBillingModel === "installment_total" ? "Última Parcela / Término" : "Término"}</span>
-                    <span className="font-bold text-foreground">{lastDueDateStr === "Sem término" ? lastDueDateStr : formatAgreementDate(lastDueDateStr)}</span>
+                    <span className="text-muted-foreground block">{selectedBillingModel === "installment_total" ? tr("packageRenewal.lastInstallmentEnd") : tr("packageRenewal.end")}</span>
+                    <span className="font-bold text-foreground">{lastDueDateStr ? formatAgreementDate(lastDueDateStr) : tr("packageRenewal.noEnd")}</span>
                   </div>
 
                   <div>
-                    <span className="text-muted-foreground block">{selectedBillingModel === "monthly" ? "Valor Mensal" : selectedBillingModel === "one_time" ? "Valor da Cobrança" : "Valor Total do Novo Contrato"}</span>
-                     <span className="font-bold text-base text-foreground">{formatCentsToBRL(selectedBillingModel === "monthly" ? previewTerms?.monthlyAmountCents || totalAmountCents : previewTerms?.expectedTotalCents || totalAmountCents)}{selectedBillingModel === "monthly" ? " / mês" : ""}</span>
+                    <span className="text-muted-foreground block">{selectedBillingModel === "monthly" ? tr("packageRenewal.monthlyAmount") : selectedBillingModel === "one_time" ? tr("packageRenewal.chargeAmount") : tr("packageRenewal.newTotal")}</span>
+                     <span className="font-bold text-base text-foreground">{formatCentsToBRL(selectedBillingModel === "monthly" ? previewTerms?.monthlyAmountCents || totalAmountCents : previewTerms?.expectedTotalCents || totalAmountCents)}{selectedBillingModel === "monthly" ? tr("packageRenewal.perMonthSuffix") : ""}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Forma de Pagamento</span>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lPaymentMethod")}</span>
                     <span className="font-bold text-sm text-emerald-700 dark:text-emerald-400">
-                       {selectedBillingModel === "monthly" ? `${formatCentsToBRL(previewTerms?.monthlyAmountCents || 0)} por mês` : selectedBillingModel === "one_time" ? `Cobrança única de ${formatCentsToBRL(totalAmountCents)}` : `${safeCount}x de ${formatCentsToBRL(baseAmountCents)}`} ({paymentMethod})
+                       {selectedBillingModel === "monthly" ? fmt(tr("packageRenewal.perMonth"), formatCentsToBRL(previewTerms?.monthlyAmountCents || 0)) : selectedBillingModel === "one_time" ? fmt(tr("packageRenewal.oneTimeOf"), formatCentsToBRL(totalAmountCents)) : fmt(tr("packageRenewal.installmentsOf"), safeCount, formatCentsToBRL(baseAmountCents))} ({formatOnboardingPaymentMethod(paymentMethod, lang)})
                     </span>
                   </div>
                 </div>
@@ -644,7 +646,7 @@ export function PackageRenewalModal({
               onClick={() => setStep((s) => (s - 1) as any)}
               className="gap-1 text-xs font-bold"
             >
-              <ChevronLeft className="w-4 h-4" /> Voltar
+              <ChevronLeft className="w-4 h-4" /> {tr("packageRenewal.back")}
             </Button>
           ) : (
             <Button
@@ -654,7 +656,7 @@ export function PackageRenewalModal({
               onClick={onClose}
               className="text-xs font-semibold"
             >
-              Cancelar
+              {tr("packageRenewal.lCancel")}
             </Button>
           )}
 
@@ -664,14 +666,14 @@ export function PackageRenewalModal({
               size="sm"
               onClick={() => {
                 if (step === 3 && (!dueDay || !startDate)) {
-                  toast.error("Informe o dia e a data do primeiro vencimento.");
+                  toast.error(tr("packageRenewal.errDueDate"));
                   return;
                 }
                 setStep((s) => (s + 1) as any);
               }}
               className="bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 text-xs font-bold gap-1 cursor-pointer"
             >
-              Continuar <ArrowRight className="w-4 h-4" />
+              {tr("packageRenewal.continue")} <ArrowRight className="w-4 h-4" />
             </Button>
           ) : (
             <Button
@@ -683,11 +685,11 @@ export function PackageRenewalModal({
             >
               {isSubmitting ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Processando...
+                  <RefreshCw className="w-4 h-4 animate-spin" /> {tr("packageRenewal.processing")}
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" /> Confirmar Renovação
+                  <CheckCircle2 className="w-4 h-4" /> {tr("packageRenewal.confirm")}
                 </>
               )}
             </Button>

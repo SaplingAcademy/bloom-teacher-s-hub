@@ -217,6 +217,10 @@ export const translations: Record<Language, TranslationDictionary> = {
           Other: "Outro",
         },
         paymentMethods: {
+          Pix: "Pix",
+          "Cartão de Crédito": "Cartão de Crédito",
+          "Transferência Bancária": "Transferência Bancária",
+          Dinheiro: "Dinheiro",
           PIX: "PIX",
           "Bank transfer": "Transferência Bancária",
           "Bank Transfer": "Transferência Bancária",
@@ -1101,6 +1105,10 @@ export const translations: Record<Language, TranslationDictionary> = {
           Other: "Other",
         },
         paymentMethods: {
+          Pix: "Pix",
+          "Cartão de Crédito": "Credit card",
+          "Transferência Bancária": "Bank transfer",
+          Dinheiro: "Cash",
           PIX: "PIX",
           "Bank transfer": "Bank transfer",
           "Bank Transfer": "Bank Transfer",
@@ -1876,8 +1884,8 @@ export function formatWeekdayName(dayStr: string | undefined | null, lang: Langu
 export function formatOnboardingLanguage(langKey: string | undefined | null, lang: Language = "pt"): string {
   if (!langKey) return "";
   const clean = String(langKey).trim();
-  const localized = t(`onboardingOptions.languages.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.languages.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.languages.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.languages.${clean}`) {
     return localized;
   }
   return clean;
@@ -1889,8 +1897,8 @@ export function formatOnboardingLanguage(langKey: string | undefined | null, lan
 export function formatOnboardingPaymentMethod(methodKey: string | undefined | null, lang: Language = "pt"): string {
   if (!methodKey) return "";
   const clean = String(methodKey).trim();
-  const localized = t(`onboardingOptions.paymentMethods.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.paymentMethods.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.paymentMethods.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.paymentMethods.${clean}`) {
     return localized;
   }
   return clean;
@@ -1902,8 +1910,8 @@ export function formatOnboardingPaymentMethod(methodKey: string | undefined | nu
 export function formatOnboardingStudentRange(rangeKey: string | undefined | null, lang: Language = "pt"): string {
   if (!rangeKey) return "";
   const clean = String(rangeKey).trim();
-  const localized = t(`onboardingOptions.studentRanges.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.studentRanges.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.studentRanges.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.studentRanges.${clean}`) {
     return localized;
   }
   return clean;
@@ -1915,8 +1923,8 @@ export function formatOnboardingStudentRange(rangeKey: string | undefined | null
 export function formatOnboardingManagementTool(toolKey: string | undefined | null, lang: Language = "pt"): string {
   if (!toolKey) return "";
   const clean = String(toolKey).trim();
-  const localized = t(`onboardingOptions.managementTools.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.managementTools.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.managementTools.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.managementTools.${clean}`) {
     return localized;
   }
   return clean;
@@ -1928,8 +1936,8 @@ export function formatOnboardingManagementTool(toolKey: string | undefined | nul
 export function formatOnboardingLessonType(typeKey: string | undefined | null, lang: Language = "pt"): string {
   if (!typeKey) return "";
   const clean = String(typeKey).trim();
-  const localized = t(`onboardingOptions.lessonTypes.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.lessonTypes.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.lessonTypes.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.lessonTypes.${clean}`) {
     return localized;
   }
   return clean;
@@ -1941,8 +1949,8 @@ export function formatOnboardingLessonType(typeKey: string | undefined | null, l
 export function formatOnboardingContractPreference(prefKey: string | undefined | null, lang: Language = "pt"): string {
   if (!prefKey) return "";
   const clean = String(prefKey).trim();
-  const localized = t(`onboardingOptions.contractsPreference.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.contractsPreference.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.contractsPreference.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.contractsPreference.${clean}`) {
     return localized;
   }
   return clean;
@@ -1954,10 +1962,49 @@ export function formatOnboardingContractPreference(prefKey: string | undefined |
 export function formatOnboardingFrequency(freqKey: string | undefined | null, lang: Language = "pt"): string {
   if (!freqKey) return "";
   const clean = String(freqKey).trim();
-  const localized = t(`onboardingOptions.frequencies.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.frequencies.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.frequencies.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.frequencies.${clean}`) {
     return localized;
   }
   return clean;
 }
 
+
+// ---------------------------------------------------------------------------
+// Inline UI strings (onboarding, packages, classes) live in i18n-ui.ts and are
+// merged here so every component reads them through the same t().
+import { uiTranslations } from "./i18n-ui";
+for (const l of Object.keys(uiTranslations) as Language[]) {
+  Object.assign(translations[l], uiTranslations[l] as unknown as TranslationDictionary);
+}
+
+/** Fills {0}, {1}… placeholders in a translated string. */
+export function fmt(template: string, ...args: Array<string | number | null | undefined>): string {
+  return template.replace(/\{(\d+)\}/g, (_, i) => String(args[Number(i)] ?? ""));
+}
+
+/** Languages with a complete dictionary. Add a code here only after its dictionary is complete. */
+export const SUPPORTED_LANGUAGES: readonly Language[] = ["pt", "en"];
+/** Used when none of the user's locales is supported. */
+export const FALLBACK_LANGUAGE: Language = "en";
+
+/** Maps a single locale tag (pt-BR, en_GB, ja-JP…) to a supported language, or null. */
+export function matchLanguage(locale: string | null | undefined): Language | null {
+  if (!locale) return null;
+  const base = String(locale).trim().toLowerCase().split(/[-_]/)[0];
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(base) ? (base as Language) : null;
+}
+
+/** First supported language in the browser's preference list, else the fallback. */
+export function detectLanguage(locales: readonly (string | null | undefined)[]): Language {
+  for (const l of locales) {
+    const m = matchLanguage(l);
+    if (m) return m;
+  }
+  return FALLBACK_LANGUAGE;
+}
+
+/** Locale written to profiles.locale for a manually chosen language. */
+export function languageToLocale(lang: Language): string {
+  return lang === "pt" ? "pt-BR" : "en-US";
+}

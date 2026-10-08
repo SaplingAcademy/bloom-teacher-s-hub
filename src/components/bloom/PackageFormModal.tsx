@@ -37,7 +37,7 @@ export function PackageFormModal({
   onSave,
   initialData,
 }: PackageFormModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const t = (translations[lang === "en" ? "en" : "pt"].finance || {}) as Record<string, string>;
   const isPt = lang === "pt";
 
@@ -117,7 +117,7 @@ export function PackageFormModal({
       <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4 max-w-md w-full">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold font-outfit text-stone-900">
-            {initialData ? (isPt ? "Editar Pacote" : "Edit Package") : (isPt ? "Criar Novo Pacote" : "Create New Package")}
+            {initialData ? (tr("packageForm.editPackage")) : (tr("packageForm.createNewPackage"))}
           </DialogTitle>
         </DialogHeader>
 
@@ -141,22 +141,22 @@ export function PackageFormModal({
             <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
               <div className="space-y-1">
                 <Label htmlFor="modal-pkg-duration-type" className="text-xs font-bold text-stone-700">
-                  {isPt ? "Duração da cobrança" : "Billing duration"}
+                  {tr("packageForm.billingDuration")}
                 </Label>
                 <Select value={billingDurationType} onValueChange={(value) => setBillingDurationType(value as BillingDurationType)}>
                   <SelectTrigger id="modal-pkg-duration-type" className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-xs font-bold">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="continuous">{isPt ? "Contínua — até cancelamento" : "Continuous — until cancelled"}</SelectItem>
-                    <SelectItem value="fixed">{isPt ? "Período determinado" : "Fixed period"}</SelectItem>
+                    <SelectItem value="continuous">{tr("packageForm.continuousUntilCancelled")}</SelectItem>
+                    <SelectItem value="fixed">{tr("packageForm.fixedPeriod")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {billingDurationType === "fixed" && (
                 <div className="space-y-1">
                   <Label htmlFor="modal-pkg-contract-months" className="text-xs font-bold text-stone-700">
-                    {isPt ? "Duração contratual (meses)" : "Contract duration (months)"}
+                    {tr("packageForm.contractDurationMonths")}
                   </Label>
                   <Input
                     id="modal-pkg-contract-months"
@@ -177,7 +177,7 @@ export function PackageFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="modal-pkg-freq" className="text-xs font-bold text-stone-700">
-                {isPt ? "Modelo de Cobrança" : "Billing Model"}
+                {tr("packageForm.billingModel")}
               </Label>
               <Select value={frequency} onValueChange={(val) => setFrequency(val as any)}>
                 <SelectTrigger id="modal-pkg-freq" className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-xs font-bold">
@@ -194,10 +194,10 @@ export function PackageFormModal({
             <div className="space-y-1">
               <Label htmlFor="modal-pkg-price" className="text-xs font-bold text-stone-700">
                 {frequency === "total"
-                  ? (isPt ? "Valor total (R$)" : "Total value ($)")
+                  ? (tr("packageForm.totalValue"))
                   : frequency === "Monthly"
-                  ? (isPt ? "Valor mensal (R$)" : "Monthly price ($)")
-                  : (isPt ? "Valor (R$)" : "Price ($)")}
+                  ? (tr("packageForm.monthlyPrice"))
+                  : (tr("packageForm.price"))}
               </Label>
               <CurrencyInput
                 id="modal-pkg-price"
@@ -214,7 +214,7 @@ export function PackageFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="modal-pkg-lessons" className="text-xs font-bold text-stone-700">
-                {isPt ? "Nº de aulas" : "No. of lessons"}
+                {tr("packageForm.noOfLessons")}
               </Label>
                 <Input
                   id="modal-pkg-lessons"
@@ -229,7 +229,7 @@ export function PackageFormModal({
 
             <div className="space-y-1">
               <Label htmlFor="modal-pkg-duration" className="text-xs font-bold text-stone-700">
-                {isPt ? "Duração da aula (min)" : "Lesson duration (min)"}
+                {tr("packageForm.lessonDurationMin")}
               </Label>
                 <Input
                   id="modal-pkg-duration"
@@ -248,7 +248,7 @@ export function PackageFormModal({
           {frequency === "total" && (
             <div className="space-y-1 pt-1">
               <Label htmlFor="modal-pkg-installments" className="text-xs font-bold text-stone-700">
-                {isPt ? "Sugestão de parcelamento padrão" : "Suggested default installments"}
+                {tr("packageForm.suggestedDefaultInstallments")}
               </Label>
               <div className="flex items-center gap-2">
                   <Input
@@ -262,7 +262,7 @@ export function PackageFormModal({
                     className="h-11 w-24 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold text-center"
                   />
                 <span className="text-xs text-stone-500 font-medium">
-                  {isPt ? "parcelas (definido por aluno)" : "installments (chosen per student)"}
+                  {tr("packageForm.installmentsChosenPerStudent")}
                 </span>
               </div>
             </div>
@@ -299,7 +299,7 @@ export function PackageFormModal({
               type="submit"
               className="h-11 px-6 rounded-xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-sm transition-colors cursor-pointer shadow-md"
             >
-              {initialData ? (isPt ? "Salvar Alterações" : "Save Changes") : (isPt ? "Criar Pacote" : "Create Package")}
+              {initialData ? (tr("packageForm.saveChanges")) : (tr("packageForm.createPackage"))}
             </button>
           </DialogFooter>
         </form>
