@@ -59,9 +59,6 @@ export const Route = createFileRoute("/_app/profile")({
       },
     ],
   }),
-  beforeLoad: () => {
-    throw redirect({ to: "/" });
-  },
   component: ProfilePage,
 });
 
