@@ -1,3 +1,4 @@
+import { fmt } from "@/lib/i18n";
 import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
@@ -260,7 +261,7 @@ export function ClassFormModal({
 
       if (error) throw error;
 
-      toast.success(isPt ? `Aluno ${newStudent.full_name} criado com sucesso!` : `Student ${newStudent.full_name} created!`);
+      toast.success(fmt(t("classMgmt.studentCreated"), newStudent.full_name));
       setSelectedStudentIds((prev) => [...prev, newStudent.id]);
       availableStudents.push({ id: newStudent.id, name: newStudent.full_name });
       setInlineName("");
@@ -291,7 +292,7 @@ export function ClassFormModal({
         existingClass?.id
       );
 
-      toast.success(isPt ? "Turma salva com sucesso!" : "Class saved successfully!");
+      toast.success(t("classMgmt.classSavedSuccessfully"));
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -308,10 +309,10 @@ export function ClassFormModal({
         <DialogHeader className="p-6 pb-4 border-b border-stone-200 bg-white shrink-0">
           <DialogTitle className="font-outfit text-xl font-bold text-[#163020]">
             {existingClass
-              ? isPt ? "Editar Turma / Dupla" : "Edit Class / Pair"
+              ? t("classMgmt.editClassPair")
               : type === "pair"
-              ? isPt ? "Nova Aula em Dupla" : "New Pair Class"
-              : isPt ? "Nova Turma / Grupo" : "New Class / Group"}
+              ? t("classMgmt.newPairClass")
+              : t("classMgmt.newClassGroup")}
           </DialogTitle>
         </DialogHeader>
 
@@ -321,12 +322,12 @@ export function ClassFormModal({
             <div className="space-y-4 bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
               <div className="space-y-1">
                 <Label className="text-xs font-bold text-stone-700">
-                  {isPt ? "Nome da Turma" : "Class Name"} <span className="text-red-500">*</span>
+                  {t("classMgmt.className")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={isPt ? "ex: Conversation B1 - Terça" : "e.g. Conversation B1 - Tuesday"}
+                  placeholder={t("classMgmt.eGConversationB1Tuesday")}
                   required
                   className="h-11 rounded-xl border-stone-300 bg-stone-50 font-semibold text-stone-800"
                 />
@@ -334,20 +335,20 @@ export function ClassFormModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-stone-700">{isPt ? "Modalidade" : "Type"}</Label>
+                  <Label className="text-xs font-bold text-stone-700">{t("classMgmt.type")}</Label>
                   <Select value={type} onValueChange={(val: any) => setType(val)}>
                     <SelectTrigger className="h-11 rounded-xl border-stone-300 bg-stone-50 font-semibold text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pair">{isPt ? "Dupla (2 alunos)" : "Pair (2 students)"}</SelectItem>
-                      <SelectItem value="group">{isPt ? "Grupo (3+ alunos)" : "Group (3+ students)"}</SelectItem>
+                      <SelectItem value="pair">{t("classMgmt.pair2Students")}</SelectItem>
+                      <SelectItem value="group">{t("classMgmt.group3Students")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-stone-700">{isPt ? "Nível" : "Level"}</Label>
+                  <Label className="text-xs font-bold text-stone-700">{t("classMgmt.level")}</Label>
                   <Select value={level} onValueChange={(val) => setLevel(val)}>
                     <SelectTrigger className="h-11 rounded-xl border-stone-300 bg-stone-50 font-semibold text-sm">
                       <SelectValue />
@@ -364,7 +365,7 @@ export function ClassFormModal({
               <ColorSelector
                 value={colorKey}
                 onChange={(val) => setColorKey(val)}
-                label={isPt ? "Cor de Identificação da Turma (Padrão Bloom)" : "Class Brand Color"}
+                label={t("classMgmt.classBrandColor")}
               />
             </div>
 
@@ -372,7 +373,7 @@ export function ClassFormModal({
             <div className="space-y-3 bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider font-outfit">
-                  {isPt ? `Alunos da Turma (${selectedStudentIds.length})` : `Class Members (${selectedStudentIds.length})`}
+                  {fmt(t("classMgmt.classMembers"), selectedStudentIds.length)}
                 </Label>
                 <button
                   type="button"
@@ -380,7 +381,7 @@ export function ClassFormModal({
                   className="text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>{isPt ? "Criar novo aluno" : "New student"}</span>
+                  <span>{t("classMgmt.newStudent")}</span>
                 </button>
               </div>
 
@@ -388,18 +389,18 @@ export function ClassFormModal({
               {showInlineStudent && (
                 <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200/80 space-y-2">
                   <span className="text-xs font-bold text-emerald-900 block">
-                    {isPt ? "Cadastrar aluno e adicionar à turma:" : "Register & add student to class:"}
+                    {t("classMgmt.registerAddStudentToClass")}
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Input
-                      placeholder={isPt ? "Nome completo" : "Full name"}
+                      placeholder={t("classMgmt.fullName")}
                       value={inlineName}
                       onChange={(e) => setInlineName(e.target.value)}
                       className="h-9 text-xs bg-white"
                     />
                     <Input
                       type="tel"
-                      placeholder={isPt ? "Telefone (Ex.: +55 43 99999-9999)" : "Phone (e.g. +1 407 555 1234)"}
+                      placeholder={t("classMgmt.phoneEG1407")}
                       value={inlineWhatsApp}
                       onChange={(e) => setInlineWhatsApp(e.target.value)}
                       className="h-9 text-xs bg-white"
@@ -410,7 +411,7 @@ export function ClassFormModal({
                     onClick={handleInlineStudentCreate}
                     className="w-full h-8 bg-[#163020] text-white text-xs font-bold rounded-lg hover:bg-emerald-950 cursor-pointer"
                   >
-                    {isPt ? "Salvar e Selecionar" : "Save & Select"}
+                    {t("classMgmt.saveSelect")}
                   </button>
                 </div>
               )}
@@ -447,7 +448,7 @@ export function ClassFormModal({
             {/* Schedules */}
             <div className="space-y-3 bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
               <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider font-outfit">
-                {isPt ? "Horários das Aulas" : "Class Schedule Slots"}
+                {t("classMgmt.classScheduleSlots")}
               </Label>
 
               {schedulesList.map((sch, idx) => (
@@ -493,14 +494,14 @@ export function ClassFormModal({
               onClick={onClose}
               className="h-11 px-5 rounded-xl border border-stone-300 bg-white text-stone-700 font-bold text-xs hover:bg-stone-100 cursor-pointer"
             >
-              {isPt ? "Cancelar" : "Cancel"}
+              {t("classMgmt.cancel")}
             </button>
             <button
               type="submit"
               disabled={isSaving}
               className="h-11 px-6 rounded-xl bg-[#163020] text-[#F4EBE1] font-bold text-xs hover:bg-[#1a3825] cursor-pointer disabled:opacity-50"
             >
-              {isSaving ? (isPt ? "Salvando..." : "Saving...") : (isPt ? "Salvar Turma" : "Save Class")}
+              {isSaving ? (t("classMgmt.saving")) : (t("classMgmt.saveClass"))}
             </button>
           </div>
         </form>
@@ -605,7 +606,7 @@ export function ClassSessionAttendanceModal({
         attendanceList.map((a) => ({ student_id: a.student_id, status: a.status, notes: a.notes }))
       );
 
-      toast.success(isPt ? "Chamada e aula salvas com sucesso! 🌱" : "Attendance & lesson saved successfully! 🌱");
+      toast.success(t("classMgmt.attendanceLessonSavedSuccessfully"));
       onClose();
     } catch (err: any) {
       toast.error(reportUserError(err, i18nT("errors.saveAttendance", currentLanguage())));
@@ -619,7 +620,7 @@ export function ClassSessionAttendanceModal({
       <DialogContent className="max-w-lg rounded-3xl p-0 bg-[#FAF7F2] border border-stone-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-none font-figtree">
         <DialogHeader className="p-6 pb-4 border-b border-stone-200 bg-white shrink-0">
           <DialogTitle className="font-outfit text-xl font-bold text-[#163020]">
-            {isPt ? `Chamada de Aula — ${classEntity.name}` : `Class Session Attendance — ${classEntity.name}`}
+            {fmt(t("classMgmt.classSessionAttendance"), classEntity.name)}
           </DialogTitle>
           <span className="text-xs text-stone-500 font-semibold">{sessionDate}</span>
         </DialogHeader>
@@ -634,12 +635,12 @@ export function ClassSessionAttendanceModal({
               {/* Topic Input */}
               <div className="space-y-1 bg-white p-4 rounded-2xl border border-stone-200 shadow-sm">
                 <Label className="text-xs font-bold text-stone-700">
-                  {isPt ? "Conteúdo / Tópico da Aula" : "Lesson Topic / Content"}
+                  {t("classMgmt.lessonTopicContent")}
                 </Label>
                 <Input
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  placeholder={isPt ? "ex: Present Perfect vs Past Simple" : "e.g. Present Perfect vs Past Simple"}
+                  placeholder={t("classMgmt.eGPresentPerfectVs")}
                   className="h-10 text-xs font-semibold bg-stone-50"
                 />
               </div>
@@ -647,7 +648,7 @@ export function ClassSessionAttendanceModal({
               {/* Attendance List */}
               <div className="space-y-3 bg-white p-4 rounded-2xl border border-stone-200 shadow-sm">
                 <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider font-outfit">
-                  {isPt ? "Registro de Presença Individual" : "Per-Student Attendance"}
+                  {t("classMgmt.perStudentAttendance")}
                 </Label>
 
                 <div className="space-y-2">
@@ -669,7 +670,7 @@ export function ClassSessionAttendanceModal({
                               : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
                           }`}
                         >
-                          {isPt ? "Presente" : "Present"}
+                          {t("classMgmt.present")}
                         </button>
                         <button
                           type="button"
@@ -680,7 +681,7 @@ export function ClassSessionAttendanceModal({
                               : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
                           }`}
                         >
-                          {isPt ? "Falta" : "Absent"}
+                          {t("classMgmt.absent")}
                         </button>
                         <button
                           type="button"
@@ -691,7 +692,7 @@ export function ClassSessionAttendanceModal({
                               : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
                           }`}
                         >
-                          {isPt ? "Atrasado" : "Late"}
+                          {t("classMgmt.late")}
                         </button>
                         <button
                           type="button"
@@ -702,7 +703,7 @@ export function ClassSessionAttendanceModal({
                               : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
                           }`}
                         >
-                          {isPt ? "Justificada" : "Excused"}
+                          {t("classMgmt.excused")}
                         </button>
                       </div>
                     </div>
@@ -719,7 +720,7 @@ export function ClassSessionAttendanceModal({
             onClick={onClose}
             className="h-11 px-5 rounded-xl border border-stone-300 bg-white text-stone-700 font-bold text-xs hover:bg-stone-100 cursor-pointer"
           >
-            {isPt ? "Fechar" : "Close"}
+            {t("classMgmt.close")}
           </button>
           <button
             type="button"
@@ -727,7 +728,7 @@ export function ClassSessionAttendanceModal({
             disabled={saving || loading}
             className="h-11 px-6 rounded-xl bg-[#163020] text-[#F4EBE1] font-bold text-xs hover:bg-[#1a3825] cursor-pointer disabled:opacity-50"
           >
-            {saving ? (isPt ? "Salvando..." : "Saving...") : (isPt ? "Salvar Presença" : "Save Attendance")}
+            {saving ? (t("classMgmt.saving")) : (t("classMgmt.saveAttendance"))}
           </button>
         </div>
       </DialogContent>
@@ -873,7 +874,7 @@ export function ClassDetailsView({
           <button
             onClick={onBack}
             className="grid h-10 w-10 place-items-center rounded-xl border border-stone-200 bg-white text-stone-600 hover:text-stone-900 transition-colors cursor-pointer shadow-sm"
-            title={isPt ? "Voltar para lista" : "Back to list"}
+            title={t("classMgmt.backToList")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -886,7 +887,7 @@ export function ClassDetailsView({
                   cls.type === "pair" ? "bg-teal-100 text-teal-800" : "bg-emerald-100 text-emerald-900"
                 }`}
               >
-                {cls.type === "pair" ? (isPt ? "Dupla" : "Pair") : isPt ? "Turma" : "Group"}
+                {cls.type === "pair" ? (t("classMgmt.pair")) : t("classMgmt.group")}
               </span>
               <span
                 className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -898,20 +899,14 @@ export function ClassDetailsView({
                 }`}
               >
                 {cls.status === "active"
-                  ? isPt
-                    ? "Ativa"
-                    : "Active"
+                  ? t("classMgmt.active")
                   : cls.status === "paused"
-                  ? isPt
-                    ? "Pausada"
-                    : "Paused"
-                  : isPt
-                  ? "Arquivada"
-                  : "Archived"}
+                  ? t("classMgmt.paused")
+                  : t("classMgmt.archived")}
               </span>
             </div>
             <p className="text-xs text-stone-500 font-semibold mt-0.5">
-              {cls.language} • {isPt ? `Nível ${cls.level}` : `Level ${cls.level}`} • {isPt ? `Início: ${cls.start_date}` : `Started: ${cls.start_date}`}
+              {cls.language} • {fmt(t("classMgmt.level2"), cls.level)} • {fmt(t("classMgmt.started"), cls.start_date)}
             </p>
           </div>
         </div>
@@ -922,7 +917,7 @@ export function ClassDetailsView({
             className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-700 hover:bg-stone-50 transition-all cursor-pointer shadow-sm"
           >
             <Edit2 className="h-4 w-4" />
-            <span>{isPt ? "Editar Turma" : "Edit Class"}</span>
+            <span>{t("classMgmt.editClass")}</span>
           </button>
 
           <button
@@ -930,7 +925,7 @@ export function ClassDetailsView({
             className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-700 hover:bg-stone-50 transition-all cursor-pointer shadow-sm"
           >
             <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-            <span>{isPt ? "Chamada" : "Attendance"}</span>
+            <span>{t("classMgmt.attendance")}</span>
           </button>
 
 
@@ -943,7 +938,7 @@ export function ClassDetailsView({
         <div className="p-5 bg-white rounded-3xl border border-stone-200/80 shadow-sm space-y-3">
           <div className="flex items-center gap-2 text-stone-900 font-bold font-outfit text-sm">
             <Clock className="h-4 w-4 text-emerald-800" />
-            <span>{isPt ? "Horários Recorrentes" : "Recurring Schedules"}</span>
+            <span>{t("classMgmt.recurringSchedules")}</span>
           </div>
 
           {cls.schedules && cls.schedules.length > 0 ? (
@@ -974,7 +969,7 @@ export function ClassDetailsView({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-stone-400">{isPt ? "Nenhum horário cadastrado." : "No schedule set."}</p>
+            <p className="text-xs text-stone-400">{t("classMgmt.noScheduleSet")}</p>
           )}
         </div>
 
@@ -984,11 +979,11 @@ export function ClassDetailsView({
             <div className="flex items-center gap-2 text-stone-900 font-bold font-outfit text-sm">
               <Users className="h-4 w-4 text-emerald-800" />
               <span>
-                {isPt ? `Alunos Integrantes da Turma (${cls.members.length})` : `Class Members (${cls.members.length})`}
+                {fmt(t("classMgmt.classMembers2"), cls.members.length)}
               </span>
             </div>
             <span className="text-[11px] font-medium text-stone-400">
-              {isPt ? "Clique para abrir perfil individual" : "Click to view individual profile"}
+              {t("classMgmt.clickToViewIndividualProfile")}
             </span>
           </div>
 
@@ -1014,7 +1009,7 @@ export function ClassDetailsView({
                     }
                   }}
                   className="flex items-center justify-between p-3.5 bg-[#FAF7F2] rounded-2xl border border-stone-200/80 hover:border-[#163020] hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-[#163020] transition-all cursor-pointer group shadow-2xs select-none"
-                  aria-label={isPt ? `Abrir perfil de ${m.student_name ?? ""}` : `View profile of ${m.student_name ?? ""}`}
+                  aria-label={fmt(t("classMgmt.viewProfileOf"), m.student_name ?? "")}
                 >
                   <div className="flex items-center gap-3">
                     {m.student_avatar ? (
@@ -1033,7 +1028,7 @@ export function ClassDetailsView({
                         {m.student_name ?? ""}
                       </span>
                       <span className="text-[11px] text-stone-500 font-semibold block">
-                        {isPt ? "Ver perfil & notas privadas" : "View profile & private notes"}
+                        {t("classMgmt.viewProfilePrivateNotes")}
                       </span>
                     </div>
                   </div>

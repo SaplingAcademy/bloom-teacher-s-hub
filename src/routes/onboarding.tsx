@@ -1,3 +1,4 @@
+import { fmt } from "@/lib/i18n";
 import { getUserItem, setUserItem, removeUserItem } from "@/lib/user-storage";
 import {
   resolveInitialPreferredName,
@@ -442,9 +443,7 @@ export function OnboardingPage() {
       localStorage.setItem("bloom.onboarding.skipped", "true");
     }
     toast.info(
-      isPt
-        ? "Você pode retomar a personalização a qualquer momento."
-        : "You can resume setup anytime from your dashboard."
+      t("onboardingUi.youCanResumeSetupAnytime")
     );
     navigate({ to: "/" });
   };
@@ -628,9 +627,7 @@ export function OnboardingPage() {
     } catch (err: any) {
       console.error("[Onboarding] Finalization error:", err);
       toast.error(
-        isPt
-          ? "Não conseguimos salvar suas informações. Tente novamente."
-          : "Could not save your setup. Please try again."
+        t("onboardingUi.couldNotSaveYourSetup")
       );
     } finally {
       setIsSubmitting(false);
@@ -665,17 +662,17 @@ export function OnboardingPage() {
               </div>
               {isWelcomeStep && (
                 <span className="text-xs sm:text-sm font-semibold text-emerald-800 font-outfit bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
-                  {isPt ? "Boas-vindas" : "Welcome"}
+                  {t("onboardingUi.welcome")}
                 </span>
               )}
               {!isWelcomeStep && !isSummaryStep && (
                 <span className="text-xs sm:text-sm font-semibold text-stone-500 font-outfit">
-                  {isPt ? `Passo ${currentStep} de ${totalSteps}` : `Step ${currentStep} of ${totalSteps}`}
+                  {fmt(t("onboardingUi.stepOf"), currentStep, totalSteps)}
                 </span>
               )}
               {isSummaryStep && (
                 <span className="text-xs sm:text-sm font-semibold text-emerald-800 font-outfit bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
-                  {isPt ? "Resumo do Bloom" : "Bloom Summary"}
+                  {t("onboardingUi.bloomSummary")}
                 </span>
               )}
             </div>
@@ -687,7 +684,7 @@ export function OnboardingPage() {
                 onClick={handleSkipTrigger}
                 className="text-xs sm:text-sm font-semibold text-stone-500 hover:text-stone-800 px-3 py-1.5 rounded-lg hover:bg-stone-200/50 transition-colors cursor-pointer"
               >
-                {isPt ? "Pular" : "Skip"}
+                {t("onboardingUi.skip")}
               </button>
             )}
           </div>
@@ -713,12 +710,10 @@ export function OnboardingPage() {
             </div>
             <div className="space-y-3">
               <h2 className="text-3xl font-extrabold font-outfit text-[#163020]">
-                {isPt ? "Pronto! Sua Bloom começou a florescer. 🌱" : "All set! Your Bloom has started to flourish. 🌱"}
+                {t("onboardingUi.allSetYourBloomHas")}
               </h2>
               <p className="text-base text-stone-600 font-medium leading-relaxed">
-                {isPt
-                  ? "Preparamos sua experiência com base nas informações que você compartilhou."
-                  : "We've tailored your experience based on the details you shared."}
+                {t("onboardingUi.weVeTailoredYourExperience")}
               </p>
             </div>
             <button
@@ -726,7 +721,7 @@ export function OnboardingPage() {
               onClick={() => navigate({ to: "/" })}
               className="w-full flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-extrabold text-base shadow-lg transition-all cursor-pointer"
             >
-              <span>{isPt ? "Entrar na Bloom" : "Enter Bloom"}</span>
+              <span>{t("onboardingUi.enterBloom")}</span>
               <ArrowRight className="h-5 w-5" />
             </button>
           </div>
@@ -817,7 +812,7 @@ export function OnboardingPage() {
                     className="h-12 px-5 flex items-center gap-2 rounded-2xl border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 font-semibold text-sm shadow-sm transition-all cursor-pointer"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    <span>{isPt ? "Voltar" : "Back"}</span>
+                    <span>{t("onboardingUi.back")}</span>
                   </button>
                 ) : (
                   <div />
@@ -829,7 +824,7 @@ export function OnboardingPage() {
                     onClick={handleNext}
                     className="h-12 px-8 flex items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] active:scale-[0.98] font-bold text-sm sm:text-base shadow-md transition-all cursor-pointer ml-auto"
                   >
-                    <span>{isPt ? "Continuar" : "Continue"}</span>
+                    <span>{t("onboardingUi.continue")}</span>
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 ) : (
@@ -842,12 +837,12 @@ export function OnboardingPage() {
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5 animate-spin" />
-                        {isPt ? "Preparando seu Bloom..." : "Preparing your Bloom..."}
+                        {t("onboardingUi.preparingYourBloom")}
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5" />
-                        {isPt ? "Preparar meu Bloom" : "Prepare my Bloom"}
+                        {t("onboardingUi.prepareMyBloom")}
                       </span>
                     )}
                   </button>
@@ -868,12 +863,10 @@ export function OnboardingPage() {
 
             <div className="space-y-2">
               <h3 className="text-xl font-bold font-outfit text-stone-900">
-                {isPt ? "Quer mesmo pular esta etapa?" : "Are you sure you want to skip?"}
+                {t("onboardingUi.areYouSureYouWant")}
               </h3>
               <p className="text-sm text-stone-600 leading-relaxed">
-                {isPt
-                  ? "A Bloom usa essas informações para personalizar sua agenda, seus serviços, metas e outras áreas da plataforma. Você pode configurar tudo depois, mas algumas partes da Bloom poderão aparecer vazias ou menos personalizadas até que essas informações sejam preenchidas."
-                  : "Bloom uses this information to customize your schedule, services, goals, and other platform areas. You can configure everything later, but some features may appear empty or unpersonalized until completed."}
+                {t("onboardingUi.bloomUsesThisInformationTo")}
               </p>
             </div>
 
@@ -883,14 +876,14 @@ export function OnboardingPage() {
                 onClick={() => setShowSkipWarningModal(false)}
                 className="w-full h-12 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-sm shadow-sm transition-colors cursor-pointer"
               >
-                {isPt ? "Continuar personalizando" : "Continue personalizing"}
+                {t("onboardingUi.continuePersonalizing")}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmSkip}
                 className="w-full h-11 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 font-bold text-xs text-stone-600 transition-colors cursor-pointer"
               >
-                {isPt ? "Pular por enquanto" : "Skip for now"}
+                {t("onboardingUi.skipForNow")}
               </button>
             </div>
           </div>
@@ -907,12 +900,10 @@ export function OnboardingPage() {
 
             <div className="space-y-2">
               <h3 className="text-xl font-bold font-outfit text-stone-900">
-                {isPt ? "Pular hora-aula?" : "Skip hourly rate?"}
+                {t("onboardingUi.skipHourlyRate")}
               </h3>
               <p className="text-sm text-stone-600 leading-relaxed">
-                {isPt
-                  ? "Sua hora-aula ajuda o Bloom a gerar relatórios e insights financeiros mais precisos. Você pode pular isso agora, mas adicionar essa informação vai melhorar sua experiência."
-                  : "Your hourly rate helps Bloom generate more accurate reports and financial insights. You can skip this now, but adding it will improve your experience."}
+                {t("onboardingUi.yourHourlyRateHelpsBloom")}
               </p>
             </div>
 
@@ -922,7 +913,7 @@ export function OnboardingPage() {
                 onClick={() => setShowHourlySkipModal(false)}
                 className="w-full h-11 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 font-bold text-sm text-stone-700 transition-colors cursor-pointer"
               >
-                {isPt ? "Voltar" : "Go back"}
+                {t("onboardingUi.goBack")}
               </button>
               <button
                 type="button"
@@ -933,7 +924,7 @@ export function OnboardingPage() {
                 }}
                 className="w-full h-11 rounded-xl bg-[#163020] hover:bg-[#1a3825] font-bold text-sm text-[#F4EBE1] transition-colors cursor-pointer"
               >
-                {isPt ? "Pular por enquanto" : "Skip for now"}
+                {t("onboardingUi.skipForNow")}
               </button>
             </div>
           </div>
@@ -955,33 +946,25 @@ function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean })
 
       <div className="space-y-3">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Boas-vindas à Bloom 🌱" : "Welcome to Bloom 🌱"}
+          {t("onboardingUi.welcomeToBloom")}
         </h1>
         <p className="text-base text-stone-700 font-medium leading-relaxed">
-          {isPt
-            ? "Antes de começar, queremos conhecer um pouquinho sobre você e sobre a forma como trabalha."
-            : "Before starting, we'd love to learn a bit about you and how you work."}
+          {t("onboardingUi.beforeStartingWeDLove")}
         </p>
       </div>
 
       <div className="rounded-2xl border border-stone-200/80 bg-white/80 p-5 space-y-3 shadow-sm text-left">
         <p className="text-sm text-stone-600 leading-relaxed font-medium">
-          {isPt
-            ? "São algumas perguntas rápidas que vão nos ajudar a preparar a Bloom para a sua rotina — seus idiomas, horários, serviços e objetivos."
-            : "These quick questions will help prepare Bloom for your daily routine — your languages, schedule, services, and goals."}
+          {t("onboardingUi.theseQuickQuestionsWillHelp")}
         </p>
         <p className="text-sm text-stone-600 leading-relaxed font-medium pt-2 border-t border-stone-100">
-          {isPt
-            ? "Quanto mais conhecermos o seu trabalho, menos configurações você terá que fazer depois."
-            : "The more we know about your work, the fewer settings you'll need to adjust later."}
+          {t("onboardingUi.theMoreWeKnowAbout")}
         </p>
       </div>
 
       <div className="space-y-4 pt-2">
         <p className="text-xs text-stone-500 font-semibold">
-          {isPt
-            ? "Não se preocupe: essas informações poderão ser alteradas depois."
-            : "Don't worry: you can edit these details anytime in your settings."}
+          {t("onboardingUi.donTWorryYouCan")}
         </p>
 
         <button
@@ -989,7 +972,7 @@ function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean })
           onClick={onStart}
           className="w-full flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-base shadow-md transition-all cursor-pointer"
         >
-          <span>{isPt ? "Personalizar minha Bloom" : "Customize my Bloom"}</span>
+          <span>{t("onboardingUi.customizeMyBloom")}</span>
           <ArrowRight className="h-5 w-5" />
         </button>
       </div>
@@ -1025,7 +1008,7 @@ function Step1AboutYou({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 1 — Sobre você" : "Step 1 — About you"}
+          {t("onboardingUi.step1AboutYou")}
         </span>
       </div>
 
@@ -1035,9 +1018,7 @@ function Step1AboutYou({
           htmlFor="onboarding-preferred-name"
           className="block text-lg sm:text-xl font-extrabold font-outfit text-stone-900"
         >
-          {isPt
-            ? "Como você gostaria de ser chamado(a) na Bloom?"
-            : "What would you like to be called in Bloom?"}
+          {t("onboardingUi.whatWouldYouLikeTo")}
         </label>
         <input
           id="onboarding-preferred-name"
@@ -1046,19 +1027,17 @@ function Step1AboutYou({
           maxLength={80}
           value={data.preferredName ?? ""}
           onChange={(e) => updateData("preferredName", e.target.value)}
-          placeholder={isPt ? "Ex.: Débora" : "e.g. Débora"}
+          placeholder={t("onboardingUi.eGDeBora")}
           className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
         />
       </div>
 
       <div className="space-y-2">
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Quais idiomas você ensina?" : "What language(s) do you teach?"}
+          {t("onboardingUi.whatLanguageSDoYou")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt
-            ? "Selecione todos os idiomas que você ensina nas suas aulas."
-            : "Select all languages you teach."}
+          {t("onboardingUi.selectAllLanguagesYouTeach")}
         </p>
       </div>
 
@@ -1094,13 +1073,13 @@ function Step1AboutYou({
       {data.languages.includes("Other") && (
         <div className="pt-1">
           <label className="block text-xs font-bold text-stone-700 mb-1.5">
-            {isPt ? "Especifique o outro idioma:" : "Specify other language:"}
+            {t("onboardingUi.specifyOtherLanguage")}
           </label>
           <input
             type="text"
             value={data.otherLanguage || ""}
             onChange={(e) => updateData("otherLanguage", e.target.value)}
-            placeholder={isPt ? "ex: Mandarim, Alemão Suíço" : "e.g. Mandarin, Russian"}
+            placeholder={t("onboardingUi.eGMandarinRussian")}
             className="w-full h-11 px-4 rounded-xl border border-stone-300 bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 text-sm"
           />
         </div>
@@ -1221,15 +1200,13 @@ function Step2YourBusiness({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 2 — Seu Negócio" : "Step 2 — Your Business"}
+          {t("onboardingUi.step2YourBusiness")}
         </span>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Quantos alunos ativos você tem atualmente?" : "How many active students do you currently have?"}
+          {t("onboardingUi.howManyActiveStudentsDo")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt
-            ? "Essa informação ajusta o volume do seu painel e relatórios."
-            : "This configures your dashboard volume and metrics."}
+          {t("onboardingUi.thisConfiguresYourDashboardVolume")}
         </p>
       </div>
 
@@ -1318,13 +1295,13 @@ function Step3YourSchedule({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 3 — Sua Agenda" : "Step 3 — Your Schedule"}
+          {t("onboardingUi.step3YourSchedule")}
         </span>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Quais dias da semana você trabalha?" : "Select your working days"}
+          {t("onboardingUi.selectYourWorkingDays")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt ? "Marque os dias em que você costuma dar aulas." : "Check the days you usually teach."}
+          {t("onboardingUi.checkTheDaysYouUsually")}
         </p>
       </div>
 
@@ -1355,9 +1332,7 @@ function Step3YourSchedule({
         <div className="space-y-6 pt-6 border-t border-stone-200/70">
           <div className="space-y-2">
             <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
-              {isPt
-                ? "Você costuma ter a mesma disponibilidade em todos os dias selecionados?"
-                : "Do you usually have the same availability on all selected days?"}
+              {t("onboardingUi.doYouUsuallyHaveThe")}
             </h3>
 
             <div className="flex gap-3">
@@ -1370,7 +1345,7 @@ function Step3YourSchedule({
                     : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
                 }`}
               >
-                {isPt ? "SIM" : "YES"}
+                {t("onboardingUi.yes")}
               </button>
               <button
                 type="button"
@@ -1381,7 +1356,7 @@ function Step3YourSchedule({
                     : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
                 }`}
               >
-                {isPt ? "NÃO" : "NO"}
+                {t("onboardingUi.no")}
               </button>
             </div>
           </div>
@@ -1390,7 +1365,7 @@ function Step3YourSchedule({
           {data.sameAvailabilityAllDays ? (
             <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-2">
               <span className="text-xs font-bold text-stone-500 uppercase">
-                {isPt ? "Horário padrão para todos os dias" : "Standard time for all days"}
+                {t("onboardingUi.standardTimeForAllDays")}
               </span>
               <div className="flex items-center gap-3">
                 <input
@@ -1412,7 +1387,7 @@ function Step3YourSchedule({
             /* Custom availability editor per selected day */
             <div className="space-y-3">
               <span className="text-xs font-bold text-stone-500 uppercase">
-                {isPt ? "Configurar cada dia individualmente:" : "Configure each day separately:"}
+                {t("onboardingUi.configureEachDaySeparately")}
               </span>
               {data.workingDays.map((day) => {
                 const avail = data.customAvailability[day] || { startTime: "09:00", endTime: "18:00" };
@@ -1469,7 +1444,7 @@ const OPTIONAL_SECTION_DAYS = [
 function OptionalBadge({ isPt }: { isPt: boolean }) {
   return (
     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-stone-100 text-stone-500 border border-stone-200">
-      {isPt ? "Opcional" : "Optional"}
+      {t("onboardingUi.optional")}
     </span>
   );
 }
@@ -1495,7 +1470,7 @@ function RestBlocksSection({
         day,
         startTime: "12:00",
         endTime: "13:00",
-        label: isPt ? "Pausa" : "Break",
+        label: t("onboardingUi.break"),
       },
     ];
     updateData("restBlocks", next);
@@ -1518,14 +1493,12 @@ function RestBlocksSection({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
-              {isPt ? "Pausas recorrentes" : "Recurring breaks"}
+              {t("onboardingUi.recurringBreaks")}
             </h3>
             <OptionalBadge isPt={isPt} />
           </div>
           <p className="text-sm text-stone-500">
-            {isPt
-              ? "Intervalos fixos na sua semana, como almoço ou deslocamento. Ex.: segunda 12:00–13:30."
-              : "Fixed weekly breaks, like lunch or commuting. E.g. Monday 12:00–13:30."}
+            {t("onboardingUi.fixedWeeklyBreaksLikeLunch")}
           </p>
         </div>
       </div>
@@ -1568,14 +1541,14 @@ function RestBlocksSection({
                     type="text"
                     value={b.label || ""}
                     onChange={(e) => updateBlock(b.id, "label", e.target.value)}
-                    placeholder={isPt ? "Nome (opcional)" : "Name (optional)"}
+                    placeholder={t("onboardingUi.nameOptional")}
                     className="h-10 px-3 flex-1 min-w-[130px] rounded-xl border border-stone-300 bg-stone-50 font-medium text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
                   />
                   <button
                     type="button"
                     onClick={() => removeBlock(b.id)}
                     className="h-10 w-10 flex items-center justify-center rounded-xl border border-stone-200 text-stone-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
-                    aria-label={isPt ? "Remover pausa" : "Remove break"}
+                    aria-label={t("onboardingUi.removeBreak")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1583,9 +1556,7 @@ function RestBlocksSection({
                 {invalid && (
                   <p className="text-xs font-semibold text-red-600 flex items-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    {isPt
-                      ? "O horário final deve ser maior que o inicial."
-                      : "End time must be after start time."}
+                    {t("onboardingUi.endTimeMustBeAfter")}
                   </p>
                 )}
               </div>
@@ -1600,7 +1571,7 @@ function RestBlocksSection({
         className="w-full h-12 rounded-2xl border border-dashed border-stone-300 text-sm font-bold text-stone-600 hover:border-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
       >
         <Plus className="w-4 h-4" />
-        {isPt ? "Adicionar pausa" : "Add break"}
+        {t("onboardingUi.addBreak")}
       </button>
     </div>
   );
@@ -1649,14 +1620,12 @@ function TimeOffSection({
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
-            {isPt ? "Férias e folgas" : "Vacations & days off"}
+            {t("onboardingUi.vacationsDaysOff")}
           </h3>
           <OptionalBadge isPt={isPt} />
         </div>
         <p className="text-sm text-stone-500">
-          {isPt
-            ? "Períodos em que você não dará aulas. O Bloom pula essas datas na agenda e nos planos de aula."
-            : "Periods when you won't teach. Bloom skips these dates in the calendar and lesson plans."}
+          {t("onboardingUi.periodsWhenYouWonT")}
         </p>
       </div>
 
@@ -1688,14 +1657,14 @@ function TimeOffSection({
                     type="text"
                     value={p.title || ""}
                     onChange={(e) => updatePeriod(p.id, "title", e.target.value)}
-                    placeholder={isPt ? "Nome (ex.: Férias de julho)" : "Name (e.g. July vacation)"}
+                    placeholder={t("onboardingUi.nameEGJulyVacation")}
                     className="h-10 px-3 flex-1 min-w-[150px] rounded-xl border border-stone-300 bg-stone-50 font-medium text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
                   />
                   <button
                     type="button"
                     onClick={() => removePeriod(p.id)}
                     className="h-10 w-10 flex items-center justify-center rounded-xl border border-stone-200 text-stone-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
-                    aria-label={isPt ? "Remover período" : "Remove period"}
+                    aria-label={t("onboardingUi.removePeriod")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1703,9 +1672,7 @@ function TimeOffSection({
                 {invalid && (
                   <p className="text-xs font-semibold text-red-600 flex items-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    {isPt
-                      ? "A data final não pode ser anterior à inicial."
-                      : "End date can't be before start date."}
+                    {t("onboardingUi.endDateCanTBe")}
                   </p>
                 )}
               </div>
@@ -1720,7 +1687,7 @@ function TimeOffSection({
         className="w-full h-12 rounded-2xl border border-dashed border-stone-300 text-sm font-bold text-stone-600 hover:border-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
       >
         <Plus className="w-4 h-4" />
-        {isPt ? "Adicionar período" : "Add period"}
+        {t("onboardingUi.addPeriod")}
       </button>
     </div>
   );
@@ -1814,13 +1781,13 @@ function Step4PlansPackages({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 4 — Planos e Pacotes" : "Step 4 — Plans & Packages"}
+          {t("onboardingUi.step4PlansPackages")}
         </span>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Que tipo de aulas você oferece?" : "What type of lessons do you offer?"}
+          {t("onboardingUi.whatTypeOfLessonsDo")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt ? "Selecione todas as modalidades que aceita." : "Select all lesson modalities."}
+          {t("onboardingUi.selectAllLessonModalities")}
         </p>
       </div>
 
@@ -1863,7 +1830,7 @@ function Step4PlansPackages({
             className="h-10 px-4 rounded-xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
           >
             <Plus className="h-4 w-4" />
-            <span>{isPt ? "Criar Pacote" : "Create Package"}</span>
+            <span>{t("onboardingUi.createPackage")}</span>
           </button>
         </div>
 
@@ -1872,14 +1839,10 @@ function Step4PlansPackages({
           {data.packages.length === 0 ? (
             <div className="p-6 text-center rounded-2xl border border-dashed border-stone-300 bg-stone-50/50 space-y-2">
               <p className="text-sm font-medium text-stone-600">
-                {isPt
-                  ? "Nenhum pacote cadastrado por enquanto."
-                  : "No packages created yet."}
+                {t("onboardingUi.noPackagesCreatedYet")}
               </p>
               <p className="text-xs text-stone-400">
-                {isPt
-                  ? "Você pode criar seus pacotes agora clicando no botão acima ou pular e criar mais tarde na plataforma."
-                  : "You can create packages now using the button above or skip and add them later."}
+                {t("onboardingUi.youCanCreatePackagesNow")}
               </p>
             </div>
           ) : (
@@ -1900,7 +1863,7 @@ function Step4PlansPackages({
                       </span>
                     </div>
                     <div className="text-xs text-stone-500 font-semibold flex items-center gap-2 flex-wrap">
-                      <span>{pkg.lessons} {isPt ? "aulas" : "lessons"}</span>
+                      <span>{pkg.lessons} {t("onboardingUi.lessons")}</span>
                       <span>•</span>
                       <span>{formatReaisToBRL(pkg.price)}</span>
                       <span>•</span>
@@ -1909,7 +1872,7 @@ function Step4PlansPackages({
                         <>
                           <span>•</span>
                           <span className="text-emerald-700">
-                            {isPt ? `sugestão até ${pkg.defaultInstallmentCount}x` : `up to ${pkg.defaultInstallmentCount}x`}
+                            {fmt(t("onboardingUi.upToX"), pkg.defaultInstallmentCount)}
                           </span>
                         </>
                       )}
@@ -1925,7 +1888,7 @@ function Step4PlansPackages({
                       type="button"
                       onClick={() => handleOpenEdit(pkg)}
                       className="p-2 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
-                      title={isPt ? "Editar pacote" : "Edit package"}
+                      title={t("onboardingUi.editPackage")}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -1933,7 +1896,7 @@ function Step4PlansPackages({
                       type="button"
                       onClick={() => handleRemovePackage(pkg.id)}
                       className="p-2 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                      title={isPt ? "Excluir pacote" : "Delete package"}
+                      title={t("onboardingUi.deletePackage")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1973,15 +1936,13 @@ function Step5Finances({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 5 — Finanças" : "Step 5 — Finances"}
+          {t("onboardingUi.step5Finances")}
         </span>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Qual é a sua meta de faturamento mensal?" : "What is your monthly income goal?"}
+          {t("onboardingUi.whatIsYourMonthlyIncome")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt
-            ? "Defina uma meta para acompanhar seu progresso no painel."
-            : "Set a goal to track progress on your dashboard."}
+          {t("onboardingUi.setAGoalToTrack")}
         </p>
       </div>
 
@@ -2002,9 +1963,7 @@ function Step5Finances({
       {/* Monthly Expense Input */}
       <div className="space-y-2 pt-4 border-t border-stone-200/70">
         <label className="block text-sm font-bold text-stone-800 font-outfit">
-          {isPt
-            ? "Aproximadamente quanto você gasta por mês para manter seu negócio?"
-            : "Approximately how much do you spend each month running your business?"}
+          {t("onboardingUi.approximatelyHowMuchDoYou")}
         </label>
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-stone-400 text-sm">
@@ -2019,16 +1978,14 @@ function Step5Finances({
           />
         </div>
         <p className="text-xs text-stone-500 font-medium">
-          {isPt
-            ? "Não se preocupe se não tiver certeza. Você pode alterar essa informação a qualquer momento."
-            : "Don't worry if you're not sure. You can change this information at any time."}
+          {t("onboardingUi.donTWorryIfYou")}
         </p>
       </div>
 
       {/* Hourly Rate Question */}
       <div className="space-y-4 pt-4 border-t border-stone-200/70">
         <label className="block text-sm font-bold text-stone-800 font-outfit">
-          {isPt ? "Você sabe qual é o valor da sua hora-aula?" : "Do you know your hourly lesson rate?"}
+          {t("onboardingUi.doYouKnowYourHourly")}
         </label>
 
         <div className="flex gap-3">
@@ -2041,7 +1998,7 @@ function Step5Finances({
                 : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
             }`}
           >
-            {isPt ? "SIM" : "YES"}
+            {t("onboardingUi.yes")}
           </button>
           <button
             type="button"
@@ -2052,7 +2009,7 @@ function Step5Finances({
                 : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
             }`}
           >
-            {isPt ? "NÃO" : "NO"}
+            {t("onboardingUi.no")}
           </button>
         </div>
 
@@ -2103,15 +2060,13 @@ function Step6Payments({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 6 — Pagamentos" : "Step 6 — Payments"}
+          {t("onboardingUi.step6Payments")}
         </span>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Como seus alunos costumam te pagar?" : "How do your students usually pay you?"}
+          {t("onboardingUi.howDoYourStudentsUsually")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt
-            ? "Criaremos automaticamente as tags e formas de pagamento selecionadas."
-            : "We will automatically create payment tags for selected options."}
+          {t("onboardingUi.weWillAutomaticallyCreatePayment")}
         </p>
       </div>
 
@@ -2173,15 +2128,13 @@ function Step7Contracts({
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
-          {isPt ? "Passo 7 — Contratos" : "Step 7 — Contracts"}
+          {t("onboardingUi.step7Contracts")}
         </span>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Você utiliza contratos de aulas?" : "Do you use lesson contracts?"}
+          {t("onboardingUi.doYouUseLessonContracts")}
         </h2>
         <p className="text-sm text-stone-500">
-          {isPt
-            ? "O Bloom possui modelos prontos e gestão de contratos."
-            : "Bloom includes ready-made templates and contract tracking."}
+          {t("onboardingUi.bloomIncludesReadyMadeTemplates")}
         </p>
       </div>
 
@@ -2233,7 +2186,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
       }
       return formatOnboardingLanguage(l, lang);
     })
-    .join(", ") || (isPt ? "Não especificado" : "Not specified");
+    .join(", ") || (t("onboardingUi.notSpecified"));
 
   const formattedStudents = formatOnboardingStudentRange(data.studentRange, lang);
 
@@ -2242,9 +2195,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
     .join(", ") || "-";
 
   const packagesCount = data.packages ? data.packages.length : 0;
-  const formattedPackages = isPt
-    ? `${packagesCount} pacote(s)`
-    : `${packagesCount} package(s)`;
+  const formattedPackages = fmt(t("onboardingUi.packageS"), packagesCount);
 
   const formattedGoal = `R$ ${data.monthlyGoal || "0"}`;
 
@@ -2273,12 +2224,10 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
           <Sparkles className="h-6 w-6" />
         </div>
         <h2 className="text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {isPt ? "Tudo pronto!" : "Everything is set!"}
+          {t("onboardingUi.everythingIsSet")}
         </h2>
         <p className="text-sm text-stone-600 max-w-sm mx-auto">
-          {isPt
-            ? "Veja o resumo de como seu Bloom foi configurado. Você pode alterar qualquer informação depois em Configurações."
-            : "Here is a summary of your Bloom setup. You can modify any setting later in Settings."}
+          {t("onboardingUi.hereIsASummaryOf")}
         </p>
       </div>
 
@@ -2288,7 +2237,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <Globe className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Idiomas" : "Languages"}
+            {t("onboardingUi.languages")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedLanguages}
@@ -2299,7 +2248,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Alunos Ativos" : "Active Students"}
+            {t("onboardingUi.activeStudents")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedStudents}
@@ -2310,7 +2259,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <CalendarIcon className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Dias de Trabalho" : "Working Days"}
+            {t("onboardingUi.workingDays")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedDays}
@@ -2321,7 +2270,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <Briefcase className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Pacotes Criados" : "Packages Created"}
+            {t("onboardingUi.packagesCreated")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedPackages}
@@ -2332,7 +2281,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <TrendingUp className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Meta Mensal" : "Monthly Goal"}
+            {t("onboardingUi.monthlyGoal")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedGoal}
@@ -2343,7 +2292,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <Briefcase className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Ferramentas de Gestão" : "Management Tools"}
+            {t("onboardingUi.managementTools")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedTools}
@@ -2354,7 +2303,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
         <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-1">
           <span className="text-xs font-bold text-stone-400 uppercase font-outfit flex items-center gap-1.5">
             <CreditCard className="h-3.5 w-3.5 text-emerald-700" />
-            {isPt ? "Formas de Pagamento" : "Payment Methods"}
+            {t("onboardingUi.paymentMethods")}
           </span>
           <p className="font-bold text-stone-800 text-sm">
             {formattedPaymentMethods}
