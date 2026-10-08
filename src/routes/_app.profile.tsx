@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { reportUserError } from "@/lib/user-error";
 import { resolveTeacherName } from "@/lib/teacher-name";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,6 +36,7 @@ import {
   Lightbulb,
   FileText,
   Clock,
+  Camera,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -115,6 +116,11 @@ const translations = {
     saveError: "Could not save your profile. Please try again.",
     postSaveError: "Could not save this discussion. Please try again.",
     loadError: "Could not load your community data.",
+    profilePhoto: "Profile Photo",
+    changePhoto: "Change photo",
+    photoInvalidType: "Please choose a JPEG, PNG or WebP image.",
+    photoTooLarge: "The image must be 5 MB or smaller.",
+    uploadError: "Could not upload your photo. Please try again.",
   },
   pt: {
     langToggle: "EN",
@@ -168,6 +174,11 @@ const translations = {
     saveError: "Não foi possível salvar o perfil. Tente novamente.",
     postSaveError: "Não foi possível salvar a discussão. Tente novamente.",
     loadError: "Não foi possível carregar seus dados da comunidade.",
+    profilePhoto: "Foto de Perfil",
+    changePhoto: "Alterar foto",
+    photoInvalidType: "Escolha uma imagem JPEG, PNG ou WebP.",
+    photoTooLarge: "A imagem deve ter no máximo 5 MB.",
+    uploadError: "Não foi possível enviar sua foto. Tente novamente.",
   },
 };
 
@@ -215,6 +226,46 @@ function ProfilePage() {
   const [editExpertise, setEditExpertise] = useState<string[]>(profile.expertiseAreas);
   const [newExpertise, setNewExpertise] = useState("");
 
+  const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+  const AVATAR_TYPES: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const clearAvatarSelection = useCallback(() => {
+    setAvatarFile(null);
+    setAvatarPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  }, []);
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!AVATAR_TYPES[file.type]) {
+      toast.error(t.photoInvalidType);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error(t.photoTooLarge);
+      e.target.value = "";
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
+
   const resetForm = useCallback(() => {
     setEditName(resolveTeacherName(authProfile, user) || "");
     setEditPhoto((authProfile?.avatar_url as string) || "");
@@ -227,7 +278,8 @@ function ProfilePage() {
     setEditYears(yrs === null || yrs === undefined ? "" : String(yrs));
     setEditExpertise(Array.isArray(authProfile?.expertise_areas) ? authProfile.expertise_areas : []);
     setNewExpertise("");
-  }, [authProfile, user]);
+    clearAvatarSelection();
+  }, [authProfile, user, clearAvatarSelection]);
 
   useEffect(() => {
     if (authProfile) resetForm();
@@ -302,29 +354,56 @@ function ProfilePage() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id) return;
-    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
-    const yearsValue = editYears.trim() === "" ? null : Number.parseInt(editYears.trim(), 10);
-    const years = yearsValue === null || Number.isNaN(yearsValue) ? null : Math.min(Math.max(yearsValue, 0), 80);
-    const payload = {
-      full_name: editName.trim() || null,
-      avatar_url: editPhoto || null,
-      bio: editBio.trim() || null,
-      locale: editLanguage,
-      timezone: editTimezone,
-      professional_headline: editHeadline.trim() || null,
-      country: editCountry.trim() || null,
-      years_experience: years,
-      expertise_areas: editExpertise.length > 0 ? editExpertise : null,
-    };
-    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
-    if (error) {
-      toast.error(reportUserError(error, t.saveError));
-      return;
+    if (!user?.id || savingProfile) return;
+    setSavingProfile(true);
+    try {
+      const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+      const yearsValue = editYears.trim() === "" ? null : Number.parseInt(editYears.trim(), 10);
+      const years = yearsValue === null || Number.isNaN(yearsValue) ? null : Math.min(Math.max(yearsValue, 0), 80);
+
+      let avatarUrl = editPhoto || null;
+      if (avatarFile) {
+        const ext = AVATAR_TYPES[avatarFile.type];
+        if (!ext || avatarFile.size > AVATAR_MAX_BYTES) {
+          toast.error(!ext ? t.photoInvalidType : t.photoTooLarge);
+          return;
+        }
+        const path = `${user.id}/avatar.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
+        if (uploadError) {
+          toast.error(reportUserError(uploadError, t.uploadError));
+          return;
+        }
+        const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+        // Cache-buster so a replaced photo shows immediately instead of a stale cached image.
+        avatarUrl = `${publicData.publicUrl}?v=${Date.now()}`;
+      }
+
+      const payload = {
+        full_name: editName.trim() || null,
+        avatar_url: avatarUrl,
+        bio: editBio.trim() || null,
+        locale: editLanguage,
+        timezone: editTimezone,
+        professional_headline: editHeadline.trim() || null,
+        country: editCountry.trim() || null,
+        years_experience: years,
+        expertise_areas: editExpertise.length > 0 ? editExpertise : null,
+      };
+      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      if (error) {
+        toast.error(reportUserError(error, t.saveError));
+        return;
+      }
+      setLang(targetLang);
+      setIsEditOpen(false);
+      clearAvatarSelection();
+      retryProfileSync();
+    } finally {
+      setSavingProfile(false);
     }
-    setLang(targetLang);
-    setIsEditOpen(false);
-    retryProfileSync();
   };
 
   const handleCancelProfileEdit = () => {
@@ -642,6 +721,52 @@ function ProfilePage() {
           </DialogHeader>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 pt-3">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-foreground">{t.profilePhoto}</Label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="relative h-20 w-20 shrink-0 rounded-2xl overflow-hidden border border-border/80 group cursor-pointer"
+                  title={t.changePhoto}
+                >
+                  {avatarPreview || editPhoto ? (
+                    <img
+                      src={avatarPreview || editPhoto}
+                      alt={editName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-lilac flex items-center justify-center font-display text-xl font-extrabold text-lilac-foreground">
+                      {(editName || "?")
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
+                    </div>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="h-5 w-5 text-white" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {t.changePhoto}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarSelect}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-4">
               <div className="space-y-1">
                 <Label htmlFor="edit-name" className="text-xs font-semibold text-foreground">
@@ -809,7 +934,8 @@ function ProfilePage() {
               </button>
               <button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:bg-primary/95 cursor-pointer shadow-sm px-4"
+                disabled={savingProfile}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all hover:bg-primary/95 cursor-pointer shadow-sm px-4 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {t.saveChanges}
               </button>
