@@ -62,63 +62,6 @@ export const Route = createFileRoute("/_app/profile")({
   component: ProfilePage,
 });
 
-interface ProfileData {
-  photo: string;
-  name: string;
-  headline: string;
-  bio: string;
-  country: string;
-  teachingAreas: string[];
-  subjectsTaught: string[];
-  experience: number;
-  linkedin: string;
-  twitter: string;
-  github: string;
-  website: string;
-}
-
-const defaultProfile: ProfileData = {
-  photo: "",
-  name: "Mariana Ramos",
-  headline: "Senior ESL & English Language Coach",
-  bio: "Passionate educator with over 8 years of experience. Specializing in curriculum development, communicative methodologies, and student-centered coaching. Helping learners achieve professional fluency.",
-  country: "Brazil",
-  teachingAreas: ["Adult Education", "Business English", "Exam Preparation"],
-  subjectsTaught: ["General English", "Professional Writing", "IELTS / TOEFL Prep"],
-  experience: 8,
-  linkedin: "https://linkedin.com/in/marianaramos",
-  twitter: "https://twitter.com/marianaramos",
-  github: "",
-  website: "https://marianaramos.bloom.im",
-};
-
-const defaultPosts = [
-  {
-    id: "p1",
-    authorName: "Maria Silva",
-    category: "Question",
-    title: "How do you teach Present Perfect to beginners?",
-    content:
-      "I have a class of adult Spanish speakers who are struggling with the transition between past simple and present perfect. Any specific timeline diagrams or games that have worked well for you?",
-    tags: ["Grammar", "Adults", "Spanish Speakers"],
-    likes: 12,
-    commentsCount: 3,
-    timeAgo: "2 hours ago",
-  },
-  {
-    id: "p2",
-    authorName: "Lucas Meyer",
-    category: "Tip",
-    title: "A speaking activity my students absolutely love",
-    content:
-      "I started doing '1-Minute Elevator Pitches' where students receive a random crazy invention (e.g. solar-powered umbrella) and have to sell it to the class in exactly 60 seconds. It forces them to bypass translation and speak dynamically!",
-    tags: ["Speaking", "Fluency", "Icebreaker"],
-    likes: 24,
-    commentsCount: 1,
-    timeAgo: "4 hours ago",
-  },
-];
-
 const translations = {
   en: {
     langToggle: "PT",
@@ -155,7 +98,18 @@ const translations = {
     socialLinks: "Social Links",
     saveChanges: "Save Changes",
     cancel: "Cancel",
-    xp: "XP",
+    xp: "points",
+    languagesTaught: "Languages taught",
+    noLanguages: "No languages taught added yet.",
+    noBio: "No bio added yet.",
+    notRanked: "Not ranked yet",
+    comingSoon: "Coming soon",
+    postsCreated2: "Discussions published",
+    watersReceived: "Waters received",
+    commentsWritten: "Comments written",
+    saveError: "Could not save your profile. Please try again.",
+    postSaveError: "Could not save this discussion. Please try again.",
+    loadError: "Could not load your community data.",
   },
   pt: {
     langToggle: "EN",
@@ -192,209 +146,136 @@ const translations = {
     socialLinks: "Links Sociais",
     saveChanges: "Salvar Alterações",
     cancel: "Cancelar",
-    xp: "XP",
+    xp: "pontos",
+    languagesTaught: "Idiomas que leciona",
+    noLanguages: "Nenhum idioma de ensino informado ainda.",
+    noBio: "Nenhuma biografia adicionada ainda.",
+    notRanked: "Ainda sem posição no ranque",
+    comingSoon: "Em breve",
+    postsCreated2: "Discussões publicadas",
+    watersReceived: "Regadas recebidas",
+    commentsWritten: "Comentários escritos",
+    saveError: "Não foi possível salvar o perfil. Tente novamente.",
+    postSaveError: "Não foi possível salvar a discussão. Tente novamente.",
+    loadError: "Não foi possível carregar seus dados da comunidade.",
   },
 };
 
 function ProfilePage() {
   const { lang, setLang, t: tr } = useLanguage();
   const { user, profile: authProfile, retryProfileSync } = useAuth();
-  const [localProfile, setLocalProfile] = useState<ProfileData>(defaultProfile);
-  useEffect(() => {
-    if (!user?.id) {
-      setLocalProfile(defaultProfile);
-      return;
-    }
-    try {
-      const saved = getUserItem("bloom.profile.data", user.id);
-      setLocalProfile(saved ? { ...defaultProfile, ...JSON.parse(saved) } : defaultProfile);
-    } catch {
-      setLocalProfile(defaultProfile);
-    }
-  }, [user?.id]);
+  const t = translations[lang];
 
   const profile = {
-    ...localProfile,
-    name: resolveTeacherName(authProfile, user) || sanitizeTeacherName(localProfile.name, user?.email) || "",
-    photo: (authProfile?.avatar_url as string) || localProfile.photo,
-    preferred_language: (authProfile?.preferred_language as string) || "pt-BR",
-    timezone: (authProfile?.timezone as string) || "America/Sao_Paulo",
+    name: resolveTeacherName(authProfile, user) || "",
+    photo: (authProfile?.avatar_url as string) || "",
+    bio: (authProfile?.bio as string) || "",
+    languagesTaught: (Array.isArray(authProfile?.languages_taught)
+      ? authProfile.languages_taught
+      : []) as string[],
+    preferred_language: (authProfile?.locale as string) || (authProfile?.preferred_language as string) || "",
+    timezone: (authProfile?.timezone as string) || "",
   };
 
   const [posts, setPosts] = useState<any[]>([]);
+  const [points, setPoints] = useState(0);
+  const [rankPosition, setRankPosition] = useState<number | null>(null);
+  const [commentsWritten, setCommentsWritten] = useState(0);
 
-  // Edit Profile States
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editName, setEditName] = useState(profile.name);
-  const [editHeadline, setEditHeadline] = useState(profile.headline);
   const [editBio, setEditBio] = useState(profile.bio);
-  const [editCountry, setEditCountry] = useState(profile.country);
-  const [editAreas, setEditAreas] = useState(profile.teachingAreas.join(", "));
-  const [editSubjects, setEditSubjects] = useState(profile.subjectsTaught.join(", "));
-  const [editExperience, setEditExperience] = useState(profile.experience);
-  const [editLinkedin, setEditLinkedin] = useState(profile.linkedin);
-  const [editTwitter, setEditTwitter] = useState(profile.twitter);
-  const [editGithub, setEditGithub] = useState(profile.github);
-  const [editWebsite, setEditWebsite] = useState(profile.website);
   const [editPhoto, setEditPhoto] = useState(profile.photo);
   const [editLanguage, setEditLanguage] = useState(profile.preferred_language || "pt-BR");
   const [editTimezone, setEditTimezone] = useState(profile.timezone || "America/Sao_Paulo");
 
-  // Sync form states with database profile
-  useEffect(() => {
-    if (authProfile) {
-      setEditName(resolveTeacherName(authProfile, user) || "");
-      setEditPhoto(authProfile.avatar_url || "");
-      setEditLanguage(authProfile.preferred_language || "pt-BR");
-      setEditTimezone(authProfile.timezone || "America/Sao_Paulo");
-    }
-  }, [authProfile]);
+  const resetForm = useCallback(() => {
+    setEditName(resolveTeacherName(authProfile, user) || "");
+    setEditPhoto((authProfile?.avatar_url as string) || "");
+    setEditBio((authProfile?.bio as string) || "");
+    setEditLanguage((authProfile?.locale as string) || "pt-BR");
+    setEditTimezone((authProfile?.timezone as string) || "America/Sao_Paulo");
+  }, [authProfile, user]);
 
-  // Edit Discussion States
+  useEffect(() => {
+    if (authProfile) resetForm();
+  }, [authProfile, resetForm]);
+
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editPostTitle, setEditPostTitle] = useState("");
   const [editPostContent, setEditPostContent] = useState("");
-
-  // View Discussion Modal
   const [viewingPost, setViewingPost] = useState<any | null>(null);
 
-  const t = translations[lang];
+  const userId = user?.id;
 
-  // Seeding post and loading list from shared community posts database
-  useEffect(() => {
-    const stored = localStorage.getItem("bloom.community.posts");
-    let currentPosts = [];
-    if (stored) {
-      currentPosts = JSON.parse(stored);
-    } else {
-      currentPosts = [...defaultPosts];
-    }
-
-    const userHasPosts = currentPosts.some(
-      (p: any) =>
-        p.authorName === "You (Teacher)" ||
-        p.authorName === "Você (Professor)" ||
-        p.authorName === profile.name,
-    );
-
-    if (!userHasPosts) {
-      const seedPost = {
-        id: "p-my-seed",
-        authorName: "You (Teacher)",
-        category: "Tip" as const,
-        title: "Designing Interactive Lesson Slides that Boost Engagement",
-        content:
-          "I started using collaborative slide templates where students match items and drag-and-drop elements during live online sessions. It significantly improved camera-on time and talking time!",
-        tags: ["Engagement", "Online Teaching", "Methodology"],
-        likes: 18,
-        commentsCount: 2,
-        timeAgo: "2 days ago",
-        commentsList: [
-          {
-            id: "cm-1",
-            authorName: "Lucas Meyer",
-            content: "This works incredibly well. Drag-and-drop keeps their attention focused.",
-            timeAgo: "1 day ago",
-          },
-        ],
-      };
-      currentPosts = [seedPost, ...currentPosts];
-      localStorage.setItem("bloom.community.posts", JSON.stringify(currentPosts));
-    }
-    setPosts(currentPosts);
-  }, [profile.name]);
-
-  // Save profile changes
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    const updated: ProfileData = {
-      photo: editPhoto,
-      name: editName,
-      headline: editHeadline,
-      bio: editBio,
-      country: editCountry,
-      teachingAreas: editAreas
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      subjectsTaught: editSubjects
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      experience: Number(editExperience) || 0,
-      linkedin: editLinkedin,
-      twitter: editTwitter,
-      github: editGithub,
-      website: editWebsite,
-    };
-    setLocalProfile(updated);
-    if (user?.id) setUserItem("bloom.profile.data", JSON.stringify(updated), user.id);
-    setIsEditOpen(false);
-
-    // Call setLang so language context updates immediately across the whole app
-    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
-    setLang(targetLang);
-
-    // Sync to database if user is logged in
-    if (user?.id) {
-      console.log("[Profile] Syncing updated profile to Supabase database...");
-      // public.profiles is the single canonical profile source; only real columns.
-      const payload = {
-        full_name: editName,
-        avatar_url: editPhoto,
-        locale: editLanguage,
-        timezone: editTimezone,
-      };
-
+  const loadCommunity = useCallback(async () => {
+    if (!userId) return;
+    const [postsRes, rankRes, commentsRes] = await Promise.all([
       supabase
-        .from("profiles")
-        .update(payload)
-        .eq("id", user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error("[Profile] Database update error:", error);
-            toast.error(
-              targetLang === "pt"
-                ? `Não foi possível salvar o perfil: ${error.message}`
-                : `Could not save profile: ${error.message}`,
-            );
-          } else {
-            retryProfileSync();
-          }
-        });
+        .from("community_posts")
+        .select("id, title, content, tags, created_at, updated_at")
+        .eq("author_id", userId)
+        .order("created_at", { ascending: false }),
+      supabase.from("ranking").select("points, rank").eq("teacher_id", userId).maybeSingle(),
+      supabase.from("comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
+    ]);
+    if (postsRes.error || rankRes.error) {
+      reportUserError(postsRes.error || rankRes.error, t.loadError);
     }
-  };
+    const rows = (postsRes.data || []) as any[];
+    const ids = rows.map((r) => r.id);
+    const waters: Record<string, number> = {};
+    const commentCounts: Record<string, number> = {};
+    if (ids.length > 0) {
+      const [rx, cm] = await Promise.all([
+        supabase.from("reactions").select("post_id").eq("type", "water").in("post_id", ids),
+        supabase.from("comments").select("post_id").in("post_id", ids),
+      ]);
+      (rx.data || []).forEach((r: any) => (waters[r.post_id] = (waters[r.post_id] || 0) + 1));
+      (cm.data || []).forEach((c: any) => (commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1));
+    }
+    setPosts(
+      rows.map((r) => ({
+        ...r,
+        waterCount: waters[r.id] || 0,
+        commentsCount: commentCounts[r.id] || 0,
+      })),
+    );
+    const pts = Number(rankRes.data?.points ?? 0);
+    setPoints(pts);
+    const pos = rankRes.data?.rank;
+    setRankPosition(pts > 0 && typeof pos === "number" && pos > 0 ? pos : null);
+    setCommentsWritten(commentsRes.count ?? 0);
+  }, [userId, t.loadError]);
 
-  // Sync state variables back if modal was cancelled
-  const handleCancelProfileEdit = () => {
-    setEditPhoto(profile.photo);
-    setEditName(profile.name);
-    setEditLanguage(profile.preferred_language || "pt-BR");
-    setEditTimezone(profile.timezone || "America/Sao_Paulo");
-    setEditHeadline(profile.headline);
-    setEditBio(profile.bio);
-    setEditCountry(profile.country);
-    setEditAreas(profile.teachingAreas.join(", "));
-    setEditSubjects(profile.subjectsTaught.join(", "));
-    setEditExperience(profile.experience);
-    setEditLinkedin(profile.linkedin);
-    setEditTwitter(profile.twitter);
-    setEditGithub(profile.github);
-    setEditWebsite(profile.website);
+  useEffect(() => {
+    loadCommunity();
+  }, [loadCommunity]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+    const payload = {
+      full_name: editName.trim() || null,
+      avatar_url: editPhoto || null,
+      bio: editBio.trim() || null,
+      locale: editLanguage,
+      timezone: editTimezone,
+    };
+    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+    if (error) {
+      toast.error(reportUserError(error, t.saveError));
+      return;
+    }
+    setLang(targetLang);
     setIsEditOpen(false);
+    retryProfileSync();
   };
 
-  // CRUD on Posts
-  const handleDeletePost = (postId: string) => {
-    if (
-      confirm(
-        tr("auditUi.areYouSureYouWantToDelete"),
-      )
-    ) {
-      const updated = posts.filter((p: any) => p.id !== postId);
-      setPosts(updated);
-      localStorage.setItem("bloom.community.posts", JSON.stringify(updated));
-    }
+  const handleCancelProfileEdit = () => {
+    resetForm();
+    setIsEditOpen(false);
   };
 
   const handleStartEditPost = (post: any) => {
@@ -403,38 +284,26 @@ function ProfilePage() {
     setEditPostContent(post.content || "");
   };
 
-  const handleSaveEditPost = (e: React.FormEvent) => {
+  const handleSaveEditPost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPost) return;
-    const updated = posts.map((p: any) => {
-      if (p.id === editingPost.id) {
-        return {
-          ...p,
-          title: editPostTitle,
-          content: editPostContent,
-        };
-      }
-      return p;
-    });
-    setPosts(updated);
-    localStorage.setItem("bloom.community.posts", JSON.stringify(updated));
+    if (!editingPost || !userId) return;
+    const { error } = await supabase
+      .from("community_posts")
+      .update({ title: editPostTitle, content: editPostContent })
+      .eq("id", editingPost.id)
+      .eq("author_id", userId);
+    if (error) {
+      toast.error(reportUserError(error, t.postSaveError));
+      return;
+    }
     setEditingPost(null);
+    loadCommunity();
   };
 
-  // Filters posts to only display user created discussions
-  const myDiscussions = posts.filter(
-    (p: any) =>
-      p.authorName === "You (Teacher)" ||
-      p.authorName === "Você (Professor)" ||
-      p.authorName === profile.name,
-  );
-
-  // Dynamic user statistics calculation
-  const myPostsCount = myDiscussions.length;
-  const myCommentsCount = 12; // Static base + simulated
-  const helpfulAnswers = 8;
-  const likesReceived = myDiscussions.reduce((sum, p) => sum + (p.likes || 0), 0) + 42; // Dynamic + base
-  const resourcesPublished = 3;
+  const myDiscussions = posts;
+  const watersReceived = posts.reduce((sum, p) => sum + (p.waterCount || 0), 0);
+  const formatDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US") : "";
 
   return (
     <div className="space-y-6">
