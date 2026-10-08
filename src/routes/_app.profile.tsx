@@ -278,7 +278,8 @@ function ProfilePage() {
     setEditYears(yrs === null || yrs === undefined ? "" : String(yrs));
     setEditExpertise(Array.isArray(authProfile?.expertise_areas) ? authProfile.expertise_areas : []);
     setNewExpertise("");
-  }, [authProfile, user]);
+    clearAvatarSelection();
+  }, [authProfile, user, clearAvatarSelection]);
 
   useEffect(() => {
     if (authProfile) resetForm();
@@ -353,29 +354,56 @@ function ProfilePage() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id) return;
-    const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
-    const yearsValue = editYears.trim() === "" ? null : Number.parseInt(editYears.trim(), 10);
-    const years = yearsValue === null || Number.isNaN(yearsValue) ? null : Math.min(Math.max(yearsValue, 0), 80);
-    const payload = {
-      full_name: editName.trim() || null,
-      avatar_url: editPhoto || null,
-      bio: editBio.trim() || null,
-      locale: editLanguage,
-      timezone: editTimezone,
-      professional_headline: editHeadline.trim() || null,
-      country: editCountry.trim() || null,
-      years_experience: years,
-      expertise_areas: editExpertise.length > 0 ? editExpertise : null,
-    };
-    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
-    if (error) {
-      toast.error(reportUserError(error, t.saveError));
-      return;
+    if (!user?.id || savingProfile) return;
+    setSavingProfile(true);
+    try {
+      const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+      const yearsValue = editYears.trim() === "" ? null : Number.parseInt(editYears.trim(), 10);
+      const years = yearsValue === null || Number.isNaN(yearsValue) ? null : Math.min(Math.max(yearsValue, 0), 80);
+
+      let avatarUrl = editPhoto || null;
+      if (avatarFile) {
+        const ext = AVATAR_TYPES[avatarFile.type];
+        if (!ext || avatarFile.size > AVATAR_MAX_BYTES) {
+          toast.error(!ext ? t.photoInvalidType : t.photoTooLarge);
+          return;
+        }
+        const path = `${user.id}/avatar.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
+        if (uploadError) {
+          toast.error(reportUserError(uploadError, t.uploadError));
+          return;
+        }
+        const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+        // Cache-buster so a replaced photo shows immediately instead of a stale cached image.
+        avatarUrl = `${publicData.publicUrl}?v=${Date.now()}`;
+      }
+
+      const payload = {
+        full_name: editName.trim() || null,
+        avatar_url: avatarUrl,
+        bio: editBio.trim() || null,
+        locale: editLanguage,
+        timezone: editTimezone,
+        professional_headline: editHeadline.trim() || null,
+        country: editCountry.trim() || null,
+        years_experience: years,
+        expertise_areas: editExpertise.length > 0 ? editExpertise : null,
+      };
+      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      if (error) {
+        toast.error(reportUserError(error, t.saveError));
+        return;
+      }
+      setLang(targetLang);
+      setIsEditOpen(false);
+      clearAvatarSelection();
+      retryProfileSync();
+    } finally {
+      setSavingProfile(false);
     }
-    setLang(targetLang);
-    setIsEditOpen(false);
-    retryProfileSync();
   };
 
   const handleCancelProfileEdit = () => {
