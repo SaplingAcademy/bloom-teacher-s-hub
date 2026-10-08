@@ -2,7 +2,6 @@ import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-erro
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect, useMemo } from "react";
 import { useLanguage } from "@/hooks/use-language";
-import { fmt } from "@/lib/i18n";
 import {
   fetchTeacherTimeOff,
   createTeacherTimeOff,
@@ -210,10 +209,9 @@ export function NonWorkingDaysModal({
     setIsSubmitting(false);
 
     if (res.success) {
-      const addedMsg =
-        mode === "multiple"
-          ? `${res.count || selectedDates.size} dias sem aula cadastrados com sucesso!`
-          : "Dia sem aula cadastrado com sucesso!";
+      const addedMsg = mode === "multiple"
+        ? t("availabilityUi.multipleDaysAdded").replace("{count}", String(res.count || selectedDates.size))
+        : t("availabilityUi.dayAdded");
       toast.success(addedMsg);
 
       await loadData();
@@ -433,7 +431,7 @@ export function NonWorkingDaysModal({
               </div>
               <div>
                 <DialogTitle className="text-base font-bold text-[#F4EBE1]">
-                  Dias sem aula
+                  {t("availabilityUi.daysOff")}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#F4EBE1]/80 mt-0.5">
                   {t("availabilityUi.daysOffDescription")}
@@ -590,16 +588,18 @@ export function NonWorkingDaysModal({
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Salvando...
+                    <RefreshCw className="w-4 h-4 animate-spin" /> {t("availabilityUi.saving")}
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4" />
                     {mode === "single"
-                      ? "Cadastrar dia sem aula"
+                      ? t("availabilityUi.registerDayOff")
                       : mode === "range"
-                      ? "Cadastrar período"
-                      : `Cadastrar ${selectedDates.size} ${selectedDates.size === 1 ? "dia" : "dias"}`}
+                      ? t("availabilityUi.registerPeriod")
+                      : t("availabilityUi.registerMultipleDays")
+                          .replace("{count}", String(selectedDates.size))
+                          .replace("{unit}", selectedDates.size === 1 ? t("availabilityUi.day") : t("availabilityUi.days"))}
                   </>
                 )}
               </Button>

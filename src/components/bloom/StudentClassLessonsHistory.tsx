@@ -10,7 +10,7 @@ const STATUS_CLASS: Record<string, string> = {
   excused: "bg-sky-100 text-sky-800",
 };
 
-export function StudentClassLessonsHistory({ studentId }: { studentId: string; isPt: boolean }) {
+export function StudentClassLessonsHistory({ studentId }: { studentId: string; isPt?: boolean }) {
   const { t, formatStatus } = useLanguage();
   const [lessons, setLessons] = useState<StudentClassLesson[]>([]);
   const [loading, setLoading] = useState(true);

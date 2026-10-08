@@ -122,6 +122,13 @@ export const uiTranslations = {
       "noCategory": "Sem categoria",
       "editItem": "Editar item",
       "deletePeriod": "Excluir período"
+      ,"dayAdded": "Dia sem aula cadastrado com sucesso!"
+      ,"multipleDaysAdded": "{count} dias sem aula cadastrados com sucesso!"
+      ,"registerDayOff": "Cadastrar dia sem aula"
+      ,"registerPeriod": "Cadastrar período"
+      ,"registerMultipleDays": "Cadastrar {count} {unit}"
+      ,"day": "dia"
+      ,"days": "dias"
     },
     "auditUi": {
       "syncingScheduleWithDatabase": "Sincronizando agenda com o banco de dados...",
@@ -855,6 +862,13 @@ export const uiTranslations = {
       "noCategory": "No category",
       "editItem": "Edit item",
       "deletePeriod": "Delete period"
+      ,"dayAdded": "Day off added successfully!"
+      ,"multipleDaysAdded": "{count} days off added successfully!"
+      ,"registerDayOff": "Add day off"
+      ,"registerPeriod": "Add period"
+      ,"registerMultipleDays": "Add {count} {unit}"
+      ,"day": "day"
+      ,"days": "days"
     },
     "auditUi": {
       "syncingScheduleWithDatabase": "Syncing schedule with database...",
