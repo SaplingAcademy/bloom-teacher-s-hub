@@ -555,7 +555,7 @@ function StudentsPage() {
     eventId: requestedEventId,
   } = Route.useSearch();
   const navigate = useNavigate();
-  const { lang, t: tr } = useLanguage();
+  const { lang, t: tr, formatStatus } = useLanguage();
   const { user } = useAuth();
   const {
     languages: teacherLanguages,
@@ -2241,11 +2241,11 @@ function StudentsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider block">
-                            {sp.isCurrent ? "PACOTE ATUAL" : "PACOTE ANTERIOR"}
+                            {sp.isCurrent ? tr("auditUi.currentPackage") : tr("auditUi.previousPackage")}
                           </span>
                           <strong className="text-sm font-bold text-foreground">{sp.packageName}</strong>
                           <span className="text-muted-foreground block text-[11px]">
-                            Vigência: {sp.startedAt ? sp.startedAt.split("-").reverse().join("/") : "—"} – {sp.endedAt ? sp.endedAt.split("-").reverse().join("/") : "Ativo"}
+                            {tr("auditUi.term")}: {sp.startedAt ? sp.startedAt.split("-").reverse().join("/") : "—"} – {sp.endedAt ? sp.endedAt.split("-").reverse().join("/") : tr("auditUi.active")}
                           </span>
                         </div>
 
@@ -2264,20 +2264,20 @@ function StudentsPage() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60 text-[11px]">
                         <div>
-                          <span className="text-muted-foreground block">Valor Total</span>
+                          <span className="text-muted-foreground block">{tr("auditUi.agreementTotalValue")}</span>
                           <strong>{sp.totalAmountFormatted}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground block">Parcelas</span>
+                          <span className="text-muted-foreground block">{tr("auditUi.agreementInstallments")}</span>
                           <strong>{sp.installmentCount}x de {sp.installmentAmountFormatted}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground block">Progresso</span>
+                          <span className="text-muted-foreground block">{tr("auditUi.progress")}</span>
                           <strong className="text-emerald-700 dark:text-emerald-400">{sp.progressLabel}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground block">Meio</span>
-                          <strong>{sp.paymentMethod}</strong>
+                          <span className="text-muted-foreground block">{tr("auditUi.agreementPaymentMethod")}</span>
+                          <strong>{formatStatus(sp.paymentMethod)}</strong>
                         </div>
                       </div>
                     </div>
@@ -2315,13 +2315,13 @@ function StudentsPage() {
                             )}
                           </div>
                           <p className="text-muted-foreground text-[11px]">
-                            Ref: <strong>{pay.invoiceReference}</strong> • Meio: <strong>{pay.paymentMethod}</strong> • Período: {pay.billingPeriod}
+                            {tr("auditUi.reference")}: <strong>{pay.invoiceReference}</strong> • {tr("auditUi.agreementPaymentMethod")}: <strong>{formatStatus(pay.paymentMethod)}</strong> • {tr("auditUi.period")}: {pay.billingPeriod}
                           </p>
                         </div>
 
                         <div className="flex items-center gap-3">
                           <span className="font-extrabold text-sm text-foreground">{pay.amountFormatted}</span>
-                          <Badge className="bg-emerald-600 text-white font-bold text-[10px]">{pay.status}</Badge>
+                          <Badge className="bg-emerald-600 text-white font-bold text-[10px]">{formatStatus(pay.status)}</Badge>
                         </div>
                       </div>
                     ))}
@@ -2338,7 +2338,7 @@ function StudentsPage() {
 
                 {studentTimeline.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic text-center py-4">
-                    Nenhum evento na linha do tempo.
+                    {tr("auditUi.noTimelineEvents")}
                   </p>
                 ) : (
                   <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
@@ -2778,7 +2778,7 @@ function StudentsPage() {
                         type="email"
                         value={formEmail}
                         onChange={(e) => setFormEmail(e.target.value)}
-                        placeholder="e.g. john@email.com"
+                        placeholder={tr("auditUi.emailPlaceholder")}
                         className="h-11 rounded-xl border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary"
                       />
                     </div>
@@ -2863,8 +2863,8 @@ function StudentsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Private">Private</SelectItem>
-                        <SelectItem value="Group">Group</SelectItem>
+                        <SelectItem value="Private">{formatStatus("Private")}</SelectItem>
+                        <SelectItem value="Group">{formatStatus("Group")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3047,9 +3047,9 @@ function StudentsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="Pix">Pix</SelectItem>
-                                      <SelectItem value="Bank Transfer">Boleto / Transferência</SelectItem>
-                                      <SelectItem value="Credit Card">Cartão de Crédito</SelectItem>
-                                      <SelectItem value="Cash">Dinheiro</SelectItem>
+                                      <SelectItem value="Bank Transfer">{formatStatus("Bank Transfer")}</SelectItem>
+                                      <SelectItem value="Credit Card">{formatStatus("Credit Card")}</SelectItem>
+                                      <SelectItem value="Cash">{formatStatus("Cash")}</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -3113,9 +3113,9 @@ function StudentsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="Pix">Pix</SelectItem>
-                                      <SelectItem value="Bank Transfer">Boleto / Transferência</SelectItem>
-                                      <SelectItem value="Credit Card">Cartão de Crédito</SelectItem>
-                                      <SelectItem value="Cash">Dinheiro</SelectItem>
+                                      <SelectItem value="Bank Transfer">{formatStatus("Bank Transfer")}</SelectItem>
+                                      <SelectItem value="Credit Card">{formatStatus("Credit Card")}</SelectItem>
+                                      <SelectItem value="Cash">{formatStatus("Cash")}</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>

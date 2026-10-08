@@ -1124,9 +1124,9 @@ function TodayPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Low">{formatStatus("Low")}</SelectItem>
+                    <SelectItem value="Medium">{formatStatus("Medium")}</SelectItem>
+                    <SelectItem value="High">{formatStatus("High")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1169,7 +1169,7 @@ function TodayPage() {
                   id="task-due-time"
                   value={formDueTime}
                   onChange={(e) => setFormDueTime(e.target.value)}
-                  placeholder="e.g. 14:30"
+                  placeholder={tr("auditUi.timePlaceholder")}
                   className="h-10 rounded-xl"
                 />
               </div>
@@ -1217,7 +1217,7 @@ function TodayPage() {
             <DialogTitle className="font-display text-lg font-bold text-foreground">
               {t.tagsTitle}
             </DialogTitle>
-            <DialogDescription className="sr-only">Manage category tags</DialogDescription>
+            <DialogDescription className="sr-only">{tr("auditUi.manageCategoryTags")}</DialogDescription>
           </DialogHeader>
 
           {deletingTag ? (
@@ -1323,7 +1323,7 @@ function TodayPage() {
                           type="button"
                           onClick={() => handleDeleteTagStart(tag)}
                           className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                          title="Delete"
+                          title={tr("auditUi.delete")}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1363,7 +1363,7 @@ function TodayPage() {
             <DialogTitle className="font-display text-lg font-bold text-foreground">
               {editingTagObj ? t.editTag : t.createTag}
             </DialogTitle>
-            <DialogDescription className="sr-only">Create or edit a tag</DialogDescription>
+            <DialogDescription className="sr-only">{tr("auditUi.createOrEditTag")}</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveTag} className="space-y-4">

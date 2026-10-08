@@ -220,7 +220,7 @@ const getStatusStyles = (status: TimelineStatus) => {
 };
 
 function CalendarPage() {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatStatus, formatWeekday } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { availability: requestedAvailability, eventId: requestedEventId } = Route.useSearch();
@@ -1037,10 +1037,10 @@ function CalendarPage() {
               onClick={handleManualSyncAgenda}
               disabled={isSyncingAgenda}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 text-sm font-semibold text-primary transition-all hover:bg-primary/20 disabled:opacity-50 cursor-pointer"
-              title="Sincronizar horários dos alunos para a agenda nos próximos 2 meses"
+              title={t("calendarUi.syncTitle")}
             >
               <RotateCcw className={`h-4 w-4 ${isSyncingAgenda ? "animate-spin" : ""}`} />
-              <span>{isSyncingAgenda ? "Sincronizando..." : "Sincronizar agenda"}</span>
+              <span>{isSyncingAgenda ? t("calendarUi.syncing") : t("calendarUi.sync")}</span>
             </button>
             <button
               onClick={() => {
@@ -1147,10 +1147,10 @@ function CalendarPage() {
                 </div>
                 <div>
                   <p className="font-bold text-stone-900 dark:text-stone-100 text-sm">
-                    Você ainda não definiu seus horários de trabalho.
+                    {t("calendarUi.availabilityNotConfigured")}
                   </p>
                   <p className="text-stone-600 dark:text-stone-400 text-xs">
-                    Cadastre os dias e horários da semana em que você costuma dar aulas.
+                    {t("calendarUi.availabilityNotConfiguredDescription")}
                   </p>
                 </div>
               </div>
@@ -1163,7 +1163,7 @@ function CalendarPage() {
                 className="h-9 text-xs font-bold bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 shrink-0 gap-1.5 cursor-pointer shadow-xs"
               >
                 <Sparkles className="w-4 h-4 text-emerald-400" />
-                Configurar disponibilidade
+                {t("calendarUi.configureAvailability")}
               </Button>
             </div>
           );
@@ -1173,11 +1173,10 @@ function CalendarPage() {
           <div className="p-3 rounded-2xl border border-border bg-card flex flex-wrap items-center justify-between gap-2 text-xs shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-muted-foreground text-[11px] uppercase tracking-wider">
-                Disponibilidade:
+                {t("calendarUi.availability")}:
               </span>
               {enabledDays.map((a) => {
-                const label =
-                  WEEKDAYS_MAP.find((w) => w.key === a.day)?.labelPt || a.day;
+                const label = formatWeekday(a.day, true);
                 return (
                   <Badge key={a.day} variant="secondary" className="text-[11px] font-bold gap-1 bg-muted px-2 py-0.5">
                     <span>{label}</span>
@@ -1194,7 +1193,7 @@ function CalendarPage() {
               className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline cursor-pointer"
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>Editar</span>
+              <span>{t("globalUi.edit")}</span>
             </button>
           </div>
         );
@@ -1482,7 +1481,7 @@ function CalendarPage() {
                                   variant="outline"
                                   className="text-[10px] font-bold border-current py-0.5"
                                 >
-                                  {evt.status}
+                                  {formatStatus(evt.status)}
                                 </Badge>
                               </div>
                             </div>
@@ -1501,13 +1500,9 @@ function CalendarPage() {
             <div className="p-4 py-6">
               {/* Day labels */}
               <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs text-muted-foreground uppercase mb-2">
-                <div>Seg</div>
-                <div>Ter</div>
-                <div>Qua</div>
-                <div>Qui</div>
-                <div>Sex</div>
-                <div>Sáb</div>
-                <div>Dom</div>
+                {(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const).map((day) => (
+                  <div key={day}>{formatWeekday(day, true)}</div>
+                ))}
               </div>
 
               {/* Month dates grid (35 dynamic cells for current month) */}
@@ -1558,7 +1553,7 @@ function CalendarPage() {
                           })}
                           {cellEvents.length > 3 && (
                             <div className="text-[8px] text-muted-foreground font-semibold text-center mt-0.5">
-                              + {cellEvents.length - 3} more
+                              + {cellEvents.length - 3} {t("calendarUi.more")}
                             </div>
                           )}
                         </div>
@@ -1586,7 +1581,7 @@ function CalendarPage() {
                   variant="outline"
                   className={`text-xs py-0.5 border-current ${getStatusStyles(selectedEvent.status)}`}
                 >
-                  {selectedEvent.status}
+                  {formatStatus(selectedEvent.status)}
                 </Badge>
               </DialogTitle>
             </DialogHeader>
@@ -1596,7 +1591,7 @@ function CalendarPage() {
               <div className="grid grid-cols-2 gap-4 border-b border-border/60 pb-4">
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-semibold block uppercase">
-                    Student / Group
+                    {t("calendarUi.studentOrGroup")}
                   </span>
                   <span className="font-bold text-foreground text-base flex items-center gap-1">
                     <User className="h-4 w-4 text-primary shrink-0" />
@@ -1605,7 +1600,7 @@ function CalendarPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-semibold block uppercase">
-                    Schedule
+                    {t("calendarUi.schedule")}
                   </span>
                   <span className="font-semibold text-foreground flex items-center gap-1">
                     <Clock className="h-4 w-4 text-accent shrink-0" />
@@ -1614,7 +1609,7 @@ function CalendarPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-semibold block uppercase">
-                    Level & Focus
+                    {t("calendarUi.levelAndFocus")}
                   </span>
                   <span className="font-semibold text-foreground">
                     {selectedEvent.level} · {selectedEvent.focus} ({selectedEvent.type})
@@ -1622,7 +1617,7 @@ function CalendarPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-semibold block uppercase">
-                    Format & Delivery
+                    {t("calendarUi.formatAndDelivery")}
                   </span>
                   <span className="font-semibold text-foreground flex items-center gap-1.5">
                     {selectedEvent.deliveryMode === "Online" ? (
@@ -1630,7 +1625,7 @@ function CalendarPage() {
                     ) : (
                       <MapPin className="h-4 w-4 text-accent" />
                     )}
-                    {selectedEvent.deliveryMode}
+                    {formatStatus(selectedEvent.deliveryMode)}
                   </span>
                 </div>
               </div>
@@ -1639,7 +1634,7 @@ function CalendarPage() {
               {selectedEvent.locationLink && (
                 <div className="space-y-1 border-b border-border/60 pb-4">
                   <span className="text-xs text-muted-foreground font-semibold block uppercase">
-                    Location / Link
+                    {t("calendarUi.locationOrLink")}
                   </span>
                   {selectedEvent.deliveryMode === "Online" ? (
                     <a
@@ -1662,7 +1657,7 @@ function CalendarPage() {
               {!selectedEvent.classId && selectedEvent.studentId && (
               <div className="space-y-2 border-b border-border/60 pb-4 bg-secondary/10 p-3 rounded-xl">
                 <h5 className="font-bold text-xs uppercase text-foreground">
-                  Attendance & Presence
+                  {t("calendarUi.attendance")}
                 </h5>
                 <div className="flex items-center gap-3">
                   <Select value={attStatus} onValueChange={(val: any) => setAttStatus(val)}>
@@ -1670,21 +1665,21 @@ function CalendarPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Present">Present</SelectItem>
-                      <SelectItem value="Absent">Absent</SelectItem>
-                      <SelectItem value="Late">Late</SelectItem>
-                      <SelectItem value="Excused">Excused</SelectItem>
+                      <SelectItem value="Present">{formatStatus("Present")}</SelectItem>
+                      <SelectItem value="Absent">{formatStatus("Absent")}</SelectItem>
+                      <SelectItem value="Late">{formatStatus("Late")}</SelectItem>
+                      <SelectItem value="Excused">{formatStatus("Excused")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <button
                     onClick={handleSaveAttendance}
                     className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 cursor-pointer"
                   >
-                    Record Attendance
+                    {t("calendarUi.recordAttendance")}
                   </button>
                   {selectedEvent.attendanceRecorded && (
                     <Badge className="bg-success text-success-foreground text-[10px] font-bold">
-                      Saved: {selectedEvent.attendanceStatus}
+                      {t("calendarUi.saved")}: {formatStatus(selectedEvent.attendanceStatus)}
                     </Badge>
                   )}
                 </div>
@@ -1693,7 +1688,7 @@ function CalendarPage() {
 
               {/* Lesson Plan linking */}
               <div className="space-y-2 border-b border-border/60 pb-4">
-                <h5 className="font-bold text-xs uppercase text-foreground">Linked Lesson Plan</h5>
+                <h5 className="font-bold text-xs uppercase text-foreground">{t("calendarUi.linkedLessonPlan")}</h5>
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="https://docs.google.com/..."
@@ -1705,7 +1700,7 @@ function CalendarPage() {
                     onClick={handleSaveLessonPlan}
                     className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 cursor-pointer"
                   >
-                    Link Plan
+                    {t("calendarUi.linkPlan")}
                   </button>
                 </div>
                 {selectedEvent.lessonPlanUrl && (
@@ -1715,17 +1710,17 @@ function CalendarPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline mt-1"
                   >
-                    Open Linked Lesson Plan <ExternalLink className="h-3 w-3" />
+                    {t("calendarUi.openLinkedLessonPlan")} <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </div>
 
               {/* Homework management */}
               <div className="space-y-2 border-b border-border/60 pb-4">
-                <h5 className="font-bold text-xs uppercase text-foreground">Homework Status</h5>
+                <h5 className="font-bold text-xs uppercase text-foreground">{t("calendarUi.homeworkStatus")}</h5>
                 <div className="flex items-center gap-2">
                   <Input
-                    placeholder="e.g. Write business email draft"
+                    placeholder={t("calendarUi.homeworkPlaceholder")}
                     value={hwTitle}
                     onChange={(e) => setHwTitle(e.target.value)}
                     className="h-9 rounded-lg text-xs flex-1"
@@ -1734,12 +1729,12 @@ function CalendarPage() {
                     onClick={handleSaveHomework}
                     className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 cursor-pointer"
                   >
-                    Send Homework
+                    {t("calendarUi.sendHomework")}
                   </button>
                 </div>
                 {selectedEvent.homeworkTitle && (
                   <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    Homework:{" "}
+                    {t("calendarUi.homework")}: {" "}
                     <span className="font-semibold text-foreground">
                       {selectedEvent.homeworkTitle}
                     </span>
@@ -1749,9 +1744,9 @@ function CalendarPage() {
 
               {/* Class Notes */}
               <div className="space-y-2 border-b border-border/60 pb-4">
-                <h5 className="font-bold text-xs uppercase text-foreground">Class Notes</h5>
+                <h5 className="font-bold text-xs uppercase text-foreground">{t("calendarUi.classNotes")}</h5>
                 <Textarea
-                  placeholder="Notes about student performance, next steps..."
+                  placeholder={t("calendarUi.notesPlaceholder")}
                   value={notesText}
                   onChange={(e) => setNotesText(e.target.value)}
                   className="rounded-xl text-xs min-h-[70px]"
@@ -1760,7 +1755,7 @@ function CalendarPage() {
                   onClick={handleUpdateNotes}
                   className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow hover:bg-primary/95 cursor-pointer"
                 >
-                  Save Notes
+                  {t("calendarUi.saveNotes")}
                 </button>
               </div>
 
@@ -1888,7 +1883,7 @@ function CalendarPage() {
                     />
                   </div>
                 ) : (
-                  <span className="text-xs text-muted-foreground/60 italic pr-8">Closed</span>
+                  <span className="text-xs text-muted-foreground/60 italic pr-8">{t("calendarUi.closed")}</span>
                 )}
               </div>
             ))}
@@ -1896,14 +1891,14 @@ function CalendarPage() {
             <div className="flex items-center justify-end gap-2 pt-4">
               <DialogClose asChild>
                 <button className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-card px-4 text-xs font-bold text-foreground transition-all hover:bg-secondary cursor-pointer">
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </DialogClose>
               <button
                 onClick={handleSaveAvail}
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow hover:bg-primary/95 cursor-pointer"
               >
-                Save Availability
+                {t("calendarUi.saveAvailability")}
               </button>
             </div>
           </div>
@@ -1928,7 +1923,7 @@ function CalendarPage() {
               {studentsList.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border p-3 text-center space-y-2 bg-secondary/20">
                   <p className="text-xs text-muted-foreground">
-                    {lang === "pt" ? "Você ainda não cadastrou nenhum aluno." : "You haven't added any students yet."}
+                    {t("calendarUi.noStudents")}
                   </p>
                   <Button
                     type="button"
@@ -1984,7 +1979,7 @@ function CalendarPage() {
                 id="add-name"
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
-                placeholder="e.g. Lucas Meyer / Reunião"
+                placeholder={t("calendarUi.namePlaceholder")}
                 required
                 className="h-10 rounded-xl"
               />
@@ -1994,7 +1989,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-date" className="text-xs font-semibold text-foreground">
-                  Date
+                  {t("calendarUi.date")}
                 </Label>
                 <Input
                   id="add-date"
@@ -2008,7 +2003,7 @@ function CalendarPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="add-time" className="text-xs font-semibold text-foreground">
-                  Start Time
+                  {t("calendarUi.startTime")}
                 </Label>
                 <Input
                   id="add-time"
@@ -2025,7 +2020,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-duration" className="text-xs font-semibold text-foreground">
-                  Duration (Minutes)
+                  {t("calendarUi.durationMinutes")}
                 </Label>
                 <Select
                   value={String(addDuration)}
@@ -2046,15 +2041,15 @@ function CalendarPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="add-type" className="text-xs font-semibold text-foreground">
-                  Class Type
+                  {t("calendarUi.classType")}
                 </Label>
                 <Select value={addType} onValueChange={(val: any) => setAddType(val)}>
                   <SelectTrigger id="add-type" className="h-10 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Private">Private</SelectItem>
-                    <SelectItem value="Group">Group</SelectItem>
+                    <SelectItem value="Private">{formatStatus("Private")}</SelectItem>
+                    <SelectItem value="Group">{formatStatus("Group")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2064,7 +2059,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-level" className="text-xs font-semibold text-foreground">
-                  CEFR Level
+                  {t("calendarUi.cefrLevel")}
                 </Label>
                 <Select value={addLevel} onValueChange={(val: any) => setAddLevel(val)}>
                   <SelectTrigger id="add-level" className="h-10 rounded-xl">
@@ -2083,21 +2078,21 @@ function CalendarPage() {
 
               <div className="space-y-1">
                 <Label htmlFor="add-focus" className="text-xs font-semibold text-foreground">
-                  Course Focus
+                  {t("calendarUi.courseFocus")}
                 </Label>
                 <Select value={addFocus} onValueChange={(val: any) => setAddFocus(val)}>
                   <SelectTrigger id="add-focus" className="h-10 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General English">General English</SelectItem>
-                    <SelectItem value="Business English">Business English</SelectItem>
-                    <SelectItem value="Travel">Travel</SelectItem>
-                    <SelectItem value="Conversation">Conversation</SelectItem>
+                    <SelectItem value="General English">{formatStatus("General English")}</SelectItem>
+                    <SelectItem value="Business English">{formatStatus("Business English")}</SelectItem>
+                    <SelectItem value="Travel">{formatStatus("Travel")}</SelectItem>
+                    <SelectItem value="Conversation">{formatStatus("Conversation")}</SelectItem>
                     <SelectItem value="IELTS">IELTS</SelectItem>
                     <SelectItem value="TOEFL">TOEFL</SelectItem>
                     <SelectItem value="Cambridge">Cambridge</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Other">{formatStatus("Other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2107,7 +2102,7 @@ function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-mode" className="text-xs font-semibold text-foreground">
-                  Format
+                  {t("calendarUi.format")}
                 </Label>
                 <Select value={addMode} onValueChange={(val: any) => setAddMode(val)}>
                   <SelectTrigger id="add-mode" className="h-10 rounded-xl">
@@ -2115,14 +2110,14 @@ function CalendarPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Online">Online</SelectItem>
-                    <SelectItem value="In person">In person</SelectItem>
+                    <SelectItem value="In person">{formatStatus("In person")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1">
                 <Label htmlFor="add-link" className="text-xs font-semibold text-foreground">
-                  Meeting Link / Location
+                  {t("calendarUi.meetingLinkLocation")}
                 </Label>
                 <Input
                   id="add-link"
@@ -2140,14 +2135,14 @@ function CalendarPage() {
                   type="button"
                   className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </DialogClose>
               <button
                 type="submit"
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all cursor-pointer"
               >
-                Schedule Class
+                {t("calendarUi.scheduleClass")}
               </button>
             </div>
           </form>

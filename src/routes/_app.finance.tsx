@@ -831,10 +831,10 @@ function FinancePage() {
                                 setIsDrawerOpen(true);
                               }}
                               className="inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-bold border border-border bg-card hover:bg-secondary text-foreground cursor-pointer"
-                              title="Ver histórico de pagamentos"
+                              title={tr("auditUi.viewPaymentHistory")}
                             >
                               <History className="h-3.5 w-3.5 text-stone-600" />
-                              <span className="hidden sm:inline">Histórico</span>
+                              <span className="hidden sm:inline">{tr("auditUi.history")}</span>
                             </button>
 
                             {studentAlert && (
@@ -848,7 +848,7 @@ function FinancePage() {
                                 className="inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm"
                               >
                                 <RefreshCw className="h-3.5 w-3.5" />
-                                <span>Renovar</span>
+                                <span>{tr("auditUi.renew")}</span>
                               </button>
                             )}
                           </>
