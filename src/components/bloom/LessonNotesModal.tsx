@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { sanitizeFilename } from "@/lib/pdf-export";
+import { useLanguage } from "@/hooks/use-language";
+import { fmt } from "@/lib/i18n";
 
 export interface LessonAttachment {
   id: string;
@@ -58,6 +60,7 @@ export function LessonNotesModal({
   lesson,
   onSave,
 }: Props) {
+  const { t } = useLanguage();
   if (!lesson) return null;
 
   const [notesText, setNotesText] = useState(lesson.notes || "");
@@ -121,7 +124,7 @@ export function LessonNotesModal({
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkUrl.trim()) {
-      toast.error("Insira uma URL válida.");
+      toast.error(t("globalUi.enterValidUrl"));
       return;
     }
 
@@ -142,7 +145,7 @@ export function LessonNotesModal({
     setLinkTitle("");
     setLinkUrl("");
     setIsAddingLink(false);
-    toast.success("Link adicionado com sucesso!");
+    toast.success(t("globalUi.linkAdded"));
   };
 
   // File Upload Handler
@@ -153,13 +156,13 @@ export function LessonNotesModal({
     // Validate MIME type & extension
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     if (!isPdf) {
-      toast.error("Por favor, selecione apenas arquivos PDF (.pdf).");
+      toast.error(t("globalUi.pdfOnly"));
       return;
     }
 
     // Validate File Size (10MB limit)
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      toast.error("O arquivo excede o limite máximo de 10 MB.");
+      toast.error(t("globalUi.fileTooLarge"));
       return;
     }
 
@@ -203,10 +206,10 @@ export function LessonNotesModal({
       };
 
       setAttachments((prev) => [...prev, newAttachment]);
-      toast.success("PDF anexado com sucesso!");
+      toast.success(t("globalUi.pdfAttached"));
     } catch (err: any) {
       console.error("[LessonNotesModal] Upload exception:", err);
-      toast.error("Erro ao enviar PDF.");
+      toast.error(t("globalUi.pdfUploadError"));
     } finally {
       setIsUploading(false);
       // Reset input value
@@ -229,7 +232,7 @@ export function LessonNotesModal({
     }
 
     setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
-    toast.info("Anexo removido.");
+    toast.info(t("globalUi.attachmentRemoved"));
   };
 
   // Save Modal Handler
@@ -242,7 +245,7 @@ export function LessonNotesModal({
 
     onSave(updatedLesson);
     onClose();
-    toast.success("Notas e anexos da aula salvos com sucesso!");
+    toast.success(t("globalUi.notesSaved"));
   };
 
   const formattedDate = lesson.scheduled_date
@@ -256,14 +259,14 @@ export function LessonNotesModal({
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-bold font-display text-foreground flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
-              <span>Notas da Aula</span>
+              <span>{t("globalUi.lessonNotes")}</span>
             </DialogTitle>
           </div>
 
           {/* Context Banner */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-muted-foreground pt-1">
             <span className="text-foreground font-bold bg-primary/10 px-2 py-0.5 rounded-md text-primary">
-              Aula {lesson.lesson_number}
+              {fmt(t("globalUi.lessonNumber"), lesson.lesson_number)}
             </span>
             <span>•</span>
             <span>{formattedDate}</span>
@@ -275,14 +278,14 @@ export function LessonNotesModal({
         {/* Text Area Notes Section */}
         <div className="space-y-2">
           <Label htmlFor="lesson-notes-text" className="text-xs font-bold uppercase tracking-wider text-foreground/90">
-            Anotações da Aula
+            {t("globalUi.lessonAnnotations")}
           </Label>
           <Textarea
             id="lesson-notes-text"
             rows={4}
             value={notesText}
             onChange={(e) => setNotesText(e.target.value)}
-            placeholder="Registre observações sobre a aula, dificuldades, pontos para revisar, materiais utilizados ou qualquer informação importante..."
+            placeholder={t("globalUi.lessonNotesPlaceholder")}
             className="text-xs rounded-xl bg-background border-border resize-none focus-visible:ring-primary leading-relaxed"
           />
         </div>
@@ -292,7 +295,7 @@ export function LessonNotesModal({
           <div className="flex items-center justify-between">
             <Label className="text-xs font-bold uppercase tracking-wider text-foreground/90 flex items-center gap-1.5">
               <Paperclip className="w-4 h-4 text-primary" />
-              <span>Anexos ({attachments.length})</span>
+              <span>{fmt(t("globalUi.attachmentsCount"), attachments.length)}</span>
             </Label>
 
             {/* Action Buttons: Upload PDF & Add Link */}
@@ -303,7 +306,7 @@ export function LessonNotesModal({
                 ) : (
                   <Upload className="w-3.5 h-3.5" />
                 )}
-                <span>Enviar PDF</span>
+                <span>{t("globalUi.uploadPdf")}</span>
                 <input
                   type="file"
                   accept="application/pdf,.pdf"
@@ -319,7 +322,7 @@ export function LessonNotesModal({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold transition-colors cursor-pointer"
               >
                 <LinkIcon className="w-3.5 h-3.5 text-primary" />
-                <span>Adicionar link</span>
+                <span>{t("globalUi.addLink")}</span>
               </button>
             </div>
           </div>
@@ -327,16 +330,16 @@ export function LessonNotesModal({
           {/* Add Link Form */}
           {isAddingLink && (
             <form onSubmit={handleAddLink} className="p-3.5 rounded-xl bg-secondary/40 border border-border/60 space-y-3 animate-in fade-in duration-150">
-              <h5 className="text-xs font-bold text-foreground">Novo Link Externo</h5>
+              <h5 className="text-xs font-bold text-foreground">{t("globalUi.newExternalLink")}</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
-                  placeholder="Título do link (opcional, ex: Canva)"
+                  placeholder={t("globalUi.linkTitlePlaceholder")}
                   value={linkTitle}
                   onChange={(e) => setLinkTitle(e.target.value)}
                   className="h-9 text-xs rounded-lg bg-background border-border"
                 />
                 <Input
-                  placeholder="URL (ex: https://canva.com/...)"
+                  placeholder={t("globalUi.linkUrlPlaceholder")}
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   required
@@ -351,14 +354,14 @@ export function LessonNotesModal({
                   onClick={() => setIsAddingLink(false)}
                   className="h-8 text-xs rounded-lg cursor-pointer"
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
                   className="h-8 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
                 >
-                  Adicionar
+                  {t("common.add")}
                 </Button>
               </div>
             </form>
@@ -369,7 +372,7 @@ export function LessonNotesModal({
             <div className="py-6 text-center rounded-xl border border-dashed border-border/80 bg-secondary/10 space-y-1">
               <Paperclip className="w-6 h-6 text-muted-foreground/50 mx-auto" />
               <p className="text-xs font-medium text-muted-foreground">
-                Nenhum anexo nesta aula ainda.
+                {t("globalUi.noAttachments")}
               </p>
             </div>
           ) : (
@@ -399,7 +402,7 @@ export function LessonNotesModal({
                         {att.type === "file"
                           ? att.file_size
                             ? `${(att.file_size / (1024 * 1024)).toFixed(2)} MB • PDF`
-                            : "Arquivo PDF"
+                            : t("globalUi.pdfFile")
                           : att.file_url}
                       </span>
                     </div>
@@ -412,7 +415,7 @@ export function LessonNotesModal({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-background border border-border text-foreground hover:bg-secondary text-[11px] font-semibold transition-colors cursor-pointer"
                     >
-                      <span>{att.type === "file" ? "Visualizar" : "Abrir"}</span>
+                      <span>{att.type === "file" ? t("globalUi.view") : t("globalUi.open")}</span>
                       <ExternalLink className="w-3 h-3 text-muted-foreground" />
                     </a>
 
@@ -420,7 +423,8 @@ export function LessonNotesModal({
                       type="button"
                       onClick={() => handleDeleteAttachment(att.id)}
                       className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors cursor-pointer"
-                      title="Remover anexo"
+                      title={t("globalUi.removeAttachment")}
+                      aria-label={t("globalUi.removeAttachment")}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -439,14 +443,14 @@ export function LessonNotesModal({
             onClick={onClose}
             className="h-10 text-xs font-semibold rounded-xl cursor-pointer"
           >
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
             onClick={handleSaveModal}
             className="h-10 px-5 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:bg-primary/95 cursor-pointer shadow-sm"
           >
-            Salvar Notas
+            {t("globalUi.saveNotes")}
           </Button>
         </div>
       </DialogContent>

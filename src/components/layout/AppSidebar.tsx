@@ -146,7 +146,7 @@ export function AppSidebar({
                   onClick={onTogglePin}
                   className="rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer"
                   title={isPinned ? t("common.close") : t("common.edit")}
-                  aria-label={isPinned ? "Desafixar menu" : "Fixar menu"}
+                  aria-label={isPinned ? t("auditUi.unpinMenu") : t("auditUi.pinMenu")}
                 >
                   {isPinned ? (
                     <PinOff className="h-4 w-4 text-emerald-500 fill-emerald-500/20" />

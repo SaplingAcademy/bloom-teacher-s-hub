@@ -449,7 +449,7 @@ export function GenerateLessonPlanModal({
               {isLoadingSchedules && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-1 py-2">
                   <Clock className="w-3.5 h-3.5 animate-pulse" />
-                  <span>Carregando horários do aluno...</span>
+                  <span>{t("globalUi.loadingStudentSchedule")}</span>
                 </div>
               )}
 
