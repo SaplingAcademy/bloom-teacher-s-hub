@@ -19,6 +19,6 @@
 - [x] Gestão de cobranças: aba Cobranças, pagar/editar/desfazer, vencimento individual, pagamentos anteriores no cadastro
 - [x] Correção do cronograma de contrato existente: UPDATE do contrato e das cobranças, sem novo contrato; started_at só com Data de Início alterada
 - [x] Lesson Plan reutiliza Data de Início/Término do aluno (course_start_date/course_end_date)
-- [ ] Auditar e migrar todos os textos visíveis restantes para o i18n português/inglês
-- [ ] Traduzir apenas labels de enums, preservando os valores canônicos armazenados
-- [ ] Validar a interface, o typecheck e os testes existentes após a padronização
+- [x] Auditar e migrar todos os textos visíveis restantes para o i18n português/inglês
+- [x] Traduzir apenas labels de enums, preservando os valores canônicos armazenados
+- [x] Validar a interface, o typecheck e os testes existentes após a padronização
