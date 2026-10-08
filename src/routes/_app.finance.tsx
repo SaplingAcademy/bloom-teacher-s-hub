@@ -1,4 +1,4 @@
-import { formatOnboardingPaymentMethod } from "@/lib/i18n";
+import { formatOnboardingPaymentMethod, t as i18nT } from "@/lib/i18n";
 import { toUserMessage } from "@/lib/user-error";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";

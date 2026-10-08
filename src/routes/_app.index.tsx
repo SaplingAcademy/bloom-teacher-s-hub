@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { UrgentWidget } from "@/components/bloom/UrgentWidget";
 import { DailyPrioritiesCard } from "@/components/bloom/DailyPrioritiesCard";
+import { t as i18nT } from "@/lib/i18n";
 
 /**
  * Helper to extract canonical teacher first name from profile or auth user metadata.
@@ -326,7 +327,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
           : `Your task "${task.title}" is due in ${minsRounded} minutes.`;
 
       toast.warning(message, {
-        description: i18nT("auditUi.urgentTask"),
+        description: i18nT("auditUi.urgentTask", lang),
       });
       state.dueSoonSent = true;
       updated = true;
@@ -342,7 +343,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
           : `Your task "${task.title}" is overdue.`;
 
       toast.error(message, {
-        description: i18nT("auditUi.overdueTask"),
+        description: i18nT("auditUi.overdueTask", lang),
       });
       state.overdueSent = true;
       updated = true;
