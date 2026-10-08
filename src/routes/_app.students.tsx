@@ -555,7 +555,7 @@ function StudentsPage() {
     eventId: requestedEventId,
   } = Route.useSearch();
   const navigate = useNavigate();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const { user } = useAuth();
   const {
     languages: teacherLanguages,
@@ -1094,9 +1094,7 @@ function StudentsPage() {
     const isEditPackageSelected = editPackageId && editPackageId !== "" && editPackageId !== "none_value";
     if (isEditPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
-        lang === "pt"
-          ? "Por favor, selecione o dia de vencimento."
-          : "Please select a due day."
+        t("auditUi.pleaseSelectADueDay")
       );
       return;
     }
@@ -1329,13 +1327,13 @@ function StudentsPage() {
     if (!data) return;
 
     const dayTranslation: Record<string, string> = {
-      Monday: lang === "pt" ? "Seg" : "Mon",
-      Tuesday: lang === "pt" ? "Ter" : "Tue",
-      Wednesday: lang === "pt" ? "Qua" : "Wed",
-      Thursday: lang === "pt" ? "Qui" : "Thu",
-      Friday: lang === "pt" ? "Sex" : "Fri",
-      Saturday: lang === "pt" ? "Sáb" : "Sat",
-      Sunday: lang === "pt" ? "Dom" : "Sun",
+      Monday: t("auditUi.mon"),
+      Tuesday: t("auditUi.tue"),
+      Wednesday: t("auditUi.wed"),
+      Thursday: t("auditUi.thu"),
+      Friday: t("auditUi.fri"),
+      Saturday: t("auditUi.sat"),
+      Sunday: t("auditUi.sun"),
     };
 
     const mappedStudents: Student[] = data.map((d: any) => {
@@ -1639,9 +1637,7 @@ function StudentsPage() {
       const isDirty = checkIsFormDirty();
       if (isDirty) {
         const confirmClose = window.confirm(
-          lang === "pt"
-            ? "Você tem alterações não salvas. Deseja realmente sair e descartar as alterações?"
-            : "You have unsaved changes. Are you sure you want to close and discard your changes?"
+          t("auditUi.youHaveUnsavedChangesAreYouSure")
         );
         if (!confirmClose) return;
       }
@@ -1675,9 +1671,7 @@ function StudentsPage() {
     const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
     if (isPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
-        lang === "pt"
-          ? "Por favor, selecione o dia de vencimento."
-          : "Please select a due day."
+        t("auditUi.pleaseSelectADueDay")
       );
       return;
     }
@@ -1827,9 +1821,7 @@ function StudentsPage() {
     if (!id) return;
 
     const confirmMessage =
-      lang === "pt"
-        ? "Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita."
-        : "Are you sure you want to delete this student? This action cannot be undone.";
+      t("auditUi.areYouSureYouWantToDelete2");
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -2094,9 +2086,7 @@ function StudentsPage() {
                   {t.privateNotesTitle}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {lang === "pt"
-                    ? "Estas notas são estritamente individuais e não são compartilhadas em turmas."
-                    : "These notes are strictly private to this student and not shared with class sessions."}
+                  {t("auditUi.theseNotesAreStrictlyPrivateToThis")}
                 </p>
                 <textarea
                   value={selectedStudent.notes || ""}
@@ -2115,7 +2105,7 @@ function StudentsPage() {
                     }
                   }}
                   rows={4}
-                  placeholder={lang === "pt" ? "Escreva notas privadas sobre este aluno..." : "Write private notes about this student..."}
+                  placeholder={t("auditUi.writePrivateNotesAboutThisStudent")}
                   className="w-full rounded-xl border border-border bg-background p-3 text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium"
                 />
               </div>
@@ -2167,7 +2157,7 @@ function StudentsPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {lang === "pt" ? "Plano Contratado" : "Active Package"}
+                    {t("auditUi.activePackage")}
                   </span>
                   <div className="text-base font-bold text-foreground flex items-center gap-2 flex-wrap">
                     <span>{financialSummary?.packageName || (studentPkg ? studentPkg.name : t.financeNoPkg)}</span>
@@ -2190,7 +2180,7 @@ function StudentsPage() {
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {lang === "pt" ? "Progresso / Parcela Atual" : "Payment Progress"}
+                    {t("auditUi.paymentProgress")}
                   </span>
                   <div className="text-base font-bold text-foreground">
                     {financialSummary?.currentInstallmentLabel || "Mensalidade"}
@@ -2202,30 +2192,30 @@ function StudentsPage() {
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {lang === "pt" ? "Próximo Vencimento" : "Next Due Date"}
+                    {t("auditUi.nextDueDate")}
                   </span>
                   <div className="text-base font-bold text-foreground">
                     {financialSummary?.nextDueDate
                       ? new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.nextDueDate}T00:00:00Z`))
-                      : (lang === "pt" ? "Em dia" : "Up to date")}
+                      : (t("auditUi.upToDate"))}
                   </div>
                   {financialSummary?.lastPaymentDate && (
                     <p className="text-[11px] text-muted-foreground font-medium">
-                      {lang === "pt" ? "Último pago:" : "Last paid:"} {new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.lastPaymentDate}T00:00:00Z`))}
+                      {t("auditUi.lastPaid")} {new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.lastPaymentDate}T00:00:00Z`))}
                     </p>
                   )}
                 </div>
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {lang === "pt" ? "Saldo Restante" : "Remaining Balance"}
+                    {t("auditUi.remainingBalance")}
                   </span>
                   <div className="text-xl font-extrabold text-foreground">
                     {financialSummary?.remainingBalanceFormatted || "R$ 0,00"}
                   </div>
                   {financialSummary?.isInstallment && (
                     <p className="text-[10px] text-stone-500 font-semibold">
-                      {lang === "pt" ? "Valor total do contrato" : "Total agreement value"}
+                      {t("auditUi.totalAgreementValue")}
                     </p>
                   )}
                 </div>
@@ -2235,7 +2225,7 @@ function StudentsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
                 <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <Tag className="w-4 h-4 text-emerald-600" />
-                  {lang === "pt" ? "Histórico de Contratos & Pacotes" : "Package Agreements History"}
+                  {t("auditUi.packageAgreementsHistory")}
                 </h4>
 
                 <div className="space-y-4">
@@ -2299,12 +2289,12 @@ function StudentsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
                 <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-emerald-600" />
-                  {lang === "pt" ? "Histórico de Pagamentos" : "Payment History"}
+                  {t("auditUi.paymentHistory")}
                 </h4>
 
                 {studentPaymentHistory.length === 0 ? (
                   <p className="text-xs text-muted-foreground font-medium py-4 text-center">
-                    {lang === "pt" ? "Nenhum pagamento histórico registrado ainda." : "No payment history recorded yet."}
+                    {t("auditUi.noPaymentHistoryRecordedYet")}
                   </p>
                 ) : (
                   <div className="divide-y divide-border/60">
@@ -2343,7 +2333,7 @@ function StudentsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
                 <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <Clock className="w-4 h-4 text-emerald-600" />
-                  {lang === "pt" ? "Linha do Tempo Financeira" : "Financial Timeline"}
+                  {t("auditUi.financialTimeline")}
                 </h4>
 
                 {studentTimeline.length === 0 ? (
@@ -2399,7 +2389,7 @@ function StudentsPage() {
                 <ColorSelector
                   value={editColorKey}
                   onChange={(val) => setEditColorKey(val)}
-                  label={lang === "pt" ? "Cor de Identificação do Aluno (Padrão Bloom)" : "Student Brand Color"}
+                  label={t("auditUi.studentBrandColor")}
                 />
 
                 <Button type="submit" className="w-full font-bold cursor-pointer">
@@ -2458,7 +2448,7 @@ function StudentsPage() {
               }`}
             >
               <Users className="h-4 w-4" />
-              <span>{lang === "pt" ? "Todos os alunos" : "All students"} ({activeStudents.length})</span>
+              <span>{t("auditUi.allStudents")} ({activeStudents.length})</span>
             </button>
 
             <button
@@ -2472,7 +2462,7 @@ function StudentsPage() {
             >
               <User className="h-4 w-4" />
               <span>
-                {lang === "pt" ? "Alunos individuais" : "Individual students"} ({individualActiveStudents.length})
+                {t("auditUi.individualStudents")} ({individualActiveStudents.length})
               </span>
             </button>
 
@@ -2486,7 +2476,7 @@ function StudentsPage() {
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              <span>{lang === "pt" ? "Turmas & Duplas" : "Classes & Pairs"} ({classesList.length})</span>
+              <span>{t("auditUi.classesPairs")} ({classesList.length})</span>
             </button>
 
             <button
@@ -2556,7 +2546,7 @@ function StudentsPage() {
                   ))
                 ) : languagesLoading ? null : (
                   <SelectItem value="CONFIGURE_LANGUAGES" className="text-amber-700 font-semibold">
-                    {lang === "pt" ? "⚠️ Configurar idiomas" : "⚠️ Configure languages"}
+                    {t("auditUi.configureLanguages")}
                   </SelectItem>
                 )}
               </SelectContent>
@@ -2601,12 +2591,10 @@ function StudentsPage() {
                 <div className="p-12 text-center bg-card rounded-2xl border border-border/80 space-y-4">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto" />
                   <h3 className="text-lg font-bold font-outfit">
-                    {lang === "pt" ? "Nenhuma turma ou dupla encontrada" : "No classes or pairs found"}
+                    {t("auditUi.noClassesOrPairsFound")}
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    {lang === "pt"
-                      ? "Crie turmas em grupo ou aulas em dupla mantendo os perfis individuais dos seus alunos."
-                      : "Create group classes or pair lessons while preserving individual student profiles."}
+                    {t("auditUi.createGroupClassesOrPairLessonsWhile")}
                   </p>
                   <button
                     onClick={() => {
@@ -2617,7 +2605,7 @@ function StudentsPage() {
                     className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#163020] text-[#F4EBE1] px-5 text-sm font-bold hover:bg-[#1a3825] cursor-pointer shadow-md"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{lang === "pt" ? "Criar Primeira Turma" : "Create First Class"}</span>
+                    <span>{t("auditUi.createFirstClass")}</span>
                   </button>
                 </div>
               ) : (
@@ -2731,9 +2719,7 @@ function StudentsPage() {
           <DialogHeader className="p-6 pb-4 border-b border-border bg-[#FAF8F5] shrink-0">
             <DialogTitle className="font-outfit text-xl font-bold text-[#33411B]">
               {editingStudentIdForModal
-                ? lang === "pt"
-                  ? "Editar Perfil do Aluno"
-                  : "Edit Student Profile"
+                ? t("auditUi.editStudentProfile")
                 : t.modalTitle}
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-1 select-none">
@@ -2750,7 +2736,7 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <User className="h-4 w-4 text-[#33411B]" />
-                  {lang === "pt" ? "Informações do Aluno" : "Student Information"}
+                  {t("auditUi.studentInformation")}
                 </div>
                 <div className="space-y-4">
                   {/* Name */}
@@ -2804,7 +2790,7 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <BookOpen className="h-4 w-4 text-[#33411B]" />
-                  {lang === "pt" ? "Curso e Nível" : "Course & Level"}
+                  {t("auditUi.courseLevel")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -2827,15 +2813,15 @@ function StudentsPage() {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="std-focus" className="text-xs font-semibold text-foreground select-none">
-                      {lang === "pt" ? "Idioma Estudado" : "Language Studied"}
+                      {t("auditUi.languageStudied")}
                     </Label>
                     <Select value={formFocus} onValueChange={(val) => setFormFocus(val)}>
                       <SelectTrigger id="std-focus" className="h-11 rounded-xl border-border bg-white">
                         <SelectValue
                           placeholder={
                             languagesLoading
-                              ? lang === "pt" ? "Carregando..." : "Loading..."
-                              : lang === "pt" ? "Selecione o idioma" : "Select the language"
+                              ? t("auditUi.loading")
+                              : t("auditUi.selectTheLanguage")
                           }
                         />
                       </SelectTrigger>
@@ -2863,7 +2849,7 @@ function StudentsPage() {
                           onClick={() => navigate({ to: "/settings" })}
                           className="underline font-bold cursor-pointer hover:text-amber-900"
                         >
-                          {lang === "pt" ? "Configurar idiomas" : "Configure languages"}
+                          {t("auditUi.configureLanguages2")}
                         </button>
                       </p>
                     )}
@@ -2903,7 +2889,7 @@ function StudentsPage() {
                 <ColorSelector
                   value={formColorKey}
                   onChange={(val) => setFormColorKey(val)}
-                  label={lang === "pt" ? "Cor de Identificação do Aluno (Padrão Bloom)" : "Student Brand Color"}
+                  label={t("auditUi.studentBrandColor")}
                 />
               </div>
 
@@ -2911,7 +2897,7 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <DollarSign className="h-4 w-4 text-[#33411B]" />
-                  {lang === "pt" ? "Plano Financeiro" : "Financial Plan"}
+                  {t("auditUi.financialPlan")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="std-package" className="text-xs font-semibold text-foreground select-none">
@@ -2932,7 +2918,7 @@ function StudentsPage() {
                         onClick={() => navigate({ to: "/finance" })}
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        {lang === "pt" ? "Criar pacote" : "Create package"}
+                        {t("auditUi.createPackage")}
                       </Button>
                     </div>
                   ) : (
@@ -2951,13 +2937,13 @@ function StudentsPage() {
                         }}
                       >
                         <SelectTrigger id="std-package" className="h-11 rounded-xl border-border bg-white">
-                          <SelectValue placeholder={lang === "pt" ? "Selecione um plano" : "Select a package"} />
+                          <SelectValue placeholder={t("auditUi.selectAPackage")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none_value">{lang === "pt" ? "Nenhum plano" : "None"}</SelectItem>
+                          <SelectItem value="none_value">{t("auditUi.none")}</SelectItem>
                           {packages.map((pkg) => (
                             <SelectItem key={pkg.id} value={pkg.id}>
-                              {pkg.name} — {formatReaisToBRL(pkg.price)} ({pkg.lessons} {lang === "pt" ? "aulas" : "lessons"})
+                              {pkg.name} — {formatReaisToBRL(pkg.price)} ({pkg.lessons} {t("auditUi.lessons")})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -2985,7 +2971,7 @@ function StudentsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Parcelas" : "Installments"}
+                                    {t("auditUi.installments")}
                                   </Label>
                                   <Select
                                     value={installmentCount.toString()}
@@ -3006,7 +2992,7 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Vencimento" : "Due Date"}
+                                    {t("auditUi.dueDate")}
                                   </Label>
                                   <Select
                                     value={formDueDay ? formDueDay.toString() : ""}
@@ -3019,7 +3005,7 @@ function StudentsPage() {
                                     }}
                                   >
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
-                                      <SelectValue placeholder={lang === "pt" ? "Selecione o dia" : "Select a day"} />
+                                      <SelectValue placeholder={t("auditUi.selectADay")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -3033,7 +3019,7 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Primeiro vencimento" : "First due date"}
+                                    {t("auditUi.firstDueDate")}
                                   </Label>
                                   <Input
                                     type="date"
@@ -3047,15 +3033,13 @@ function StudentsPage() {
                                     className="h-10 rounded-xl border-border bg-white text-sm font-semibold"
                                   />
                                   <p className="text-[10px] text-muted-foreground leading-tight">
-                                    {lang === "pt"
-                                      ? "Contrato já em andamento? Informe a data da 1ª cobrança, mesmo que já tenha passado."
-                                      : "Contract already running? Enter the 1st charge date, even if it is in the past."}
+                                    {t("auditUi.contractAlreadyRunningEnterThe1stCharge")}
                                   </p>
                                 </div>
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Forma de Pagamento" : "Payment Method"}
+                                    {t("auditUi.paymentMethod")}
                                   </Label>
                                   <Select value={formPaymentMethod} onValueChange={setFormPaymentMethod}>
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white">
@@ -3074,7 +3058,7 @@ function StudentsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Vencimento" : "Due Date"}
+                                    {t("auditUi.dueDate")}
                                   </Label>
                                   <Select
                                     value={formDueDay ? formDueDay.toString() : ""}
@@ -3087,7 +3071,7 @@ function StudentsPage() {
                                     }}
                                   >
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
-                                      <SelectValue placeholder={lang === "pt" ? "Selecione o dia" : "Select a day"} />
+                                      <SelectValue placeholder={t("auditUi.selectADay")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -3101,7 +3085,7 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Primeiro vencimento" : "First due date"}
+                                    {t("auditUi.firstDueDate")}
                                   </Label>
                                   <Input
                                     type="date"
@@ -3115,15 +3099,13 @@ function StudentsPage() {
                                     className="h-10 rounded-xl border-border bg-white text-sm font-semibold"
                                   />
                                   <p className="text-[10px] text-muted-foreground leading-tight">
-                                    {lang === "pt"
-                                      ? "Contrato já em andamento? Informe a data da 1ª cobrança, mesmo que já tenha passado."
-                                      : "Contract already running? Enter the 1st charge date, even if it is in the past."}
+                                    {t("auditUi.contractAlreadyRunningEnterThe1stCharge")}
                                   </p>
                                 </div>
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {lang === "pt" ? "Forma de Pagamento" : "Payment Method"}
+                                    {t("auditUi.paymentMethod")}
                                   </Label>
                                   <Select value={formPaymentMethod} onValueChange={setFormPaymentMethod}>
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white">
@@ -3144,23 +3126,23 @@ function StudentsPage() {
                             <div className="p-4 rounded-xl border border-emerald-300/80 bg-emerald-50/70 space-y-2 text-xs font-figtree">
                               <div className="flex items-center gap-1.5 font-extrabold text-[#163020]">
                                 <Receipt className="h-4 w-4 text-[#163020]" />
-                                <span>{lang === "pt" ? "Resumo do Acordo Financeiro" : "Financial Agreement Summary"}</span>
+                                <span>{t("auditUi.financialAgreementSummary")}</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1 text-stone-700">
                                 <div>
-                                  <span className="text-stone-500 font-medium">{lang === "pt" ? "Pacote:" : "Package:"}</span>{" "}
+                                  <span className="text-stone-500 font-medium">{t("auditUi.package")}</span>{" "}
                                   <strong className="text-stone-900 font-bold">{selectedPkg.name}</strong>
                                 </div>
                                 <div>
                                   <span className="text-stone-500 font-medium">
-                                    {isMonthly ? (lang === "pt" ? "Valor Mensal:" : "Monthly Price:") : (lang === "pt" ? "Valor:" : "Price:")}
+                                    {isMonthly ? (t("auditUi.monthlyPrice2")) : (t("auditUi.price2"))}
                                   </span>{" "}
                                   <strong className="text-stone-900 font-bold">{formatCentsToBRL(totalPriceCents)}</strong>
                                 </div>
                                 {model === "installment_total" ? (
                                   <>
                                     <div>
-                                      <span className="text-stone-500 font-medium">{lang === "pt" ? "Condição de Pagamento:" : "Payment Terms:"}</span>{" "}
+                                      <span className="text-stone-500 font-medium">{t("auditUi.paymentTerms")}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {scheduleInfo.isUneven
                                           ? `${installmentCount - 1}x de ${formatCentsToBRL(scheduleInfo.baseAmountCents)} + 1x de ${formatCentsToBRL(scheduleInfo.lastAmountCents)}`
@@ -3168,15 +3150,15 @@ function StudentsPage() {
                                       </strong>
                                     </div>
                                     <div>
-                                      <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
+                                      <span className="text-stone-500 font-medium">{t("auditUi.dueDate2")}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {formDueDay
                                           ? (lang === "pt" ? `dia ${formDueDay}` : `day ${formDueDay}`)
-                                          : (lang === "pt" ? "Selecione o dia" : "Select a day")}
+                                          : (t("auditUi.selectADay"))}
                                       </strong>
                                     </div>
                                     <div className="sm:col-span-2">
-                                      <span className="text-stone-500 font-medium">{lang === "pt" ? "Última Parcela:" : "Last Installment:"}</span>{" "}
+                                      <span className="text-stone-500 font-medium">{t("auditUi.lastInstallment")}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {formDueDay && formFirstDueDate ? lastDueDate : "-"}
                                       </strong>
@@ -3184,16 +3166,16 @@ function StudentsPage() {
                                   </>
                                 ) : model === "one_time" ? (
                                   <div>
-                                    <span className="text-stone-500 font-medium">{lang === "pt" ? "Condição:" : "Terms:"}</span>{" "}
-                                    <strong className="text-stone-900 font-bold">{lang === "pt" ? "Cobrança única" : "One-time charge"}</strong>
+                                    <span className="text-stone-500 font-medium">{t("auditUi.terms")}</span>{" "}
+                                    <strong className="text-stone-900 font-bold">{t("auditUi.oneTimeCharge")}</strong>
                                   </div>
                                 ) : (
                                   <div>
-                                    <span className="text-stone-500 font-medium">{lang === "pt" ? "Vencimento:" : "Due Date:"}</span>{" "}
+                                    <span className="text-stone-500 font-medium">{t("auditUi.dueDate2")}</span>{" "}
                                     <strong className="text-stone-900 font-bold">
                                       {formDueDay
                                         ? (lang === "pt" ? `dia ${formDueDay}` : `day ${formDueDay}`)
-                                        : (lang === "pt" ? "Selecione o dia" : "Select a day")}
+                                        : (t("auditUi.selectADay"))}
                                     </strong>
                                   </div>
                                 )}
@@ -3211,14 +3193,14 @@ function StudentsPage() {
               <div className="bg-sidebar border border-sidebar-border/60 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-sidebar-foreground border-b border-sidebar-border/60 pb-2 select-none">
                   <Calendar className="h-4 w-4 text-sidebar-foreground" />
-                  {lang === "pt" ? "Agenda das Aulas" : "Class Schedule"}
+                  {t("auditUi.classSchedule")}
                 </div>
 
                 {formType === "Group" && (
                   <div className="space-y-3 rounded-xl border border-border bg-white p-3">
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold text-foreground select-none">
-                        {lang === "pt" ? "Opção de Agenda do Grupo" : "Group Schedule Option"}
+                        {t("auditUi.groupScheduleOption")}
                       </Label>
                       <Select
                         value={formLinkedGroupId ? "link" : "new"}
@@ -3236,15 +3218,11 @@ function StudentsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="new">
-                            {lang === "pt"
-                              ? "Criar novo horário próprio para este grupo"
-                              : "Create new custom schedule for this group"}
+                            {t("auditUi.createNewCustomScheduleForThisGroup")}
                           </SelectItem>
                           {students.some((s) => s.type === "Group" && s.id !== editingStudentIdForModal) && (
                             <SelectItem value="link">
-                              {lang === "pt"
-                                ? "Vincular a um grupo existente"
-                                : "Link to an existing group"}
+                              {t("auditUi.linkToAnExistingGroup")}
                             </SelectItem>
                           )}
                         </SelectContent>
@@ -3257,7 +3235,7 @@ function StudentsPage() {
                           htmlFor="std-group-link"
                           className="text-xs font-semibold text-foreground select-none"
                         >
-                          {lang === "pt" ? "Selecionar Grupo Existente" : "Select Existing Group"}
+                          {t("auditUi.selectExistingGroup")}
                         </Label>
                         <Select value={formLinkedGroupId} onValueChange={setFormLinkedGroupId}>
                           <SelectTrigger id="std-group-link" className="h-11 rounded-xl border-border bg-white">
@@ -3284,7 +3262,7 @@ function StudentsPage() {
                     {/* Frequency selector */}
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold text-sidebar-foreground select-none">
-                        {lang === "pt" ? "Quantidade de aulas por semana" : "Classes per week"}
+                        {t("auditUi.classesPerWeek")}
                       </Label>
                       <div className="flex gap-2 flex-wrap">
                         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
@@ -3308,23 +3286,23 @@ function StudentsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <Label htmlFor="std-frequency" className="text-xs font-semibold text-sidebar-foreground select-none">
-                          {lang === "pt" ? "Frequência" : "Recurrence"}
+                          {t("auditUi.recurrence")}
                         </Label>
                         <Select value={formFrequency} onValueChange={(val) => setFormFrequency(val as any)}>
                           <SelectTrigger id="std-frequency" className="h-11 rounded-xl border-border bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Weekly">{lang === "pt" ? "Semanal" : "Weekly"}</SelectItem>
-                            <SelectItem value="Bi-weekly">{lang === "pt" ? "Quinzenal" : "Bi-weekly"}</SelectItem>
-                            <SelectItem value="Monthly">{lang === "pt" ? "Mensal" : "Monthly"}</SelectItem>
+                            <SelectItem value="Weekly">{t("auditUi.weekly")}</SelectItem>
+                            <SelectItem value="Bi-weekly">{t("auditUi.biWeekly")}</SelectItem>
+                            <SelectItem value="Monthly">{t("auditUi.monthly")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-1">
                         <Label htmlFor="std-tz" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
-                          {lang === "pt" ? "Fuso Horário" : "Time Zone"}
+                          {t("auditUi.timeZone")}
                         </Label>
                         <Input
                           id="std-tz"
@@ -3339,7 +3317,7 @@ function StudentsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <Label htmlFor="std-startdate" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
-                          {lang === "pt" ? "Data de Início" : "Start Date"} <span className="text-[#ED7034] font-bold">*</span>
+                          {t("auditUi.startDate")} <span className="text-[#ED7034] font-bold">*</span>
                         </Label>
                         <Input
                           id="std-startdate"
@@ -3353,7 +3331,7 @@ function StudentsPage() {
 
                       <div className="space-y-1">
                         <Label htmlFor="std-enddate" className="text-xs font-semibold text-sidebar-foreground select-none">
-                          {lang === "pt" ? "Data de Término" : "End Date (Opcional)"}
+                          {t("auditUi.endDateOpcional")}
                         </Label>
                         <Input
                           id="std-enddate"
@@ -3378,7 +3356,7 @@ function StudentsPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground select-none">
-                              {lang === "pt" ? "Dia da semana" : "Weekday"}
+                              {t("auditUi.weekday")}
                             </Label>
                             <Select
                               value={sch.weekday}
@@ -3392,20 +3370,20 @@ function StudentsPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Monday">{lang === "pt" ? "Segunda-feira" : "Monday"}</SelectItem>
-                                <SelectItem value="Tuesday">{lang === "pt" ? "Terça-feira" : "Tuesday"}</SelectItem>
-                                <SelectItem value="Wednesday">{lang === "pt" ? "Quarta-feira" : "Wednesday"}</SelectItem>
-                                <SelectItem value="Thursday">{lang === "pt" ? "Quinta-feira" : "Thursday"}</SelectItem>
-                                <SelectItem value="Friday">{lang === "pt" ? "Sexta-feira" : "Friday"}</SelectItem>
-                                <SelectItem value="Saturday">{lang === "pt" ? "Sábado" : "Saturday"}</SelectItem>
-                                <SelectItem value="Sunday">{lang === "pt" ? "Domingo" : "Sunday"}</SelectItem>
+                                <SelectItem value="Monday">{t("auditUi.monday")}</SelectItem>
+                                <SelectItem value="Tuesday">{t("auditUi.tuesday")}</SelectItem>
+                                <SelectItem value="Wednesday">{t("auditUi.wednesday")}</SelectItem>
+                                <SelectItem value="Thursday">{t("auditUi.thursday")}</SelectItem>
+                                <SelectItem value="Friday">{t("auditUi.friday")}</SelectItem>
+                                <SelectItem value="Saturday">{t("auditUi.saturday")}</SelectItem>
+                                <SelectItem value="Sunday">{t("auditUi.sunday")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
-                              {lang === "pt" ? "Horário" : "Start Time"} <span className="text-[#ED7034] font-bold">*</span>
+                              {t("auditUi.startTime")} <span className="text-[#ED7034] font-bold">*</span>
                             </Label>
                             <Input
                               type="time"
@@ -3424,7 +3402,7 @@ function StudentsPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground select-none">
-                              {lang === "pt" ? "Duração" : "Duration"}
+                              {t("auditUi.duration")}
                             </Label>
                             <Select
                               value={String(sch.duration)}
@@ -3449,7 +3427,7 @@ function StudentsPage() {
 
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground select-none">
-                              {lang === "pt" ? "Formato" : "Format"}
+                              {t("auditUi.format")}
                             </Label>
                             <Select
                               value={sch.deliveryMode}
@@ -3464,7 +3442,7 @@ function StudentsPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="Online">Online</SelectItem>
-                                <SelectItem value="In person">{lang === "pt" ? "Presencial" : "In person"}</SelectItem>
+                                <SelectItem value="In person">{t("auditUi.inPerson")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -3473,8 +3451,8 @@ function StudentsPage() {
                         <div className="space-y-1">
                           <Label className="text-xs font-semibold text-foreground select-none">
                             {sch.deliveryMode === "Online"
-                              ? (lang === "pt" ? "Link (Zoom/Meet)" : "Meeting Link")
-                              : (lang === "pt" ? "Endereço" : "Location")}
+                              ? (t("auditUi.meetingLink"))
+                              : (t("auditUi.location"))}
                           </Label>
                           <Input
                             value={sch.locationLink}
@@ -3497,20 +3475,18 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4 animate-in fade-in duration-200">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <FileText className="h-4 w-4 text-[#33411B]" />
-                  {lang === "pt" ? "Observações" : "Notes"}
+                  {t("auditUi.notes2")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="std-notes" className="text-xs font-semibold text-foreground select-none">
-                    {lang === "pt" ? "Notas Extras" : "Additional Notes"}
+                    {t("auditUi.additionalNotes")}
                   </Label>
                   <textarea
                     id="std-notes"
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
                     placeholder={
-                      lang === "pt"
-                        ? "ex: Prefere foco em conversação."
-                        : "e.g. Focus on conversation preferred."
+                      t("auditUi.eGFocusOnConversationPreferred")
                     }
                     className="w-full min-h-[100px] rounded-xl border border-border bg-white p-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
                   />
@@ -3533,7 +3509,7 @@ function StudentsPage() {
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-[#33411B] px-5 text-sm font-bold text-white hover:bg-[#33411B]/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 {isSaving ? (
-                  <span>{lang === "pt" ? "Salvando..." : "Saving..."}</span>
+                  <span>{t("auditUi.saving")}</span>
                 ) : editingStudentIdForModal ? (
                   t.btnSave
                 ) : (
@@ -3562,7 +3538,7 @@ function StudentsPage() {
 
           <div className="space-y-2">
             <DialogTitle className="font-outfit text-2xl font-extrabold text-[#163020] tracking-tight">
-              {lang === "pt" ? "Boas-vindas ao seu Espaço de Alunos! 🌱" : "Welcome to your Students Hub! 🌱"}
+              {t("auditUi.welcomeToYourStudentsHub")}
             </DialogTitle>
             <p className="text-sm text-stone-600 leading-relaxed font-medium">
               {lang === "pt"
@@ -3584,7 +3560,7 @@ function StudentsPage() {
               className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-extrabold text-sm shadow-md transition-all cursor-pointer"
             >
               <Plus className="h-4 w-4" />
-              <span>{lang === "pt" ? "Cadastrar Primeiro Aluno" : "Register First Student"}</span>
+              <span>{t("auditUi.registerFirstStudent")}</span>
             </button>
 
             <button
@@ -3594,7 +3570,7 @@ function StudentsPage() {
               }}
               className="text-xs font-semibold text-stone-400 hover:text-stone-600 transition-colors cursor-pointer pt-1"
             >
-              {lang === "pt" ? "Explorar painel primeiro" : "Explore dashboard first"}
+              {t("auditUi.exploreDashboardFirst")}
             </button>
           </div>
         </DialogContent>
@@ -3613,7 +3589,7 @@ function StudentsPage() {
         <DialogContent className="sm:max-w-md rounded-3xl p-6 space-y-4">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold font-outfit">
-              {lang === "pt" ? "Cadastre seus pacotes primeiro" : "Create your packages first"}
+              {t("auditUi.createYourPackagesFirst")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
@@ -3640,7 +3616,7 @@ function StudentsPage() {
                 open?.();
               }}
             >
-              {lang === "pt" ? "Continuar sem pacote" : "Continue without a package"}
+              {t("auditUi.continueWithoutAPackage")}
             </Button>
             <Button
               type="button"
@@ -3652,7 +3628,7 @@ function StudentsPage() {
               }}
             >
               <Plus className="h-4 w-4" />
-              {lang === "pt" ? "Criar pacote" : "Create package"}
+              {t("auditUi.createPackage")}
             </Button>
           </div>
         </DialogContent>

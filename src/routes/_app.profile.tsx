@@ -200,7 +200,7 @@ const translations = {
 };
 
 function ProfilePage() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const { user, profile: authProfile, retryProfileSync } = useAuth();
   const [localProfile, setLocalProfile] = useState<ProfileData>(defaultProfile);
   useEffect(() => {
@@ -391,9 +391,7 @@ function ProfilePage() {
   const handleDeletePost = (postId: string) => {
     if (
       confirm(
-        lang === "pt"
-          ? "Tem certeza que deseja excluir esta discussão?"
-          : "Are you sure you want to delete this discussion?",
+        t("auditUi.areYouSureYouWantToDelete"),
       )
     ) {
       const updated = posts.filter((p: any) => p.id !== postId);
@@ -482,17 +480,13 @@ function ProfilePage() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Briefcase className="h-3.5 w-3.5" />
-                    {profile.experience} {lang === "pt" ? "anos de exp." : "years exp."}
+                    {profile.experience} {t("auditUi.yearsExp")}
                   </span>
                   <span className="flex items-center gap-1">
                     <User className="h-3.5 w-3.5" />
                     {profile.preferred_language === "pt-BR"
-                      ? lang === "pt"
-                        ? "Português"
-                        : "Portuguese"
-                      : lang === "pt"
-                        ? "Inglês"
-                        : "English"}
+                      ? t("auditUi.portuguese")
+                      : t("auditUi.english")}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
@@ -507,7 +501,7 @@ function ProfilePage() {
               <div className="space-y-2 pt-2 border-t border-border/50">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
-                    {lang === "pt" ? "Áreas de Atuação" : "Teaching Areas"}
+                    {t("auditUi.teachingAreas")}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.teachingAreas.map((area, idx) => (
@@ -524,7 +518,7 @@ function ProfilePage() {
 
                 <div>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
-                    {lang === "pt" ? "Disciplinas Lecionadas" : "Subjects Taught"}
+                    {t("auditUi.subjectsTaught")}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.subjectsTaught.map((sub, idx) => (
@@ -602,14 +596,14 @@ function ProfilePage() {
           <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
             <div className="flex border-b border-border/60 pb-1 overflow-x-auto gap-4">
               <span className="text-xs font-bold text-primary border-b-2 border-primary pb-2 shrink-0 cursor-pointer">
-                {lang === "pt" ? "Conquistas & Selos" : "Achievements & Badges"}
+                {t("auditUi.achievementsBadges")}
               </span>
               <span className="text-xs font-semibold text-muted-foreground/60 pb-2 shrink-0 cursor-not-allowed flex items-center gap-1">
-                {lang === "pt" ? "Portfólio & Aulas" : "Portfolio & Lessons"}
+                {t("auditUi.portfolioLessons")}
                 <Lock className="h-2.5 w-2.5" />
               </span>
               <span className="text-xs font-semibold text-muted-foreground/60 pb-2 shrink-0 cursor-not-allowed flex items-center gap-1">
-                {lang === "pt" ? "Avaliações de Alunos" : "Student Reviews"}
+                {t("auditUi.studentReviews")}
                 <Lock className="h-2.5 w-2.5" />
               </span>
             </div>
@@ -625,10 +619,10 @@ function ProfilePage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-foreground">
-                    {lang === "pt" ? "Fundador" : "Founder"}
+                    {t("auditUi.founder")}
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    {lang === "pt" ? "Membro pioneiro do Bloom" : "Early pioneer member of Bloom"}
+                    {t("auditUi.earlyPioneerMemberOfBloom")}
                   </p>
                 </div>
               </div>
@@ -642,12 +636,10 @@ function ProfilePage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-foreground">
-                    {lang === "pt" ? "Mentor de Discussões" : "Discussion Mentor"}
+                    {t("auditUi.discussionMentor")}
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    {lang === "pt"
-                      ? "Publicou discussões na comunidade"
-                      : "Published topics in the community"}
+                    {t("auditUi.publishedTopicsInTheCommunity")}
                   </p>
                 </div>
               </div>
@@ -661,12 +653,10 @@ function ProfilePage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-foreground">
-                    {lang === "pt" ? "Autor Estrela" : "Star Creator"}
+                    {t("auditUi.starCreator")}
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    {lang === "pt"
-                      ? "Venda 10+ recursos no marketplace"
-                      : "Sell 10+ resources on marketplace"}
+                    {t("auditUi.sell10ResourcesOnMarketplace")}
                   </p>
                 </div>
               </div>
@@ -726,32 +716,32 @@ function ProfilePage() {
             <div className="flex items-center gap-2 pb-4 border-b border-border/60">
               <Award className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               <h3 className="font-display text-lg font-bold text-foreground">
-                {lang === "pt" ? "Impacto na Comunidade" : "Community Impact"}
+                {t("auditUi.communityImpact")}
               </h3>
             </div>
 
             <ul className="mt-4 divide-y divide-border/40 text-xs font-semibold">
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🌱</span> {lang === "pt" ? "Ideias Regadas pela Comunidade" : "Ideas Watered by Community"}
+                  <span>🌱</span> {t("auditUi.ideasWateredByCommunity")}
                 </span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">{likesReceived || 42}</span>
               </li>
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🤝</span> {lang === "pt" ? "Professores Ajudados" : "Teachers Helped"}
+                  <span>🤝</span> {t("auditUi.teachersHelped")}
                 </span>
                 <span className="text-foreground font-bold text-sm">{helpfulAnswers || 18}</span>
               </li>
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>✅</span> {lang === "pt" ? "Soluções Aceitas" : "Accepted Solutions"}
+                  <span>✅</span> {t("auditUi.acceptedSolutions")}
                 </span>
                 <span className="text-foreground font-bold text-sm">{helpfulAnswers > 0 ? Math.floor(helpfulAnswers / 2) : 5}</span>
               </li>
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>📚</span> {lang === "pt" ? "Recursos Compartilhados" : "Resources Shared"}
+                  <span>📚</span> {t("auditUi.resourcesShared")}
                 </span>
                 <span className="text-foreground font-bold text-sm">{resourcesPublished || 12}</span>
               </li>
@@ -765,12 +755,10 @@ function ProfilePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
           <div>
             <h3 className="font-display text-lg font-bold text-foreground">
-              {lang === "pt" ? "Histórico de Publicações do Educador" : "Teacher Publication History"}
+              {t("auditUi.teacherPublicationHistory")}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {lang === "pt"
-                ? "Todas as suas perguntas, atividades, recursos e artigos com snapshots de versão imutáveis."
-                : "All your questions, tips, resources, and community articles with immutable version history."}
+              {t("auditUi.allYourQuestionsTipsResourcesAndCommunity")}
             </p>
           </div>
         </div>
@@ -785,11 +773,11 @@ function ProfilePage() {
             <table className="w-full border-collapse text-left text-xs font-semibold">
               <thead>
                 <tr className="border-b border-border/80 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
-                  <th className="pb-3 pl-2">{lang === "pt" ? "Publicação & Título" : "Publication & Title"}</th>
-                  <th className="pb-3">{lang === "pt" ? "Categoria" : "Category"}</th>
-                  <th className="pb-3 text-center">{lang === "pt" ? "Versão" : "Version"}</th>
-                  <th className="pb-3 text-center">{lang === "pt" ? "Regadas" : "Waterings"}</th>
-                  <th className="pb-3 text-right pr-2">{lang === "pt" ? "Ações" : "Actions"}</th>
+                  <th className="pb-3 pl-2">{t("auditUi.publicationTitle")}</th>
+                  <th className="pb-3">{t("auditUi.category")}</th>
+                  <th className="pb-3 text-center">{t("auditUi.version")}</th>
+                  <th className="pb-3 text-center">{t("auditUi.waterings")}</th>
+                  <th className="pb-3 text-right pr-2">{t("auditUi.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -823,10 +811,10 @@ function ProfilePage() {
                         variant="secondary"
                         className="text-[9px] py-0 font-bold bg-secondary/80"
                       >
-                        {post.category === "Question" && (lang === "pt" ? "Pergunta" : "Question")}
-                        {post.category === "Tip" && (lang === "pt" ? "Dica" : "Tip")}
-                        {post.category === "Need Help" && (lang === "pt" ? "Ajuda" : "Help")}
-                        {post.category === "Resource" && (lang === "pt" ? "Recurso" : "Resource")}
+                        {post.category === "Question" && (t("auditUi.question"))}
+                        {post.category === "Tip" && (t("auditUi.tip"))}
+                        {post.category === "Need Help" && (t("auditUi.help"))}
+                        {post.category === "Resource" && (t("auditUi.resource"))}
                       </Badge>
                     </td>
                     <td className="py-3.5 text-center font-bold text-muted-foreground">
@@ -1033,12 +1021,12 @@ function ProfilePage() {
 
             <div className="space-y-2 border-t border-border/50 pt-3">
               <h4 className="text-xs font-bold text-foreground">
-                {lang === "pt" ? "Preferências do Sistema" : "System Preferences"}
+                {t("auditUi.systemPreferences")}
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="edit-language" className="text-xs font-semibold text-foreground">
-                    {lang === "pt" ? "Idioma de Preferência" : "Preferred Language"}
+                    {t("auditUi.preferredLanguage")}
                   </Label>
                   <select
                     id="edit-language"
@@ -1053,7 +1041,7 @@ function ProfilePage() {
 
                 <div className="space-y-1">
                   <Label htmlFor="edit-timezone" className="text-xs font-semibold text-foreground">
-                    {lang === "pt" ? "Fuso Horário" : "Timezone"}
+                    {t("auditUi.timezone")}
                   </Label>
                   <select
                     id="edit-timezone"
@@ -1102,7 +1090,7 @@ function ProfilePage() {
           <form onSubmit={handleSaveEditPost} className="space-y-4 pt-3">
             <div className="space-y-1">
               <Label htmlFor="edit-post-title" className="text-xs font-semibold text-foreground">
-                {lang === "pt" ? "Título" : "Title"}
+                {t("auditUi.title")}
               </Label>
               <Input
                 id="edit-post-title"
@@ -1115,7 +1103,7 @@ function ProfilePage() {
 
             <div className="space-y-1">
               <Label htmlFor="edit-post-content" className="text-xs font-semibold text-foreground">
-                {lang === "pt" ? "Conteúdo" : "Content"}
+                {t("auditUi.content")}
               </Label>
               <textarea
                 id="edit-post-content"
@@ -1181,11 +1169,11 @@ function ProfilePage() {
                 <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground pt-1">
                   <span className="flex items-center gap-1">
                     <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                    {viewingPost.likes || 0} {lang === "pt" ? "Curtidas" : "Likes"}
+                    {viewingPost.likes || 0} {t("auditUi.likes")}
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
-                    {viewingPost.commentsCount || 0} {lang === "pt" ? "Comentários" : "Comments"}
+                    {viewingPost.commentsCount || 0} {t("auditUi.comments")}
                   </span>
                 </div>
               </div>
@@ -1196,7 +1184,7 @@ function ProfilePage() {
                     type="button"
                     className="inline-flex h-9 items-center justify-center rounded-xl bg-secondary px-4 text-xs font-semibold text-foreground transition-all hover:bg-secondary/80 cursor-pointer"
                   >
-                    {lang === "pt" ? "Fechar" : "Close"}
+                    {t("auditUi.close")}
                   </button>
                 </DialogClose>
               </div>

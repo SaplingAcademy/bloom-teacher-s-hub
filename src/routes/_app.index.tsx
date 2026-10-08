@@ -326,7 +326,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
           : `Your task "${task.title}" is due in ${minsRounded} minutes.`;
 
       toast.warning(message, {
-        description: lang === "pt" ? "Tarefa Urgente" : "Urgent Task",
+        description: t("auditUi.urgentTask"),
       });
       state.dueSoonSent = true;
       updated = true;
@@ -342,7 +342,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
           : `Your task "${task.title}" is overdue.`;
 
       toast.error(message, {
-        description: lang === "pt" ? "Tarefa Atrasada" : "Overdue Task",
+        description: t("auditUi.overdueTask"),
       });
       state.overdueSent = true;
       updated = true;
@@ -358,7 +358,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
 function TodayPage() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const { lang, formatStatus } = useLanguage();
+  const { lang, formatStatus, t } = useLanguage();
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -987,7 +987,7 @@ function TodayPage() {
                         if (!selectedTag)
                           return (
                             <span className="text-muted-foreground">
-                              {lang === "pt" ? "Selecionar marcador..." : "Select tag..."}
+                              {t("auditUi.selectTag")}
                             </span>
                           );
                         const colorStyles = getTagColorStyles(selectedTag.color);
@@ -1009,7 +1009,7 @@ function TodayPage() {
                       })()
                     ) : (
                       <span className="text-muted-foreground">
-                        {lang === "pt" ? "Selecionar marcador..." : "Select tag..."}
+                        {t("auditUi.selectTag")}
                       </span>
                     )}
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 ml-1" />
@@ -1027,7 +1027,7 @@ function TodayPage() {
                           <Search className="h-4 w-4 text-muted-foreground shrink-0 mr-2" />
                           <input
                             type="text"
-                            placeholder={lang === "pt" ? "Buscar..." : "Search..."}
+                            placeholder={t("auditUi.search")}
                             value={tagSearchQuery}
                             onChange={(e) => setTagSearchQuery(e.target.value)}
                             className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -1075,7 +1075,7 @@ function TodayPage() {
                             tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase()),
                           ).length === 0 && (
                               <p className="px-2.5 py-2 text-xs text-muted-foreground text-center">
-                                {lang === "pt" ? "Nenhum resultado" : "No results"}
+                                {t("auditUi.noResults")}
                               </p>
                             )}
                         </div>
@@ -1102,7 +1102,7 @@ function TodayPage() {
                             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-primary hover:bg-primary-soft transition-colors text-left cursor-pointer"
                           >
                             <Plus className="h-3.5 w-3.5 text-primary shrink-0" />
-                            {lang === "pt" ? "Criar Marcador" : "Create Tag"}
+                            {t("auditUi.createTag")}
                           </button>
                         </div>
                       </div>
@@ -1149,7 +1149,7 @@ function TodayPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="task-date" className="text-xs font-semibold text-foreground">
-                  {lang === "pt" ? "Data de Vencimento" : "Due Date"}
+                  {t("auditUi.dueDate")}
                 </Label>
                 <Input
                   id="task-date"
@@ -1338,7 +1338,7 @@ function TodayPage() {
                     type="button"
                     className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-card px-4 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
                   >
-                    {lang === "pt" ? "Fechar" : "Close"}
+                    {t("auditUi.close")}
                   </button>
                 </DialogClose>
                 <button
