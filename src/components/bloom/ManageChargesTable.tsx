@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { RefreshCw, CheckCircle2, Undo2, CalendarClock, Pencil, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -91,7 +93,7 @@ export function ManageChargesTable({
       await load();
       onChanged();
     } catch (err: any) {
-      toast.error(err?.message || (pt ? "Não foi possível concluir a ação." : "Action failed."));
+      toast.error(reportUserError(err, i18nT("errors.generic", pt ? "pt" : "en")));
     } finally {
       setBusyId(null);
     }

@@ -1,3 +1,5 @@
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
@@ -201,13 +203,13 @@ export function GenerateClassLessonPlanModal({
     if (!startDate || isNaN(Date.parse(startDate))) {
       const err = isPt ? "Selecione uma data de início válida." : "Select a valid start date.";
       setErrorMessage(err);
-      toast.error(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
       return;
     }
     if (slots.length === 0) {
       const err = isPt ? "Informe ao menos um horário semanal." : "Add at least one weekly slot.";
       setErrorMessage(err);
-      toast.error(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
       return;
     }
 

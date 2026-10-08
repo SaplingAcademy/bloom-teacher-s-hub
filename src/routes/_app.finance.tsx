@@ -1,3 +1,4 @@
+import { toUserMessage } from "@/lib/user-error";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
@@ -750,7 +751,7 @@ function FinancePage() {
                 <ul className="list-disc pl-4 space-y-0.5">
                   {syncIssues.map((issue) => (
                     <li key={issue.studentPackageId}>
-                      <strong>{issue.studentName}</strong>: {issue.message}
+                      <strong>{issue.studentName}</strong>: {toUserMessage(issue.message, lang === "pt" ? "Não foi possível gerar as cobranças deste contrato." : "Could not generate this contract's charges.")}
                     </li>
                   ))}
                 </ul>
@@ -765,9 +766,7 @@ function FinancePage() {
               ) : invoicesError ? (
                 <div role="alert" className="py-8 text-center text-xs font-medium text-destructive space-y-2">
                   <p>
-                    {invoicesError instanceof FinanceSyncError
-                      ? invoicesError.message
-                      : getFriendlyErrorMessage(invoicesError, lang === "pt" ? "Não foi possível carregar os recebíveis." : "Could not load receivables.")}
+                    {getFriendlyErrorMessage(invoicesError, lang === "pt" ? "Não foi possível carregar os recebíveis." : "Could not load receivables.")}
                   </p>
                   <button type="button" onClick={() => refetchInvoices()} className="underline">
                     {lang === "pt" ? "Tentar novamente" : "Try again"}

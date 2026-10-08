@@ -1,3 +1,5 @@
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect, useMemo } from "react";
 import {
   fetchTeacherTimeOff,
@@ -220,7 +222,7 @@ export function NonWorkingDaysModal({
       setSelectedDates(new Set());
       setActiveTab("list");
     } else {
-      toast.error(res.error || "Erro ao salvar períodos sem aula.");
+      toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff", currentLanguage())));
     }
   };
 
@@ -235,7 +237,7 @@ export function NonWorkingDaysModal({
       setSelectedItemIds(new Set(selectedItemIds));
       if (onTimeOffUpdated) onTimeOffUpdated();
     } else {
-      toast.error(res.error || "Erro ao excluir período.");
+      toast.error(toUserMessage(res.error, i18nT("errors.deleteItems", currentLanguage())));
     }
   };
 
@@ -251,7 +253,7 @@ export function NonWorkingDaysModal({
       setSelectedItemIds(new Set());
       if (onTimeOffUpdated) onTimeOffUpdated();
     } else {
-      toast.error(res.error || "Erro ao excluir itens selecionados.");
+      toast.error(toUserMessage(res.error, i18nT("errors.deleteItems", currentLanguage())));
     }
   };
 
@@ -269,7 +271,7 @@ export function NonWorkingDaysModal({
       await loadData();
       if (onTimeOffUpdated) onTimeOffUpdated();
     } else {
-      toast.error(res.error || "Erro ao atualizar item.");
+      toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff", currentLanguage())));
     }
   };
 

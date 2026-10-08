@@ -34,11 +34,12 @@ function describeFinanceCause(cause: unknown): string {
 /** Financial read/write failure that must reach the UI (never swallowed into []). */
 export class FinanceSyncError extends Error {
   cause?: unknown;
-  /** Raw database detail (code/message) shown alongside the friendly message. */
+  /** Raw database detail (code/message) for diagnostics only — never shown to the teacher. */
   detail: string;
   constructor(message: string, cause?: unknown) {
     const detail = describeFinanceCause(cause);
-    super(detail && detail !== message ? `${message} (${detail})` : message);
+    // Message stays human-readable; raw database detail is kept in `detail` and logged, never shown.
+    super(message);
     this.name = "FinanceSyncError";
     this.cause = cause;
     this.detail = detail;

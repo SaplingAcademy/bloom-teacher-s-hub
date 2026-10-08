@@ -1,3 +1,5 @@
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -209,7 +211,7 @@ export function CentralAvailabilityModal({
       setIsSavingHours(true);
       const res = await saveTeacherWorkingAvailability(teacherId, proposed);
       if (!res.success) {
-        toast.error(`Erro ao salvar: ${res.error}`);
+        toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
         return;
       }
 
@@ -336,7 +338,7 @@ export function CentralAvailabilityModal({
       const res = await createTeacherTimeOffBatch(teacherId, payload);
 
       if (!res.success) {
-        toast.error(`Erro ao salvar: ${res.error}`);
+        toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
         return;
       }
 
@@ -380,7 +382,7 @@ export function CentralAvailabilityModal({
         await loadDaysOffData();
         if (onSaved) onSaved();
       } else {
-        toast.error(res.error || "Erro ao excluir registros.");
+        toast.error(toUserMessage(res.error, i18nT("errors.deleteItems", currentLanguage())));
       }
     } catch (err) {
       toast.error("Falha ao excluir registros.");
@@ -466,7 +468,7 @@ export function CentralAvailabilityModal({
         toast.success("Horários de descanso salvos com sucesso!");
         if (onSaved) onSaved();
       } else {
-        toast.error(res.error || "Erro ao salvar horários de descanso.");
+        toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
       }
     } catch (err) {
       toast.error("Falha ao salvar horários de descanso.");

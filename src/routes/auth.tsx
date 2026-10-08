@@ -1,3 +1,4 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
@@ -804,7 +805,7 @@ function AuthPage() {
     } catch (err) {
       const error = err as Error;
       console.error("[Auth] Google Auth error:", error);
-      toast.error(error.message || t.errorHeader);
+      toast.error(reportUserError(error, t.errorHeader));
       setLoading(false);
     }
   };

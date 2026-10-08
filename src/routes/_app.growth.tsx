@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -418,7 +420,7 @@ function GrowthPage() {
         lang === "pt" ? "Meta mensal salva com sucesso!" : "Monthly goal saved successfully!"
       );
     } else {
-      toast.error(res.error || (lang === "pt" ? "Erro ao salvar meta." : "Error saving goal."));
+      toast.error(toUserMessage(res.error, i18nT("errors.saveGoal", lang)));
     }
   };
 
@@ -1306,7 +1308,7 @@ function GrowthPage() {
                         : "Saved as your official monthly goal!"
                     );
                   } else {
-                    toast.error(res.error || (lang === "pt" ? "Erro ao salvar meta." : "Error saving goal."));
+                    toast.error(toUserMessage(res.error, i18nT("errors.saveGoal", lang)));
                   }
                 }}
                 disabled={isSavingGoal}
