@@ -721,6 +721,52 @@ function ProfilePage() {
           </DialogHeader>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 pt-3">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-foreground">{t.profilePhoto}</Label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="relative h-20 w-20 shrink-0 rounded-2xl overflow-hidden border border-border/80 group cursor-pointer"
+                  title={t.changePhoto}
+                >
+                  {avatarPreview || editPhoto ? (
+                    <img
+                      src={avatarPreview || editPhoto}
+                      alt={editName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-lilac flex items-center justify-center font-display text-xl font-extrabold text-lilac-foreground">
+                      {(editName || "?")
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
+                    </div>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="h-5 w-5 text-white" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {t.changePhoto}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarSelect}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-4">
               <div className="space-y-1">
                 <Label htmlFor="edit-name" className="text-xs font-semibold text-foreground">
