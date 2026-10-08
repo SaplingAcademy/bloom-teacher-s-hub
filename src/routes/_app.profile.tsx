@@ -583,8 +583,6 @@ function ProfilePage() {
 
             <div className="space-y-2 border-t border-border/50 pt-3">
               <h4 className="text-xs font-bold text-foreground">
-                {tr("auditUi.systemPreferences")}            <div className="space-y-2 border-t border-border/50 pt-3">
-              <h4 className="text-xs font-bold text-foreground">
                 {tr("auditUi.systemPreferences")}
               </h4>
               <div className="grid grid-cols-2 gap-4">
