@@ -210,7 +210,7 @@ function ProfilePage() {
 
   const loadCommunity = useCallback(async () => {
     if (!userId) return;
-    const [postsRes, rankRes, commentsRes] = await Promise.all([
+    const [postsRes, rankRes, rankRpcRes, commentsRes] = await Promise.all([
       supabase
         .from("community_posts")
         .select("id, title, content, tags, created_at, updated_at")
