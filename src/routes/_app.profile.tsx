@@ -669,10 +669,95 @@ function ProfilePage() {
               />
             </div>
 
-            <div className="space-y-2 border-t border-border/50 pt-3">
-              <h4 className="text-xs font-bold text-foreground">
-                {tr("auditUi.systemPreferences")}
-              </h4>
+            <div className="space-y-1">
+              <Label htmlFor="edit-headline" className="text-xs font-semibold text-foreground">
+                {t.headline}
+              </Label>
+              <Input
+                id="edit-headline"
+                value={editHeadline}
+                onChange={(e) => setEditHeadline(e.target.value)}
+                className="h-10 rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="edit-country" className="text-xs font-semibold text-foreground">
+                  {t.country}
+                </Label>
+                <Input
+                  id="edit-country"
+                  value={editCountry}
+                  onChange={(e) => setEditCountry(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-years" className="text-xs font-semibold text-foreground">
+                  {t.yearsExperience}
+                </Label>
+                <Input
+                  id="edit-years"
+                  type="number"
+                  min={0}
+                  max={80}
+                  value={editYears}
+                  onChange={(e) => setEditYears(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-expertise" className="text-xs font-semibold text-foreground">
+                {t.expertiseAreas}
+              </Label>
+              {editExpertise.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {editExpertise.map((area) => (
+                    <Badge
+                      key={area}
+                      variant="secondary"
+                      className="text-[10px] py-0.5 px-2 font-bold bg-secondary/80 gap-1"
+                    >
+                      {area}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExpertise(area)}
+                        aria-label={t.removeArea}
+                        className="ml-0.5 rounded-full hover:bg-background/60 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  id="edit-expertise"
+                  value={newExpertise}
+                  onChange={(e) => setNewExpertise(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddExpertise();
+                    }
+                  }}
+                  placeholder={t.addArea}
+                  className="h-10 rounded-xl flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddExpertise}
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {t.add}
+                </button>
+              </div>
+            </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="edit-language" className="text-xs font-semibold text-foreground">
