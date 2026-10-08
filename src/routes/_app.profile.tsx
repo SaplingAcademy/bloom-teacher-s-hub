@@ -226,6 +226,46 @@ function ProfilePage() {
   const [editExpertise, setEditExpertise] = useState<string[]>(profile.expertiseAreas);
   const [newExpertise, setNewExpertise] = useState("");
 
+  const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+  const AVATAR_TYPES: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const clearAvatarSelection = useCallback(() => {
+    setAvatarFile(null);
+    setAvatarPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  }, []);
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!AVATAR_TYPES[file.type]) {
+      toast.error(t.photoInvalidType);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error(t.photoTooLarge);
+      e.target.value = "";
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
+
   const resetForm = useCallback(() => {
     setEditName(resolveTeacherName(authProfile, user) || "");
     setEditPhoto((authProfile?.avatar_url as string) || "");
