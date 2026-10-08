@@ -411,7 +411,7 @@ function CalendarPage() {
       for (const student of studentsData) {
         const { data: schedulesData, error: schErr } = await supabase
           .from("student_schedules")
-          .select("id, weekday, start_time, end_time")
+          .select("id, weekday, start_time, end_time, meeting_url, delivery_mode, duration_minutes")
           .eq("student_id", student.id);
 
         if (schErr) {

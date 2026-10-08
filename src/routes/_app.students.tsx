@@ -145,6 +145,14 @@ export interface ScheduleInput {
 }
 
 import { ColorSelector } from "@/components/bloom/ColorSelector";
+import {
+  findInvalidMeetingUrl,
+  persistStudentSchedules,
+  rowDurationMinutes,
+  rowToFormInput,
+  sortScheduleRows,
+  type StudentScheduleRow,
+} from "@/lib/student-schedules";
 import { getBrandColorMeta } from "@/lib/brand-colors";
 
 interface Student {
@@ -921,34 +929,11 @@ function StudentsPage() {
 
     const savedStudentId = savedStudentData.id;
 
-    let savedSchedules: any[] = [];
+    let savedSchedules: StudentScheduleRow[] = [];
     try {
-      if (isEdit) {
-        // Delete existing schedules first
-        const { error: deleteError } = await supabase
-          .from("student_schedules")
-          .delete()
-          .eq("student_id", savedStudentId);
-        if (deleteError) throw deleteError;
-      }
-
-      // Insert new schedules and SELECT to retrieve generated UUIDs
-      if (schedules.length > 0) {
-        const schedulesToInsert = schedules.map((sch) => ({
-          student_id: savedStudentId,
-          weekday: sch.weekday,
-          start_time: sch.startTime || (sch as any).start_time || null,
-          end_time: (sch as any).endTime || (sch as any).end_time || null,
-        }));
-
-        const { data: insertedData, error: insertSchedulesError } = await supabase
-          .from("student_schedules")
-          .insert(schedulesToInsert)
-          .select();
-
-        if (insertSchedulesError) throw insertSchedulesError;
-        savedSchedules = insertedData || [];
-      }
+      // UPDATE by id / INSERT new / DELETE removed — never delete+recreate all rows.
+      const result = await persistStudentSchedules(savedStudentId, schedules);
+      savedSchedules = result.rows;
     } catch (scheduleError: any) {
       console.error("[Student Save Failure]", {
         step: "student_schedules_error",
@@ -1076,7 +1061,7 @@ function StudentsPage() {
         studentData.level as CEFRLevel,
         studentData.language_studied as CourseFocus,
         studentData.type as StudentType,
-        savedSchedules.length > 0 ? savedSchedules : schedules,
+        savedSchedules,
         8
       );
       console.log("[Students] Calendar sync result:", syncResult);
@@ -1084,7 +1069,10 @@ function StudentsPage() {
       console.warn("[Students] Failed to sync recurring events to calendar_events:", syncErr);
     }
 
-    return savedStudentData;
+    return {
+      ...savedStudentData,
+      savedScheduleInputs: savedSchedules.map(rowToFormInput) as ScheduleInput[],
+    };
   };
 
   const handleSaveStudentSettings = async (e: React.FormEvent) => {
@@ -1093,6 +1081,12 @@ function StudentsPage() {
 
     if (!editWhatsApp.trim()) {
       toast.error(i18nT("students.toastPhoneRequired", lang));
+      return;
+    }
+
+    const invalidEditUrl = findInvalidMeetingUrl(editSchedulesList);
+    if (invalidEditUrl >= 0) {
+      toast.error(i18nT("students.invalidMeetingUrl", lang).replace("{n}", String(invalidEditUrl + 1)));
       return;
     }
 
@@ -1198,7 +1192,7 @@ function StudentsPage() {
                 packageId: data.package_id || undefined,
                 courseStartDate: coursePeriodFromStudent(data).startDate,
                 courseEndDate: coursePeriodFromStudent(data).endDate,
-                schedules: editSchedulesList,
+                schedules: data.savedScheduleInputs,
                 scheduleDetails: editSchedulesList.length > 0 ? {
                   day: editSchedulesList[0].weekday,
                   startTime: editSchedulesList[0].startTime,
@@ -1355,14 +1349,14 @@ function StudentsPage() {
         const firstS = schedulesList[0];
         scheduleDetailsObj = {
           day: firstS.weekday,
-          startTime: firstS.start_time || "09:00",
-          duration: 60,
+          startTime: (firstS.start_time || "09:00").slice(0, 5),
+          duration: rowDurationMinutes(firstS) ?? 60,
           frequency: "Weekly",
           startDate: coursePeriodFromStudent(d).startDate,
           endDate: coursePeriodFromStudent(d).endDate || undefined,
           timezone: "America/Sao_Paulo",
-          deliveryMode: "Online",
-          locationLink: undefined,
+          deliveryMode: firstS.delivery_mode === "In person" ? "In person" : "Online",
+          locationLink: firstS.meeting_url || undefined,
         };
       }
 
@@ -1395,15 +1389,7 @@ function StudentsPage() {
           paymentMethod: activePkgAssignment.payment_method || "Pix",
           installmentCount: activePkgAssignment.installment_count ?? null,
         } : undefined,
-        schedules: schedulesList.map((s: any) => ({
-          id: s.id,
-          weekday: s.weekday,
-          startTime: s.start_time || "",
-          endTime: s.end_time || "",
-          duration: 60,
-          deliveryMode: "Online" as const,
-          locationLink: "",
-        })),
+        schedules: sortScheduleRows(schedulesList).map((s: any) => rowToFormInput(s)),
         scheduleDetails: scheduleDetailsObj,
       };
     });
@@ -1679,6 +1665,12 @@ function StudentsPage() {
       return;
     }
 
+    const invalidFormUrl = findInvalidMeetingUrl(formSchedulesList);
+    if (invalidFormUrl >= 0) {
+      toast.error(i18nT("students.invalidMeetingUrl", lang).replace("{n}", String(invalidFormUrl + 1)));
+      return;
+    }
+
     const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
     if (isPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
@@ -1777,7 +1769,7 @@ function StudentsPage() {
         lastActive: data.updated_at,
         notes: data.notes || "",
         color_key: data.color_key || formColorKey,
-        schedules: formSchedulesList,
+        schedules: data.savedScheduleInputs,
         scheduleDetails: formSchedulesList.length > 0 ? {
           day: formSchedulesList[0].weekday,
           startTime: formSchedulesList[0].startTime,

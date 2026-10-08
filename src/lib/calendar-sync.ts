@@ -266,7 +266,23 @@ export function deleteStudentEvents(
   });
 }
 
-// Sync Student recurring schedules directly to Supabase calendar_events (8-week rolling window)
+export interface SyncScheduleInput {
+  id?: string;
+  weekday: string;
+  startTime?: string;
+  start_time?: string | null;
+  endTime?: string;
+  end_time?: string | null;
+  duration?: number;
+  duration_minutes?: number | null;
+  meeting_url?: string | null;
+  locationLink?: string | null;
+  delivery_mode?: string | null;
+  deliveryMode?: string | null;
+}
+
+// Sync student_schedules (canonical) → calendar_events (derived copies), 8-week rolling window.
+// Future open occurrences are updated in place per schedule_id; past and Completed/Closed events are never touched.
 export async function syncStudentSchedulesToSupabaseEvents(
   studentId: string,
   teacherId: string,
@@ -274,173 +290,121 @@ export async function syncStudentSchedulesToSupabaseEvents(
   level: CEFRLevel,
   focus: CourseFocus,
   type: StudentType,
-  schedules: Array<{ id?: string; weekday: string; startTime?: string; start_time?: string; endTime?: string; end_time?: string; duration?: number; duration_minutes?: number }>,
+  schedules: SyncScheduleInput[],
   limitWeeks = 8
 ) {
-  console.log("[calendar-sync] Starting sync for student:", {
-    teacherId,
-    studentId,
-    studentName,
-    schedulesCount: schedules?.length ?? 0,
-    schedules,
-  });
-
   if (!studentId || !teacherId) {
-    console.error("[calendar-sync] Aborting sync: missing studentId or teacherId", { studentId, teacherId });
     return { success: false, generatedCount: 0, insertedCount: 0, error: "Missing studentId or teacherId" };
   }
 
+  const { planEventReconcile } = await import("@/lib/student-schedules");
   const todayStr = formatDateString(new Date());
 
   try {
-    // 1. Delete future uncompleted recurring events for this student (preserving completed/past events)
     const { data: existingEvents, error: fetchErr } = await supabase
       .from("calendar_events")
-      .select("id, date, status, schedule_id")
+      .select("id, date, status, schedule_id, is_recurring")
       .eq("student_id", studentId)
       .gte("date", todayStr);
+    if (fetchErr) throw fetchErr;
 
-    if (fetchErr) {
-      console.error("[calendar-sync] Error fetching existing calendar events:", fetchErr);
-    }
-
-    if (existingEvents && existingEvents.length > 0) {
-      const idsToDelete = existingEvents
-        .filter((e) => e.status !== "Completed" && e.status !== "Closed")
-        .map((e) => e.id);
-
-      if (idsToDelete.length > 0) {
-        const { error: delErr } = await supabase.from("calendar_events").delete().in("id", idsToDelete);
-        if (delErr) {
-          console.error("[calendar-sync] Error deleting previous future events:", delErr);
-        }
-      }
-    }
-
-    // 2. Fetch teacher non-working days for exclusion
     const timeOffList = await fetchTeacherTimeOff(teacherId);
 
-    // 3. For each schedule, generate next weeks of occurrences
-    const newEventsToInsert: any[] = [];
+    type Fields = {
+      start_time: string; end_time: string; duration: number;
+      delivery_mode: string; location_link: string | null;
+    };
+    const fieldsBySchedule = new Map<string | null, Fields>();
+    const desired: Array<{ scheduleId: string | null; date: string }> = [];
 
     for (const sch of schedules) {
       if (!sch.weekday) continue;
-      const rawStartTime = sch.startTime || sch.start_time || "09:00";
-      const startTime = formatTimeHHMMSS(rawStartTime);
-      const duration = sch.duration_minutes || sch.duration || 60;
-      const rawEndTime = sch.endTime || sch.end_time || calculateEndTime(rawStartTime, duration);
-      const endTime = formatTimeHHMMSS(rawEndTime);
+      const rawStart = sch.startTime || sch.start_time || "09:00";
+      const startTime = formatTimeHHMMSS(rawStart);
+      let duration = Number(sch.duration_minutes || sch.duration) || 0;
+      const rawEnd = sch.endTime || sch.end_time || "";
+      if (!duration && rawEnd) {
+        const [sh, sm] = startTime.split(":").map(Number);
+        const [eh, em] = rawEnd.split(":").map(Number);
+        const diff = eh * 60 + em - (sh * 60 + sm);
+        if (diff > 0) duration = diff;
+      }
+      if (!duration) duration = 60;
+      const endTime = formatTimeHHMMSS(rawEnd || calculateEndTime(rawStart, duration));
+      const mode = (sch.delivery_mode || sch.deliveryMode) === "In person" ? "In person" : "Online";
+      const link = (sch.meeting_url ?? sch.locationLink ?? null) || null;
+      const scheduleId = sch.id || null;
+      fieldsBySchedule.set(scheduleId, { start_time: startTime, end_time: endTime, duration, delivery_mode: mode, location_link: link });
 
-      const occurrenceDates = generateOccurrenceDates(todayStr, sch.weekday, "Weekly", limitWeeks);
-      console.log(`[calendar-sync] Generated ${occurrenceDates.length} occurrences for schedule`, {
-        scheduleId: sch.id,
-        weekday: sch.weekday,
-        occurrenceDates,
-      });
-
-      for (const dateStr of occurrenceDates) {
-        // Skip dates when teacher is on non-working time off
-        const matchedTimeOff = checkDateIsNonWorking(dateStr, timeOffList);
-        if (matchedTimeOff) {
-          console.log(`[calendar-sync] Skipping candidate date ${dateStr} due to non-working ${matchedTimeOff.type}`);
-          continue;
-        }
-
-        newEventsToInsert.push({
-          teacher_id: teacherId,
-          student_id: studentId,
-          schedule_id: sch.id || null,
-          student_name: studentName,
-          level: level || "A1",
-          focus: focus || "General English",
-          date: dateStr,
-          start_time: startTime,
-          end_time: endTime,
-          duration: duration,
-          type: type || "Private",
-          delivery_mode: "Online",
-          status: "Scheduled",
-          is_recurring: true,
-          recurrence_series_id: `series-${studentId}`,
-        });
+      for (const dateStr of generateOccurrenceDates(todayStr, sch.weekday, "Weekly", limitWeeks)) {
+        if (checkDateIsNonWorking(dateStr, timeOffList)) continue;
+        desired.push({ scheduleId, date: dateStr });
       }
     }
 
-    console.log(`[calendar-sync] Total event payloads generated: ${newEventsToInsert.length}`, {
-      samplePayload: newEventsToInsert[0] || null,
+    const plan = planEventReconcile((existingEvents || []) as any, desired);
+
+    if (plan.deleteIds.length > 0) {
+      const { error } = await supabase.from("calendar_events").delete().in("id", plan.deleteIds);
+      if (error) throw error;
+    }
+
+    // One UPDATE per schedule_id, only touching its open future occurrences.
+    const updatesBySchedule = new Map<string | null, string[]>();
+    plan.updateIds.forEach(({ id, scheduleId }) => {
+      updatesBySchedule.set(scheduleId, [...(updatesBySchedule.get(scheduleId) || []), id]);
+    });
+    for (const [scheduleId, ids] of updatesBySchedule) {
+      const f = fieldsBySchedule.get(scheduleId);
+      if (!f) continue;
+      const { error } = await supabase
+        .from("calendar_events")
+        .update({ ...f, student_name: studentName })
+        .in("id", ids);
+      if (error) throw error;
+    }
+
+    const rowsToInsert = plan.insert.map((d) => {
+      const f = fieldsBySchedule.get(d.scheduleId)!;
+      return {
+        teacher_id: teacherId,
+        student_id: studentId,
+        schedule_id: d.scheduleId,
+        student_name: studentName,
+        level: level || "A1",
+        focus: focus || "General English",
+        date: d.date,
+        start_time: f.start_time,
+        end_time: f.end_time,
+        duration: f.duration,
+        type: type || "Private",
+        delivery_mode: f.delivery_mode,
+        location_link: f.location_link,
+        status: "Scheduled",
+        is_recurring: true,
+        recurrence_series_id: `series-${studentId}`,
+      };
     });
 
-    if (newEventsToInsert.length > 0) {
-      let { data: upsertData, error } = await supabase
-        .from("calendar_events")
-        .upsert(newEventsToInsert, {
-          onConflict: "student_id,schedule_id,date",
-          ignoreDuplicates: true,
-        })
-        .select();
-
-      // Fallback: If PostgREST returns 42P10 (no matching index for onConflict spec), retry insert
-      if (error && (error.code === "42P10" || error.message?.includes("ON CONFLICT"))) {
-        console.warn("[calendar-sync] onConflict spec returned 42P10, retrying standard insert:", error.message);
-        const { data: insertData, error: insertErr } = await supabase
-          .from("calendar_events")
-          .insert(newEventsToInsert)
-          .select();
-
-        if (!insertErr) {
-          upsertData = insertData;
-          error = null;
-        } else {
-          error = insertErr;
-        }
-      }
-
-      if (error) {
-        console.error("[calendar-sync] Complete Supabase error object on upserting calendar events:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          fullError: JSON.stringify(error, null, 2),
-        });
-        return {
-          success: false,
-          generatedCount: newEventsToInsert.length,
-          insertedCount: 0,
-          error: error.message,
-          rawErrorObject: error,
-        };
-      }
-
-      const insertedCount = upsertData ? upsertData.length : newEventsToInsert.length;
-      console.log("[calendar-sync] Supabase upsert/insert successful!", {
-        generatedCount: newEventsToInsert.length,
-        insertedCount,
-        insertedSample: upsertData?.[0] || null,
-      });
-
-      return {
-        success: true,
-        generatedCount: newEventsToInsert.length,
-        insertedCount,
-        error: null,
-      };
+    let insertedCount = 0;
+    if (rowsToInsert.length > 0) {
+      const { data, error } = await supabase.from("calendar_events").insert(rowsToInsert).select("id");
+      if (error) throw error;
+      insertedCount = data?.length ?? rowsToInsert.length;
     }
 
     return {
       success: true,
-      generatedCount: 0,
-      insertedCount: 0,
+      generatedCount: desired.length,
+      insertedCount,
+      updatedCount: plan.updateIds.length,
+      deletedCount: plan.deleteIds.length,
       error: null,
     };
   } catch (err: any) {
-    console.error("[calendar-sync] Failed to sync student schedules to Supabase calendar_events:", err);
-    return {
-      success: false,
-      generatedCount: 0,
-      insertedCount: 0,
-      error: err?.message || String(err),
-    };
+    console.error("[calendar-sync] Failed to sync student schedules to calendar_events:", {
+      message: err?.message, code: err?.code, details: err?.details, hint: err?.hint,
+    });
+    return { success: false, generatedCount: 0, insertedCount: 0, error: err?.message || String(err), rawErrorObject: err };
   }
 }
-
