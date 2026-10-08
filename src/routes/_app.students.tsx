@@ -555,7 +555,7 @@ function StudentsPage() {
     eventId: requestedEventId,
   } = Route.useSearch();
   const navigate = useNavigate();
-  const { lang, t: tr } = useLanguage();
+  const { lang, t: tr, formatStatus } = useLanguage();
   const { user } = useAuth();
   const {
     languages: teacherLanguages,
@@ -2264,11 +2264,11 @@ function StudentsPage() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60 text-[11px]">
                         <div>
-                          <span className="text-muted-foreground block">{tr("auditUi.totalValue")}</span>
+                          <span className="text-muted-foreground block">{tr("auditUi.agreementTotalValue")}</span>
                           <strong>{sp.totalAmountFormatted}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground block">{tr("auditUi.installments")}</span>
+                          <span className="text-muted-foreground block">{tr("auditUi.agreementInstallments")}</span>
                           <strong>{sp.installmentCount}x de {sp.installmentAmountFormatted}</strong>
                         </div>
                         <div>
@@ -2276,7 +2276,7 @@ function StudentsPage() {
                           <strong className="text-emerald-700 dark:text-emerald-400">{sp.progressLabel}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground block">{tr("auditUi.paymentMethod")}</span>
+                          <span className="text-muted-foreground block">{tr("auditUi.agreementPaymentMethod")}</span>
                           <strong>{formatStatus(sp.paymentMethod)}</strong>
                         </div>
                       </div>
@@ -2315,7 +2315,7 @@ function StudentsPage() {
                             )}
                           </div>
                           <p className="text-muted-foreground text-[11px]">
-                            {tr("auditUi.reference")}: <strong>{pay.invoiceReference}</strong> • {tr("auditUi.paymentMethod")}: <strong>{formatStatus(pay.paymentMethod)}</strong> • {tr("auditUi.period")}: {pay.billingPeriod}
+                            {tr("auditUi.reference")}: <strong>{pay.invoiceReference}</strong> • {tr("auditUi.agreementPaymentMethod")}: <strong>{formatStatus(pay.paymentMethod)}</strong> • {tr("auditUi.period")}: {pay.billingPeriod}
                           </p>
                         </div>
 
