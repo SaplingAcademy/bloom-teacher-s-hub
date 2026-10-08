@@ -182,7 +182,7 @@ export function ClassFormModal({
   onSuccess,
 }: ClassFormModalProps) {
   const { user } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const isPt = lang === "pt";
 
   const [name, setName] = useState("");
@@ -527,7 +527,7 @@ export function ClassSessionAttendanceModal({
   sessionDate = new Date().toISOString().split("T")[0],
 }: ClassSessionAttendanceModalProps) {
   const { user } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const isPt = lang === "pt";
 
   const [loading, setLoading] = useState(true);

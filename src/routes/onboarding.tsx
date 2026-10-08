@@ -938,6 +938,7 @@ export function OnboardingPage() {
    STEP 0 — WELCOME INTRODUCTION
    ========================================================================= */
 function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-8 text-center max-w-lg mx-auto py-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="h-16 w-16 mx-auto rounded-3xl bg-[#163020] flex items-center justify-center text-[#F4EBE1] font-outfit font-black text-2xl shadow-md">
@@ -1194,7 +1195,7 @@ function Step2YourBusiness({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   return (
     <div className="space-y-8">
       {/* Title */}
@@ -1256,7 +1257,7 @@ function Step3YourSchedule({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const toggleDay = (day: string) => {
     let next: string[];
     if (data.workingDays.includes(day)) {
@@ -1442,6 +1443,7 @@ const OPTIONAL_SECTION_DAYS = [
 ];
 
 function OptionalBadge({ isPt }: { isPt: boolean }) {
+  const { t } = useLanguage();
   return (
     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-stone-100 text-stone-500 border border-stone-200">
       {t("onboardingUi.optional")}
@@ -1458,7 +1460,7 @@ function RestBlocksSection({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const blocks = data.restBlocks || [];
 
   const addBlock = () => {
@@ -1586,6 +1588,7 @@ function TimeOffSection({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { t } = useLanguage();
   const periods = data.timeOff || [];
 
   const addPeriod = () => {
@@ -1931,6 +1934,7 @@ function Step5Finances({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-8">
       {/* Title */}
@@ -2044,7 +2048,7 @@ function Step6Payments({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const togglePaymentMethod = (methodId: string) => {
     let next: string[];
     if (data.paymentMethods.includes(methodId)) {
@@ -2116,7 +2120,7 @@ function Step7Contracts({
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const options: Array<"YES" | "NO" | "Planning to start"> = [
     "YES",
     "NO",
@@ -2176,7 +2180,7 @@ function Step7Contracts({
    FINAL SUMMARY SCREEN
    ========================================================================= */
 function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const formattedLanguages = (data.languages || [])
     .map((l) => {
