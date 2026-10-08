@@ -112,8 +112,6 @@ export const navSections: NavSection[] = [
         to: "/profile",
         icon: UserCircle,
         description: "Your teacher reputation",
-        badge: "Soon",
-        disabled: true,
       },
     ],
   },
