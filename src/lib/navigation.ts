@@ -94,8 +94,6 @@ export const navSections: NavSection[] = [
         to: "/community",
         icon: Newspaper,
         description: "Ideas and discussion",
-        badge: "Soon",
-        disabled: true,
       },
       {
         id: "marketplace",

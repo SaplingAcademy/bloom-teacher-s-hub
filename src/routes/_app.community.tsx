@@ -1,757 +1,538 @@
-import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
-import { t as i18nT } from "@/lib/i18n";
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Droplets, MessageSquare, Plus, Search, Send, Sprout, Trash2, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
-import {
-  Sprout,
-  Plus,
-  MessageSquare,
-  Bookmark,
-  Share2,
-  X,
-  Sparkles,
-  BookOpen,
-  ArrowRight,
-  Filter,
-  Search,
-  CheckCircle2,
-  HelpCircle,
-  Flower2,
-  TreeDeciduous,
-  Globe,
-  Tag as TagIcon,
-  RefreshCw,
-  Sun,
-  Award,
-  Users,
-  Compass,
-  Cpu,
-  User,
-  Briefcase,
-  Languages,
-  History,
-  Edit2,
-  Trash2,
-  Save,
-} from "lucide-react";
+import { reportUserError } from "@/lib/user-error";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  GardenPost,
-  GrowthStage,
-  getStageMeta,
-  getDailyWateringStatus,
-  waterIdea,
-  toggleCultivateItem,
-  convertDiscussionToCommunityArticle,
-  DailyWateringStatus,
-} from "@/lib/knowledge-garden";
-import {
-  SubjectGarden,
-  ThematicGarden,
-  BloomLibraryArticle,
-  DEFAULT_SUBJECT_GARDENS,
-  DEFAULT_THEMATIC_GARDENS,
-  fetchSubjectGardens,
-  fetchThematicGardens,
-  fetchFollowedGardens,
-  toggleFollowGarden,
-  fetchBloomLibraryArticles,
-  scorePostForPersonalizedFeed,
-} from "@/lib/community-ecosystem";
-import { analyzeAndAutoTagPost, AutoTagResult } from "@/lib/ai-autotagging";
-import {
-  editPostWithVersion,
-  softDeletePost,
-  saveCommunityDraft,
-  fetchCommunityDraft,
-  clearCommunityDraft,
-} from "@/lib/community-persistence";
-import { PostVersionHistoryModal } from "@/components/bloom/PostVersionHistoryModal";
 
 export const Route = createFileRoute("/_app/community")({
   head: () => ({
     meta: [
-      { title: "Ecossistema do Conhecimento · Comunidade Bloom" },
-      {
-        name: "description",
-        content: "Espaço global colaborativo onde educadores cultivam, regam e compartilham saberes.",
-      },
+      { title: "Comunidade · Bloom" },
+      { name: "description", content: "Professores compartilhando ideias, dúvidas e dicas na Bloom." },
+      { property: "og:title", content: "Comunidade · Bloom" },
+      { property: "og:description", content: "Professores compartilhando ideias, dúvidas e dicas na Bloom." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  beforeLoad: () => {
-    throw redirect({ to: "/" });
-  },
-  component: CommunityEcosystemPage,
+  component: CommunityPage,
 });
 
-const DEFAULT_POSTS: GardenPost[] = [
-  {
-    id: "p1",
-    authorName: "Profa. Maria Silva",
-    category: "Question",
-    title: "Como transicionar de Past Simple para Present Perfect com alunos adultos?",
-    content:
-      "Tenho uma turma de adultos que trava ao entender a diferença entre tempo definido e experiência de vida. Quais dinâmicas visuais ou jogos de linha do tempo vocês usam que realmente funcionam em sala?",
-    tags: ["Gramática Prática", "Adultos", "Metodologia"],
-    waterCount: 18,
-    growthStage: "blooming",
-    commentsCount: 3,
-    timeAgo: "há 2 horas",
-  },
-  {
-    id: "p2",
-    authorName: "Prof. Lucas Meyer",
-    category: "Tip",
-    title: "Atividade de conversão: 1-Minute Pitch de Invenções Malucas",
-    content:
-      "Toda sexta faço o 'Pitch de 1 Minuto'. Os alunos sorteiam uma invenção absurda (ex: guarda-chuva solar) e têm 60 segundos para vender para a turma. Força o raciocínio direto em inglês sem tradução prévia!",
-    tags: ["Conversação", "Fluência", "Atividade Prática"],
-    waterCount: 34,
-    growthStage: "favorite",
-    commentsCount: 2,
-    timeAgo: "há 4 horas",
-  },
-];
+type Author = { full_name: string | null; avatar_url: string | null } | null;
 
-function CommunityEcosystemPage() {
+interface Post {
+  id: string;
+  author_id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  created_at: string;
+  author: Author;
+  waterCount: number;
+  wateredByMe: boolean;
+  commentCount: number;
+}
+
+interface Comment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  author: Author;
+}
+
+type Period = "week" | "month" | "year" | "all";
+
+interface LeaderRow {
+  teacherId: string;
+  name: string | null;
+  avatar: string | null;
+  points: number;
+  position: number;
+}
+
+function initials(name: string | null | undefined) {
+  if (!name) return "?";
+  return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+function Avatar({ name, url, size = 9 }: { name: string | null | undefined; url?: string | null; size?: number }) {
+  const cls = size === 9 ? "h-9 w-9 text-xs" : "h-7 w-7 text-[10px]";
+  if (url) return <img src={url} alt={name ?? ""} className={`${cls} rounded-full object-cover shrink-0`} />;
+  return (
+    <div className={`${cls} rounded-full bg-lilac-soft text-foreground font-semibold flex items-center justify-center shrink-0`}>
+      {initials(name)}
+    </div>
+  );
+}
+
+function CommunityPage() {
   const { user } = useAuth();
-  const { t, formatStatus } = useLanguage();
-  const teacherId = user?.id;
+  const { t, lang } = useLanguage();
+  const userId = user?.id;
+  const locale = lang === "pt" ? "pt-BR" : "en-US";
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
 
-  const [subjectGardens, setSubjectGardens] = useState<SubjectGarden[]>(DEFAULT_SUBJECT_GARDENS);
-  const [thematicGardens, setThematicGardens] = useState<ThematicGarden[]>(DEFAULT_THEMATIC_GARDENS);
-  const [followedGardens, setFollowedGardens] = useState<Set<string>>(new Set(["sg-en", "tg-conversation"]));
-  const [posts, setPosts] = useState<GardenPost[]>(DEFAULT_POSTS);
-  const [activeView, setActiveView] = useState<"my_garden" | "blooming" | "discover" | "library" | "cultivated">("my_garden");
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [search, setSearch] = useState("");
+  const [busyWater, setBusyWater] = useState<Set<string>>(new Set());
 
-  // Translation & Version History Modals State
-  const [showOriginalMap, setShowOriginalMap] = useState<Record<string, boolean>>({});
-  const [historyPostId, setHistoryPostId] = useState<string | null>(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [openComments, setOpenComments] = useState<string | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [sendingComment, setSendingComment] = useState(false);
 
-  // Daily Waterings Quota
-  const [wateringStatus, setWateringStatus] = useState<DailyWateringStatus>({
-    usedToday: 0,
-    dailyLimit: 5,
-    remainingToday: 5,
-  });
+  const [newOpen, setNewOpen] = useState(false);
+  const [form, setForm] = useState({ title: "", content: "", tags: "" });
+  const [publishing, setPublishing] = useState(false);
 
-  // Modal & AI Auto-Tagging State
-  const [isNewIdeaOpen, setIsNewIdeaOpen] = useState(false);
-  const [newIdeaForm, setNewIdeaForm] = useState({
-    title: "",
-    content: "",
-    category: "Tip" as GardenPost["category"],
-  });
-  const [aiTagResult, setAiTagResult] = useState<AutoTagResult | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [period, setPeriod] = useState<Period>("week");
+  const [leaders, setLeaders] = useState<LeaderRow[]>([]);
+  const [leadersLoading, setLeadersLoading] = useState(true);
 
-  // Draft Autosave Status Indicator
-  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">("idle");
-
-  // Edit Modal State
-  const [editingPost, setEditingPost] = useState<GardenPost | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", content: "", reason: "" });
-
-  const loadEcosystemData = async () => {
-    if (!teacherId) return;
-
-    const quota = await getDailyWateringStatus(teacherId);
-    setWateringStatus(quota);
-
-    const sGardens = await fetchSubjectGardens();
-    const tGardens = await fetchThematicGardens();
-    setSubjectGardens(sGardens);
-    setThematicGardens(tGardens);
-
-    const followed = await fetchFollowedGardens(teacherId);
-    if (followed.size > 0) setFollowedGardens(followed);
-
-    try {
-      const { data: dbPosts, error } = await supabase
-        .from("community_posts")
-        .select("*, profiles:author_id(full_name, avatar_url)")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
-
-      if (!error && dbPosts && dbPosts.length > 0) {
-        const { data: teacherWaterings } = await supabase.from("idea_waterings").select("post_id").eq("teacher_id", teacherId);
-        const { data: teacherCultivated } = await supabase.from("cultivated_items").select("post_id").eq("teacher_id", teacherId);
-
-        const wateredIds = new Set((teacherWaterings || []).map((w) => w.post_id));
-        const cultivatedIds = new Set((teacherCultivated || []).map((c) => c.post_id));
-
-        const mapped: GardenPost[] = dbPosts.map((p: any) => ({
+  const loadPosts = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    const { data, error } = await supabase
+      .from("community_posts")
+      .select("id, author_id, title, content, tags, likes_count, created_at, updated_at, profiles:author_id(full_name, avatar_url)")
+      .order("created_at", { ascending: false });
+    if (error) {
+      reportUserError(error, t("communityV1.loadError"));
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+    const ids = (data ?? []).map((p: any) => p.id);
+    let reactions: { post_id: string; user_id: string }[] = [];
+    let commentRows: { post_id: string }[] = [];
+    if (ids.length) {
+      const [r, c] = await Promise.all([
+        supabase.from("reactions").select("post_id, user_id").eq("type", "water").in("post_id", ids),
+        supabase.from("comments").select("post_id").in("post_id", ids),
+      ]);
+      if (r.error || c.error) {
+        reportUserError(r.error ?? c.error, t("communityV1.loadError"));
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+      reactions = (r.data ?? []) as any;
+      commentRows = (c.data ?? []) as any;
+    }
+    setPosts(
+      (data ?? []).map((p: any) => {
+        const rs = reactions.filter((x) => x.post_id === p.id);
+        return {
           id: p.id,
-          authorId: p.author_id,
-          authorName: p.profiles?.full_name || "Educador Bloom",
-          authorAvatar: p.profiles?.avatar_url,
-          category: p.category || "Tip",
+          author_id: p.author_id,
           title: p.title,
           content: p.content,
-          tags: p.tags || [],
-          waterCount: p.water_count || p.likes_count || 0,
-          growthStage: (p.growth_stage as GrowthStage) || getStageMeta(p.water_count || 0).id,
-          commentsCount: 0,
-          timeAgo: new Date(p.created_at).toLocaleDateString("pt-BR"),
-          wateredByUser: wateredIds.has(p.id),
-          cultivatedByUser: cultivatedIds.has(p.id),
-          isAcceptedSolution: p.is_accepted_solution,
-          isCommunityArticle: p.is_community_article,
-          articleContributors: p.article_contributors || [],
-          subject_garden_id: p.subject_garden_id,
-          thematic_garden_ids: p.thematic_garden_ids || [],
-        }));
+          tags: p.tags ?? [],
+          created_at: p.created_at,
+          author: p.profiles ?? null,
+          waterCount: rs.length,
+          wateredByMe: !!userId && rs.some((x) => x.user_id === userId),
+          commentCount: commentRows.filter((x) => x.post_id === p.id).length,
+        };
+      }),
+    );
+    setLoading(false);
+  }, [userId, t]);
 
-        setPosts(mapped);
-      }
-    } catch (err) {
-      console.error("[community-ecosystem] Error loading posts:", err);
-    }
-  };
-
-  useEffect(() => {
-    loadEcosystemData();
-  }, [teacherId]);
-
-  // Load saved draft when modal opens
-  useEffect(() => {
-    if (isNewIdeaOpen && teacherId) {
-      fetchCommunityDraft(teacherId, "post").then((draft) => {
-        if (draft && (draft.title || draft.content)) {
-          setNewIdeaForm({
-            title: draft.title || "",
-            content: draft.content || "",
-            category: "Tip",
-          });
-          toast.info(t("community.toastDraftRestored"));
-        }
-      });
-    }
-  }, [isNewIdeaOpen, teacherId, t]);
-
-  // Debounced Draft Autosave
-  useEffect(() => {
-    if (!isNewIdeaOpen || !teacherId) return;
-
-    if (!newIdeaForm.title && !newIdeaForm.content) return;
-
-    setDraftStatus("saving");
-    const timer = setTimeout(async () => {
-      await saveCommunityDraft(teacherId, "post", newIdeaForm.title, newIdeaForm.content);
-      setDraftStatus("saved");
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [newIdeaForm.title, newIdeaForm.content, isNewIdeaOpen, teacherId]);
-
-  // AI Auto-Tagging Trigger
-  useEffect(() => {
-    if (newIdeaForm.title.length > 5 || newIdeaForm.content.length > 15) {
-      const result = analyzeAndAutoTagPost(newIdeaForm.title, newIdeaForm.content);
-      setAiTagResult(result);
+  const loadLeaders = useCallback(async (p: Period) => {
+    setLeadersLoading(true);
+    const { data, error } = await supabase.rpc("get_community_leaderboard", { period_type: p, result_limit: 10 });
+    if (error) {
+      reportUserError(error, t("communityV1.loadError"));
+      setLeaders([]);
     } else {
-      setAiTagResult(null);
+      const rows = (Array.isArray(data) ? data : []) as any[];
+      setLeaders(
+        rows
+          .map((r, i) => ({
+            teacherId: r.teacher_id ?? r.user_id ?? r.id ?? String(i),
+            name: r.full_name ?? r.name ?? null,
+            avatar: r.avatar_url ?? null,
+            points: Number(r.points ?? r.total_points ?? r.reputation_points ?? r.score ?? 0),
+            position: Number(r.position ?? r.rank ?? r.ranking_position ?? i + 1),
+          }))
+          .filter((r) => r.points > 0)
+          .slice(0, 10),
+      );
     }
-  }, [newIdeaForm.title, newIdeaForm.content]);
+    setLeadersLoading(false);
+  }, [t]);
 
-  // Handle 🌱 Water Idea (Regar)
-  const handleWaterPost = async (post: GardenPost) => {
-    if (!teacherId) {
-      toast.error(t("community.toastLoginRequired"));
-      return;
-    }
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
 
-    if (post.wateredByUser) {
-      toast.info(t("community.toastAlreadyWatered"));
-      return;
-    }
+  useEffect(() => {
+    loadLeaders(period);
+  }, [period, loadLeaders]);
 
-    if (wateringStatus.remainingToday <= 0) {
-      toast.warning(t("community.toastWaterLimit"));
-      return;
-    }
-
-    const res = await waterIdea(teacherId, post.id);
-
-    if (res.success) {
-      const newCount = res.waterCount ?? post.waterCount + 1;
-      const newStage = res.growthStage ?? getStageMeta(newCount).id;
-
-      toast.success(t("community.toastWaterSuccess"));
-
-      setWateringStatus((prev) => ({
-        ...prev,
-        usedToday: res.usedToday ?? prev.usedToday + 1,
-        remainingToday: res.remainingToday ?? Math.max(0, prev.remainingToday - 1),
-      }));
-
+  const toggleWater = async (post: Post) => {
+    if (!userId) return toast.error(t("communityV1.loginRequired"));
+    if (busyWater.has(post.id)) return;
+    setBusyWater((s) => new Set(s).add(post.id));
+    const { error } = post.wateredByMe
+      ? await supabase.from("reactions").delete().eq("user_id", userId).eq("post_id", post.id).eq("type", "water")
+      : await supabase.from("reactions").insert({ user_id: userId, post_id: post.id, type: "water" });
+    if (error) {
+      toast.error(reportUserError(error, t("communityV1.actionError")));
+    } else {
       setPosts((prev) =>
         prev.map((p) =>
-          p.id === post.id ? { ...p, waterCount: newCount, growthStage: newStage, wateredByUser: true } : p
-        )
+          p.id === post.id
+            ? { ...p, wateredByMe: !post.wateredByMe, waterCount: p.waterCount + (post.wateredByMe ? -1 : 1) }
+            : p,
+        ),
       );
-    } else if (res.limitReached) {
-      toast.warning(t("community.toastWaterLimitReached"));
-    } else {
-      console.error("[Community] Water error:", res.error);
-      toast.error(t("community.toastWaterError"));
+      loadLeaders(period);
     }
+    setBusyWater((s) => {
+      const n = new Set(s);
+      n.delete(post.id);
+      return n;
+    });
   };
 
-  // Handle Cultivar (Save into Meu Jardim)
-  const handleCultivatePost = async (post: GardenPost) => {
-    if (!teacherId) return;
-    const nextState = !post.cultivatedByUser;
-    const res = await toggleCultivateItem(teacherId, post.id, post.cultivatedByUser || false);
-
-    if (res.success) {
-      toast.success(nextState ? t("community.toastCultivateAdded") : t("community.toastCultivateRemoved"));
-      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, cultivatedByUser: nextState } : p)));
+  const loadComments = async (postId: string) => {
+    setCommentsLoading(true);
+    const { data, error } = await supabase
+      .from("comments")
+      .select("id, post_id, author_id, content, created_at, profiles:author_id(full_name, avatar_url)")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
+    if (error) {
+      toast.error(reportUserError(error, t("communityV1.loadError")));
+      setComments([]);
     } else {
-      console.error("[Community] Cultivate error:", res.error);
-      toast.error(t("community.toastCultivateError"));
+      setComments((data ?? []).map((c: any) => ({ ...c, author: c.profiles ?? null })));
     }
+    setCommentsLoading(false);
   };
 
-  // Handle Create Idea with Draft Clearing
-  const handleCreateIdea = async (e: React.FormEvent) => {
+  const toggleComments = (postId: string) => {
+    if (openComments === postId) {
+      setOpenComments(null);
+      return;
+    }
+    setOpenComments(postId);
+    setCommentDraft("");
+    setComments([]);
+    loadComments(postId);
+  };
+
+  const syncCommentCount = (postId: string, delta: number) =>
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount + delta) } : p)));
+
+  const sendComment = async (postId: string) => {
+    if (!userId) return toast.error(t("communityV1.loginRequired"));
+    const content = commentDraft.trim();
+    if (!content) return;
+    setSendingComment(true);
+    const { error } = await supabase.from("comments").insert({ post_id: postId, author_id: userId, content });
+    setSendingComment(false);
+    if (error) return toast.error(reportUserError(error, t("communityV1.actionError")));
+    setCommentDraft("");
+    syncCommentCount(postId, 1);
+    loadComments(postId);
+    loadLeaders(period);
+  };
+
+  const deleteComment = async (c: Comment) => {
+    if (!userId || c.author_id !== userId) return;
+    if (!window.confirm(t("communityV1.confirmDeleteComment"))) return;
+    const { error } = await supabase.from("comments").delete().eq("id", c.id).eq("author_id", userId);
+    if (error) return toast.error(reportUserError(error, t("communityV1.actionError")));
+    setComments((prev) => prev.filter((x) => x.id !== c.id));
+    syncCommentCount(c.post_id, -1);
+    loadLeaders(period);
+  };
+
+  const publish = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teacherId || !newIdeaForm.title.trim() || !newIdeaForm.content.trim()) return;
-
-    setSubmitting(true);
-    try {
-      const finalTags = aiTagResult?.suggestedTags || ["Geral"];
-
-      const { data: newPost, error } = await supabase
-        .from("community_posts")
-        .insert({
-          author_id: teacherId,
-          title: newIdeaForm.title.trim(),
-          content: newIdeaForm.content.trim(),
-          tags: finalTags,
-          subject_garden_id: aiTagResult?.detectedSubjectGardenId || null,
-          thematic_garden_ids: aiTagResult?.detectedThematicGardenIds || [],
-          water_count: 0,
-          growth_stage: "seedling",
-        })
-        .select("*")
-        .single();
-
-      if (error) {
-        toast.error(reportUserError(error, i18nT("errors.publishPost", currentLanguage())));
-      } else {
-        toast.success("🌱 Ideia plantada com sucesso!");
-        await clearCommunityDraft(teacherId, "post");
-        setIsNewIdeaOpen(false);
-        setNewIdeaForm({ title: "", content: "", category: "Tip" });
-        setAiTagResult(null);
-        loadEcosystemData();
-      }
-    } catch (err: any) {
-      toast.error("Falha ao publicar ideia.");
-    } finally {
-      setSubmitting(false);
-    }
+    if (!userId) return toast.error(t("communityV1.loginRequired"));
+    const title = form.title.trim();
+    const content = form.content.trim();
+    if (!title || !content) return;
+    const tags = form.tags.split(",").map((s) => s.trim()).filter(Boolean);
+    setPublishing(true);
+    const { error } = await supabase.from("community_posts").insert({ author_id: userId, title, content, tags });
+    setPublishing(false);
+    if (error) return toast.error(reportUserError(error, t("communityV1.actionError")));
+    toast.success(t("communityV1.published"));
+    setForm({ title: "", content: "", tags: "" });
+    setNewOpen(false);
+    loadPosts();
   };
 
-  // Handle Edit Post Transactionally with Versioning
-  const handleSavePostEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingPost || !teacherId) return;
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return posts;
+    return posts.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.content.toLowerCase().includes(q) ||
+        p.tags.some((x) => x.toLowerCase().includes(q)),
+    );
+  }, [posts, search]);
 
-    setSubmitting(true);
-    try {
-      const res = await editPostWithVersion({
-        postId: editingPost.id,
-        teacherId,
-        newTitle: editForm.title.trim(),
-        newContent: editForm.content.trim(),
-        editReason: editForm.reason.trim() || undefined,
-      });
-
-      if (res.success) {
-        toast.success(`Publicação atualizada! Criada a Versão #${res.newVersionNumber}.`);
-        setEditingPost(null);
-        loadEcosystemData();
-      } else if (res.concurrencyConflict) {
-        toast.error(toUserMessage(res.error, "Conflito de edição simultânea."));
-      } else {
-        toast.error(toUserMessage(res.error, i18nT("errors.editPost", currentLanguage())));
-      }
-    } catch (err: any) {
-      toast.error("Falha na edição.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Handle Soft Delete
-  const handleSoftDelete = async (post: GardenPost) => {
-    if (!teacherId) return;
-    if (!window.confirm("Deseja realmente remover esta publicação? Ela poderá ser recuperada no histórico.")) return;
-
-    const res = await softDeletePost(post.id, teacherId, "Removido pelo autor");
-    if (res.success) {
-      toast.success("Publicação removida com sucesso. Histórico preservado.");
-      setPosts((prev) => prev.filter((p) => p.id !== post.id));
-    } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.removePost", currentLanguage())));
-    }
-  };
-
-  // Filter posts
-  const displayPosts = posts.filter((post) => {
-    const matchesSearch =
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.tags?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    if (!matchesSearch) return false;
-
-    if (selectedSubjectId && post.subject_garden_id && post.subject_garden_id !== selectedSubjectId) {
-      return false;
-    }
-
-    if (activeView === "blooming") return post.waterCount >= 15 || post.growthStage === "blooming" || post.growthStage === "favorite";
-    if (activeView === "library") return post.isCommunityArticle;
-    if (activeView === "cultivated") return post.cultivatedByUser;
-
-    return true;
-  });
+  const periods: Period[] = ["week", "month", "year", "all"];
+  const medal = (pos: number) =>
+    pos === 1
+      ? "bg-accent text-accent-foreground"
+      : pos === 2
+        ? "bg-primary text-primary-foreground"
+        : pos === 3
+          ? "bg-lilac text-lilac-foreground"
+          : "bg-muted text-muted-foreground";
 
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        eyebrow={t("communityUi.eyebrow")}
-        title={t("communityUi.title")}
-        description={t("communityUi.description")}
+        eyebrow={t("communityV1.eyebrow")}
+        title={t("communityV1.title")}
+        description={t("communityV1.description")}
         actions={
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-              <Sprout className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>{wateringStatus.remainingToday}/{wateringStatus.dailyLimit} {t("communityUi.wateredToday")}</span>
-            </div>
-
-            <Button onClick={() => setIsNewIdeaOpen(true)} className="gap-1.5 shadow-sm">
-              <Plus className="w-4 h-4" /> {t("communityUi.plantIdea")}
-            </Button>
-          </div>
+          <Button onClick={() => setNewOpen(true)} className="gap-1.5">
+            <Plus className="w-4 h-4" /> {t("communityV1.newPost")}
+          </Button>
         }
       />
 
-      {/* VIEW TABS */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("communityUi.searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr] items-start">
+        {/* Leaderboard */}
+        <aside className="rounded-2xl border border-border bg-card p-4 space-y-3 lg:sticky lg:top-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-accent" />
+            <h2 className="font-display font-semibold text-sm">{t("communityV1.highlights")}</h2>
+          </div>
+          <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+            {periods.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPeriod(p)}
+                className={`rounded-lg py-1 text-xs font-medium transition-colors ${
+                  period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t(`communityV1.${p}`)}
+              </button>
+            ))}
+          </div>
+          {leadersLoading ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">{t("communityV1.loading")}</p>
+          ) : leaders.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">{t("communityV1.leaderboardEmpty")}</p>
+          ) : (
+            <ol className="space-y-1.5">
+              {leaders.map((l) => {
+                const me = l.teacherId === userId;
+                return (
+                  <li
+                    key={l.teacherId}
+                    className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 ${me ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+                  >
+                    <span className={`h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 ${medal(l.position)}`}>
+                      {l.position}
+                    </span>
+                    <Avatar name={l.name} url={l.avatar} size={7} />
+                    <span className="flex-1 truncate text-sm">
+                      {l.name || t("communityV1.unnamed")}
+                      {me && <span className="ml-1 text-xs text-primary font-medium">({t("communityV1.you")})</span>}
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums">
+                      {l.points} {t("communityV1.points")}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </aside>
 
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-          <Button
-            variant={activeView === "my_garden" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setActiveView("my_garden")}
-            className="h-8 text-xs gap-1.5"
-          >
-            🏡 {t("communityUi.myGarden")}
-          </Button>
-          <Button
-            variant={activeView === "blooming" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setActiveView("blooming")}
-            className="h-8 text-xs gap-1.5"
-          >
-            🌼 {t("communityUi.bloomingIdeas")}
-          </Button>
-          <Button
-            variant={activeView === "cultivated" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setActiveView("cultivated")}
-            className="h-8 text-xs gap-1.5 text-amber-600 dark:text-amber-400"
-          >
-            🌻 {t("communityUi.cultivatedByMe")}
-          </Button>
-        </div>
-      </div>
+        {/* Feed */}
+        <section className="space-y-4 min-w-0">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t("communityV1.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-card"
+            />
+          </div>
 
-      {/* POSTS STREAM */}
-      <div className="space-y-4">
-        {displayPosts.map((post) => {
-          const stageMeta = getStageMeta(post.waterCount, post.growthStage);
-          const isAuthor = teacherId && post.authorId === teacherId;
-
-          return (
-            <div key={post.id} className={`rounded-xl border bg-card p-5 transition-all space-y-4 ${stageMeta.containerClass}`}>
-              {/* Post Header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-700 font-bold flex items-center justify-center text-sm border border-emerald-500/20">
-                    {post.authorName ? post.authorName.substring(0, 2).toUpperCase() : "ED"}
+          {loading ? (
+            <p className="text-sm text-muted-foreground text-center py-10">{t("communityV1.loading")}</p>
+          ) : loadError ? (
+            <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">{t("communityV1.loadError")}</p>
+              <Button variant="outline" size="sm" onClick={loadPosts}>{t("communityV1.retry")}</Button>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center space-y-3">
+              <Sprout className="w-8 h-8 mx-auto text-primary" />
+              <h3 className="font-display font-semibold">{t("communityV1.emptyTitle")}</h3>
+              <p className="text-sm text-muted-foreground">{t("communityV1.emptyBody")}</p>
+              <Button onClick={() => setNewOpen(true)} className="gap-1.5">
+                <Plus className="w-4 h-4" /> {t("communityV1.newPost")}
+              </Button>
+            </div>
+          ) : visible.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">{t("communityV1.noResults")}</p>
+          ) : (
+            visible.map((post) => (
+              <article key={post.id} className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                <header className="flex items-center gap-3">
+                  <Avatar name={post.author?.full_name} url={post.author?.avatar_url} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{post.author?.full_name || t("communityV1.unnamed")}</p>
+                    <p className="text-xs text-muted-foreground">{fmtDate(post.created_at)}</p>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-card-foreground">
-                        {post.authorId ? post.authorName : t("communityUi.profileUnavailable")}
-                      </span>
-                      <span className="text-xs text-muted-foreground">• {post.timeAgo}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className={`text-[10px] px-2 py-0.5 gap-1 font-medium ${stageMeta.badgeClass}`}>
-                        <span>{stageMeta.emoji}</span>
-                        <span>{stageMeta.label}</span>
-                      </Badge>
-
-                      {/* History & Edit badges */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-primary gap-1"
-                        onClick={() => {
-                          setHistoryPostId(post.id);
-                          setIsHistoryOpen(true);
-                        }}
-                      >
-                        <History className="w-3 h-3" /> {t("communityUi.versionHistory")}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Author Actions (Edit & Soft Delete) */}
-                {isAuthor && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-card-foreground"
-                      onClick={() => {
-                        setEditingPost(post);
-                        setEditForm({ title: post.title, content: post.content, reason: "" });
-                      }}
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      onClick={() => handleSoftDelete(post)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                </header>
+                <h3 className="font-display font-semibold text-lg leading-snug">{post.title}</h3>
+                <p className="text-sm text-foreground/90 whitespace-pre-line">{post.content}</p>
+                {post.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {post.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="font-normal">#{tag}</Badge>
+                    ))}
                   </div>
                 )}
-              </div>
-
-              {/* Title & Content */}
-              <div className="space-y-2">
-                <h3 className="font-bold text-base text-card-foreground">{post.title}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                  {post.content}
-                </p>
-              </div>
-
-              {/* Action Bar — 🌱 Regar */}
-              <div className="flex items-center justify-between pt-3 border-t border-border/60 text-xs">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 pt-1">
                   <Button
+                    variant={post.wateredByMe ? "default" : "outline"}
                     size="sm"
-                    variant={post.wateredByUser ? "secondary" : "outline"}
-                    className={`h-8 text-xs gap-1.5 transition-all ${
-                      post.wateredByUser ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" : "hover:text-emerald-600"
-                    }`}
-                    onClick={() => handleWaterPost(post)}
+                    className="gap-1.5"
+                    disabled={busyWater.has(post.id)}
+                    onClick={() => toggleWater(post)}
+                    aria-pressed={post.wateredByMe}
                   >
-                    <Sprout className={`w-4 h-4 ${post.wateredByUser ? "text-emerald-600 fill-emerald-500/20" : ""}`} />
-                    <span className="font-semibold">{t("communityUi.water")}</span>
-                    <span className="ml-1 opacity-80">({post.waterCount})</span>
+                    <Droplets className="w-4 h-4" />
+                    {post.wateredByMe ? t("communityV1.watered") : t("communityV1.water")}
+                    <span className="tabular-nums">· {post.waterCount}</span>
                   </Button>
-
-                  <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5 text-muted-foreground">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{post.commentsCount || 0} {t("communityUi.contributions")}</span>
+                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => toggleComments(post.id)}>
+                    <MessageSquare className="w-4 h-4" />
+                    {openComments === post.id ? t("communityV1.hideComments") : t("communityV1.comments")}
+                    <span className="tabular-nums">· {post.commentCount}</span>
                   </Button>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={`h-8 text-xs gap-1.5 ${post.cultivatedByUser ? "text-amber-600 font-semibold" : "text-muted-foreground"}`}
-                  onClick={() => handleCultivatePost(post)}
-                >
-                  <Flower2 className="w-3.5 h-3.5" />
-                  <span>{post.cultivatedByUser ? t("communityUi.cultivated") : t("communityUi.cultivate")}</span>
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+                {openComments === post.id && (
+                  <div className="border-t border-border pt-3 space-y-3">
+                    {commentsLoading ? (
+                      <p className="text-xs text-muted-foreground">{t("communityV1.loading")}</p>
+                    ) : comments.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">{t("communityV1.noComments")}</p>
+                    ) : (
+                      <ul className="space-y-3">
+                        {comments.map((c) => (
+                          <li key={c.id} className="flex gap-2.5">
+                            <Avatar name={c.author?.full_name} url={c.author?.avatar_url} size={7} />
+                            <div className="flex-1 min-w-0 rounded-xl bg-muted/60 px-3 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-medium truncate">
+                                  {c.author?.full_name || t("communityV1.unnamed")}
+                                  <span className="ml-2 font-normal text-muted-foreground">{fmtDate(c.created_at)}</span>
+                                </p>
+                                {c.author_id === userId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteComment(c)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                    aria-label={t("communityV1.delete")}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-sm whitespace-pre-line mt-0.5">{c.content}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <form
+                      className="flex gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        sendComment(post.id);
+                      }}
+                    >
+                      <Input
+                        value={commentDraft}
+                        onChange={(e) => setCommentDraft(e.target.value)}
+                        placeholder={t("communityV1.commentPlaceholder")}
+                      />
+                      <Button type="submit" size="sm" disabled={sendingComment || !commentDraft.trim()} className="gap-1.5">
+                        <Send className="w-4 h-4" /> {t("communityV1.send")}
+                      </Button>
+                    </form>
+                  </div>
+                )}
+              </article>
+            ))
+          )}
+        </section>
       </div>
 
-      {/* Modal: New Idea with Autosave Indicator */}
-      <Dialog open={isNewIdeaOpen} onOpenChange={setIsNewIdeaOpen}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent>
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                <Sprout className="w-5 h-5" /> {t("communityUi.newIdeaTitle")}
-              </DialogTitle>
-
-              {draftStatus !== "idle" && (
-                <Badge variant="outline" className="text-[10px] gap-1 font-normal">
-                  {draftStatus === "saving" ? (
-                    <>
-                      <RefreshCw className="w-3 h-3 animate-spin text-amber-500" /> {t("communityUi.savingDraft")}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> {t("communityUi.draftSaved")}
-                    </>
-                  )}
-                </Badge>
-              )}
-            </div>
+            <DialogTitle>{t("communityV1.newPost")}</DialogTitle>
           </DialogHeader>
-
-          <form onSubmit={handleCreateIdea} className="space-y-4 pt-2">
+          <form onSubmit={publish} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="post_title">{t("communityUi.ideaTitle")} *</Label>
-              <Input
-                id="post_title"
-                required
-                placeholder={t("communityUi.ideaTitlePlaceholder")}
-                value={newIdeaForm.title}
-                onChange={(e) => setNewIdeaForm({ ...newIdeaForm, title: e.target.value })}
-              />
+              <Label htmlFor="cp-title">{t("communityV1.postTitle")}</Label>
+              <Input id="cp-title" value={form.title} placeholder={t("communityV1.titlePlaceholder")}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="post_content">{t("communityUi.ideaDetails")} *</Label>
-              <Textarea
-                id="post_content"
-                required
-                rows={4}
-                placeholder={t("communityUi.ideaDetailsPlaceholder")}
-                value={newIdeaForm.content}
-                onChange={(e) => setNewIdeaForm({ ...newIdeaForm, content: e.target.value })}
-              />
+              <Label htmlFor="cp-content">{t("communityV1.postContent")}</Label>
+              <Textarea id="cp-content" rows={6} value={form.content} placeholder={t("communityV1.contentPlaceholder")}
+                onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} />
             </div>
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsNewIdeaOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="submit" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                {submitting ? t("communityUi.planting") : t("communityUi.confirmPlant")}
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-tags">{t("communityV1.postTags")}</Label>
+              <Input id="cp-tags" value={form.tags} placeholder={t("communityV1.tagsPlaceholder")}
+                onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setNewOpen(false)}>{t("communityV1.cancel")}</Button>
+              <Button type="submit" disabled={publishing || !form.title.trim() || !form.content.trim()}>
+                {publishing ? t("communityV1.publishing") : t("communityV1.publish")}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Modal: Edit Post Transactionally */}
-      {editingPost && (
-        <Dialog open={!!editingPost} onOpenChange={() => setEditingPost(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-primary" /> {t("communityUi.editPost")} (#{editingPost.waterCount ? editingPost.waterCount + 1 : 2})
-              </DialogTitle>
-              <DialogDescription>
-                {t("communityUi.editDescription")}
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleSavePostEdit} className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Label>{t("communityUi.ideaTitle")} *</Label>
-                <Input
-                  required
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>{t("communityUi.content")} *</Label>
-                <Textarea
-                  required
-                  rows={4}
-                  value={editForm.content}
-                  onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>{t("communityUi.editReason")}</Label>
-                <Input
-                  placeholder={t("communityUi.editReasonPlaceholder")}
-                  value={editForm.reason}
-                  onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })}
-                />
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setEditingPost(null)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? t("communityUi.savingVersion") : t("communityUi.saveEdit")}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Modal: Version History Snapshot Viewer */}
-      <PostVersionHistoryModal
-        postId={historyPostId}
-        teacherId={teacherId}
-        isAuthor={true}
-        open={isHistoryOpen}
-        onOpenChange={setIsHistoryOpen}
-        onVersionRestored={() => loadEcosystemData()}
-      />
     </div>
   );
 }
