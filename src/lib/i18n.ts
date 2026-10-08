@@ -219,7 +219,6 @@ export const translations: Record<Language, TranslationDictionary> = {
         paymentMethods: {
           Pix: "Pix",
           "Cartão de Crédito": "Cartão de Crédito",
-          Boleto: "Boleto",
           "Transferência Bancária": "Transferência Bancária",
           Dinheiro: "Dinheiro",
           PIX: "PIX",
@@ -1108,7 +1107,6 @@ export const translations: Record<Language, TranslationDictionary> = {
         paymentMethods: {
           Pix: "Pix",
           "Cartão de Crédito": "Credit card",
-          Boleto: "Boleto (bank slip)",
           "Transferência Bancária": "Bank transfer",
           Dinheiro: "Cash",
           PIX: "PIX",
