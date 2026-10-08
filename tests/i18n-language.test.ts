@@ -22,8 +22,8 @@ describe("ui dictionaries", () => {
     expect(keys(uiTranslations.en).sort()).toEqual(keys(uiTranslations.pt).sort());
   });
   it("translates lesson types without changing stored values", () => {
-    expect(t("onboardingOptions.lessonTypes.Pair", "pt")).toBe(translations.pt.onboardingOptions && (translations.pt as any).onboardingOptions.lessonTypes.Pair);
-    expect(t("onboardingOptions.lessonTypes.Pair", "en")).toBe("Pair");
+    expect(t("onboarding.onboardingOptions.lessonTypes.Pair", "pt")).toBe("Em dupla");
+    expect(t("onboarding.onboardingOptions.lessonTypes.Pair", "en")).toBe("Pair");
   });
   it("fmt fills placeholders", () => {
     expect(fmt(t("onboardingUi.stepOf", "en"), 2, 7)).toBe("Step 2 of 7");

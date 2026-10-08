@@ -1884,8 +1884,8 @@ export function formatWeekdayName(dayStr: string | undefined | null, lang: Langu
 export function formatOnboardingLanguage(langKey: string | undefined | null, lang: Language = "pt"): string {
   if (!langKey) return "";
   const clean = String(langKey).trim();
-  const localized = t(`onboardingOptions.languages.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.languages.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.languages.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.languages.${clean}`) {
     return localized;
   }
   return clean;
@@ -1897,8 +1897,8 @@ export function formatOnboardingLanguage(langKey: string | undefined | null, lan
 export function formatOnboardingPaymentMethod(methodKey: string | undefined | null, lang: Language = "pt"): string {
   if (!methodKey) return "";
   const clean = String(methodKey).trim();
-  const localized = t(`onboardingOptions.paymentMethods.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.paymentMethods.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.paymentMethods.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.paymentMethods.${clean}`) {
     return localized;
   }
   return clean;
@@ -1910,8 +1910,8 @@ export function formatOnboardingPaymentMethod(methodKey: string | undefined | nu
 export function formatOnboardingStudentRange(rangeKey: string | undefined | null, lang: Language = "pt"): string {
   if (!rangeKey) return "";
   const clean = String(rangeKey).trim();
-  const localized = t(`onboardingOptions.studentRanges.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.studentRanges.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.studentRanges.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.studentRanges.${clean}`) {
     return localized;
   }
   return clean;
@@ -1923,8 +1923,8 @@ export function formatOnboardingStudentRange(rangeKey: string | undefined | null
 export function formatOnboardingManagementTool(toolKey: string | undefined | null, lang: Language = "pt"): string {
   if (!toolKey) return "";
   const clean = String(toolKey).trim();
-  const localized = t(`onboardingOptions.managementTools.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.managementTools.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.managementTools.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.managementTools.${clean}`) {
     return localized;
   }
   return clean;
@@ -1936,8 +1936,8 @@ export function formatOnboardingManagementTool(toolKey: string | undefined | nul
 export function formatOnboardingLessonType(typeKey: string | undefined | null, lang: Language = "pt"): string {
   if (!typeKey) return "";
   const clean = String(typeKey).trim();
-  const localized = t(`onboardingOptions.lessonTypes.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.lessonTypes.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.lessonTypes.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.lessonTypes.${clean}`) {
     return localized;
   }
   return clean;
@@ -1949,8 +1949,8 @@ export function formatOnboardingLessonType(typeKey: string | undefined | null, l
 export function formatOnboardingContractPreference(prefKey: string | undefined | null, lang: Language = "pt"): string {
   if (!prefKey) return "";
   const clean = String(prefKey).trim();
-  const localized = t(`onboardingOptions.contractsPreference.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.contractsPreference.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.contractsPreference.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.contractsPreference.${clean}`) {
     return localized;
   }
   return clean;
@@ -1962,8 +1962,8 @@ export function formatOnboardingContractPreference(prefKey: string | undefined |
 export function formatOnboardingFrequency(freqKey: string | undefined | null, lang: Language = "pt"): string {
   if (!freqKey) return "";
   const clean = String(freqKey).trim();
-  const localized = t(`onboardingOptions.frequencies.${clean}`, lang, "");
-  if (localized && localized !== `onboardingOptions.frequencies.${clean}`) {
+  const localized = t(`onboarding.onboardingOptions.frequencies.${clean}`, lang, "");
+  if (localized && localized !== `onboarding.onboardingOptions.frequencies.${clean}`) {
     return localized;
   }
   return clean;
