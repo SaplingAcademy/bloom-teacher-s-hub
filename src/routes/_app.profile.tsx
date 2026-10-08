@@ -116,6 +116,11 @@ const translations = {
     saveError: "Could not save your profile. Please try again.",
     postSaveError: "Could not save this discussion. Please try again.",
     loadError: "Could not load your community data.",
+    profilePhoto: "Profile Photo",
+    changePhoto: "Change photo",
+    photoInvalidType: "Please choose a JPEG, PNG or WebP image.",
+    photoTooLarge: "The image must be 5 MB or smaller.",
+    uploadError: "Could not upload your photo. Please try again.",
   },
   pt: {
     langToggle: "EN",
@@ -169,6 +174,11 @@ const translations = {
     saveError: "Não foi possível salvar o perfil. Tente novamente.",
     postSaveError: "Não foi possível salvar a discussão. Tente novamente.",
     loadError: "Não foi possível carregar seus dados da comunidade.",
+    profilePhoto: "Foto de Perfil",
+    changePhoto: "Alterar foto",
+    photoInvalidType: "Escolha uma imagem JPEG, PNG ou WebP.",
+    photoTooLarge: "A imagem deve ter no máximo 5 MB.",
+    uploadError: "Não foi possível enviar sua foto. Tente novamente.",
   },
 };
 
