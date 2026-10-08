@@ -1023,8 +1023,8 @@ function GrowthPage() {
             </div>
 
             {/* Working Capacity & Workload Breakdown Row */}
-            <div className="grid grid-cols-3 gap-4 items-start">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="relative flex flex-col pb-4">
                 <Label
                   htmlFor="sim-workhrs"
                   className="text-[11px] font-semibold text-foreground block"
@@ -1044,11 +1044,11 @@ function GrowthPage() {
                       setTeachHoursPerWeek(val);
                     }
                   }}
-                  className="h-10 rounded-xl"
+                  className="h-10 rounded-xl mt-auto"
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="relative flex flex-col pb-4">
                 <Label
                   htmlFor="sim-teachhrs"
                   className="text-[11px] font-semibold text-foreground block"
@@ -1073,11 +1073,11 @@ function GrowthPage() {
                       setTeachHoursPerWeek(val);
                     }
                   }}
-                  className="h-10 rounded-xl"
+                  className="h-10 rounded-xl mt-auto"
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="relative flex flex-col pb-4">
                 <Label
                   htmlFor="sim-weeks"
                   className="text-[11px] font-semibold text-foreground flex items-center justify-between"
@@ -1099,9 +1099,9 @@ function GrowthPage() {
                   step={0.01}
                   value={weeksPerMonth}
                   onChange={setWeeksPerMonth}
-                  className="h-10 rounded-xl"
+                  className="h-10 rounded-xl mt-auto"
                 />
-                <span className="text-[9px] text-muted-foreground block leading-none">
+                <span className="text-[9px] text-muted-foreground block leading-none absolute bottom-0 left-0">
                   ({tr("auditUi.annualAvg433")})
                 </span>
               </div>
