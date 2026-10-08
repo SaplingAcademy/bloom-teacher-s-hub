@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Store } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
+import { useLanguage } from "@/hooks/use-language";
 
 export const Route = createFileRoute("/_app/marketplace")({
   head: () => ({
@@ -12,20 +13,25 @@ export const Route = createFileRoute("/_app/marketplace")({
   beforeLoad: () => {
     throw redirect({ to: "/" });
   },
-  component: () => (
+  component: MarketplacePage,
+});
+
+function MarketplacePage() {
+  const { t } = useLanguage();
+  return (
     <ModulePlaceholder
-      eyebrow="Community"
-      title="Marketplace"
-      description="A curated marketplace where teachers sell and discover great educational content."
+      eyebrow={t("nav.community")}
+      title={t("nav.marketplace")}
+      description={t("auditUi.marketplaceDescription")}
       icon={Store}
-      goal="Help teachers earn more by monetizing their best material — and save others prep time."
+      goal={t("auditUi.marketplaceGoal")}
       planned={[
-        "List worksheets, courses and lesson packs",
-        "Secure payments and instant delivery",
-        "Ratings, reviews and previews",
-        "Seller storefront tied to your profile",
-        "Revenue dashboard for your sales",
+        t("auditUi.marketplaceListResources"),
+        t("auditUi.marketplaceSecurePayments"),
+        t("auditUi.marketplaceRatings"),
+        t("auditUi.marketplaceStorefront"),
+        t("auditUi.marketplaceRevenue"),
       ]}
     />
-  ),
-});
+  );
+}
