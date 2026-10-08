@@ -1,6 +1,8 @@
 import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect, useMemo } from "react";
+import { useLanguage } from "@/hooks/use-language";
+import { fmt } from "@/lib/i18n";
 import {
   fetchTeacherTimeOff,
   createTeacherTimeOff,
@@ -65,6 +67,7 @@ export function NonWorkingDaysModal({
   teacherId,
   onTimeOffUpdated,
 }: NonWorkingDaysModalProps) {
+  const { t, formatStatus } = useLanguage();
   const [activeTab, setActiveTab] = useState<"create" | "list">("create");
   const [loading, setLoading] = useState<boolean>(false);
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
@@ -189,7 +192,7 @@ export function NonWorkingDaysModal({
       // Multiple Mode
       const datesArray = Array.from(selectedDates).sort();
       if (datesArray.length === 0) {
-        toast.error("Selecione pelo menos uma data no calendário.");
+        toast.error(t("availabilityUi.selectAtLeastOneDate"));
         setIsSubmitting(false);
         return;
       }
@@ -231,7 +234,7 @@ export function NonWorkingDaysModal({
     if (!teacherId) return;
     const res = await deleteTeacherTimeOff(teacherId, id);
     if (res.success) {
-      toast.success("Período excluído da agenda.");
+      toast.success(t("availabilityUi.periodDeleted"));
       setTimeOffList((prev) => prev.filter((item) => item.id !== id));
       selectedItemIds.delete(id);
       setSelectedItemIds(new Set(selectedItemIds));
@@ -266,7 +269,7 @@ export function NonWorkingDaysModal({
     });
 
     if (res.success) {
-      toast.success("Informações atualizadas com sucesso!");
+      toast.success(t("availabilityUi.informationUpdated"));
       setEditingItem(null);
       await loadData();
       if (onTimeOffUpdated) onTimeOffUpdated();
@@ -433,7 +436,7 @@ export function NonWorkingDaysModal({
                   Dias sem aula
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#F4EBE1]/80 mt-0.5">
-                  Cadastre feriados, férias e outros dias em que você não estará disponível para aulas.
+                  {t("availabilityUi.daysOffDescription")}
                 </DialogDescription>
               </div>
             </div>
@@ -450,7 +453,7 @@ export function NonWorkingDaysModal({
                   : "text-[#F4EBE1]/80 hover:bg-white/10"
               }`}
             >
-              + Adicionar
+              {t("availabilityUi.add")}
             </button>
             <button
               type="button"
@@ -461,7 +464,7 @@ export function NonWorkingDaysModal({
                   : "text-[#F4EBE1]/80 hover:bg-white/10"
               }`}
             >
-              Dias cadastrados ({timeOffList.length})
+              {t("availabilityUi.registeredDays")} ({timeOffList.length})
             </button>
           </div>
         </div>
@@ -472,7 +475,7 @@ export function NonWorkingDaysModal({
             <form onSubmit={handleCreate} className="space-y-4 text-xs">
               {/* Three Selection Modes */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-foreground">Modo de Seleção</Label>
+                <Label className="text-xs font-bold text-foreground">{t("availabilityUi.selectionMode")}</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -486,7 +489,7 @@ export function NonWorkingDaysModal({
                         : "border-border text-muted-foreground hover:bg-muted/40"
                     }`}
                   >
-                    Data única
+                    {t("availabilityUi.singleDate")}
                   </button>
                   <button
                     type="button"
@@ -497,7 +500,7 @@ export function NonWorkingDaysModal({
                         : "border-border text-muted-foreground hover:bg-muted/40"
                     }`}
                   >
-                    Intervalo
+                    {t("availabilityUi.range")}
                   </button>
                   <button
                     type="button"
@@ -508,7 +511,7 @@ export function NonWorkingDaysModal({
                         : "border-border text-muted-foreground hover:bg-muted/40"
                     }`}
                   >
-                    Múltiplos dias
+                    {t("availabilityUi.multipleDays")}
                   </button>
                 </div>
               </div>
@@ -518,7 +521,7 @@ export function NonWorkingDaysModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs font-bold">
-                      {mode === "single" ? "Data" : "Data de Início"}
+                      {mode === "single" ? t("globalUi.date") : t("availabilityUi.startDate")}
                     </Label>
                     <Input
                       type="date"
@@ -530,7 +533,7 @@ export function NonWorkingDaysModal({
 
                   {mode === "range" && (
                     <div className="space-y-1">
-                      <Label className="text-xs font-bold">Data de Término</Label>
+                      <Label className="text-xs font-bold">{t("availabilityUi.endDate")}</Label>
                       <Input
                         type="date"
                         min={startDate}
@@ -549,16 +552,16 @@ export function NonWorkingDaysModal({
               {/* Optional Name & Category */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold">Nome (opcional)</Label>
+                  <Label className="text-xs font-bold">{t("availabilityUi.optionalName")}</Label>
                   <Input
-                    placeholder="Ex.: Férias, feriado, viagem..."
+                    placeholder={t("availabilityUi.namePlaceholder")}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold">Categoria (opcional)</Label>
+                  <Label className="text-xs font-bold">{t("availabilityUi.optionalCategory")}</Label>
                   <Select
                     value={category}
                     onValueChange={(val) => setCategory(val as TimeOffType | "Nenhuma")}
@@ -567,13 +570,13 @@ export function NonWorkingDaysModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Nenhuma">Nenhuma</SelectItem>
-                      <SelectItem value="Feriado">Feriado</SelectItem>
-                      <SelectItem value="Férias">Férias</SelectItem>
-                      <SelectItem value="Recesso">Recesso</SelectItem>
-                      <SelectItem value="Compromisso pessoal">Compromisso pessoal</SelectItem>
-                      <SelectItem value="Viagem">Viagem</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
+                      <SelectItem value="Nenhuma">{t("availabilityUi.none")}</SelectItem>
+                      <SelectItem value="Feriado">{t("availabilityUi.holiday")}</SelectItem>
+                      <SelectItem value="Férias">{t("availabilityUi.vacation")}</SelectItem>
+                      <SelectItem value="Recesso">{t("availabilityUi.break")}</SelectItem>
+                      <SelectItem value="Compromisso pessoal">{t("availabilityUi.personalCommitment")}</SelectItem>
+                      <SelectItem value="Viagem">{t("availabilityUi.trip")}</SelectItem>
+                      <SelectItem value="Outro">{t("availabilityUi.other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -610,7 +613,7 @@ export function NonWorkingDaysModal({
                 <div className="relative w-full sm:w-64">
                   <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-2.5" />
                   <Input
-                    placeholder="Buscar por nome, data ou categoria..."
+                    placeholder={t("availabilityUi.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-8 h-8 text-xs"
@@ -625,18 +628,18 @@ export function NonWorkingDaysModal({
                     onClick={handleBulkDelete}
                     className="h-8 text-xs font-bold gap-1 self-stretch sm:self-auto cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Excluir selecionados ({selectedItemIds.size})
+                    <Trash2 className="w-3.5 h-3.5" /> {t("availabilityUi.deleteSelected")} ({selectedItemIds.size})
                   </Button>
                 )}
               </div>
 
               {loading ? (
                 <div className="py-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Carregando dias cadastrados...
+                  <RefreshCw className="w-4 h-4 animate-spin text-primary" /> {t("availabilityUi.loadingRegisteredDays")}
                 </div>
               ) : filteredList.length === 0 ? (
                 <div className="py-8 text-center border border-dashed rounded-xl text-xs text-muted-foreground">
-                  Nenhum dia sem aula encontrado.
+                  {t("availabilityUi.noDaysFound")}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -656,7 +659,7 @@ export function NonWorkingDaysModal({
                               <Input
                                 value={editTitle}
                                 onChange={(e) => setEditTitle(e.target.value)}
-                                placeholder="Nome (opcional)"
+                                placeholder={t("availabilityUi.optionalName")}
                                 className="h-8 text-xs"
                               />
                               <Select
@@ -667,13 +670,13 @@ export function NonWorkingDaysModal({
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Nenhuma">Nenhuma</SelectItem>
-                                  <SelectItem value="Feriado">Feriado</SelectItem>
-                                  <SelectItem value="Férias">Férias</SelectItem>
-                                  <SelectItem value="Recesso">Recesso</SelectItem>
-                                  <SelectItem value="Compromisso pessoal">Compromisso pessoal</SelectItem>
-                                  <SelectItem value="Viagem">Viagem</SelectItem>
-                                  <SelectItem value="Outro">Outro</SelectItem>
+                                  <SelectItem value="Nenhuma">{t("availabilityUi.none")}</SelectItem>
+                                  <SelectItem value="Feriado">{t("availabilityUi.holiday")}</SelectItem>
+                                  <SelectItem value="Férias">{t("availabilityUi.vacation")}</SelectItem>
+                                  <SelectItem value="Recesso">{t("availabilityUi.break")}</SelectItem>
+                                  <SelectItem value="Compromisso pessoal">{t("availabilityUi.personalCommitment")}</SelectItem>
+                                  <SelectItem value="Viagem">{t("availabilityUi.trip")}</SelectItem>
+                                  <SelectItem value="Outro">{t("availabilityUi.other")}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -684,14 +687,14 @@ export function NonWorkingDaysModal({
                                 className="h-7 text-xs"
                                 onClick={() => setEditingItem(null)}
                               >
-                                Cancelar
+                                {t("common.cancel")}
                               </Button>
                               <Button
                                 size="sm"
                                 className="h-7 text-xs bg-[#163020] text-[#F4EBE1]"
                                 onClick={handleSaveEditItem}
                               >
-                                <Check className="w-3.5 h-3.5 mr-1" /> Salvar
+                                <Check className="w-3.5 h-3.5 mr-1" /> {t("common.save")}
                               </Button>
                             </div>
                           </div>
@@ -722,7 +725,7 @@ export function NonWorkingDaysModal({
                                     variant="outline"
                                     className="text-[10px] font-bold gap-1 bg-stone-50 dark:bg-stone-800"
                                   >
-                                    {getTypeIcon(item.type)} {item.type || "Sem categoria"}
+                                    {getTypeIcon(item.type)} {item.type ? formatStatus(item.type) : t("availabilityUi.noCategory")}
                                   </Badge>
                                   {item.title && (
                                     <strong className="text-foreground font-bold">{item.title}</strong>
@@ -749,7 +752,7 @@ export function NonWorkingDaysModal({
                                   setEditCategory(item.type || "Nenhuma");
                                 }}
                                 className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
-                                title="Editar item"
+                                title={t("availabilityUi.editItem")} aria-label={t("availabilityUi.editItem")}
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
@@ -758,7 +761,7 @@ export function NonWorkingDaysModal({
                                 type="button"
                                 onClick={() => handleDeleteItem(item.id)}
                                 className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                                title="Excluir período"
+                                title={t("availabilityUi.deletePeriod")} aria-label={t("availabilityUi.deletePeriod")}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -783,7 +786,7 @@ export function NonWorkingDaysModal({
             onClick={onClose}
             className="text-xs font-semibold cursor-pointer"
           >
-            Fechar
+            {t("common.close")}
           </Button>
         </DialogFooter>
       </DialogContent>
