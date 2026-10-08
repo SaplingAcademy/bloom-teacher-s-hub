@@ -455,18 +455,18 @@ function CommunityEcosystemPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        eyebrow="Ecossistema de Conhecimento"
-        title="Jardim do Conhecimento Bloom"
-        description="Onde educadores de diferentes idiomas cultivam saberes, regam ideias práticas e registram snapshots imutáveis de cada edição."
+        eyebrow={t("communityUi.eyebrow")}
+        title={t("communityUi.title")}
+        description={t("communityUi.description")}
         actions={
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               <Sprout className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>{wateringStatus.remainingToday}/{wateringStatus.dailyLimit} regadas hoje</span>
+              <span>{wateringStatus.remainingToday}/{wateringStatus.dailyLimit} {t("communityUi.wateredToday")}</span>
             </div>
 
             <Button onClick={() => setIsNewIdeaOpen(true)} className="gap-1.5 shadow-sm">
-              <Plus className="w-4 h-4" /> Plantar Ideia (com IA)
+              <Plus className="w-4 h-4" /> {t("communityUi.plantIdea")}
             </Button>
           </div>
         }
@@ -477,7 +477,7 @@ function CommunityEcosystemPage() {
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por ideia ou metodologia..."
+            placeholder={t("communityUi.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9 text-sm"
@@ -491,7 +491,7 @@ function CommunityEcosystemPage() {
             onClick={() => setActiveView("my_garden")}
             className="h-8 text-xs gap-1.5"
           >
-            🏡 Meu Jardim
+            🏡 {t("communityUi.myGarden")}
           </Button>
           <Button
             variant={activeView === "blooming" ? "secondary" : "ghost"}
@@ -499,7 +499,7 @@ function CommunityEcosystemPage() {
             onClick={() => setActiveView("blooming")}
             className="h-8 text-xs gap-1.5"
           >
-            🌼 Ideias Florescendo
+            🌼 {t("communityUi.bloomingIdeas")}
           </Button>
           <Button
             variant={activeView === "cultivated" ? "secondary" : "ghost"}
@@ -507,7 +507,7 @@ function CommunityEcosystemPage() {
             onClick={() => setActiveView("cultivated")}
             className="h-8 text-xs gap-1.5 text-amber-600 dark:text-amber-400"
           >
-            🌻 Cultivados por Mim
+            🌻 {t("communityUi.cultivatedByMe")}
           </Button>
         </div>
       </div>
@@ -529,7 +529,7 @@ function CommunityEcosystemPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm text-card-foreground">
-                        {post.authorId ? post.authorName : "Perfil indisponível"}
+                        {post.authorId ? post.authorName : t("communityUi.profileUnavailable")}
                       </span>
                       <span className="text-xs text-muted-foreground">• {post.timeAgo}</span>
                     </div>
@@ -550,7 +550,7 @@ function CommunityEcosystemPage() {
                           setIsHistoryOpen(true);
                         }}
                       >
-                        <History className="w-3 h-3" /> Ver histórico de versões
+                        <History className="w-3 h-3" /> {t("communityUi.versionHistory")}
                       </Button>
                     </div>
                   </div>
@@ -602,13 +602,13 @@ function CommunityEcosystemPage() {
                     onClick={() => handleWaterPost(post)}
                   >
                     <Sprout className={`w-4 h-4 ${post.wateredByUser ? "text-emerald-600 fill-emerald-500/20" : ""}`} />
-                    <span className="font-semibold">Regar</span>
+                    <span className="font-semibold">{t("communityUi.water")}</span>
                     <span className="ml-1 opacity-80">({post.waterCount})</span>
                   </Button>
 
                   <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5 text-muted-foreground">
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{post.commentsCount || 0} contribuições</span>
+                    <span>{post.commentsCount || 0} {t("communityUi.contributions")}</span>
                   </Button>
                 </div>
 
@@ -619,7 +619,7 @@ function CommunityEcosystemPage() {
                   onClick={() => handleCultivatePost(post)}
                 >
                   <Flower2 className="w-3.5 h-3.5" />
-                  <span>{post.cultivatedByUser ? "Cultivado em Meu Jardim" : "Cultivar"}</span>
+                  <span>{post.cultivatedByUser ? t("communityUi.cultivated") : t("communityUi.cultivate")}</span>
                 </Button>
               </div>
             </div>
@@ -633,18 +633,18 @@ function CommunityEcosystemPage() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                <Sprout className="w-5 h-5" /> Plantar Ideia com Auto-Tagging & Rascunho
+                <Sprout className="w-5 h-5" /> {t("communityUi.newIdeaTitle")}
               </DialogTitle>
 
               {draftStatus !== "idle" && (
                 <Badge variant="outline" className="text-[10px] gap-1 font-normal">
                   {draftStatus === "saving" ? (
                     <>
-                      <RefreshCw className="w-3 h-3 animate-spin text-amber-500" /> Salvando rascunho...
+                      <RefreshCw className="w-3 h-3 animate-spin text-amber-500" /> {t("communityUi.savingDraft")}
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Rascunho salvo
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> {t("communityUi.draftSaved")}
                     </>
                   )}
                 </Badge>
@@ -654,23 +654,23 @@ function CommunityEcosystemPage() {
 
           <form onSubmit={handleCreateIdea} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="post_title">Título da Ideia *</Label>
+              <Label htmlFor="post_title">{t("communityUi.ideaTitle")} *</Label>
               <Input
                 id="post_title"
                 required
-                placeholder="Ex: Como ensinar Phrasal Verbs de forma contextualizada?"
+                placeholder={t("communityUi.ideaTitlePlaceholder")}
                 value={newIdeaForm.title}
                 onChange={(e) => setNewIdeaForm({ ...newIdeaForm, title: e.target.value })}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="post_content">Detalhamento da Ideia *</Label>
+              <Label htmlFor="post_content">{t("communityUi.ideaDetails")} *</Label>
               <Textarea
                 id="post_content"
                 required
                 rows={4}
-                placeholder="Explique o contexto, a metodologia e o impacto prático em sala..."
+                placeholder={t("communityUi.ideaDetailsPlaceholder")}
                 value={newIdeaForm.content}
                 onChange={(e) => setNewIdeaForm({ ...newIdeaForm, content: e.target.value })}
               />
@@ -678,10 +678,10 @@ function CommunityEcosystemPage() {
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsNewIdeaOpen(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                {submitting ? "Plantando..." : "Confirmar e Plantar Ideia"}
+                {submitting ? t("communityUi.planting") : t("communityUi.confirmPlant")}
               </Button>
             </DialogFooter>
           </form>
@@ -694,16 +694,16 @@ function CommunityEcosystemPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-primary" /> Editar Publicação (Versão #{editingPost.waterCount ? editingPost.waterCount + 1 : 2})
+                <Edit2 className="w-5 h-5 text-primary" /> {t("communityUi.editPost")} (#{editingPost.waterCount ? editingPost.waterCount + 1 : 2})
               </DialogTitle>
               <DialogDescription>
-                A versão anterior será preservada no histórico imutável antes da gravação.
+                {t("communityUi.editDescription")}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSavePostEdit} className="space-y-4 pt-2">
               <div className="space-y-1.5">
-                <Label>Título *</Label>
+                <Label>{t("communityUi.ideaTitle")} *</Label>
                 <Input
                   required
                   value={editForm.title}
@@ -712,7 +712,7 @@ function CommunityEcosystemPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Conteúdo *</Label>
+                <Label>{t("communityUi.content")} *</Label>
                 <Textarea
                   required
                   rows={4}
@@ -722,9 +722,9 @@ function CommunityEcosystemPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Motivo da Edição (Opcional)</Label>
+                <Label>{t("communityUi.editReason")}</Label>
                 <Input
-                  placeholder="Ex: Correção de texto e inclusão de exemplos..."
+                  placeholder={t("communityUi.editReasonPlaceholder")}
                   value={editForm.reason}
                   onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })}
                 />
@@ -735,7 +735,7 @@ function CommunityEcosystemPage() {
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Salvando Snapshot..." : "Salvar Edição"}
+                  {submitting ? t("communityUi.savingVersion") : t("communityUi.saveEdit")}
                 </Button>
               </DialogFooter>
             </form>
