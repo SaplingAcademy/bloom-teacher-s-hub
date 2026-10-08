@@ -1,7 +1,7 @@
 import { toast } from "sonner";
-import { getUserItem, setUserItem } from "@/lib/user-storage";
-import { resolveTeacherName, sanitizeTeacherName } from "@/lib/teacher-name";
-import { useState, useEffect } from "react";
+import { reportUserError } from "@/lib/user-error";
+import { resolveTeacherName } from "@/lib/teacher-name";
+import { useState, useEffect, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -324,7 +324,7 @@ function ProfilePage() {
                 />
               ) : (
                 <div className="h-28 w-28 rounded-2xl bg-gradient-lilac flex items-center justify-center font-display text-3xl font-extrabold text-lilac-foreground border border-border/80">
-                  {profile.name
+                  {(profile.name || "?")
                     .split(" ")
                     .map((n: string) => n[0])
                     .join("")
@@ -338,113 +338,40 @@ function ProfilePage() {
                 <h2 className="font-display text-2xl font-extrabold text-foreground">
                   {profile.name}
                 </h2>
-                <p className="text-sm font-semibold text-primary mt-0.5">{profile.headline}</p>
                 <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-muted-foreground mt-2 font-medium">
                   <span className="flex items-center gap-1">
-                    <Globe className="h-3.5 w-3.5" />
-                    {profile.country}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="h-3.5 w-3.5" />
-                    {profile.experience} {tr("auditUi.yearsExp")}
-                  </span>
-                  <span className="flex items-center gap-1">
                     <User className="h-3.5 w-3.5" />
-                    {profile.preferred_language === "pt-BR"
+                    {profile.preferred_language.startsWith("pt")
                       ? tr("auditUi.portuguese")
                       : tr("auditUi.english")}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {profile.timezone}
-                  </span>
+                  {profile.timezone && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {profile.timezone}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">{profile.bio}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {profile.bio || <span className="italic">{t.noBio}</span>}
+              </p>
 
-              {/* Badges areas */}
               <div className="space-y-2 pt-2 border-t border-border/50">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
-                    {tr("auditUi.teachingAreas")}
-                  </span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
+                  {t.languagesTaught}
+                </span>
+                {profile.languagesTaught.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {profile.teachingAreas.map((area, idx) => (
-                      <Badge
-                        key={idx}
-                        variant="secondary"
-                        className="text-[10px] py-0 px-2 font-bold bg-secondary/80"
-                      >
-                        {area}
+                    {profile.languagesTaught.map((l, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-[10px] py-0 px-2 font-bold bg-secondary/80">
+                        {l}
                       </Badge>
                     ))}
                   </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
-                    {tr("auditUi.subjectsTaught")}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {profile.subjectsTaught.map((sub, idx) => (
-                      <Badge
-                        key={idx}
-                        variant="outline"
-                        className="text-[10px] py-0 px-2 font-semibold"
-                      >
-                        {sub}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Social Links */}
-              <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-border/50">
-                {profile.linkedin && (
-                  <a
-                    href={profile.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Linkedin className="h-3.5 w-3.5" />
-                    LinkedIn
-                  </a>
-                )}
-                {profile.twitter && (
-                  <a
-                    href={profile.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Twitter className="h-3.5 w-3.5" />
-                    Twitter
-                  </a>
-                )}
-                {profile.github && (
-                  <a
-                    href={profile.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Github className="h-3.5 w-3.5" />
-                    GitHub
-                  </a>
-                )}
-                {profile.website && (
-                  <a
-                    href={profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Link className="h-3.5 w-3.5" />
-                    Website
-                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{t.noLanguages}</p>
                 )}
               </div>
             </div>
@@ -461,8 +388,9 @@ function ProfilePage() {
           {/* FUTURE-READY visual roadmap sections */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
             <div className="flex border-b border-border/60 pb-1 overflow-x-auto gap-4">
-              <span className="text-xs font-bold text-primary border-b-2 border-primary pb-2 shrink-0 cursor-pointer">
+              <span className="text-xs font-semibold text-muted-foreground/60 pb-2 shrink-0 cursor-not-allowed flex items-center gap-1">
                 {tr("auditUi.achievementsBadges")}
+                <Lock className="h-2.5 w-2.5" />
               </span>
               <span className="text-xs font-semibold text-muted-foreground/60 pb-2 shrink-0 cursor-not-allowed flex items-center gap-1">
                 {tr("auditUi.portfolioLessons")}
@@ -474,58 +402,9 @@ function ProfilePage() {
               </span>
             </div>
 
-            {/* Achievements Content */}
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-border/70 p-3 bg-secondary/5 space-y-1.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px]">🎖️</span>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] font-bold py-0">
-                    Unlocked
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {tr("auditUi.founder")}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tr("auditUi.earlyPioneerMemberOfBloom")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/70 p-3 bg-secondary/5 space-y-1.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px]">✍️</span>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] font-bold py-0">
-                    Unlocked
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {tr("auditUi.discussionMentor")}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tr("auditUi.publishedTopicsInTheCommunity")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-dashed border-border/80 p-3 opacity-60 space-y-1.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px]">⭐️</span>
-                  <Badge variant="outline" className="text-[8px] font-bold py-0">
-                    Locked
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {tr("auditUi.starCreator")}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tr("auditUi.sell10ResourcesOnMarketplace")}
-                  </p>
-                </div>
-              </div>
+            <div className="mt-5 text-center py-6 border border-dashed border-border rounded-xl">
+              <Lock className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground font-medium">{t.comingSoon}</p>
             </div>
           </div>
         </div>
@@ -544,7 +423,11 @@ function ProfilePage() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {t.rank}
                 </p>
-                <p className="text-3xl font-extrabold text-primary mt-1">#18</p>
+                {rankPosition ? (
+                  <p className="text-3xl font-extrabold text-primary mt-1">#{rankPosition}</p>
+                ) : (
+                  <p className="text-sm font-semibold text-muted-foreground mt-1">{t.notRanked}</p>
+                )}
               </div>
 
               <div>
@@ -552,27 +435,9 @@ function ProfilePage() {
                   {t.communityScore}
                 </p>
                 <p className="text-2xl font-extrabold text-foreground mt-1">
-                  2,480 <span className="text-xs font-medium text-muted-foreground">{t.xp}</span>
+                  {points.toLocaleString(lang === "pt" ? "pt-BR" : "en-US")}{" "}
+                  <span className="text-xs font-medium text-muted-foreground">{t.xp}</span>
                 </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-muted-foreground mb-1.5">
-                  <span>{t.progress}</span>
-                  <span className="font-bold text-foreground">{t.nextRank}: Top 10</span>
-                </div>
-                <div className="font-mono text-lg text-primary tracking-tight select-none">
-                  ████████░░{" "}
-                  <span className="text-xs font-sans font-bold text-muted-foreground ml-1.5">
-                    80%
-                  </span>
-                </div>
-                <div className="w-full bg-secondary h-2.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="bg-primary h-full rounded-full transition-all duration-300"
-                    style={{ width: "80%" }}
-                  ></div>
-                </div>
               </div>
             </div>
           </div>
@@ -588,28 +453,18 @@ function ProfilePage() {
 
             <ul className="mt-4 divide-y divide-border/40 text-xs font-semibold">
               <li className="flex justify-between items-center py-3">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🌱</span> {tr("auditUi.ideasWateredByCommunity")}
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">{likesReceived || 42}</span>
+                <span className="text-muted-foreground">{t.postsCreated2}</span>
+                <span className="text-foreground font-bold text-sm">{posts.length}</span>
               </li>
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🤝</span> {tr("auditUi.teachersHelped")}
+                  <span>🌱</span> {t.watersReceived}
                 </span>
-                <span className="text-foreground font-bold text-sm">{helpfulAnswers || 18}</span>
+                <span className="text-primary font-extrabold text-sm">{watersReceived}</span>
               </li>
               <li className="flex justify-between items-center py-3">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>✅</span> {tr("auditUi.acceptedSolutions")}
-                </span>
-                <span className="text-foreground font-bold text-sm">{helpfulAnswers > 0 ? Math.floor(helpfulAnswers / 2) : 5}</span>
-              </li>
-              <li className="flex justify-between items-center py-3">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>📚</span> {tr("auditUi.resourcesShared")}
-                </span>
-                <span className="text-foreground font-bold text-sm">{resourcesPublished || 12}</span>
+                <span className="text-muted-foreground">{t.commentsWritten}</span>
+                <span className="text-foreground font-bold text-sm">{commentsWritten}</span>
               </li>
             </ul>
           </div>
@@ -640,8 +495,6 @@ function ProfilePage() {
               <thead>
                 <tr className="border-b border-border/80 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
                   <th className="pb-3 pl-2">{tr("auditUi.publicationTitle")}</th>
-                  <th className="pb-3">{tr("auditUi.category")}</th>
-                  <th className="pb-3 text-center">{tr("auditUi.version")}</th>
                   <th className="pb-3 text-center">{tr("auditUi.waterings")}</th>
                   <th className="pb-3 text-right pr-2">{tr("auditUi.actions")}</th>
                 </tr>
@@ -657,37 +510,13 @@ function ProfilePage() {
                         >
                           {post.title}
                         </p>
-                        {post.isAcceptedSolution && (
-                          <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
-                            ✅ Solução Aceita
-                          </Badge>
-                        )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 font-medium flex items-center gap-2">
-                        <span>Criado: {post.timeAgo || "Recente"}</span>
-                        {post.last_edited_at && (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            • Editado em: {new Date(post.last_edited_at).toLocaleDateString("pt-BR")}
-                          </span>
-                        )}
+                      <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                        {formatDate(post.created_at)}
                       </p>
                     </td>
-                    <td className="py-3.5">
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] py-0 font-bold bg-secondary/80"
-                      >
-                        {post.category === "Question" && (tr("auditUi.question"))}
-                        {post.category === "Tip" && (tr("auditUi.tip"))}
-                        {post.category === "Need Help" && (tr("auditUi.help"))}
-                        {post.category === "Resource" && (tr("auditUi.resource"))}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 text-center font-bold text-muted-foreground">
-                      v{post.version_number || 1}
-                    </td>
-                    <td className="py-3.5 text-center font-bold text-emerald-600 dark:text-emerald-400">
-                      🌱 {post.likes || post.waterCount || 0}
+                    <td className="py-3.5 text-center font-bold text-primary">
+                      🌱 {post.waterCount || 0}
                     </td>
                     <td className="py-3.5 text-right pr-2">
                       <div className="flex items-center justify-end gap-1.5">
@@ -725,7 +554,7 @@ function ProfilePage() {
           </DialogHeader>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 pt-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4">
               <div className="space-y-1">
                 <Label htmlFor="edit-name" className="text-xs font-semibold text-foreground">
                   {t.fullName}
@@ -734,23 +563,10 @@ function ProfilePage() {
                   id="edit-name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  required
                   className="h-10 rounded-xl"
                 />
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="edit-headline" className="text-xs font-semibold text-foreground">
-                  {t.headline}
-                </Label>
-                <Input
-                  id="edit-headline"
-                  value={editHeadline}
-                  onChange={(e) => setEditHeadline(e.target.value)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
             </div>
 
             <div className="space-y-1">
@@ -761,131 +577,13 @@ function ProfilePage() {
                 id="edit-bio"
                 value={editBio}
                 onChange={(e) => setEditBio(e.target.value)}
-                required
-                className="h-10 rounded-xl"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="edit-country" className="text-xs font-semibold text-foreground">
-                  {t.country}
-                </Label>
-                <Input
-                  id="edit-country"
-                  value={editCountry}
-                  onChange={(e) => setEditCountry(e.target.value)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="edit-experience" className="text-xs font-semibold text-foreground">
-                  {t.experience}
-                </Label>
-                <Input
-                  id="edit-experience"
-                  type="number"
-                  value={editExperience}
-                  onChange={(e) => setEditExperience(Number(e.target.value) || 0)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="edit-areas" className="text-xs font-semibold text-foreground">
-                {t.teachingAreas}
-              </Label>
-              <Input
-                id="edit-areas"
-                value={editAreas}
-                onChange={(e) => setEditAreas(e.target.value)}
-                placeholder="e.g. Adult Education, Business English"
-                required
-                className="h-10 rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="edit-subjects" className="text-xs font-semibold text-foreground">
-                {t.subjectsTaught}
-              </Label>
-              <Input
-                id="edit-subjects"
-                value={editSubjects}
-                onChange={(e) => setEditSubjects(e.target.value)}
-                placeholder="e.g. General English, Professional Writing"
-                required
                 className="h-10 rounded-xl"
               />
             </div>
 
             <div className="space-y-2 border-t border-border/50 pt-3">
-              <h4 className="text-xs font-bold text-foreground">{t.socialLinks}</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-linkedin"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    LinkedIn
-                  </Label>
-                  <Input
-                    id="edit-linkedin"
-                    value={editLinkedin}
-                    onChange={(e) => setEditLinkedin(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-twitter"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    Twitter / X
-                  </Label>
-                  <Input
-                    id="edit-twitter"
-                    value={editTwitter}
-                    onChange={(e) => setEditTwitter(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-github"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    GitHub
-                  </Label>
-                  <Input
-                    id="edit-github"
-                    value={editGithub}
-                    onChange={(e) => setEditGithub(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="edit-website"
-                    className="text-[10px] font-semibold text-muted-foreground"
-                  >
-                    Website
-                  </Label>
-                  <Input
-                    id="edit-website"
-                    value={editWebsite}
-                    onChange={(e) => setEditWebsite(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 border-t border-border/50 pt-3">
+              <h4 className="text-xs font-bold text-foreground">
+                {tr("auditUi.systemPreferences")}            <div className="space-y-2 border-t border-border/50 pt-3">
               <h4 className="text-xs font-bold text-foreground">
                 {tr("auditUi.systemPreferences")}
               </h4>
@@ -1013,18 +711,18 @@ function ProfilePage() {
                   variant="secondary"
                   className="text-[10px] shrink-0 font-bold bg-secondary/80"
                 >
-                  {viewingPost.category}
+                  {(viewingPost.tags || []).join(", ")}
                 </Badge>
               </DialogHeader>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-full bg-gradient-lilac flex items-center justify-center font-display text-[9px] font-extrabold text-lilac-foreground">
-                    {profile.name.substring(0, 2).toUpperCase()}
+                    {(profile.name || "?").substring(0, 2).toUpperCase()}
                   </div>
                   <span className="text-xs font-bold text-foreground">{profile.name}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    • {viewingPost.timeAgo || "Recently"}
+                    • {formatDate(viewingPost.created_at)}
                   </span>
                 </div>
 
@@ -1035,7 +733,7 @@ function ProfilePage() {
                 <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground pt-1">
                   <span className="flex items-center gap-1">
                     <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                    {viewingPost.likes || 0} {tr("auditUi.likes")}
+                    🌱 {viewingPost.waterCount || 0}
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
