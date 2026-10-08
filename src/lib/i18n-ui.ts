@@ -264,14 +264,8 @@ export const uiTranslations = {
       "saveEdit": "Salvar edição"
     },
     "auditUi": {
-      "currentPackage": "Pacote atual",
-      "term": "Vigência",
-      "until": "até",
       "ongoing": "Em andamento",
-      "monthlyFee": "Mensalidade",
       "value": "Valor",
-      "terms": "Condição",
-      "progress": "Progresso",
       "payment": "Pagamento",
       "previousPackages": "Pacotes anteriores",
       "noPreviousAgreement": "Nenhum contrato anterior registrado.",
@@ -1167,14 +1161,8 @@ export const uiTranslations = {
       "saveEdit": "Save edit"
     },
     "auditUi": {
-      "currentPackage": "Current package",
-      "term": "Term",
-      "until": "to",
       "ongoing": "Ongoing",
-      "monthlyFee": "Monthly fee",
       "value": "Value",
-      "terms": "Terms",
-      "progress": "Progress",
       "payment": "Payment",
       "previousPackages": "Previous packages",
       "noPreviousAgreement": "No previous agreement recorded.",
