@@ -99,8 +99,10 @@ export async function fetchMonthlyGoal(teacherId: string): Promise<MonthlyGoal |
 
 /**
  * Save (upsert) the teacher's monthly revenue goal to public.business_goals.
- * If a record with metric_name='monthly_revenue' already exists, updates it.
- * Otherwise inserts a new one.
+ * Real database UPSERT keyed on the unique constraint (teacher_id, metric_name):
+ * one row per teacher/metric, no lookup-then-decide, no duplicates.
+ * current_value is intentionally omitted: it defaults to 0 on insert and is
+ * left untouched on conflict.
  */
 export async function saveMonthlyGoal(
   teacherId: string,
@@ -111,35 +113,20 @@ export async function saveMonthlyGoal(
   const safeValue = Math.max(1, Math.round(value * 100) / 100);
 
   try {
-    const { data: existing, error: lookupError } = await supabase
+    const { error } = await supabase
       .from("business_goals")
-      .select("id")
-      .eq("teacher_id", teacherId)
-      .eq("metric_name", "monthly_revenue")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .upsert(
+        {
+          teacher_id: teacherId,
+          title: "Meta de Faturamento Mensal",
+          target_value: safeValue,
+          metric_name: "monthly_revenue",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "teacher_id,metric_name" }
+      );
 
-    if (lookupError) return { success: false, error: lookupError.message };
-
-    if (existing?.id) {
-      const { error } = await supabase
-        .from("business_goals")
-        .update({ target_value: safeValue, updated_at: new Date().toISOString() })
-        .eq("id", existing.id);
-
-      if (error) return { success: false, error: error.message };
-    } else {
-      const { error } = await supabase.from("business_goals").insert({
-        teacher_id: teacherId,
-        title: "Meta de Faturamento Mensal",
-        target_value: safeValue,
-        current_value: 0,
-        metric_name: "monthly_revenue",
-      });
-
-      if (error) return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
 
     return { success: true };
   } catch (err: any) {
