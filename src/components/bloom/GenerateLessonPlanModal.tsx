@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -206,21 +208,21 @@ export function GenerateLessonPlanModal({
     if (!startDate || isNaN(Date.parse(startDate))) {
       const err = "Please select a valid start date.";
       setErrorMessage(err);
-      toast.error(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan")));
       return;
     }
 
     if (!schedules || schedules.length === 0) {
       const err = "Please specify at least one weekly schedule time slot.";
       setErrorMessage(err);
-      toast.error(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan")));
       return;
     }
 
     if (targetCount <= 0) {
       const err = "Please select a positive number of lessons to generate.";
       setErrorMessage(err);
-      toast.error(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan")));
       return;
     }
 

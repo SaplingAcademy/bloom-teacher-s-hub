@@ -1,3 +1,4 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { coursePeriodFromStudent } from "@/lib/lesson-plan-period";
@@ -1815,7 +1816,7 @@ function StudentsPage() {
       openPriorPaymentsIfNeeded();
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
-      toast.error(error instanceof FinanceSyncError ? error.message : i18nT("students.toastSaveError", lang));
+      toast.error(reportUserError(error, i18nT("students.toastSaveError", lang)));
     } finally {
       setIsSaving(false);
     }

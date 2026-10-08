@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -369,7 +371,7 @@ function CommunityEcosystemPage() {
         .single();
 
       if (error) {
-        toast.error("Erro ao publicar: " + error.message);
+        toast.error(reportUserError(error, i18nT("errors.publishPost")));
       } else {
         toast.success("🌱 Ideia plantada com sucesso!");
         await clearCommunityDraft(teacherId, "post");
@@ -405,9 +407,9 @@ function CommunityEcosystemPage() {
         setEditingPost(null);
         loadEcosystemData();
       } else if (res.concurrencyConflict) {
-        toast.error(res.error || "Conflito de edição simultânea.");
+        toast.error(toUserMessage(res.error, "Conflito de edição simultânea."));
       } else {
-        toast.error(`Erro ao editar: ${res.error}`);
+        toast.error(toUserMessage(res.error, i18nT("errors.editPost")));
       }
     } catch (err: any) {
       toast.error("Falha na edição.");
@@ -426,7 +428,7 @@ function CommunityEcosystemPage() {
       toast.success("Publicação removida com sucesso. Histórico preservado.");
       setPosts((prev) => prev.filter((p) => p.id !== post.id));
     } else {
-      toast.error(`Erro ao remover: ${res.error}`);
+      toast.error(toUserMessage(res.error, i18nT("errors.removePost")));
     }
   };
 

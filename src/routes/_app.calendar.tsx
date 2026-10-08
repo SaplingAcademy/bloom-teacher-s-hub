@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/hooks/use-language";
@@ -323,7 +325,7 @@ function CalendarPage() {
           details: error?.details,
           hint: error?.hint,
         });
-        toast.error(lang === "pt" ? `Erro ao carregar agenda: ${error.message}` : `Error loading agenda: ${error.message}`);
+        toast.error(reportUserError(error, i18nT("errors.loadAgenda", lang)));
         setIsEventsError(true);
         setEvents([]);
         setIsLoadingEvents(false);
@@ -391,7 +393,7 @@ function CalendarPage() {
 
       if (stErr) {
         console.error("[Calendar] Failed to load students for manual sync:", stErr);
-        toast.error(`Falha ao carregar alunos: ${stErr.message}`);
+        toast.error(reportUserError(stErr, i18nT("errors.loadStudents", lang)));
         setIsSyncingAgenda(false);
         return;
       }
@@ -461,7 +463,7 @@ function CalendarPage() {
       }
     } catch (err: any) {
       console.error("[Calendar] Manual sync error:", err);
-      toast.error(`Erro ao sincronizar agenda: ${err?.message || err}`);
+      toast.error(reportUserError(err, i18nT("errors.syncAgenda", lang)));
     } finally {
       setIsSyncingAgenda(false);
     }
@@ -558,7 +560,7 @@ function CalendarPage() {
     if (!user) return;
     const res = await saveTeacherWorkingAvailability(user.id, tempAvail);
     if (!res.success) {
-      toast.error(res.error || (lang === "pt" ? "Erro ao salvar disponibilidade." : "Error saving availability."));
+      toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", lang)));
       return;
     }
     invalidateTeacherAvailability(user.id);

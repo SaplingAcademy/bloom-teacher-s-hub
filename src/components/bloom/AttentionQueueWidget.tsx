@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { AttentionItem, fetchAttentionQueue } from "@/lib/attention-queue";
 import { retryFailedAutomation } from "@/lib/automation-engine";
@@ -72,7 +74,7 @@ export function AttentionQueueWidget({
       toast.success("Automação executada novamente com sucesso!");
       loadQueue();
     } else {
-      toast.error(`Falha ao reprocessar: ${res.error}`);
+      toast.error(toUserMessage(res.error, i18nT("errors.reprocess")));
     }
   };
 

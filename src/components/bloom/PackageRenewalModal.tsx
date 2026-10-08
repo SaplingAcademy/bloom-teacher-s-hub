@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
@@ -261,10 +263,10 @@ export function PackageRenewalModal({
         onClose();
         setStep(1);
       } else {
-        toast.error(res.message);
+        toast.error(toUserMessage(res.message, i18nT("errors.renewPackage")));
       }
     } catch (err: any) {
-      toast.error(`Erro ao renovar: ${err?.message || err}`);
+      toast.error(reportUserError(err, i18nT("errors.renewPackage")));
     } finally {
       setIsSubmitting(false);
     }

@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getStudentChargesByAgreement, recordInvoicePayment, formatCentsToBRL, type ManagedCharge } from "@/lib/finance-engine";
@@ -42,7 +44,7 @@ export function PriorPaymentsDialog({
         else setCharges(open);
       })
       .catch((err) => {
-        if (!cancelled) toast.error(err?.message || (pt ? "Não foi possível carregar as cobranças." : "Could not load charges."));
+        if (!cancelled) toast.error(reportUserError(err, i18nT("errors.loadCharges", pt ? "pt" : "en")));
         onClose();
       });
     return () => {

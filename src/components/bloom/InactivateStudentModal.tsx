@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -124,7 +126,7 @@ export function InactivateStudentModal({
       onClose();
     } catch (err: any) {
       console.error("[InactivateStudentModal] Inactivation error:", err);
-      toast.error(err.message || "Erro ao inativar aluno.");
+      toast.error(reportUserError(err, i18nT("errors.inactivateStudent")));
     } finally {
       setIsSubmitting(false);
     }

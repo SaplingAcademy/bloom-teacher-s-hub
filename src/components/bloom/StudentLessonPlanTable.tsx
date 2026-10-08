@@ -1,3 +1,5 @@
+import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useMemo } from "react";
 import { StudentLesson, saveStudentLessons, LessonScheduleInput } from "@/lib/lesson-plan-sync";
 import { CEFRLevel, CourseFocus } from "@/lib/calendar-sync";
@@ -186,7 +188,7 @@ export function StudentLessonPlanTable({
         lessons,
       });
       if (!res.success) {
-        toast.error(res.error || "Não foi possível concluir o plano.");
+        toast.error(toUserMessage(res.error, i18nT("errors.lessonPlan")));
         return;
       }
       setHistoryRefreshKey((k) => k + 1);
