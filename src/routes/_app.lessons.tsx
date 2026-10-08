@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { BookOpen } from "lucide-react";
 import { ModulePlaceholder } from "@/components/bloom/ModulePlaceholder";
+import { useLanguage } from "@/hooks/use-language";
 
 export const Route = createFileRoute("/_app/lessons")({
   head: () => ({
@@ -9,20 +10,25 @@ export const Route = createFileRoute("/_app/lessons")({
       { name: "description", content: "Plan, structure and deliver your lessons with AI help." },
     ],
   }),
-  component: () => (
+  component: LessonsPage,
+});
+
+function LessonsPage() {
+  const { t } = useLanguage();
+  return (
     <ModulePlaceholder
-      eyebrow="Workspace"
-      title="Lessons"
-      description="Plan lessons quickly, reuse what works, and let AI handle the first draft."
+      eyebrow={t("nav.workspace")}
+      title={t("nav.lessons")}
+      description={t("auditUi.planLessonsQuicklyReuseWhatWorksAnd")}
       icon={BookOpen}
-      goal="Cut lesson-prep time dramatically while keeping every class high quality."
+      goal={t("auditUi.cutLessonPrepTimeDramaticallyWhileKeepingEvery")}
       planned={[
-        "Reusable lesson templates and curricula",
-        "AI-generated activities, exercises and warm-ups",
-        "Attach resources and assign homework",
-        "Level-aware content by CEFR (A1–C2)",
-        "Deliver in-class mode with notes and timer",
+        t("auditUi.reusableLessonTemplatesAndCurricula"),
+        t("auditUi.aiGeneratedActivitiesExercisesAndWarmUps"),
+        t("auditUi.attachResourcesAndAssignHomework"),
+        t("auditUi.levelAwareContentByCefrA1C2"),
+        t("auditUi.deliverInClassModeWithNotesAndTimer"),
       ]}
     />
-  ),
-});
+  );
+}

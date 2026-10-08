@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "./PageHeader";
+import { useLanguage } from "@/hooks/use-language";
 
 type ModulePlaceholderProps = {
   eyebrow: string;
@@ -19,6 +20,7 @@ export function ModulePlaceholder({
   planned,
   goal,
 }: ModulePlaceholderProps) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-6">
       <PageHeader eyebrow={eyebrow} title={title} description={description} />
@@ -31,9 +33,9 @@ export function ModulePlaceholder({
             </span>
             <div>
               <h2 className="font-display text-lg font-semibold text-card-foreground">
-                What we'll build here
+                {t("auditUi.whatWellBuildHere")}
               </h2>
-              <p className="text-sm text-muted-foreground">A focused, purpose-built module.</p>
+              <p className="text-sm text-muted-foreground">{t("globalUi.purposeBuiltModule")}</p>
             </div>
           </div>
           <ul className="mt-5 space-y-3">
@@ -49,13 +51,12 @@ export function ModulePlaceholder({
         <section className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-gradient-primary p-6 text-primary-foreground shadow-[var(--shadow-md)]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-              Why it matters
+              {t("auditUi.whyItMatters")}
             </p>
             <p className="mt-2 font-display text-lg font-semibold leading-snug">{goal}</p>
           </div>
           <p className="text-sm opacity-90">
-            Foundation ready — this module plugs into the shared Bloom shell, design system and data
-            layer as we build it out.
+            {t("auditUi.foundationReadyThisModulePlugsIntoThe")}
           </p>
         </section>
       </div>
