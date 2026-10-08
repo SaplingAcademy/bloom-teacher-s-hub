@@ -300,7 +300,8 @@ function GrowthPage() {
   });
 
   // Simulator Input States (Data-driven defaults)
-  const [incomeGoal, setIncomeGoal] = useState(5000);
+  // Simulator-only state. Seeded from the official goal (business_goals); 0 = goal not defined yet.
+  const [incomeGoal, setIncomeGoal] = useState(0);
   const [currency, setCurrency] = useState("R$");
   const [workHoursPerWeek, setWorkHoursPerWeek] = useState(40);
   const [teachHoursPerWeek, setTeachHoursPerWeek] = useState(20);
@@ -365,7 +366,7 @@ function GrowthPage() {
       setIncomeGoal(goalRes.targetValue);
     } else {
       setMonthlyGoal(null);
-      setIncomeGoal(5000);
+      setIncomeGoal(0);
     }
 
     setMrrData(mrrRes);
@@ -394,7 +395,7 @@ function GrowthPage() {
   }, [growthQuery.data]);
 
   const handleOpenEditGoal = () => {
-    setEditGoalInputValue(monthlyGoal ? String(monthlyGoal) : "10000");
+    setEditGoalInputValue(monthlyGoal ? String(monthlyGoal) : "");
     setIsEditGoalOpen(true);
   };
 
@@ -561,7 +562,8 @@ function GrowthPage() {
     if (savedGoal) {
       try {
         const parsed = JSON.parse(savedGoal);
-        setIncomeGoal(parsed.incomeGoal ?? 5000);
+        // incomeGoal is never restored from local storage: the official goal
+        // lives only in business_goals and seeds the simulator.
         setCurrency(parsed.currency ?? "R$");
         setWorkHoursPerWeek(parsed.workHoursPerWeek ?? 40);
         setTeachHoursPerWeek(parsed.teachHoursPerWeek ?? 20);
@@ -612,7 +614,7 @@ function GrowthPage() {
   };
 
   const handleResetSimulator = () => {
-    setIncomeGoal(5000);
+    setIncomeGoal(monthlyGoal ?? 0);
     setCurrency("R$");
     setWorkHoursPerWeek(40);
     setTeachHoursPerWeek(20);
@@ -1320,8 +1322,7 @@ function GrowthPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (monthlyGoal) setIncomeGoal(monthlyGoal);
-                  else setIncomeGoal(5000);
+                  setIncomeGoal(monthlyGoal ?? 0);
 
                   if (capacityData.hasWorkingHours) {
                     setWorkHoursPerWeek(capacityData.totalValidSlots);
