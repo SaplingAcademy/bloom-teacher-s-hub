@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useEffect } from "react";
 import {
@@ -126,7 +126,7 @@ export function InactivateStudentModal({
       onClose();
     } catch (err: any) {
       console.error("[InactivateStudentModal] Inactivation error:", err);
-      toast.error(reportUserError(err, i18nT("errors.inactivateStudent")));
+      toast.error(reportUserError(err, i18nT("errors.inactivateStudent", currentLanguage())));
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
@@ -263,10 +263,10 @@ export function PackageRenewalModal({
         onClose();
         setStep(1);
       } else {
-        toast.error(toUserMessage(res.message, i18nT("errors.renewPackage")));
+        toast.error(toUserMessage(res.message, i18nT("errors.renewPackage", currentLanguage())));
       }
     } catch (err: any) {
-      toast.error(reportUserError(err, i18nT("errors.renewPackage")));
+      toast.error(reportUserError(err, i18nT("errors.renewPackage", currentLanguage())));
     } finally {
       setIsSubmitting(false);
     }

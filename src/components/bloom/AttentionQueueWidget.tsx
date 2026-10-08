@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { AttentionItem, fetchAttentionQueue } from "@/lib/attention-queue";
@@ -74,7 +74,7 @@ export function AttentionQueueWidget({
       toast.success("Automação executada novamente com sucesso!");
       loadQueue();
     } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.reprocess")));
+      toast.error(toUserMessage(res.error, i18nT("errors.reprocess", currentLanguage())));
     }
   };
 

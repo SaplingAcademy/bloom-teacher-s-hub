@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useMemo } from "react";
 import { StudentLesson, saveStudentLessons, LessonScheduleInput } from "@/lib/lesson-plan-sync";
@@ -188,7 +188,7 @@ export function StudentLessonPlanTable({
         lessons,
       });
       if (!res.success) {
-        toast.error(toUserMessage(res.error, i18nT("errors.lessonPlan")));
+        toast.error(toUserMessage(res.error, i18nT("errors.lessonPlan", currentLanguage())));
         return;
       }
       setHistoryRefreshKey((k) => k + 1);

@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -222,7 +222,7 @@ export function NonWorkingDaysModal({
       setSelectedDates(new Set());
       setActiveTab("list");
     } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff")));
+      toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff", currentLanguage())));
     }
   };
 
@@ -237,7 +237,7 @@ export function NonWorkingDaysModal({
       setSelectedItemIds(new Set(selectedItemIds));
       if (onTimeOffUpdated) onTimeOffUpdated();
     } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.deleteItems")));
+      toast.error(toUserMessage(res.error, i18nT("errors.deleteItems", currentLanguage())));
     }
   };
 
@@ -253,7 +253,7 @@ export function NonWorkingDaysModal({
       setSelectedItemIds(new Set());
       if (onTimeOffUpdated) onTimeOffUpdated();
     } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.deleteItems")));
+      toast.error(toUserMessage(res.error, i18nT("errors.deleteItems", currentLanguage())));
     }
   };
 
@@ -271,7 +271,7 @@ export function NonWorkingDaysModal({
       await loadData();
       if (onTimeOffUpdated) onTimeOffUpdated();
     } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff")));
+      toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff", currentLanguage())));
     }
   };
 

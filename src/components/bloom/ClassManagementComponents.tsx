@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
@@ -267,7 +267,7 @@ export function ClassFormModal({
       setInlineWhatsApp("");
       setShowInlineStudent(false);
     } catch (err: any) {
-      toast.error(reportUserError(err, i18nT("errors.saveStudent")));
+      toast.error(reportUserError(err, i18nT("errors.saveStudent", currentLanguage())));
     }
   };
 
@@ -296,7 +296,7 @@ export function ClassFormModal({
       onClose();
     } catch (err: any) {
       console.error("Save class error:", err);
-      toast.error(reportUserError(err, i18nT("errors.saveClass")));
+      toast.error(reportUserError(err, i18nT("errors.saveClass", currentLanguage())));
     } finally {
       setIsSaving(false);
     }
@@ -608,7 +608,7 @@ export function ClassSessionAttendanceModal({
       toast.success(isPt ? "Chamada e aula salvas com sucesso! 🌱" : "Attendance & lesson saved successfully! 🌱");
       onClose();
     } catch (err: any) {
-      toast.error(reportUserError(err, i18nT("errors.saveAttendance")));
+      toast.error(reportUserError(err, i18nT("errors.saveAttendance", currentLanguage())));
     } finally {
       setSaving(false);
     }

@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -166,7 +166,7 @@ export function useTeacherLanguages() {
         return true;
       } catch (err: any) {
         console.error("[useTeacherLanguages] Error updating languages:", err);
-        toast.error(reportUserError(err, i18nT("errors.saveLanguages")));
+        toast.error(reportUserError(err, i18nT("errors.saveLanguages", currentLanguage())));
         return false;
       } finally {
         setLoading(false);

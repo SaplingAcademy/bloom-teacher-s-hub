@@ -1,4 +1,4 @@
-import { reportUserError, toUserMessage } from "@/lib/user-error";
+import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { PostVersion, fetchPostVersions, restorePostVersion } from "@/lib/community-persistence";
@@ -79,7 +79,7 @@ export function PostVersionHistoryModal({
       onOpenChange(false);
       if (onVersionRestored) onVersionRestored();
     } else {
-      toast.error(toUserMessage(res.error, i18nT("errors.restoreVersion")));
+      toast.error(toUserMessage(res.error, i18nT("errors.restoreVersion", currentLanguage())));
     }
   };
 
