@@ -92,9 +92,14 @@ const translations = {
     headline: "Professional Headline",
     bio: "Short Biography",
     country: "Country",
-    teachingAreas: "Teaching Areas (comma separated)",
-    subjectsTaught: "Subjects Taught (comma separated)",
-    experience: "Years of Experience (years)",
+    expertiseAreas: "Areas of Expertise",
+    noExpertise: "No areas of expertise added yet.",
+    addArea: "Add area",
+    add: "Add",
+    removeArea: "Remove",
+    yearsExperience: "Years of Experience",
+    yrs: "yrs",
+    experience: "Years of Experience",
     socialLinks: "Social Links",
     saveChanges: "Save Changes",
     cancel: "Cancel",
@@ -140,9 +145,14 @@ const translations = {
     headline: "Título Profissional",
     bio: "Breve Biografia",
     country: "País",
-    teachingAreas: "Áreas de Atuação (separadas por vírgula)",
-    subjectsTaught: "Disciplinas Lecionadas (separadas por vírgula)",
-    experience: "Anos de Experiência (anos)",
+    expertiseAreas: "Áreas de Atuação",
+    noExpertise: "Nenhuma área de atuação informada ainda.",
+    addArea: "Adicionar área",
+    add: "Adicionar",
+    removeArea: "Remover",
+    yearsExperience: "Anos de Experiência",
+    yrs: "anos",
+    experience: "Anos de Experiência",
     socialLinks: "Links Sociais",
     saveChanges: "Salvar Alterações",
     cancel: "Cancelar",
@@ -175,6 +185,15 @@ function ProfilePage() {
       : []) as string[],
     preferred_language: (authProfile?.locale as string) || (authProfile?.preferred_language as string) || "",
     timezone: (authProfile?.timezone as string) || "",
+    headline: (authProfile?.professional_headline as string) || "",
+    country: (authProfile?.country as string) || "",
+    yearsExperience:
+      authProfile?.years_experience === null || authProfile?.years_experience === undefined
+        ? null
+        : Number(authProfile.years_experience),
+    expertiseAreas: (Array.isArray(authProfile?.expertise_areas)
+      ? authProfile.expertise_areas
+      : []) as string[],
   };
 
   const [posts, setPosts] = useState<any[]>([]);
@@ -188,6 +207,13 @@ function ProfilePage() {
   const [editPhoto, setEditPhoto] = useState(profile.photo);
   const [editLanguage, setEditLanguage] = useState(profile.preferred_language || "pt-BR");
   const [editTimezone, setEditTimezone] = useState(profile.timezone || "America/Sao_Paulo");
+  const [editHeadline, setEditHeadline] = useState(profile.headline);
+  const [editCountry, setEditCountry] = useState(profile.country);
+  const [editYears, setEditYears] = useState(
+    profile.yearsExperience === null ? "" : String(profile.yearsExperience),
+  );
+  const [editExpertise, setEditExpertise] = useState<string[]>(profile.expertiseAreas);
+  const [newExpertise, setNewExpertise] = useState("");
 
   const resetForm = useCallback(() => {
     setEditName(resolveTeacherName(authProfile, user) || "");
@@ -195,6 +221,12 @@ function ProfilePage() {
     setEditBio((authProfile?.bio as string) || "");
     setEditLanguage((authProfile?.locale as string) || "pt-BR");
     setEditTimezone((authProfile?.timezone as string) || "America/Sao_Paulo");
+    setEditHeadline((authProfile?.professional_headline as string) || "");
+    setEditCountry((authProfile?.country as string) || "");
+    const yrs = authProfile?.years_experience;
+    setEditYears(yrs === null || yrs === undefined ? "" : String(yrs));
+    setEditExpertise(Array.isArray(authProfile?.expertise_areas) ? authProfile.expertise_areas : []);
+    setNewExpertise("");
   }, [authProfile, user]);
 
   useEffect(() => {
@@ -255,16 +287,35 @@ function ProfilePage() {
     loadCommunity();
   }, [loadCommunity]);
 
+  const handleAddExpertise = () => {
+    const value = newExpertise.trim();
+    if (!value) return;
+    if (!editExpertise.some((a) => a.toLowerCase() === value.toLowerCase())) {
+      setEditExpertise([...editExpertise, value]);
+    }
+    setNewExpertise("");
+  };
+
+  const handleRemoveExpertise = (area: string) => {
+    setEditExpertise(editExpertise.filter((a) => a !== area));
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
     const targetLang = editLanguage.startsWith("pt") ? "pt" : "en";
+    const yearsValue = editYears.trim() === "" ? null : Number.parseInt(editYears.trim(), 10);
+    const years = yearsValue === null || Number.isNaN(yearsValue) ? null : Math.min(Math.max(yearsValue, 0), 80);
     const payload = {
       full_name: editName.trim() || null,
       avatar_url: editPhoto || null,
       bio: editBio.trim() || null,
       locale: editLanguage,
       timezone: editTimezone,
+      professional_headline: editHeadline.trim() || null,
+      country: editCountry.trim() || null,
+      years_experience: years,
+      expertise_areas: editExpertise.length > 0 ? editExpertise : null,
     };
     const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     if (error) {
@@ -341,6 +392,11 @@ function ProfilePage() {
                 <h2 className="font-display text-2xl font-extrabold text-foreground">
                   {profile.name}
                 </h2>
+                {profile.headline && (
+                  <p className="text-sm font-medium text-muted-foreground mt-0.5">
+                    {profile.headline}
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-muted-foreground mt-2 font-medium">
                   <span className="flex items-center gap-1">
                     <User className="h-3.5 w-3.5" />
@@ -348,6 +404,18 @@ function ProfilePage() {
                       ? tr("auditUi.portuguese")
                       : tr("auditUi.english")}
                   </span>
+                  {profile.country && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {profile.country}
+                    </span>
+                  )}
+                  {profile.yearsExperience !== null && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="h-3.5 w-3.5" />
+                      {profile.yearsExperience} {t.yrs}
+                    </span>
+                  )}
                   {profile.timezone && (
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
@@ -375,6 +443,23 @@ function ProfilePage() {
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground italic">{t.noLanguages}</p>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border/50">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">
+                  {t.expertiseAreas}
+                </span>
+                {profile.expertiseAreas.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.expertiseAreas.map((area, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-[10px] py-0 px-2 font-bold bg-secondary/80">
+                        {area}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{t.noExpertise}</p>
                 )}
               </div>
             </div>
@@ -582,6 +667,96 @@ function ProfilePage() {
                 onChange={(e) => setEditBio(e.target.value)}
                 className="h-10 rounded-xl"
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="edit-headline" className="text-xs font-semibold text-foreground">
+                {t.headline}
+              </Label>
+              <Input
+                id="edit-headline"
+                value={editHeadline}
+                onChange={(e) => setEditHeadline(e.target.value)}
+                className="h-10 rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="edit-country" className="text-xs font-semibold text-foreground">
+                  {t.country}
+                </Label>
+                <Input
+                  id="edit-country"
+                  value={editCountry}
+                  onChange={(e) => setEditCountry(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-years" className="text-xs font-semibold text-foreground">
+                  {t.yearsExperience}
+                </Label>
+                <Input
+                  id="edit-years"
+                  type="number"
+                  min={0}
+                  max={80}
+                  value={editYears}
+                  onChange={(e) => setEditYears(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-expertise" className="text-xs font-semibold text-foreground">
+                {t.expertiseAreas}
+              </Label>
+              {editExpertise.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {editExpertise.map((area) => (
+                    <Badge
+                      key={area}
+                      variant="secondary"
+                      className="text-[10px] py-0.5 px-2 font-bold bg-secondary/80 gap-1"
+                    >
+                      {area}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExpertise(area)}
+                        aria-label={t.removeArea}
+                        className="ml-0.5 rounded-full hover:bg-background/60 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  id="edit-expertise"
+                  value={newExpertise}
+                  onChange={(e) => setNewExpertise(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddExpertise();
+                    }
+                  }}
+                  placeholder={t.addArea}
+                  className="h-10 rounded-xl flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddExpertise}
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {t.add}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2 border-t border-border/50 pt-3">
