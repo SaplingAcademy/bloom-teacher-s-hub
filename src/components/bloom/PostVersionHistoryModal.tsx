@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/hooks/use-language";
+import { fmt } from "@/lib/i18n";
 
 interface PostVersionHistoryModalProps {
   postId: string | null;
@@ -41,6 +43,7 @@ export function PostVersionHistoryModal({
   onOpenChange,
   onVersionRestored,
 }: PostVersionHistoryModalProps) {
+  const { t, lang } = useLanguage();
   const [versions, setVersions] = useState<PostVersion[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<PostVersion | null>(null);
@@ -74,7 +77,7 @@ export function PostVersionHistoryModal({
 
     if (res.success) {
       toast.success(
-        `Restaurado com sucesso! Criada a nova Versão #${res.newVersionNumber} a partir do histórico.`
+        fmt(t("globalUi.versionRestored"), res.newVersionNumber)
       );
       onOpenChange(false);
       if (onVersionRestored) onVersionRestored();
@@ -88,27 +91,27 @@ export function PostVersionHistoryModal({
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" /> Histórico de Versões da Publicação
+            <History className="w-5 h-5 text-primary" /> {t("globalUi.postVersionHistory")}
           </DialogTitle>
           <DialogDescription>
-            Todas as edições salvas geram snapshots imutáveis. Restaurar uma versão cria uma nova revisão sem apagar o histórico.
+            {t("globalUi.versionHistoryDescription")}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="py-12 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Carregando histórico de edições...
+            <RefreshCw className="w-4 h-4 animate-spin text-primary" /> {t("globalUi.loadingEditHistory")}
           </div>
         ) : versions.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-lg">
-            Nenhuma edição anterior registrada. Esta publicação ainda está em sua versão original.
+            {t("globalUi.noPreviousEdits")}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Version List Sidebar */}
             <div className="space-y-2 border-r border-border pr-3">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Revisões ({versions.length})
+                {t("globalUi.revisions")} ({versions.length})
               </h4>
               <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
                 {versions.map((ver) => (
@@ -122,13 +125,13 @@ export function PostVersionHistoryModal({
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary">Versão #{ver.version_number}</span>
+                      <span className="font-bold text-primary">{t("globalUi.version")} #{ver.version_number}</span>
                       <Badge variant="outline" className="text-[9px] capitalize py-0">
                         {ver.change_type}
                       </Badge>
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      {new Date(ver.created_at).toLocaleString("pt-BR", {
+                      {new Date(ver.created_at).toLocaleString(lang === "pt" ? "pt-BR" : "en-US", {
                         day: "2-digit",
                         month: "2-digit",
                         hour: "2-digit",
@@ -152,11 +155,11 @@ export function PostVersionHistoryModal({
                   <div className="flex items-center justify-between pb-2 border-b border-border text-xs">
                     <div>
                       <span className="font-bold text-card-foreground">
-                        Snapshot Versão #{selectedVersion.version_number}
+                        {t("globalUi.versionSnapshot")} #{selectedVersion.version_number}
                       </span>
                       <span className="text-muted-foreground block text-[11px]">
-                        Editado por {selectedVersion.created_by_name} em{" "}
-                        {new Date(selectedVersion.created_at).toLocaleString("pt-BR")}
+                        {t("globalUi.editedBy")} {selectedVersion.created_by_name} {t("globalUi.onDate")}{" "}
+                        {new Date(selectedVersion.created_at).toLocaleString(lang === "pt" ? "pt-BR" : "en-US")}
                       </span>
                     </div>
 
@@ -169,25 +172,25 @@ export function PostVersionHistoryModal({
                         onClick={() => handleRestore(selectedVersion)}
                       >
                         <RotateCcw className={`w-3.5 h-3.5 ${restoring ? "animate-spin" : ""}`} />
-                        Restaurar esta Versão
+                        {t("globalUi.restoreThisVersion")}
                       </Button>
                     )}
                   </div>
 
                   {selectedVersion.edit_reason && (
                     <div className="bg-card p-2 rounded border border-border text-xs italic text-muted-foreground">
-                      <strong>Motivo da Edição:</strong> {selectedVersion.edit_reason}
+                      <strong>{t("globalUi.editReason")}:</strong> {selectedVersion.edit_reason}
                     </div>
                   )}
 
                   <div className="space-y-2">
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Título</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">{t("globalUi.title")}</span>
                       <h4 className="font-bold text-sm text-card-foreground">{selectedVersion.title_snapshot}</h4>
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Conteúdo do Snapshot</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">{t("globalUi.snapshotContent")}</span>
                       <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed bg-card p-3 rounded-lg border border-border">
                         {selectedVersion.content_snapshot}
                       </p>
@@ -196,7 +199,7 @@ export function PostVersionHistoryModal({
                 </div>
               ) : (
                 <div className="py-12 text-center text-xs text-muted-foreground">
-                  Selecione uma versão na lista ao lado para visualizar o snapshot.
+                  {t("globalUi.selectVersionToView")}
                 </div>
               )}
             </div>
