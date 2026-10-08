@@ -44,7 +44,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
       <button
         onClick={onOpenMobileNav}
         className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary lg:hidden"
-        aria-label="Open navigation"
+        aria-label={t("globalUi.openNavigation")}
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -72,7 +72,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex h-10 items-center gap-1.5 rounded-xl border border-search-border bg-search-bg px-3 text-sm font-semibold text-foreground hover:bg-secondary/80 transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-            aria-label="Select Language"
+            aria-label={t("globalUi.selectLanguage")}
           >
             <Globe className="h-[18px] w-[18px] text-muted-foreground" />
             <span className="hidden sm:inline">{lang === "en" ? "English" : "Português"}</span>
@@ -97,7 +97,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 }`}
               >
                 <span>🇺🇸</span>
-                <span>English</span>
+                <span>{t("globalUi.english")}</span>
               </button>
               <button
                 onClick={() => {
@@ -111,56 +111,16 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
                 }`}
               >
                 <span>🇧🇷</span>
-                <span>Português</span>
+                <span>{t("globalUi.portuguese")}</span>
               </button>
 
-              <div className="border-t border-border/40 my-1"></div>
-
-              <button
-                disabled
-                className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground/50 text-left cursor-not-allowed"
-              >
-                <div className="flex items-center gap-2">
-                  <span>🇪🇸</span>
-                  <span>Español</span>
-                </div>
-                <span className="text-[9px] uppercase font-bold text-muted-foreground/40 bg-secondary px-1 py-0.5 rounded">
-                  Soon
-                </span>
-              </button>
-
-              <button
-                disabled
-                className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground/50 text-left cursor-not-allowed"
-              >
-                <div className="flex items-center gap-2">
-                  <span>🇫🇷</span>
-                  <span>Français</span>
-                </div>
-                <span className="text-[9px] uppercase font-bold text-muted-foreground/40 bg-secondary px-1 py-0.5 rounded">
-                  Soon
-                </span>
-              </button>
-
-              <button
-                disabled
-                className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground/50 text-left cursor-not-allowed"
-              >
-                <div className="flex items-center gap-2">
-                  <span>🇩🇪</span>
-                  <span>Deutsch</span>
-                </div>
-                <span className="text-[9px] uppercase font-bold text-muted-foreground/40 bg-secondary px-1 py-0.5 rounded">
-                  Soon
-                </span>
-              </button>
             </div>
           )}
         </div>
 
         <button
           className="relative rounded-xl p-2.5 text-muted-foreground transition-colors hover:bg-secondary"
-          aria-label="Notifications"
+          aria-label={t("globalUi.notifications")}
         >
           <Bell className="h-5 w-5" />
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent ring-2 ring-header-bg" />
@@ -171,7 +131,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
           <button
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             className="grid h-10 w-10 place-items-center rounded-full bg-gradient-lilac text-sm font-semibold text-lilac-foreground cursor-pointer transition-transform hover:scale-105"
-            aria-label="Account Menu"
+            aria-label={t("globalUi.accountMenu")}
           >
             {getInitials()}
           </button>

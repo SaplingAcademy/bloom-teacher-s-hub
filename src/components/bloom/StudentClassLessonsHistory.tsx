@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import { StudentClassLesson, fetchStudentClassLessons } from "@/lib/lesson-plans";
+import { useLanguage } from "@/hooks/use-language";
 
-const STATUS_LABEL: Record<string, { pt: string; en: string; cls: string }> = {
-  present: { pt: "Presente", en: "Present", cls: "bg-emerald-100 text-emerald-800" },
-  absent: { pt: "Falta", en: "Absent", cls: "bg-rose-100 text-rose-800" },
-  late: { pt: "Atrasado", en: "Late", cls: "bg-amber-100 text-amber-800" },
-  excused: { pt: "Justificada", en: "Excused", cls: "bg-sky-100 text-sky-800" },
+const STATUS_CLASS: Record<string, string> = {
+  present: "bg-emerald-100 text-emerald-800",
+  absent: "bg-rose-100 text-rose-800",
+  late: "bg-amber-100 text-amber-800",
+  excused: "bg-sky-100 text-sky-800",
 };
 
-export function StudentClassLessonsHistory({ studentId, isPt }: { studentId: string; isPt: boolean }) {
+export function StudentClassLessonsHistory({ studentId }: { studentId: string; isPt: boolean }) {
+  const { t, formatStatus } = useLanguage();
   const [lessons, setLessons] = useState<StudentClassLesson[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ export function StudentClassLessonsHistory({ studentId, isPt }: { studentId: str
       <div className="flex items-center gap-2">
         <Users className="w-5 h-5 text-primary" />
         <h3 className="text-base font-semibold text-foreground">
-          {isPt ? "Aulas em turmas e duplas" : "Group & pair lessons"}
+          {t("globalUi.classPairLessons")}
         </h3>
         <span className="text-xs text-muted-foreground">({lessons.length})</span>
       </div>
@@ -39,7 +41,7 @@ export function StudentClassLessonsHistory({ studentId, isPt }: { studentId: str
       <div className="space-y-2">
         {lessons.map((l) => {
           const cancelled = l.event_status === "Cancelled";
-          const status = l.attendance_status ? STATUS_LABEL[l.attendance_status] : null;
+          const statusClass = l.attendance_status ? STATUS_CLASS[l.attendance_status] : null;
           return (
             <div
               key={l.event_id}
@@ -62,16 +64,16 @@ export function StudentClassLessonsHistory({ studentId, isPt }: { studentId: str
                 className={`px-2 py-0.5 rounded-full font-bold ${
                   cancelled
                     ? "bg-stone-200 text-stone-700"
-                    : status
-                    ? status.cls
+                    : statusClass
+                    ? statusClass
                     : "bg-muted text-muted-foreground"
                 }`}
               >
                 {cancelled
-                  ? isPt ? "Cancelada" : "Cancelled"
-                  : status
-                  ? isPt ? status.pt : status.en
-                  : isPt ? "Sem registro" : "Unrecorded"}
+                  ? t("globalUi.cancelledFeminine")
+                  : l.attendance_status
+                  ? formatStatus(l.attendance_status)
+                  : t("globalUi.unrecorded")}
               </span>
             </div>
           );
