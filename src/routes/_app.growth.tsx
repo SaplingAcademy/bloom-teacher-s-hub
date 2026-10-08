@@ -248,7 +248,7 @@ const translations = {
 };
 
 function GrowthPage() {
-  const { lang, t } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -405,7 +405,7 @@ function GrowthPage() {
     const parsed = parseBRL(editGoalInputValue);
     if (!parsed || parsed <= 0) {
       toast.error(
-        t("auditUi.pleaseEnterAValidGoalGreaterThan")
+        tr("auditUi.pleaseEnterAValidGoalGreaterThan")
       );
       return;
     }
@@ -416,7 +416,7 @@ function GrowthPage() {
       setMonthlyGoal(parsed);
       setIsEditGoalOpen(false);
       toast.success(
-        t("auditUi.monthlyGoalSavedSuccessfully")
+        tr("auditUi.monthlyGoalSavedSuccessfully")
       );
     } else {
       toast.error(toUserMessage(res.error, i18nT("errors.saveGoal", lang)));
@@ -605,7 +605,7 @@ function GrowthPage() {
     };
     localStorage.setItem("bloom.pricing.goal", JSON.stringify(goalData));
     alert(
-      t("auditUi.pricingGoalSuccessfullySaved"),
+      tr("auditUi.pricingGoalSuccessfullySaved"),
     );
   };
 
@@ -678,10 +678,10 @@ function GrowthPage() {
               </div>
               <div className="space-y-1 max-w-sm">
                 <h4 className="font-display text-base font-bold text-foreground">
-                  {t("auditUi.setYourMonthlyGoal")}
+                  {tr("auditUi.setYourMonthlyGoal")}
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {t("auditUi.addYourMonthlyTargetToTrackRevenue")}
+                  {tr("auditUi.addYourMonthlyTargetToTrackRevenue")}
                 </p>
               </div>
               <Button
@@ -689,7 +689,7 @@ function GrowthPage() {
                 className="mt-1 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95"
               >
                 <PlusCircle className="mr-1.5 h-4 w-4" />
-                {t("auditUi.setGoal")}
+                {tr("auditUi.setGoal")}
               </Button>
             </div>
           </div>
@@ -707,7 +707,7 @@ function GrowthPage() {
                 title="Editar meta mensal"
               >
                 <Pencil className="h-3.5 w-3.5" />
-                <span>{t("auditUi.editGoal")}</span>
+                <span>{tr("auditUi.editGoal")}</span>
               </button>
             </div>
 
@@ -738,7 +738,7 @@ function GrowthPage() {
                     {metrics.progressPct}%
                   </span>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                    {t("auditUi.goal")}
+                    {tr("auditUi.goal")}
                   </span>
                 </div>
               </div>
@@ -749,7 +749,7 @@ function GrowthPage() {
                   <button
                     onClick={() => navigate({ to: "/finance" })}
                     className="hover:text-primary transition-colors cursor-pointer text-left"
-                    title={t("auditUi.clickToViewDetailedRevenueInFinance")}
+                    title={tr("auditUi.clickToViewDetailedRevenueInFinance")}
                   >
                     {formatBRL(mrrData.totalMRR)}
                   </button>
@@ -762,11 +762,11 @@ function GrowthPage() {
                   <div className="space-y-0.5">
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-center sm:justify-start">
                       <CheckCircle2 className="h-4 w-4" />
-                      <span>{t("auditUi.goalReached")}</span>
+                      <span>{tr("auditUi.goalReached")}</span>
                     </p>
                     {metrics.overage > 0 && (
                       <p className="text-[11px] font-semibold text-muted-foreground">
-                        {formatBRL(metrics.overage)} {t("auditUi.aboveTarget")}
+                        {formatBRL(metrics.overage)} {tr("auditUi.aboveTarget")}
                       </p>
                     )}
                   </div>
@@ -787,7 +787,7 @@ function GrowthPage() {
                             ? `Para atingir sua meta, faltam aproximadamente `
                             : `To reach your goal, you need approximately `}
                           <strong className="font-extrabold text-foreground">
-                            {metrics.studentGap} {metrics.studentGap === 1 ? (t("auditUi.student")) : (t("auditUi.students"))}
+                            {metrics.studentGap} {metrics.studentGap === 1 ? (tr("auditUi.student")) : (tr("auditUi.students"))}
                           </strong>
                           {lang === "pt"
                             ? ` com ticket semelhante ao atual (${formatBRL(metrics.avgTicket)}/mês).`
@@ -806,14 +806,14 @@ function GrowthPage() {
                               </span>
                             </p>
                             <p className="text-[10px] opacity-90 font-normal">
-                              {t("auditUi.toReachYourGoalWithNewStudents")}
+                              {tr("auditUi.toReachYourGoalWithNewStudents")}
                             </p>
                           </div>
                         )}
                       </>
                     ) : (
                       <p className="font-medium opacity-90 text-[11px]">
-                        {t("auditUi.addYourActiveStudentsAndPackageContracts")}
+                        {tr("auditUi.addYourActiveStudentsAndPackageContracts")}
                       </p>
                     )}
                   </div>
@@ -840,10 +840,10 @@ function GrowthPage() {
               </div>
               <div className="space-y-1 max-w-sm">
                 <h4 className="font-display text-base font-bold text-foreground">
-                  {t("auditUi.configureYourAvailabilityToCalculateYourTeaching")}
+                  {tr("auditUi.configureYourAvailabilityToCalculateYourTeaching")}
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {t("auditUi.setYourWeeklyWorkingDaysAndHours")}
+                  {tr("auditUi.setYourWeeklyWorkingDaysAndHours")}
                 </p>
               </div>
               <Button
@@ -851,7 +851,7 @@ function GrowthPage() {
                 className="mt-1 rounded-xl bg-accent text-xs font-bold text-accent-foreground shadow-sm hover:bg-accent/90 cursor-pointer"
               >
                 <Clock className="mr-1.5 h-4 w-4" />
-                {t("auditUi.configureAvailability")}
+                {tr("auditUi.configureAvailability")}
               </Button>
             </div>
           </div>
@@ -867,7 +867,7 @@ function GrowthPage() {
                 onClick={() => setIsAvailabilityModalOpen(true)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 cursor-pointer"
               >
-                <span>{t("auditUi.configureAvailability")}</span>
+                <span>{tr("auditUi.configureAvailability")}</span>
                 <ArrowRight className="h-3 w-3" />
               </button>
             </div>
@@ -878,12 +878,12 @@ function GrowthPage() {
               </span>
               <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
                 {t.capacitySubtitle} ({capacityData.occupancyPct}%{" "}
-                {t("auditUi.occupied")})
+                {tr("auditUi.occupied")})
               </span>
             </div>
 
             <div className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {capacityData.totalRemainingSlots} {t("auditUi.slotsAvailable")}
+              {capacityData.totalRemainingSlots} {tr("auditUi.slotsAvailable")}
             </div>
 
             {/* Slots Availability Breakdown for working days only */}
@@ -973,10 +973,10 @@ function GrowthPage() {
         <div className="mb-6">
           <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
-            {t("auditUi.hourlyRateSimulator")}
+            {tr("auditUi.hourlyRateSimulator")}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t("auditUi.discoverHowMuchToChargePerTeaching")}
+            {tr("auditUi.discoverHowMuchToChargePerTeaching")}
           </p>
         </div>
 
@@ -990,7 +990,7 @@ function GrowthPage() {
                   htmlFor="sim-income"
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
-                  {t("auditUi.desiredNetIncome")}
+                  {tr("auditUi.desiredNetIncome")}
                   <span className="text-[10px] text-muted-foreground font-medium opacity-85">
                     (Take-home)
                   </span>
@@ -1006,7 +1006,7 @@ function GrowthPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="sim-currency" className="text-xs font-semibold text-foreground">
-                  {t("auditUi.currency")}
+                  {tr("auditUi.currency")}
                 </Label>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger id="sim-currency" className="h-10 rounded-xl">
@@ -1029,9 +1029,9 @@ function GrowthPage() {
                   htmlFor="sim-workhrs"
                   className="text-[11px] font-semibold text-foreground block"
                 >
-                  {t("auditUi.totalWorkHoursWeek")}
+                  {tr("auditUi.totalWorkHoursWeek")}
                   <span className="text-[9px] text-muted-foreground block leading-tight mt-0.5">
-                    ({t("auditUi.desiredTotalWorkload")})
+                    ({tr("auditUi.desiredTotalWorkload")})
                   </span>
                 </Label>
                 <SafeNumberInput
@@ -1053,9 +1053,9 @@ function GrowthPage() {
                   htmlFor="sim-teachhrs"
                   className="text-[11px] font-semibold text-foreground block"
                 >
-                  {t("auditUi.hoursReservedForLessonsWeek")}
+                  {tr("auditUi.hoursReservedForLessonsWeek")}
                   <span className="text-[9px] text-muted-foreground block leading-tight mt-0.5">
-                    ({t("auditUi.paidTeachingSlots")})
+                    ({tr("auditUi.paidTeachingSlots")})
                   </span>
                 </Label>
                 <SafeNumberInput
@@ -1066,7 +1066,7 @@ function GrowthPage() {
                   onChange={(val) => {
                     if (val > workHoursPerWeek) {
                       toast.error(
-                        t("auditUi.teachingHoursCannotExceedTotalWorkHours")
+                        tr("auditUi.teachingHoursCannotExceedTotalWorkHours")
                       );
                       setTeachHoursPerWeek(workHoursPerWeek);
                     } else {
@@ -1082,11 +1082,11 @@ function GrowthPage() {
                   htmlFor="sim-weeks"
                   className="text-[11px] font-semibold text-foreground flex items-center justify-between"
                 >
-                  <span>{t("auditUi.averageWeeksMonth")}</span>
+                  <span>{tr("auditUi.averageWeeksMonth")}</span>
                   <span
                     className="cursor-help text-muted-foreground hover:text-foreground"
                     title={
-                      t("auditUi.weUseAnAnnualAverage52Weeks")
+                      tr("auditUi.weUseAnAnnualAverage52Weeks")
                     }
                   >
                     <Info className="h-3 w-3 inline-block" />
@@ -1102,7 +1102,7 @@ function GrowthPage() {
                   className="h-10 rounded-xl"
                 />
                 <span className="text-[9px] text-muted-foreground block leading-none">
-                  ({t("auditUi.annualAvg433")})
+                  ({tr("auditUi.annualAvg433")})
                 </span>
               </div>
             </div>
@@ -1111,7 +1111,7 @@ function GrowthPage() {
             <div className="space-y-2 p-4 rounded-xl bg-secondary/35 border border-border/50">
               <div className="flex justify-between items-center text-xs font-semibold text-foreground">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/90">
-                  {t("auditUi.workloadSplitForLessons")}
+                  {tr("auditUi.workloadSplitForLessons")}
                 </span>
                 <span className="text-primary font-extrabold text-xs">
                   {teachHoursPerWeek}h / {workHoursPerWeek}h (
@@ -1133,11 +1133,11 @@ function GrowthPage() {
 
               <div className="text-[11px] text-muted-foreground leading-relaxed pt-0.5">
                 <p className="font-medium text-foreground/80">
-                  💡 {Math.max(0, workHoursPerWeek - teachHoursPerWeek)}h {t("auditUi.weeklyHoursRemainAvailableForPreparationAdmin")}
+                  💡 {Math.max(0, workHoursPerWeek - teachHoursPerWeek)}h {tr("auditUi.weeklyHoursRemainAvailableForPreparationAdmin")}
                 </p>
                 {Math.round((teachHoursPerWeek / (workHoursPerWeek || 1)) * 100) > 75 && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
-                    ⚠️ {t("auditUi.youAllocatedOver75OfYourWorkload")}
+                    ⚠️ {tr("auditUi.youAllocatedOver75OfYourWorkload")}
                   </p>
                 )}
               </div>
@@ -1151,7 +1151,7 @@ function GrowthPage() {
                 className="w-full flex items-center justify-between p-3.5 text-xs font-bold text-foreground hover:bg-secondary/40 transition-colors"
               >
                 <span>
-                  {t("auditUi.advancedSettingsCostsMargins")}
+                  {tr("auditUi.advancedSettingsCostsMargins")}
                 </span>
                 <span>{advancedExpanded ? "▲" : "▼"}</span>
               </button>
@@ -1165,12 +1165,12 @@ function GrowthPage() {
                       className="text-xs font-semibold text-foreground flex items-center justify-between"
                     >
                       <span>
-                        {t("auditUi.monthlyBusinessExpenses")}
+                        {tr("auditUi.monthlyBusinessExpenses")}
                       </span>
                       <span className="text-[10px] font-bold text-muted-foreground">
                         {isManualExpenses
-                          ? (t("auditUi.manualEstimate"))
-                          : (t("auditUi.realFinanceData"))}
+                          ? (tr("auditUi.manualEstimate"))
+                          : (tr("auditUi.realFinanceData"))}
                       </span>
                     </Label>
                     <SafeNumberInput
@@ -1186,7 +1186,7 @@ function GrowthPage() {
                   <div className="grid grid-cols-2 gap-4 items-start">
                     <div className="space-y-1">
                       <Label htmlFor="sim-tax" className="text-xs font-semibold text-foreground">
-                        {t("auditUi.taxPaymentFees")}
+                        {tr("auditUi.taxPaymentFees")}
                       </Label>
                       <div className="relative">
                         <SafeNumberInput
@@ -1205,7 +1205,7 @@ function GrowthPage() {
 
                     <div className="space-y-1">
                       <Label htmlFor="sim-safety" className="text-xs font-semibold text-foreground">
-                        {t("auditUi.safetyMargin")}
+                        {tr("auditUi.safetyMargin")}
                       </Label>
                       <div className="relative">
                         <SafeNumberInput
@@ -1229,36 +1229,36 @@ function GrowthPage() {
             {/* Suggestions Banner */}
             <div className="rounded-xl border border-border/80 bg-primary-soft/30 p-4 space-y-1.5">
               <h5 className="text-[10px] font-bold uppercase tracking-wider text-primary">
-                {t("auditUi.currentBusinessData")}
+                {tr("auditUi.currentBusinessData")}
               </h5>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-semibold text-foreground/80">
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {t("auditUi.activeStudents")}
+                    {tr("auditUi.activeStudents")}
                   </span>
                   <span>{currentStudentsCount}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {t("auditUi.currentMrr")}
+                    {tr("auditUi.currentMrr")}
                   </span>
                   <span>
-                    {currentMRR > 0 ? formatBRL(currentMRR) : (t("auditUi.0"))}
+                    {currentMRR > 0 ? formatBRL(currentMRR) : (tr("auditUi.0"))}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {t("auditUi.avgHourlyRate")}
+                    {tr("auditUi.avgHourlyRate")}
                   </span>
                   <span>
                     {currentAvgHourlyRate > 0
                       ? `${currency} ${currentAvgHourlyRate}/h`
-                      : (t("auditUi.noData"))}
+                      : (tr("auditUi.noData"))}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
-                    {t("auditUi.agendaOccupied")}
+                    {tr("auditUi.agendaOccupied")}
                   </span>
                   <span>{capacityData.occupancyPct}%</span>
                 </div>
@@ -1272,7 +1272,7 @@ function GrowthPage() {
                 onClick={async () => {
                   if (!user) return;
                   if (incomeGoal <= 0) {
-                    toast.error(t("auditUi.pleaseEnterAValidGoal"));
+                    toast.error(tr("auditUi.pleaseEnterAValidGoal"));
                     return;
                   }
                   setIsSavingGoal(true);
@@ -1281,7 +1281,7 @@ function GrowthPage() {
                   if (res.success) {
                     setMonthlyGoal(incomeGoal);
                     toast.success(
-                      t("auditUi.savedAsYourOfficialMonthlyGoal")
+                      tr("auditUi.savedAsYourOfficialMonthlyGoal")
                     );
                   } else {
                     toast.error(toUserMessage(res.error, i18nT("errors.saveGoal", lang)));
@@ -1291,7 +1291,7 @@ function GrowthPage() {
                 className="flex-1 inline-flex h-10 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/95 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSavingGoal ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-                {t("auditUi.saveAsMyPricingGoal")}
+                {tr("auditUi.saveAsMyPricingGoal")}
               </button>
               <button
                 type="button"
@@ -1310,11 +1310,11 @@ function GrowthPage() {
                   setExpenses(realExpenses);
                   setTaxPercent(15);
                   setSafetyMarginPercent(10);
-                  toast.info(t("auditUi.simulatorResetToRealData"));
+                  toast.info(tr("auditUi.simulatorResetToRealData"));
                 }}
                 className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-secondary cursor-pointer transition-all"
               >
-                {t("auditUi.reset")}
+                {tr("auditUi.reset")}
               </button>
             </div>
           </div>
@@ -1352,12 +1352,12 @@ function GrowthPage() {
                   {/* Recommended rate badge */}
                   <div className="text-center py-4 border-b border-lilac-foreground/20 space-y-1">
                     <span className="text-[10px] uppercase font-extrabold tracking-widest opacity-80 block">
-                      {t("auditUi.recommendedHourlyRate")}
+                      {tr("auditUi.recommendedHourlyRate")}
                     </span>
                     <h3 className="font-display text-4xl font-extrabold text-white">
                       {currency} {recHourlyRate}{" "}
                       <span className="text-sm font-semibold opacity-90">
-                        /{t("auditUi.hour")}
+                        /{tr("auditUi.hour")}
                       </span>
                     </h3>
                     <p className="text-[11px] opacity-80 pt-1">
@@ -1371,11 +1371,11 @@ function GrowthPage() {
                   <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 flex items-center gap-1">
-                        <span>{t("auditUi.minSustainableRate")}</span>
+                        <span>{tr("auditUi.minSustainableRate")}</span>
                         <span
                           className="cursor-help opacity-70 hover:opacity-100"
                           title={
-                            t("auditUi.theLowestHourlyRateThatCoversOperating")
+                            tr("auditUi.theLowestHourlyRateThatCoversOperating")
                           }
                         >
                           <Info className="h-3 w-3 inline-block" />
@@ -1388,7 +1388,7 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {t("auditUi.requiredGrossRevenue")}
+                        {tr("auditUi.requiredGrossRevenue")}
                       </span>
                       <span className="text-sm font-bold text-white">
                         {currency} {grossNeeded.toLocaleString()}/{t.month}
@@ -1397,18 +1397,18 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {t("auditUi.billableHoursMonth")}
+                        {tr("auditUi.billableHoursMonth")}
                       </span>
                       <span className="text-sm font-bold text-white">{monthlyBillableHours}h</span>
                     </div>
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 flex items-center gap-1">
-                        <span>{t("auditUi.reservedCapacityOccupancy")}</span>
+                        <span>{tr("auditUi.reservedCapacityOccupancy")}</span>
                         <span
                           className="cursor-help opacity-70 hover:opacity-100"
                           title={
-                            t("auditUi.percentageOfYourReservedLessonHoursCurrently")
+                            tr("auditUi.percentageOfYourReservedLessonHoursCurrently")
                           }
                         >
                           <Info className="h-3 w-3 inline-block" />
@@ -1421,7 +1421,7 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {t("auditUi.currentRate")}
+                        {tr("auditUi.currentRate")}
                       </span>
                       <span className="text-sm font-bold text-white">
                         {currentAvgHourlyRate > 0 ? `${currency} ${currentAvgHourlyRate}/h` : "—"}
@@ -1430,7 +1430,7 @@ function GrowthPage() {
 
                     <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
                       <span className="opacity-80 block">
-                        {t("auditUi.requiredDifference")}
+                        {tr("auditUi.requiredDifference")}
                       </span>
                       <span className="text-sm font-bold text-white">
                         {currentAvgHourlyRate > 0
@@ -1453,7 +1453,7 @@ function GrowthPage() {
                         <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-300" />
                         <div className="space-y-1.5 flex-1">
                           <p className="font-bold text-amber-200">
-                            {t("auditUi.calendarAvailabilityAlert")}
+                            {tr("auditUi.calendarAvailabilityAlert")}
                           </p>
                           <p className="opacity-95 text-[11px] leading-normal">
                             {lang === "pt"
@@ -1466,7 +1466,7 @@ function GrowthPage() {
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-[11px] font-bold transition-colors cursor-pointer"
                           >
                             <Clock className="w-3.5 h-3.5" />
-                            <span>{t("auditUi.reviewAvailability")}</span>
+                            <span>{tr("auditUi.reviewAvailability")}</span>
                           </button>
                         </div>
                       </>
@@ -1475,7 +1475,7 @@ function GrowthPage() {
                         <CheckCircle className="h-4.5 w-4.5 shrink-0 text-emerald-300" />
                         <div>
                           <p className="font-bold text-emerald-200">
-                            {t("auditUi.goalFitsCalendarAvailability")}
+                            {tr("auditUi.goalFitsCalendarAvailability")}
                           </p>
                           <p className="opacity-95 text-[11px] leading-normal mt-0.5">
                             {lang === "pt"
@@ -1490,10 +1490,10 @@ function GrowthPage() {
                   {/* Student Projections estimate box */}
                   <div className="rounded-xl bg-white/5 border border-white/15 p-3.5 space-y-2 text-white">
                     <h5 className="text-[10px] uppercase font-bold tracking-wider opacity-90">
-                      {t("auditUi.studentProjections")}
+                      {tr("auditUi.studentProjections")}
                     </h5>
                     <p className="text-[11px] leading-snug opacity-95">
-                      {t("auditUi.toReachThisGoalYouWouldNeed")}
+                      {tr("auditUi.toReachThisGoalYouWouldNeed")}
                     </p>
                     <ul className="text-xs list-disc list-inside space-y-1 font-medium pl-1">
                       <li>
@@ -1502,7 +1502,7 @@ function GrowthPage() {
                           : `${weeklyVIPsNeeded} weekly VIP students at the recommended rate of ${currency} ${recHourlyRate}`}
                       </li>
                       <li className="list-none italic opacity-70 text-[10px] pl-3">
-                        — {t("auditUi.or")} —
+                        — {tr("auditUi.or")} —
                       </li>
                       <li>
                         {lang === "pt"
@@ -1529,7 +1529,7 @@ function GrowthPage() {
 
           const scenarios = [
             {
-              name: t("auditUi.currentPricing"),
+              name: tr("auditUi.currentPricing"),
               rate: currentAvgHourlyRate,
               mrr: currentMRR,
               hours: Math.round(currentMRR / (currentAvgHourlyRate || 1)),
@@ -1543,7 +1543,7 @@ function GrowthPage() {
               ),
             },
             {
-              name: t("auditUi.minSustainable"),
+              name: tr("auditUi.minSustainable"),
               rate: minHourlyRate,
               mrr: incomeGoal + expenses,
               hours: monthlyBillableHours,
@@ -1551,7 +1551,7 @@ function GrowthPage() {
               occupancy: Math.round((teachHoursPerWeek / (availableWeeklySlots || 1)) * 100),
             },
             {
-              name: t("auditUi.recommended"),
+              name: tr("auditUi.recommended"),
               rate: recHourlyRate,
               mrr: grossNeeded,
               hours: monthlyBillableHours,
@@ -1563,7 +1563,7 @@ function GrowthPage() {
           return (
             <div className="mt-6 rounded-xl border border-border bg-card p-5 md:p-6 shadow-sm space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                {t("auditUi.pricingScenariosComparison")}
+                {tr("auditUi.pricingScenariosComparison")}
               </h4>
               <div className="grid gap-4 sm:grid-cols-3 items-stretch">
                 {scenarios.map((sc, index) => (
@@ -1585,15 +1585,15 @@ function GrowthPage() {
                         </span>
                       </p>
                       <p>
-                        {t("auditUi.hoursMonth")}:{" "}
+                        {tr("auditUi.hoursMonth")}:{" "}
                         <span className="text-foreground">{sc.hours}h</span>
                       </p>
                       <p>
-                        {t("auditUi.estStudents")}:{" "}
+                        {tr("auditUi.estStudents")}:{" "}
                         <span className="text-foreground">{sc.students}</span>
                       </p>
                       <p>
-                        {t("auditUi.occupancy")}:{" "}
+                        {tr("auditUi.occupancy")}:{" "}
                         <span className="text-foreground">{sc.occupancy}%</span>
                       </p>
                     </div>
@@ -1679,7 +1679,7 @@ function GrowthPage() {
             <div className="flex items-center gap-2">
               <Badge className="bg-primary hover:bg-primary">5</Badge>
               <span className="text-sm font-bold text-foreground">
-                {t("auditUi.leads")}
+                {tr("auditUi.leads")}
               </span>
             </div>
             <span className="text-xs text-muted-foreground font-semibold">100%</span>
@@ -1688,7 +1688,7 @@ function GrowthPage() {
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
             <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              80% {t("auditUi.conv")}
+              80% {tr("auditUi.conv")}
             </span>
           </div>
 
@@ -1697,7 +1697,7 @@ function GrowthPage() {
             <div className="flex items-center gap-2">
               <Badge className="bg-primary hover:bg-primary">4</Badge>
               <span className="text-sm font-bold text-foreground">
-                {t("auditUi.contacted")}
+                {tr("auditUi.contacted")}
               </span>
             </div>
             <span className="text-xs text-muted-foreground font-semibold">80%</span>
@@ -1706,7 +1706,7 @@ function GrowthPage() {
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
             <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              50% {t("auditUi.conv")}
+              50% {tr("auditUi.conv")}
             </span>
           </div>
 
@@ -1715,7 +1715,7 @@ function GrowthPage() {
             <div className="flex items-center gap-2">
               <Badge className="bg-primary hover:bg-primary">2</Badge>
               <span className="text-sm font-bold text-foreground">
-                {t("auditUi.trial")}
+                {tr("auditUi.trial")}
               </span>
             </div>
             <span className="text-xs text-muted-foreground font-semibold">40%</span>
@@ -1724,7 +1724,7 @@ function GrowthPage() {
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
             <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              100% {t("auditUi.conv")}
+              100% {tr("auditUi.conv")}
             </span>
           </div>
 
@@ -1735,7 +1735,7 @@ function GrowthPage() {
                 28
               </Badge>
               <span className="text-sm font-bold">
-                {t("auditUi.activeStudents")}
+                {tr("auditUi.activeStudents")}
               </span>
             </div>
             <span className="text-xs font-bold">40%</span>
@@ -1748,13 +1748,13 @@ function GrowthPage() {
         <DialogContent className="max-w-md rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">
-              {t("auditUi.editMonthlyGoal")}
+              {tr("auditUi.editMonthlyGoal")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveGoalSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label htmlFor="monthly-goal-input" className="text-xs font-semibold text-foreground">
-                {t("auditUi.monthlyRevenueTargetR")}
+                {tr("auditUi.monthlyRevenueTargetR")}
               </Label>
               <Input
                 id="monthly-goal-input"
@@ -1766,7 +1766,7 @@ function GrowthPage() {
                 autoFocus
               />
               <p className="text-[11px] text-muted-foreground">
-                {t("auditUi.setYourTargetGrossMonthlyRevenueIn")}
+                {tr("auditUi.setYourTargetGrossMonthlyRevenueIn")}
               </p>
             </div>
 
@@ -1777,7 +1777,7 @@ function GrowthPage() {
                 onClick={() => setIsEditGoalOpen(false)}
                 className="rounded-xl"
               >
-                {t("auditUi.cancel")}
+                {tr("auditUi.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -1785,7 +1785,7 @@ function GrowthPage() {
                 className="rounded-xl bg-primary text-primary-foreground font-semibold"
               >
                 {isSavingGoal ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                {t("auditUi.saveGoal")}
+                {tr("auditUi.saveGoal")}
               </Button>
             </div>
           </form>

@@ -120,29 +120,30 @@ type AuthView =
   | "confirmed_error";
 
 function mapSupabaseAuthError(err: any, lang: "pt" | "en"): string {
+  const tr = (key: string) => i18nT(key, lang);
   if (!err) return "";
   const msg = err.message?.toLowerCase() || "";
   const status = err.status;
 
   if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
-    return t("auditUi.invalidEmailOrPassword");
+    return tr("auditUi.invalidEmailOrPassword");
   }
   if (msg.includes("email not confirmed")) {
-    return t("auditUi.emailNotVerifiedYetPleaseCheckYour");
+    return tr("auditUi.emailNotVerifiedYetPleaseCheckYour");
   }
   if (msg.includes("signup is disabled") || msg.includes("signups not allowed")) {
-    return t("auditUi.publicRegistrationIsDisabledBloomIsCurrently");
+    return tr("auditUi.publicRegistrationIsDisabledBloomIsCurrently");
   }
   if (status === 429 || msg.includes("rate limit") || msg.includes("too many requests")) {
-    return t("auditUi.tooManyRequestsPleaseWaitBeforeTrying");
+    return tr("auditUi.tooManyRequestsPleaseWaitBeforeTrying");
   }
   if (msg.includes("token has expired") || msg.includes("invalid token") || msg.includes("link is invalid")) {
-    return t("auditUi.theLinkHasExpiredOrIsInvalid");
+    return tr("auditUi.theLinkHasExpiredOrIsInvalid");
   }
   if (msg.includes("user already registered") || msg.includes("already registered")) {
-    return t("auditUi.thisEmailIsAlreadyRegisteredPleaseTry");
+    return tr("auditUi.thisEmailIsAlreadyRegisteredPleaseTry");
   }
-  return err.message || (t("auditUi.authenticationError"));
+  return err.message || (tr("auditUi.authenticationError"));
 }
 
 function AuthPage() {
@@ -740,7 +741,7 @@ function AuthPage() {
       }
     } catch (err: any) {
       console.error("[Auth] Auth error caught in form handler:", err);
-      const userMsg = mapSupabaseAuthError(err, t("auditUi.en"));
+      const userMsg = mapSupabaseAuthError(err, lang);
       toast.error(userMsg);
     } finally {
       console.log("Auth process completed (finally block triggered). Setting loading to false.");

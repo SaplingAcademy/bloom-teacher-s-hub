@@ -995,7 +995,7 @@ function CalendarPage() {
     alert(t("auditUi.lessonPlanLinked"));
   };
 
-  const currentTranslation = t[lang];
+  const currentTranslation = translations[lang];
 
   // Hours for grid display in week/day view (08:00 to 21:00)
   // Grid shading source: teacher availability snapshot (single source of truth)

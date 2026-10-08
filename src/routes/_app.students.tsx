@@ -555,7 +555,7 @@ function StudentsPage() {
     eventId: requestedEventId,
   } = Route.useSearch();
   const navigate = useNavigate();
-  const { lang, t } = useLanguage();
+  const { lang, t: tr } = useLanguage();
   const { user } = useAuth();
   const {
     languages: teacherLanguages,
@@ -1094,7 +1094,7 @@ function StudentsPage() {
     const isEditPackageSelected = editPackageId && editPackageId !== "" && editPackageId !== "none_value";
     if (isEditPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
-        t("auditUi.pleaseSelectADueDay")
+        tr("auditUi.pleaseSelectADueDay")
       );
       return;
     }
@@ -1327,13 +1327,13 @@ function StudentsPage() {
     if (!data) return;
 
     const dayTranslation: Record<string, string> = {
-      Monday: t("auditUi.mon"),
-      Tuesday: t("auditUi.tue"),
-      Wednesday: t("auditUi.wed"),
-      Thursday: t("auditUi.thu"),
-      Friday: t("auditUi.fri"),
-      Saturday: t("auditUi.sat"),
-      Sunday: t("auditUi.sun"),
+      Monday: tr("auditUi.mon"),
+      Tuesday: tr("auditUi.tue"),
+      Wednesday: tr("auditUi.wed"),
+      Thursday: tr("auditUi.thu"),
+      Friday: tr("auditUi.fri"),
+      Saturday: tr("auditUi.sat"),
+      Sunday: tr("auditUi.sun"),
     };
 
     const mappedStudents: Student[] = data.map((d: any) => {
@@ -1637,7 +1637,7 @@ function StudentsPage() {
       const isDirty = checkIsFormDirty();
       if (isDirty) {
         const confirmClose = window.confirm(
-          t("auditUi.youHaveUnsavedChangesAreYouSure")
+          tr("auditUi.youHaveUnsavedChangesAreYouSure")
         );
         if (!confirmClose) return;
       }
@@ -1671,7 +1671,7 @@ function StudentsPage() {
     const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
     if (isPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
-        t("auditUi.pleaseSelectADueDay")
+        tr("auditUi.pleaseSelectADueDay")
       );
       return;
     }
@@ -1821,7 +1821,7 @@ function StudentsPage() {
     if (!id) return;
 
     const confirmMessage =
-      t("auditUi.areYouSureYouWantToDelete2");
+      tr("auditUi.areYouSureYouWantToDelete2");
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -2086,7 +2086,7 @@ function StudentsPage() {
                   {t.privateNotesTitle}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {t("auditUi.theseNotesAreStrictlyPrivateToThis")}
+                  {tr("auditUi.theseNotesAreStrictlyPrivateToThis")}
                 </p>
                 <textarea
                   value={selectedStudent.notes || ""}
@@ -2105,7 +2105,7 @@ function StudentsPage() {
                     }
                   }}
                   rows={4}
-                  placeholder={t("auditUi.writePrivateNotesAboutThisStudent")}
+                  placeholder={tr("auditUi.writePrivateNotesAboutThisStudent")}
                   className="w-full rounded-xl border border-border bg-background p-3 text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium"
                 />
               </div>
@@ -2157,7 +2157,7 @@ function StudentsPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {t("auditUi.activePackage")}
+                    {tr("auditUi.activePackage")}
                   </span>
                   <div className="text-base font-bold text-foreground flex items-center gap-2 flex-wrap">
                     <span>{financialSummary?.packageName || (studentPkg ? studentPkg.name : t.financeNoPkg)}</span>
@@ -2180,7 +2180,7 @@ function StudentsPage() {
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {t("auditUi.paymentProgress")}
+                    {tr("auditUi.paymentProgress")}
                   </span>
                   <div className="text-base font-bold text-foreground">
                     {financialSummary?.currentInstallmentLabel || "Mensalidade"}
@@ -2192,30 +2192,30 @@ function StudentsPage() {
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {t("auditUi.nextDueDate")}
+                    {tr("auditUi.nextDueDate")}
                   </span>
                   <div className="text-base font-bold text-foreground">
                     {financialSummary?.nextDueDate
                       ? new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.nextDueDate}T00:00:00Z`))
-                      : (t("auditUi.upToDate"))}
+                      : (tr("auditUi.upToDate"))}
                   </div>
                   {financialSummary?.lastPaymentDate && (
                     <p className="text-[11px] text-muted-foreground font-medium">
-                      {t("auditUi.lastPaid")} {new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.lastPaymentDate}T00:00:00Z`))}
+                      {tr("auditUi.lastPaid")} {new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.lastPaymentDate}T00:00:00Z`))}
                     </p>
                   )}
                 </div>
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {t("auditUi.remainingBalance")}
+                    {tr("auditUi.remainingBalance")}
                   </span>
                   <div className="text-xl font-extrabold text-foreground">
                     {financialSummary?.remainingBalanceFormatted || "R$ 0,00"}
                   </div>
                   {financialSummary?.isInstallment && (
                     <p className="text-[10px] text-stone-500 font-semibold">
-                      {t("auditUi.totalAgreementValue")}
+                      {tr("auditUi.totalAgreementValue")}
                     </p>
                   )}
                 </div>
@@ -2225,7 +2225,7 @@ function StudentsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
                 <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <Tag className="w-4 h-4 text-emerald-600" />
-                  {t("auditUi.packageAgreementsHistory")}
+                  {tr("auditUi.packageAgreementsHistory")}
                 </h4>
 
                 <div className="space-y-4">
@@ -2289,12 +2289,12 @@ function StudentsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
                 <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-emerald-600" />
-                  {t("auditUi.paymentHistory")}
+                  {tr("auditUi.paymentHistory")}
                 </h4>
 
                 {studentPaymentHistory.length === 0 ? (
                   <p className="text-xs text-muted-foreground font-medium py-4 text-center">
-                    {t("auditUi.noPaymentHistoryRecordedYet")}
+                    {tr("auditUi.noPaymentHistoryRecordedYet")}
                   </p>
                 ) : (
                   <div className="divide-y divide-border/60">
@@ -2333,7 +2333,7 @@ function StudentsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
                 <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                   <Clock className="w-4 h-4 text-emerald-600" />
-                  {t("auditUi.financialTimeline")}
+                  {tr("auditUi.financialTimeline")}
                 </h4>
 
                 {studentTimeline.length === 0 ? (
@@ -2389,7 +2389,7 @@ function StudentsPage() {
                 <ColorSelector
                   value={editColorKey}
                   onChange={(val) => setEditColorKey(val)}
-                  label={t("auditUi.studentBrandColor")}
+                  label={tr("auditUi.studentBrandColor")}
                 />
 
                 <Button type="submit" className="w-full font-bold cursor-pointer">
@@ -2448,7 +2448,7 @@ function StudentsPage() {
               }`}
             >
               <Users className="h-4 w-4" />
-              <span>{t("auditUi.allStudents")} ({activeStudents.length})</span>
+              <span>{tr("auditUi.allStudents")} ({activeStudents.length})</span>
             </button>
 
             <button
@@ -2462,7 +2462,7 @@ function StudentsPage() {
             >
               <User className="h-4 w-4" />
               <span>
-                {t("auditUi.individualStudents")} ({individualActiveStudents.length})
+                {tr("auditUi.individualStudents")} ({individualActiveStudents.length})
               </span>
             </button>
 
@@ -2476,7 +2476,7 @@ function StudentsPage() {
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              <span>{t("auditUi.classesPairs")} ({classesList.length})</span>
+              <span>{tr("auditUi.classesPairs")} ({classesList.length})</span>
             </button>
 
             <button
@@ -2546,7 +2546,7 @@ function StudentsPage() {
                   ))
                 ) : languagesLoading ? null : (
                   <SelectItem value="CONFIGURE_LANGUAGES" className="text-amber-700 font-semibold">
-                    {t("auditUi.configureLanguages")}
+                    {tr("auditUi.configureLanguages")}
                   </SelectItem>
                 )}
               </SelectContent>
@@ -2591,10 +2591,10 @@ function StudentsPage() {
                 <div className="p-12 text-center bg-card rounded-2xl border border-border/80 space-y-4">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto" />
                   <h3 className="text-lg font-bold font-outfit">
-                    {t("auditUi.noClassesOrPairsFound")}
+                    {tr("auditUi.noClassesOrPairsFound")}
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    {t("auditUi.createGroupClassesOrPairLessonsWhile")}
+                    {tr("auditUi.createGroupClassesOrPairLessonsWhile")}
                   </p>
                   <button
                     onClick={() => {
@@ -2605,7 +2605,7 @@ function StudentsPage() {
                     className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#163020] text-[#F4EBE1] px-5 text-sm font-bold hover:bg-[#1a3825] cursor-pointer shadow-md"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{t("auditUi.createFirstClass")}</span>
+                    <span>{tr("auditUi.createFirstClass")}</span>
                   </button>
                 </div>
               ) : (
@@ -2719,7 +2719,7 @@ function StudentsPage() {
           <DialogHeader className="p-6 pb-4 border-b border-border bg-[#FAF8F5] shrink-0">
             <DialogTitle className="font-outfit text-xl font-bold text-[#33411B]">
               {editingStudentIdForModal
-                ? t("auditUi.editStudentProfile")
+                ? tr("auditUi.editStudentProfile")
                 : t.modalTitle}
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-1 select-none">
@@ -2736,7 +2736,7 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <User className="h-4 w-4 text-[#33411B]" />
-                  {t("auditUi.studentInformation")}
+                  {tr("auditUi.studentInformation")}
                 </div>
                 <div className="space-y-4">
                   {/* Name */}
@@ -2790,7 +2790,7 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <BookOpen className="h-4 w-4 text-[#33411B]" />
-                  {t("auditUi.courseLevel")}
+                  {tr("auditUi.courseLevel")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -2813,15 +2813,15 @@ function StudentsPage() {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="std-focus" className="text-xs font-semibold text-foreground select-none">
-                      {t("auditUi.languageStudied")}
+                      {tr("auditUi.languageStudied")}
                     </Label>
                     <Select value={formFocus} onValueChange={(val) => setFormFocus(val)}>
                       <SelectTrigger id="std-focus" className="h-11 rounded-xl border-border bg-white">
                         <SelectValue
                           placeholder={
                             languagesLoading
-                              ? t("auditUi.loading")
-                              : t("auditUi.selectTheLanguage")
+                              ? tr("auditUi.loading")
+                              : tr("auditUi.selectTheLanguage")
                           }
                         />
                       </SelectTrigger>
@@ -2849,7 +2849,7 @@ function StudentsPage() {
                           onClick={() => navigate({ to: "/settings" })}
                           className="underline font-bold cursor-pointer hover:text-amber-900"
                         >
-                          {t("auditUi.configureLanguages2")}
+                          {tr("auditUi.configureLanguages2")}
                         </button>
                       </p>
                     )}
@@ -2889,7 +2889,7 @@ function StudentsPage() {
                 <ColorSelector
                   value={formColorKey}
                   onChange={(val) => setFormColorKey(val)}
-                  label={t("auditUi.studentBrandColor")}
+                  label={tr("auditUi.studentBrandColor")}
                 />
               </div>
 
@@ -2897,7 +2897,7 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <DollarSign className="h-4 w-4 text-[#33411B]" />
-                  {t("auditUi.financialPlan")}
+                  {tr("auditUi.financialPlan")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="std-package" className="text-xs font-semibold text-foreground select-none">
@@ -2918,7 +2918,7 @@ function StudentsPage() {
                         onClick={() => navigate({ to: "/finance" })}
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        {t("auditUi.createPackage")}
+                        {tr("auditUi.createPackage")}
                       </Button>
                     </div>
                   ) : (
@@ -2937,13 +2937,13 @@ function StudentsPage() {
                         }}
                       >
                         <SelectTrigger id="std-package" className="h-11 rounded-xl border-border bg-white">
-                          <SelectValue placeholder={t("auditUi.selectAPackage")} />
+                          <SelectValue placeholder={tr("auditUi.selectAPackage")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none_value">{t("auditUi.none")}</SelectItem>
+                          <SelectItem value="none_value">{tr("auditUi.none")}</SelectItem>
                           {packages.map((pkg) => (
                             <SelectItem key={pkg.id} value={pkg.id}>
-                              {pkg.name} — {formatReaisToBRL(pkg.price)} ({pkg.lessons} {t("auditUi.lessons")})
+                              {pkg.name} — {formatReaisToBRL(pkg.price)} ({pkg.lessons} {tr("auditUi.lessons")})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -2971,7 +2971,7 @@ function StudentsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.installments")}
+                                    {tr("auditUi.installments")}
                                   </Label>
                                   <Select
                                     value={installmentCount.toString()}
@@ -2992,7 +2992,7 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.dueDate")}
+                                    {tr("auditUi.dueDate")}
                                   </Label>
                                   <Select
                                     value={formDueDay ? formDueDay.toString() : ""}
@@ -3005,7 +3005,7 @@ function StudentsPage() {
                                     }}
                                   >
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
-                                      <SelectValue placeholder={t("auditUi.selectADay")} />
+                                      <SelectValue placeholder={tr("auditUi.selectADay")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -3019,7 +3019,7 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.firstDueDate")}
+                                    {tr("auditUi.firstDueDate")}
                                   </Label>
                                   <Input
                                     type="date"
@@ -3033,13 +3033,13 @@ function StudentsPage() {
                                     className="h-10 rounded-xl border-border bg-white text-sm font-semibold"
                                   />
                                   <p className="text-[10px] text-muted-foreground leading-tight">
-                                    {t("auditUi.contractAlreadyRunningEnterThe1stCharge")}
+                                    {tr("auditUi.contractAlreadyRunningEnterThe1stCharge")}
                                   </p>
                                 </div>
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.paymentMethod")}
+                                    {tr("auditUi.paymentMethod")}
                                   </Label>
                                   <Select value={formPaymentMethod} onValueChange={setFormPaymentMethod}>
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white">
@@ -3058,7 +3058,7 @@ function StudentsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.dueDate")}
+                                    {tr("auditUi.dueDate")}
                                   </Label>
                                   <Select
                                     value={formDueDay ? formDueDay.toString() : ""}
@@ -3071,7 +3071,7 @@ function StudentsPage() {
                                     }}
                                   >
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white text-sm font-semibold">
-                                      <SelectValue placeholder={t("auditUi.selectADay")} />
+                                      <SelectValue placeholder={tr("auditUi.selectADay")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
@@ -3085,7 +3085,7 @@ function StudentsPage() {
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.firstDueDate")}
+                                    {tr("auditUi.firstDueDate")}
                                   </Label>
                                   <Input
                                     type="date"
@@ -3099,13 +3099,13 @@ function StudentsPage() {
                                     className="h-10 rounded-xl border-border bg-white text-sm font-semibold"
                                   />
                                   <p className="text-[10px] text-muted-foreground leading-tight">
-                                    {t("auditUi.contractAlreadyRunningEnterThe1stCharge")}
+                                    {tr("auditUi.contractAlreadyRunningEnterThe1stCharge")}
                                   </p>
                                 </div>
 
                                 <div className="space-y-1">
                                   <Label className="text-xs font-semibold text-foreground select-none">
-                                    {t("auditUi.paymentMethod")}
+                                    {tr("auditUi.paymentMethod")}
                                   </Label>
                                   <Select value={formPaymentMethod} onValueChange={setFormPaymentMethod}>
                                     <SelectTrigger className="h-10 rounded-xl border-border bg-white">
@@ -3126,23 +3126,23 @@ function StudentsPage() {
                             <div className="p-4 rounded-xl border border-emerald-300/80 bg-emerald-50/70 space-y-2 text-xs font-figtree">
                               <div className="flex items-center gap-1.5 font-extrabold text-[#163020]">
                                 <Receipt className="h-4 w-4 text-[#163020]" />
-                                <span>{t("auditUi.financialAgreementSummary")}</span>
+                                <span>{tr("auditUi.financialAgreementSummary")}</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1 text-stone-700">
                                 <div>
-                                  <span className="text-stone-500 font-medium">{t("auditUi.package")}</span>{" "}
+                                  <span className="text-stone-500 font-medium">{tr("auditUi.package")}</span>{" "}
                                   <strong className="text-stone-900 font-bold">{selectedPkg.name}</strong>
                                 </div>
                                 <div>
                                   <span className="text-stone-500 font-medium">
-                                    {isMonthly ? (t("auditUi.monthlyPrice2")) : (t("auditUi.price2"))}
+                                    {isMonthly ? (tr("auditUi.monthlyPrice2")) : (tr("auditUi.price2"))}
                                   </span>{" "}
                                   <strong className="text-stone-900 font-bold">{formatCentsToBRL(totalPriceCents)}</strong>
                                 </div>
                                 {model === "installment_total" ? (
                                   <>
                                     <div>
-                                      <span className="text-stone-500 font-medium">{t("auditUi.paymentTerms")}</span>{" "}
+                                      <span className="text-stone-500 font-medium">{tr("auditUi.paymentTerms")}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {scheduleInfo.isUneven
                                           ? `${installmentCount - 1}x de ${formatCentsToBRL(scheduleInfo.baseAmountCents)} + 1x de ${formatCentsToBRL(scheduleInfo.lastAmountCents)}`
@@ -3150,15 +3150,15 @@ function StudentsPage() {
                                       </strong>
                                     </div>
                                     <div>
-                                      <span className="text-stone-500 font-medium">{t("auditUi.dueDate2")}</span>{" "}
+                                      <span className="text-stone-500 font-medium">{tr("auditUi.dueDate2")}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {formDueDay
                                           ? (lang === "pt" ? `dia ${formDueDay}` : `day ${formDueDay}`)
-                                          : (t("auditUi.selectADay"))}
+                                          : (tr("auditUi.selectADay"))}
                                       </strong>
                                     </div>
                                     <div className="sm:col-span-2">
-                                      <span className="text-stone-500 font-medium">{t("auditUi.lastInstallment")}</span>{" "}
+                                      <span className="text-stone-500 font-medium">{tr("auditUi.lastInstallment")}</span>{" "}
                                       <strong className="text-stone-900 font-bold">
                                         {formDueDay && formFirstDueDate ? lastDueDate : "-"}
                                       </strong>
@@ -3166,16 +3166,16 @@ function StudentsPage() {
                                   </>
                                 ) : model === "one_time" ? (
                                   <div>
-                                    <span className="text-stone-500 font-medium">{t("auditUi.terms")}</span>{" "}
-                                    <strong className="text-stone-900 font-bold">{t("auditUi.oneTimeCharge")}</strong>
+                                    <span className="text-stone-500 font-medium">{tr("auditUi.terms")}</span>{" "}
+                                    <strong className="text-stone-900 font-bold">{tr("auditUi.oneTimeCharge")}</strong>
                                   </div>
                                 ) : (
                                   <div>
-                                    <span className="text-stone-500 font-medium">{t("auditUi.dueDate2")}</span>{" "}
+                                    <span className="text-stone-500 font-medium">{tr("auditUi.dueDate2")}</span>{" "}
                                     <strong className="text-stone-900 font-bold">
                                       {formDueDay
                                         ? (lang === "pt" ? `dia ${formDueDay}` : `day ${formDueDay}`)
-                                        : (t("auditUi.selectADay"))}
+                                        : (tr("auditUi.selectADay"))}
                                     </strong>
                                   </div>
                                 )}
@@ -3193,14 +3193,14 @@ function StudentsPage() {
               <div className="bg-sidebar border border-sidebar-border/60 p-5 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-sidebar-foreground border-b border-sidebar-border/60 pb-2 select-none">
                   <Calendar className="h-4 w-4 text-sidebar-foreground" />
-                  {t("auditUi.classSchedule")}
+                  {tr("auditUi.classSchedule")}
                 </div>
 
                 {formType === "Group" && (
                   <div className="space-y-3 rounded-xl border border-border bg-white p-3">
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold text-foreground select-none">
-                        {t("auditUi.groupScheduleOption")}
+                        {tr("auditUi.groupScheduleOption")}
                       </Label>
                       <Select
                         value={formLinkedGroupId ? "link" : "new"}
@@ -3218,11 +3218,11 @@ function StudentsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="new">
-                            {t("auditUi.createNewCustomScheduleForThisGroup")}
+                            {tr("auditUi.createNewCustomScheduleForThisGroup")}
                           </SelectItem>
                           {students.some((s) => s.type === "Group" && s.id !== editingStudentIdForModal) && (
                             <SelectItem value="link">
-                              {t("auditUi.linkToAnExistingGroup")}
+                              {tr("auditUi.linkToAnExistingGroup")}
                             </SelectItem>
                           )}
                         </SelectContent>
@@ -3235,7 +3235,7 @@ function StudentsPage() {
                           htmlFor="std-group-link"
                           className="text-xs font-semibold text-foreground select-none"
                         >
-                          {t("auditUi.selectExistingGroup")}
+                          {tr("auditUi.selectExistingGroup")}
                         </Label>
                         <Select value={formLinkedGroupId} onValueChange={setFormLinkedGroupId}>
                           <SelectTrigger id="std-group-link" className="h-11 rounded-xl border-border bg-white">
@@ -3262,7 +3262,7 @@ function StudentsPage() {
                     {/* Frequency selector */}
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold text-sidebar-foreground select-none">
-                        {t("auditUi.classesPerWeek")}
+                        {tr("auditUi.classesPerWeek")}
                       </Label>
                       <div className="flex gap-2 flex-wrap">
                         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
@@ -3286,23 +3286,23 @@ function StudentsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <Label htmlFor="std-frequency" className="text-xs font-semibold text-sidebar-foreground select-none">
-                          {t("auditUi.recurrence")}
+                          {tr("auditUi.recurrence")}
                         </Label>
                         <Select value={formFrequency} onValueChange={(val) => setFormFrequency(val as any)}>
                           <SelectTrigger id="std-frequency" className="h-11 rounded-xl border-border bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Weekly">{t("auditUi.weekly")}</SelectItem>
-                            <SelectItem value="Bi-weekly">{t("auditUi.biWeekly")}</SelectItem>
-                            <SelectItem value="Monthly">{t("auditUi.monthly")}</SelectItem>
+                            <SelectItem value="Weekly">{tr("auditUi.weekly")}</SelectItem>
+                            <SelectItem value="Bi-weekly">{tr("auditUi.biWeekly")}</SelectItem>
+                            <SelectItem value="Monthly">{tr("auditUi.monthly")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-1">
                         <Label htmlFor="std-tz" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
-                          {t("auditUi.timeZone")}
+                          {tr("auditUi.timeZone")}
                         </Label>
                         <Input
                           id="std-tz"
@@ -3317,7 +3317,7 @@ function StudentsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <Label htmlFor="std-startdate" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
-                          {t("auditUi.startDate")} <span className="text-[#ED7034] font-bold">*</span>
+                          {tr("auditUi.startDate")} <span className="text-[#ED7034] font-bold">*</span>
                         </Label>
                         <Input
                           id="std-startdate"
@@ -3331,7 +3331,7 @@ function StudentsPage() {
 
                       <div className="space-y-1">
                         <Label htmlFor="std-enddate" className="text-xs font-semibold text-sidebar-foreground select-none">
-                          {t("auditUi.endDateOpcional")}
+                          {tr("auditUi.endDateOpcional")}
                         </Label>
                         <Input
                           id="std-enddate"
@@ -3356,7 +3356,7 @@ function StudentsPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground select-none">
-                              {t("auditUi.weekday")}
+                              {tr("auditUi.weekday")}
                             </Label>
                             <Select
                               value={sch.weekday}
@@ -3370,20 +3370,20 @@ function StudentsPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Monday">{t("auditUi.monday")}</SelectItem>
-                                <SelectItem value="Tuesday">{t("auditUi.tuesday")}</SelectItem>
-                                <SelectItem value="Wednesday">{t("auditUi.wednesday")}</SelectItem>
-                                <SelectItem value="Thursday">{t("auditUi.thursday")}</SelectItem>
-                                <SelectItem value="Friday">{t("auditUi.friday")}</SelectItem>
-                                <SelectItem value="Saturday">{t("auditUi.saturday")}</SelectItem>
-                                <SelectItem value="Sunday">{t("auditUi.sunday")}</SelectItem>
+                                <SelectItem value="Monday">{tr("auditUi.monday")}</SelectItem>
+                                <SelectItem value="Tuesday">{tr("auditUi.tuesday")}</SelectItem>
+                                <SelectItem value="Wednesday">{tr("auditUi.wednesday")}</SelectItem>
+                                <SelectItem value="Thursday">{tr("auditUi.thursday")}</SelectItem>
+                                <SelectItem value="Friday">{tr("auditUi.friday")}</SelectItem>
+                                <SelectItem value="Saturday">{tr("auditUi.saturday")}</SelectItem>
+                                <SelectItem value="Sunday">{tr("auditUi.sunday")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground flex items-center gap-1 select-none">
-                              {t("auditUi.startTime")} <span className="text-[#ED7034] font-bold">*</span>
+                              {tr("auditUi.startTime")} <span className="text-[#ED7034] font-bold">*</span>
                             </Label>
                             <Input
                               type="time"
@@ -3402,7 +3402,7 @@ function StudentsPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground select-none">
-                              {t("auditUi.duration")}
+                              {tr("auditUi.duration")}
                             </Label>
                             <Select
                               value={String(sch.duration)}
@@ -3427,7 +3427,7 @@ function StudentsPage() {
 
                           <div className="space-y-1">
                             <Label className="text-xs font-semibold text-foreground select-none">
-                              {t("auditUi.format")}
+                              {tr("auditUi.format")}
                             </Label>
                             <Select
                               value={sch.deliveryMode}
@@ -3442,7 +3442,7 @@ function StudentsPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="Online">Online</SelectItem>
-                                <SelectItem value="In person">{t("auditUi.inPerson")}</SelectItem>
+                                <SelectItem value="In person">{tr("auditUi.inPerson")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -3451,8 +3451,8 @@ function StudentsPage() {
                         <div className="space-y-1">
                           <Label className="text-xs font-semibold text-foreground select-none">
                             {sch.deliveryMode === "Online"
-                              ? (t("auditUi.meetingLink"))
-                              : (t("auditUi.location"))}
+                              ? (tr("auditUi.meetingLink"))
+                              : (tr("auditUi.location"))}
                           </Label>
                           <Input
                             value={sch.locationLink}
@@ -3475,18 +3475,18 @@ function StudentsPage() {
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4 animate-in fade-in duration-200">
                 <div className="flex items-center gap-2 font-outfit text-sm font-bold text-[#33411B] border-b border-border/40 pb-2 select-none">
                   <FileText className="h-4 w-4 text-[#33411B]" />
-                  {t("auditUi.notes2")}
+                  {tr("auditUi.notes2")}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="std-notes" className="text-xs font-semibold text-foreground select-none">
-                    {t("auditUi.additionalNotes")}
+                    {tr("auditUi.additionalNotes")}
                   </Label>
                   <textarea
                     id="std-notes"
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
                     placeholder={
-                      t("auditUi.eGFocusOnConversationPreferred")
+                      tr("auditUi.eGFocusOnConversationPreferred")
                     }
                     className="w-full min-h-[100px] rounded-xl border border-border bg-white p-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
                   />
@@ -3509,7 +3509,7 @@ function StudentsPage() {
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-[#33411B] px-5 text-sm font-bold text-white hover:bg-[#33411B]/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 {isSaving ? (
-                  <span>{t("auditUi.saving")}</span>
+                  <span>{tr("auditUi.saving")}</span>
                 ) : editingStudentIdForModal ? (
                   t.btnSave
                 ) : (
@@ -3538,7 +3538,7 @@ function StudentsPage() {
 
           <div className="space-y-2">
             <DialogTitle className="font-outfit text-2xl font-extrabold text-[#163020] tracking-tight">
-              {t("auditUi.welcomeToYourStudentsHub")}
+              {tr("auditUi.welcomeToYourStudentsHub")}
             </DialogTitle>
             <p className="text-sm text-stone-600 leading-relaxed font-medium">
               {lang === "pt"
@@ -3560,7 +3560,7 @@ function StudentsPage() {
               className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-extrabold text-sm shadow-md transition-all cursor-pointer"
             >
               <Plus className="h-4 w-4" />
-              <span>{t("auditUi.registerFirstStudent")}</span>
+              <span>{tr("auditUi.registerFirstStudent")}</span>
             </button>
 
             <button
@@ -3570,7 +3570,7 @@ function StudentsPage() {
               }}
               className="text-xs font-semibold text-stone-400 hover:text-stone-600 transition-colors cursor-pointer pt-1"
             >
-              {t("auditUi.exploreDashboardFirst")}
+              {tr("auditUi.exploreDashboardFirst")}
             </button>
           </div>
         </DialogContent>
@@ -3589,7 +3589,7 @@ function StudentsPage() {
         <DialogContent className="sm:max-w-md rounded-3xl p-6 space-y-4">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold font-outfit">
-              {t("auditUi.createYourPackagesFirst")}
+              {tr("auditUi.createYourPackagesFirst")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
@@ -3616,7 +3616,7 @@ function StudentsPage() {
                 open?.();
               }}
             >
-              {t("auditUi.continueWithoutAPackage")}
+              {tr("auditUi.continueWithoutAPackage")}
             </Button>
             <Button
               type="button"
@@ -3628,7 +3628,7 @@ function StudentsPage() {
               }}
             >
               <Plus className="h-4 w-4" />
-              {t("auditUi.createPackage")}
+              {tr("auditUi.createPackage")}
             </Button>
           </div>
         </DialogContent>
