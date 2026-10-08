@@ -392,6 +392,11 @@ function ProfilePage() {
                 <h2 className="font-display text-2xl font-extrabold text-foreground">
                   {profile.name}
                 </h2>
+                {profile.headline && (
+                  <p className="text-sm font-medium text-muted-foreground mt-0.5">
+                    {profile.headline}
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-muted-foreground mt-2 font-medium">
                   <span className="flex items-center gap-1">
                     <User className="h-3.5 w-3.5" />
@@ -399,6 +404,18 @@ function ProfilePage() {
                       ? tr("auditUi.portuguese")
                       : tr("auditUi.english")}
                   </span>
+                  {profile.country && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {profile.country}
+                    </span>
+                  )}
+                  {profile.yearsExperience !== null && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="h-3.5 w-3.5" />
+                      {profile.yearsExperience} {t.yrs}
+                    </span>
+                  )}
                   {profile.timezone && (
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
