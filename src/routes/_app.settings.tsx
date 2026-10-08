@@ -119,7 +119,7 @@ function SettingsPage() {
             >
               {loading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Carregando configurações...
+                  <RefreshCw className="w-4 h-4 animate-spin text-primary" /> {t("settingsUi.loading")}
                 </div>
               ) : (
                 <div className="space-y-6 pt-2">
@@ -159,7 +159,7 @@ function SettingsPage() {
                   {/* Delay Configuration Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="lead_delay">Atraso para 1º Contato com Lead (dias)</Label>
+                      <Label htmlFor="lead_delay">{t("settingsUi.leadDelay")}</Label>
                       <Input
                         id="lead_delay"
                         type="number"
@@ -174,12 +174,12 @@ function SettingsPage() {
                         }
                       />
                       <p className="text-xs text-muted-foreground">
-                        Dias até o vencimento da tarefa "Entrar em contato com {`{lead}`}".
+                        {t("settingsUi.leadDelayHelp")}
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="proposal_delay">Atraso para Follow-up de Proposta (dias)</Label>
+                      <Label htmlFor="proposal_delay">{t("settingsUi.proposalDelay")}</Label>
                       <Input
                         id="proposal_delay"
                         type="number"
@@ -194,12 +194,12 @@ function SettingsPage() {
                         }
                       />
                       <p className="text-xs text-muted-foreground">
-                        Dias após o envio da proposta para a tarefa de acompanhamento.
+                        {t("settingsUi.proposalDelayHelp")}
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="trial_hours">Antecedência da Confirmação de Aula Exp. (horas)</Label>
+                      <Label htmlFor="trial_hours">{t("settingsUi.trialConfirmationLead")}</Label>
                       <Input
                         id="trial_hours"
                         type="number"
@@ -214,12 +214,12 @@ function SettingsPage() {
                         }
                       />
                       <p className="text-xs text-muted-foreground">
-                        Horas de antecedência para enviar lembrete ao professor.
+                        {t("settingsUi.trialConfirmationHelp")}
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="inactivity_days">Período de Inatividade do Lead (dias)</Label>
+                      <Label htmlFor="inactivity_days">{t("settingsUi.inactivityPeriod")}</Label>
                       <Input
                         id="inactivity_days"
                         type="number"
@@ -234,7 +234,7 @@ function SettingsPage() {
                         }
                       />
                       <p className="text-xs text-muted-foreground">
-                        Dias sem interação para o lead aparecer em "Precisa de atenção".
+                        {t("settingsUi.inactivityHelp")}
                       </p>
                     </div>
                   </div>
@@ -242,7 +242,7 @@ function SettingsPage() {
                   <div className="pt-4 flex justify-end">
                     <Button type="submit" disabled={saving} className="gap-2 shadow-sm">
                       {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      Salvar Preferências de Automação
+                      {t("settingsUi.saveAutomation")}
                     </Button>
                   </div>
                 </div>
@@ -256,10 +256,10 @@ function SettingsPage() {
           <PlatformLanguageManager />
           <TeachingLanguagesManager />
 
-          <PanelCard title="Perfil de Professor" description="Suas informações cadastrais e dados da conta.">
+          <PanelCard title={t("settingsUi.teacherProfile")} description={t("settingsUi.teacherProfileDescription")}>
             <div className="space-y-4 text-sm text-muted-foreground">
-              <p>ID do Professor: <code className="text-card-foreground font-mono bg-muted px-2 py-0.5 rounded">{user?.id || "Conectado"}</code></p>
-              <p>Email: <span className="font-semibold text-card-foreground">{user?.email || "professor@bloom.com"}</span></p>
+              <p>{t("settingsUi.teacherId")}: <code className="text-card-foreground font-mono bg-muted px-2 py-0.5 rounded">{user?.id || t("settingsUi.connected")}</code></p>
+              <p>{t("globalUi.email")}: <span className="font-semibold text-card-foreground">{user?.email || "—"}</span></p>
             </div>
           </PanelCard>
         </TabsContent>
@@ -269,16 +269,12 @@ function SettingsPage() {
 }
 
 function PlatformLanguageManager() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
 
   return (
     <PanelCard
-      title={lang === "pt" ? "Idioma da Plataforma" : "Platform Language"}
-      description={
-        lang === "pt"
-          ? "Escolha o idioma em que deseja visualizar os menus, botões e telas do Bloom."
-          : "Choose the language in which you want to view Bloom menus, buttons, and pages."
-      }
+      title={t("settingsUi.platformLanguage")}
+      description={t("settingsUi.platformLanguageDescription")}
     >
       <div className="flex flex-wrap items-center gap-4 pt-1">
         <button
@@ -291,7 +287,7 @@ function PlatformLanguageManager() {
           }`}
         >
           <span className="text-base">🇧🇷</span>
-          <span>Português (Brasil)</span>
+          <span>{t("settingsUi.portugueseBrazil")}</span>
           {lang === "pt" && <Check className="h-4 w-4 text-emerald-400" />}
         </button>
 
@@ -305,7 +301,7 @@ function PlatformLanguageManager() {
           }`}
         >
           <span className="text-base">🇺🇸</span>
-          <span>English (US)</span>
+          <span>{t("settingsUi.englishUS")}</span>
           {lang === "en" && <Check className="h-4 w-4 text-emerald-400" />}
         </button>
       </div>
@@ -315,7 +311,7 @@ function PlatformLanguageManager() {
 
 function TeachingLanguagesManager() {
   const { languages, formatLanguageLabel, updateTeacherLanguages, checkLanguageInUse } = useTeacherLanguages();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [warningLang, setWarningLang] = useState<{ id: string; details: string[] } | null>(null);
 
@@ -353,12 +349,8 @@ function TeachingLanguagesManager() {
   return (
     <div className="space-y-4">
       <PanelCard
-        title={lang === "pt" ? "Idiomas de Ensino" : "Teaching Languages"}
-        description={
-          lang === "pt"
-            ? "Selecione os idiomas que você ensina. Estes idiomas definirão as opções nos filtros de alunos, cadastro de turmas e leads em toda a Bloom."
-            : "Select the languages you teach. These languages will populate options across student filters, classes, and leads in Bloom."
-        }
+        title={t("settingsUi.teachingLanguages")}
+        description={t("settingsUi.teachingLanguagesDescription")}
       >
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2.5 pt-1">
@@ -384,9 +376,7 @@ function TeachingLanguagesManager() {
           </div>
 
           <p className="text-xs text-muted-foreground pt-2 border-t border-border">
-            {lang === "pt"
-              ? "Idiomas selecionados aqui aparecem automaticamente nos seletores da plataforma."
-              : "Languages selected here will automatically populate selectors across your workspace."}
+            {t("settingsUi.selectedLanguagesHelp")}
           </p>
         </div>
       </PanelCard>
@@ -400,19 +390,17 @@ function TeachingLanguagesManager() {
                 <AlertCircle className="h-6 w-6 text-amber-800" />
               </div>
               <DialogTitle className="text-lg font-bold font-outfit text-stone-900 pt-2">
-                {lang === "pt" ? "Quer mesmo remover este idioma?" : "Remove this language?"}
+                {t("settingsUi.removeLanguageTitle")}
               </DialogTitle>
             </DialogHeader>
 
             <p className="text-sm text-stone-600 leading-relaxed font-medium">
-              {lang === "pt"
-                ? "Este idioma ainda está sendo usado em alunos, turmas ou outros registros da Bloom."
-                : "This language is currently associated with active students, classes, or other records in Bloom."}
+              {t("settingsUi.removeLanguageDescription")}
             </p>
 
             {warningLang.details.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 font-semibold">
-                {lang === "pt" ? "Registros afetados: " : "Affected records: "}
+                {t("settingsUi.affectedRecords")}: {" "}
                 {warningLang.details.join(", ")}
               </div>
             )}
@@ -423,7 +411,7 @@ function TeachingLanguagesManager() {
                 onClick={() => setWarningLang(null)}
                 className="w-full h-11 rounded-xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-xs"
               >
-                {lang === "pt" ? "Manter idioma" : "Keep language"}
+                {t("settingsUi.keepLanguage")}
               </Button>
               <Button
                 type="button"
@@ -431,7 +419,7 @@ function TeachingLanguagesManager() {
                 onClick={handleConfirmRemoval}
                 className="w-full h-11 rounded-xl border-stone-300 text-stone-700 hover:bg-stone-100 font-bold text-xs"
               >
-                {lang === "pt" ? "Remover mesmo assim" : "Remove anyway"}
+                {t("settingsUi.removeAnyway")}
               </Button>
             </div>
           </DialogContent>
