@@ -1961,3 +1961,42 @@ export function formatOnboardingFrequency(freqKey: string | undefined | null, la
   return clean;
 }
 
+
+// ---------------------------------------------------------------------------
+// Inline UI strings (onboarding, packages, classes) live in i18n-ui.ts and are
+// merged here so every component reads them through the same t().
+import { uiTranslations } from "./i18n-ui";
+for (const l of Object.keys(uiTranslations) as Language[]) {
+  Object.assign(translations[l], uiTranslations[l] as unknown as TranslationDictionary);
+}
+
+/** Fills {0}, {1}… placeholders in a translated string. */
+export function fmt(template: string, ...args: Array<string | number | null | undefined>): string {
+  return template.replace(/\{(\d+)\}/g, (_, i) => String(args[Number(i)] ?? ""));
+}
+
+/** Languages with a complete dictionary. Add a code here only after its dictionary is complete. */
+export const SUPPORTED_LANGUAGES: readonly Language[] = ["pt", "en"];
+/** Used when none of the user's locales is supported. */
+export const FALLBACK_LANGUAGE: Language = "en";
+
+/** Maps a single locale tag (pt-BR, en_GB, ja-JP…) to a supported language, or null. */
+export function matchLanguage(locale: string | null | undefined): Language | null {
+  if (!locale) return null;
+  const base = String(locale).trim().toLowerCase().split(/[-_]/)[0];
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(base) ? (base as Language) : null;
+}
+
+/** First supported language in the browser's preference list, else the fallback. */
+export function detectLanguage(locales: readonly (string | null | undefined)[]): Language {
+  for (const l of locales) {
+    const m = matchLanguage(l);
+    if (m) return m;
+  }
+  return FALLBACK_LANGUAGE;
+}
+
+/** Locale written to profiles.locale for a manually chosen language. */
+export function languageToLocale(lang: Language): string {
+  return lang === "pt" ? "pt-BR" : "en-US";
+}
