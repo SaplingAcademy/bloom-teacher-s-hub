@@ -262,3 +262,16 @@ export function planEventReconcile(existing: FutureEventLite[], desired: Desired
   }
   return plan;
 }
+
+const WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** Stable display order: weekday, then start time, then creation. */
+export function sortScheduleRows<T extends { weekday: string; start_time?: string | null; created_at?: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const d = WEEKDAY_ORDER.indexOf(a.weekday) - WEEKDAY_ORDER.indexOf(b.weekday);
+    if (d !== 0) return d;
+    const t = (a.start_time || "").localeCompare(b.start_time || "");
+    if (t !== 0) return t;
+    return (a.created_at || "").localeCompare(b.created_at || "");
+  });
+}

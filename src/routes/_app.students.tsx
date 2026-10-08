@@ -1665,6 +1665,12 @@ function StudentsPage() {
       return;
     }
 
+    const invalidFormUrl = findInvalidMeetingUrl(formSchedulesList);
+    if (invalidFormUrl >= 0) {
+      toast.error(i18nT("students.invalidMeetingUrl", lang).replace("{n}", String(invalidFormUrl + 1)));
+      return;
+    }
+
     const isPackageSelected = formPackageId && formPackageId !== "" && formPackageId !== "none_value";
     if (isPackageSelected && (!formDueDay || !formFirstDueDate)) {
       toast.error(
