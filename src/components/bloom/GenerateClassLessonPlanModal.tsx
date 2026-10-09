@@ -34,6 +34,7 @@ import {
   getTeacherAvailability,
   findRecurringConflicts,
 } from "@/lib/teacher-availability";
+import { LessonCountPresetPicker, type LessonCountSelection } from "@/components/bloom/LessonCountPresetPicker";
 import { calculateEndTime } from "@/lib/calendar-sync";
 
 interface Props {
@@ -79,10 +80,8 @@ export function GenerateClassLessonPlanModal({
   packageLessonCount,
   onSuccess,
 }: Props) {
-  const [quantityType, setQuantityType] = useState<"package" | "20" | "23" | "40" | "custom">(
-    packageLessonCount ? "package" : "23"
-  );
-  const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 23);
+  const [quantityType, setQuantityType] = useState<LessonCountSelection>(20);
+  const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 20);
   const [startDate, setStartDate] = useState<string>(
     cls.start_date || new Date().toISOString().split("T")[0]
   );
@@ -114,20 +113,7 @@ export function GenerateClassLessonPlanModal({
   }, [isOpen, cls.id, cls.schedules, cls.start_date, teacherId]);
 
   const targetCount = useMemo(() => {
-    switch (quantityType) {
-      case "package":
-        return packageLessonCount || 23;
-      case "20":
-        return 20;
-      case "23":
-        return 23;
-      case "40":
-        return 40;
-      case "custom":
-        return Number(customQuantity) || 1;
-      default:
-        return 23;
-    }
+    return quantityType === "custom" ? Number(customQuantity) || 1 : quantityType;
   }, [quantityType, customQuantity, packageLessonCount]);
 
   const slots: OccurrenceSlot[] = useMemo(
@@ -242,25 +228,6 @@ export function GenerateClassLessonPlanModal({
     }
   };
 
-  const optionCard = (
-    key: "package" | "20" | "23" | "40" | "custom",
-    caption: string,
-    value: string
-  ) => (
-    <button
-      key={key}
-      type="button"
-      onClick={() => setQuantityType(key)}
-      className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
-        quantityType === key
-          ? "border-primary bg-primary/5 text-primary font-semibold shadow-xs"
-          : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-      }`}
-    >
-      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{caption}</span>
-      <span className="text-sm font-bold text-foreground mt-1">{value}</span>
-    </button>
-  );
 
   const lessonsLabel = (n: number | string) => (isPt ? `${n} aulas` : `${n} lessons`);
 
@@ -303,32 +270,14 @@ export function GenerateClassLessonPlanModal({
               <span className="text-muted-foreground font-normal">{lessonsLabel(targetCount)}</span>
             </Label>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {packageLessonCount
-                ? optionCard("package", isPt ? "Total do pacote" : "Package total", lessonsLabel(packageLessonCount))
-                : null}
-              {optionCard("20", isPt ? "Padrão" : "Standard", lessonsLabel(20))}
-              {optionCard("23", isPt ? "Recomendado" : "Recommended", lessonsLabel(23))}
-              {optionCard("40", isPt ? "Estendido" : "Extended", lessonsLabel(40))}
-              {optionCard("custom", isPt ? "Personalizado" : "Custom", isPt ? "Definir" : "Specify")}
-            </div>
-
-            {quantityType === "custom" && (
-              <div className="pt-2">
-                <Label htmlFor="class-custom-qty" className="text-xs text-muted-foreground mb-1 block">
-                  {isPt ? "Informe a quantidade de aulas" : "Enter the number of lessons"}
-                </Label>
-                <Input
-                  id="class-custom-qty"
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={customQuantity}
-                  onChange={(e) => setCustomQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="h-10 text-sm font-semibold max-w-xs"
-                />
-              </div>
-            )}
+            <LessonCountPresetPicker
+              selected={quantityType}
+              onSelect={setQuantityType}
+              customQuantity={customQuantity}
+              onCustomQuantityChange={setCustomQuantity}
+              inputId="class-custom-qty"
+              customLabel={isPt ? "Informe a quantidade de aulas" : "Enter the number of lessons"}
+            />
           </div>
 
           {/* STEP 2 — START DATE */}
