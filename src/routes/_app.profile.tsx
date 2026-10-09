@@ -12,7 +12,6 @@ import {
   Award,
   BookOpen,
   MessageSquare,
-  ThumbsUp,
   Heart,
   Calendar,
   Edit2,
