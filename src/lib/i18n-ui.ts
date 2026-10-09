@@ -1,6 +1,12 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "saveFeedback": {
+      "save": "Salvar Alterações",
+      "saving": "Salvando...",
+      "saved": "Alterações salvas",
+      "error": "Não foi possível salvar as alterações. Tente novamente."
+    },
     "lessonPresets": {
       "lessons": "{0} aulas",
       "custom": "Personalizado",
@@ -980,6 +986,12 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "saveFeedback": {
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "saved": "Changes saved",
+      "error": "Could not save your changes. Please try again."
+    },
     "lessonPresets": {
       "lessons": "{0} lessons",
       "custom": "Custom",
