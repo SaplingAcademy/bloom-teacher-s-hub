@@ -31,6 +31,8 @@ export const Route = createFileRoute("/_app/community")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { post?: string } =>
+    typeof search.post === "string" && search.post ? { post: search.post } : {},
   component: CommunityPage,
 });
 
@@ -246,6 +248,25 @@ function CommunityPage() {
     loadComments(postId);
   };
 
+  const { post: focusPost } = Route.useSearch();
+  const [handledFocus, setHandledFocus] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusPost || loading || handledFocus === focusPost) return;
+    if (!posts.some((p) => p.id === focusPost)) return;
+    setHandledFocus(focusPost);
+    setSearch("");
+    if (openComments !== focusPost) {
+      setOpenComments(focusPost);
+      setCommentDraft("");
+      setComments([]);
+      loadComments(focusPost);
+    }
+    requestAnimationFrame(() =>
+      document.getElementById(`post-${focusPost}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPost, loading, posts]);
+
   const syncCommentCount = (postId: string, delta: number) =>
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount + delta) } : p)));
 
@@ -408,7 +429,11 @@ function CommunityPage() {
             <p className="text-sm text-muted-foreground text-center py-10">{t("communityV1.noResults")}</p>
           ) : (
             visible.map((post) => (
-              <article key={post.id} className="rounded-2xl border border-border bg-card p-5 space-y-3">
+              <article
+                key={post.id}
+                id={`post-${post.id}`}
+                className={`rounded-2xl border bg-card p-5 space-y-3 scroll-mt-24 transition-shadow ${focusPost === post.id ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+              >
                 <header className="flex items-center gap-3">
                   <Avatar name={post.author?.full_name} url={post.author?.avatar_url} />
                   <div className="min-w-0">

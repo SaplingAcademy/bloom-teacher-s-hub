@@ -1,5 +1,6 @@
 import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
-import { Menu, Search, Bell, Plus, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { Menu, Search, Plus, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "@tanstack/react-router";
@@ -118,13 +119,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
           )}
         </div>
 
-        <button
-          className="relative rounded-xl p-2.5 text-muted-foreground transition-colors hover:bg-secondary"
-          aria-label={t("globalUi.notifications")}
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent ring-2 ring-header-bg" />
-        </button>
+        <NotificationBell />
 
         {/* User Account Dropdown */}
         <div className="relative" ref={profileDropdownRef}>
