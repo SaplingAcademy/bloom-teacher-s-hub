@@ -267,7 +267,6 @@ export function NonWorkingDaysModal({
     });
 
     if (res.success) {
-      toast.success(t("availabilityUi.informationUpdated"));
       setEditingItem(null);
       await loadData();
       if (onTimeOffUpdated) onTimeOffUpdated();

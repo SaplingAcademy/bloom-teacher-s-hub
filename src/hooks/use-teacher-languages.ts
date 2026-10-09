@@ -162,7 +162,6 @@ export function useTeacherLanguages() {
         // 3. Update Auth context profile state
         updateProfileState({ languages_taught: newLanguages });
         setLanguages(newLanguages);
-        toast.success("Idiomas de ensino atualizados!");
         return true;
       } catch (err: any) {
         console.error("[useTeacherLanguages] Error updating languages:", err);

@@ -519,7 +519,6 @@ function FinancePage() {
 
       if (data) {
         refetchPackages();
-        toast.success(tr("auditUi.packageUpdatedSuccessfully"));
       }
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotUpdatePackage")));
@@ -564,7 +563,6 @@ function FinancePage() {
       setIsExpOpen(false);
       setExpDesc("");
       setExpNotes("");
-      toast.success(tr("auditUi.expenseSavedSuccessfully"));
     } catch (err: any) {
       console.error("[Finance] Error saving expense:", err);
       toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotSaveExpense")));
@@ -582,7 +580,6 @@ function FinancePage() {
       } else {
         await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
       }
-      toast.success(tr("auditUi.statusUpdatedSuccessfully"));
       invalidateFinanceData();
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotUpdateStatus")));

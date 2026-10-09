@@ -215,7 +215,6 @@ export function CentralAvailabilityModal({
         return;
       }
 
-      toast.success("Horários de trabalho atualizados com sucesso!");
       if (onSaved) onSaved();
     } catch (err: any) {
       toast.error("Falha ao salvar horários de trabalho.");
@@ -465,7 +464,6 @@ export function CentralAvailabilityModal({
     try {
       const res = await saveTeacherRestBlocks(teacherId, restBlocksList);
       if (res.success) {
-        toast.success("Horários de descanso salvos com sucesso!");
         if (onSaved) onSaved();
       } else {
         toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));

@@ -245,7 +245,6 @@ export function LessonNotesModal({
 
     onSave(updatedLesson);
     onClose();
-    toast.success(t("globalUi.notesSaved"));
   };
 
   const formattedDate = lesson.scheduled_date
