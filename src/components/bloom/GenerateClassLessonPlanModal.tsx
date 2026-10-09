@@ -19,8 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, AlertCircle, CheckCircle2, Info   BookOpen,
-} from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Info, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { ClassWithDetails } from "@/lib/class-sync";
 import {

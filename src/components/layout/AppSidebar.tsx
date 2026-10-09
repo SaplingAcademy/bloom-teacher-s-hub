@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Pin, PinOff   MessageCircle,
-} from "lucide-react";
+import { Pin, PinOff, MessageCircle } from "lucide-react";
 import { navSections, bottomNav } from "@/lib/navigation";
 import { BloomLogo, BloomMark } from "@/components/bloom/Logo";
 import { cn } from "@/lib/utils";
