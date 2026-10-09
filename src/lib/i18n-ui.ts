@@ -253,6 +253,7 @@ export const uiTranslations = {
       "studentPackage": "Pacote do aluno",
       "converting": "Convertendo..."
     },
+    "notificationsUi": { "title": "Notificações", "markAllRead": "Marcar todas como lidas", "empty": "Você ainda não tem notificações.", "loading": "Carregando…", "loadError": "Não foi possível carregar as notificações.", "unread": "não lidas" },
     "communityV1": {
       "eyebrow": "Comunidade",
       "title": "Comunidade Bloom",
@@ -1216,6 +1217,7 @@ export const uiTranslations = {
       "studentPackage": "Student package",
       "converting": "Converting..."
     },
+    "notificationsUi": { "title": "Notifications", "markAllRead": "Mark all as read", "empty": "You have no notifications yet.", "loading": "Loading…", "loadError": "Could not load notifications.", "unread": "unread" },
     "communityV1": {
       "eyebrow": "Community",
       "title": "Bloom Community",
