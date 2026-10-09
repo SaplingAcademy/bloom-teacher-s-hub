@@ -15,7 +15,7 @@ import {
   RefreshCw,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
+    ListTodo,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,7 +97,7 @@ export function AttentionQueueWidget({
       case "package_renewal":
         return <RefreshCw className="w-4 h-4 text-amber-600" />;
       default:
-        return <Sparkles className="w-4 h-4 text-purple-500" />;
+        return <ListTodo className="w-4 h-4 text-purple-500" />;
     }
   };
 

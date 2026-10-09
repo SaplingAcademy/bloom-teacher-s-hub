@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, Sparkles, Clock, CalendarDays, ShieldCheck } from "lucide-react";
+import { Calendar, Clock, CalendarDays, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 
 interface FirstTimeCalendarSetupModalProps {
@@ -93,7 +93,7 @@ export function FirstTimeCalendarSetupModal({
             onClick={handlePrimaryClick}
             className="w-full sm:w-auto bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 text-xs font-bold gap-1.5 cursor-pointer shadow-md"
           >
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <CalendarDays className="w-4 h-4 text-emerald-400" />
             {t("calendar.setupNow")}
           </Button>
         </DialogFooter>

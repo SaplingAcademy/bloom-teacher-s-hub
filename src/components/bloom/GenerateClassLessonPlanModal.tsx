@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Plus, Trash2, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Info, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { ClassWithDetails } from "@/lib/class-sync";
 import {
@@ -237,7 +237,7 @@ export function GenerateClassLessonPlanModal({
         <DialogHeader className="space-y-2 pb-3 border-b border-border/60">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="w-5 h-5" />
+              <BookOpen className="w-5 h-5" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground">
@@ -436,7 +436,7 @@ export function GenerateClassLessonPlanModal({
             disabled={isGenerating}
             className="h-10 text-xs font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <Sparkles className={`w-4 h-4 ${isGenerating ? "animate-spin" : ""}`} />
+            <BookOpen className={`w-4 h-4 ${isGenerating ? "animate-spin" : ""}`} />
             {isGenerating
               ? isPt ? "Gerando..." : "Generating..."
               : isPt ? `Gerar ${targetCount} aulas` : `Generate ${targetCount} lessons`}

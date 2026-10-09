@@ -36,7 +36,6 @@ import {
   RefreshCw,
   ArrowRight,
   CheckCircle2,
-  Sparkles,
   TrendingUp,
   TrendingDown,
   Calendar,
@@ -44,6 +43,7 @@ import {
   Package as PackageIcon,
   ShieldCheck,
   ChevronLeft,
+  FileText,
 } from "lucide-react";
 
 interface CatalogPackage {
@@ -359,7 +359,7 @@ export function PackageRenewalModal({
 
               <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs text-stone-700 dark:text-stone-300 space-y-1">
                 <p className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" /> Garantia Bloom de Histórico Imutável
+                  <ShieldCheck className="w-4 h-4" /> Garantia Bloom de Histórico Imutável
                 </p>
                 <p>
                   {tr("packageRenewal.renewNoteA")} <strong>{tr("packageRenewal.renewNoteB")}</strong> {tr("packageRenewal.renewNoteC")}
@@ -581,7 +581,7 @@ export function PackageRenewalModal({
           {step === 4 && (
             <div className="space-y-4">
               <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <FileText className="w-4 h-4 text-emerald-600" />
                 Resumo da Renovação Contratual
               </h4>
 

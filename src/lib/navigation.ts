@@ -8,7 +8,7 @@ import {
   Wallet,
   MessagesSquare,
   TrendingUp,
-  Sparkles,
+  MessageCircle,
   Newspaper,
   Store,
   UserCircle,
@@ -123,7 +123,7 @@ export const aiNav: NavItem = {
   id: "askBloomAi",
   label: "Ask Bloom AI",
   to: "/",
-  icon: Sparkles,
+  icon: MessageCircle,
   description: "Your teaching assistant",
 };
 

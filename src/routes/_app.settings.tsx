@@ -6,7 +6,6 @@ import { useTeacherLanguages, CANONICAL_LANGUAGES } from "@/hooks/use-teacher-la
 import { toast } from "sonner";
 import {
   Settings,
-  Sparkles,
   Clock,
   CheckCircle2,
   Sliders,
@@ -18,6 +17,7 @@ import {
   Globe,
   Check,
   AlertCircle,
+  Workflow,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelCard } from "@/components/bloom/PanelCard";
@@ -103,7 +103,7 @@ function SettingsPage() {
       <Tabs defaultValue="automations" className="space-y-6">
         <TabsList className="bg-card border border-border p-1 rounded-xl">
           <TabsTrigger value="automations" className="gap-2 text-xs font-semibold">
-            <Sparkles className="w-4 h-4 text-primary" /> {t("settings.tabAutomations")}
+            <Workflow className="w-4 h-4 text-primary" /> {t("settings.tabAutomations")}
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-2 text-xs font-semibold">
             <User className="w-4 h-4" /> {t("settings.tabProfilePreferences")}

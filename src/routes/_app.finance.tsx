@@ -30,7 +30,6 @@ import {
   Pencil,
   CheckCircle2,
   Clock,
-  Sparkles,
   Tag,
   Receipt,
   ArrowUpRight,

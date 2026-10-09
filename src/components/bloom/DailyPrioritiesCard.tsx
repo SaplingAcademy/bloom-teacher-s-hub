@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
-  Sparkles,
   ExternalLink,
   CalendarCheck,
   FileText,
@@ -132,7 +131,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       case "renewal_30d":
         return <RefreshCw className="h-3.5 w-3.5 shrink-0" />;
       default:
-        return <Sparkles className="h-3.5 w-3.5 shrink-0" />;
+        return <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />;
     }
   };
 
@@ -185,7 +184,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       {is100Percent && (
         <div className="mt-5 p-5 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-center gap-3.5 text-emerald-900 animate-in fade-in duration-300">
           <div className="h-10 w-10 rounded-xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0 shadow-inner">
-            <Sparkles className="h-5 w-5 text-emerald-700" />
+            <CheckCircle2 className="h-5 w-5 text-emerald-700" />
           </div>
           <div className="space-y-0.5">
             <h4 className="font-outfit font-extrabold text-sm text-emerald-950">

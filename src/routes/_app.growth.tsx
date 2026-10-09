@@ -32,7 +32,6 @@ import {
   Users,
   Target,
   Clock,
-  Sparkles,
   ArrowRight,
   ChevronRight,
   Zap,
@@ -1642,7 +1641,7 @@ function GrowthPage() {
         {/* GROWTH OPPORTUNITIES SECTION */}
         <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] h-full flex flex-col">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-lilac" />
+            <TrendingUp className="h-5 w-5 text-lilac" />
             <h3 className="font-display text-lg font-bold text-foreground">
               {t.opportunitiesTitle}
             </h3>

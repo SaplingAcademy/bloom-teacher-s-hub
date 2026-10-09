@@ -38,7 +38,6 @@ import {
   TrendingDown,
   AlertTriangle,
   RefreshCw,
-  Sparkles,
   Calendar,
   CreditCard,
   FileText,

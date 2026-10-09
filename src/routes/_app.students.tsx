@@ -56,8 +56,9 @@ import {
   AlertCircle,
   User,
   UserX,
-  Sparkles,
   Receipt,
+  UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -1970,7 +1971,7 @@ function StudentsPage() {
                   className="rounded-xl text-xs h-9 font-bold bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 cursor-pointer gap-1.5"
                   onClick={() => handleReactivateStudent(selectedStudent.id)}
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <UserCheck className="h-3.5 w-3.5" />
                   {t.reactivateStudent}
                 </Button>
               ) : (
@@ -2149,7 +2150,7 @@ function StudentsPage() {
                     onClick={() => setIsStudentRenewalModalOpen(true)}
                     className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 self-start sm:self-auto cursor-pointer shadow-sm"
                   >
-                    <Sparkles className="w-3.5 h-3.5" /> Renovar pacote
+                    <RefreshCw className="w-3.5 h-3.5" /> Renovar pacote
                   </Button>
                 </div>
               )}
@@ -2475,7 +2476,7 @@ function StudentsPage() {
                   : "bg-card text-muted-foreground hover:bg-secondary/40 border border-border/60"
               }`}
             >
-              <Sparkles className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               <span>{tr("auditUi.classesPairs")} ({classesList.length})</span>
             </button>
 
@@ -3533,7 +3534,7 @@ function StudentsPage() {
       >
         <DialogContent className="max-w-md rounded-3xl p-6 bg-[#FAF7F2] border border-stone-200 shadow-2xl text-center space-y-6 select-none font-figtree">
           <div className="h-16 w-16 rounded-2xl bg-[#163020] text-[#F4EBE1] mx-auto flex items-center justify-center shadow-md animate-bounce duration-1000">
-            <Sparkles className="h-8 w-8 text-[#F4EBE1]" />
+            <Users className="h-8 w-8 text-[#F4EBE1]" />
           </div>
 
           <div className="space-y-2">
