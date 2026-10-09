@@ -34,6 +34,8 @@ import { PriorPaymentsDialog } from "@/components/bloom/PriorPaymentsDialog";
 import { buildBillingAgreement, billingModelFromPackage } from "@/lib/billing-domain";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
+import { SaveButtonLabel, SaveErrorMessage } from "@/components/bloom/SaveFeedback";
 import {
   Users,
   Search,
@@ -557,6 +559,7 @@ function StudentsPage() {
   } = Route.useSearch();
   const navigate = useNavigate();
   const { lang, t: tr, formatStatus } = useLanguage();
+  const studentSave = useSaveFeedback();
   const { user } = useAuth();
   const {
     languages: teacherLanguages,
@@ -1128,6 +1131,7 @@ function StudentsPage() {
       end_date: editEndDate || null,
     };
 
+    studentSave.start();
     try {
       const data = await saveStudentAndSchedules(
         selectedStudentId,
@@ -1207,9 +1211,10 @@ function StudentsPage() {
             : s,
         ),
       );
+      studentSave.succeed();
     } catch (error: any) {
       console.error("[Students] Error saving inline student settings:", error);
-      toast.error(i18nT("classes.toastSaveError", lang));
+      studentSave.fail(i18nT("classes.toastSaveError", lang));
     }
   };
 
@@ -2390,8 +2395,9 @@ function StudentsPage() {
                   label={tr("auditUi.studentBrandColor")}
                 />
 
-                <Button type="submit" className="w-full font-bold cursor-pointer">
-                  {t.btnSave}
+                <SaveErrorMessage message={studentSave.errorMessage} />
+                <Button type="submit" disabled={studentSave.isSaving} className="w-full font-bold cursor-pointer gap-2">
+                  <SaveButtonLabel status={studentSave.status} label={t.btnSave} />
                 </Button>
               </form>
             </div>

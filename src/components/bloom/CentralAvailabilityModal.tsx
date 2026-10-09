@@ -50,6 +50,8 @@ import {
   formatLocalDateStr,
 } from "@/lib/time-off-engine";
 import { toast } from "sonner";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
+import { SaveButtonLabel, SaveErrorMessage } from "@/components/bloom/SaveFeedback";
 import { useLanguage } from "@/hooks/use-language";
 
 interface CentralAvailabilityModalProps {
@@ -85,6 +87,8 @@ export function CentralAvailabilityModal({
     Sunday: { startTime: "09:00", endTime: "13:00" },
   });
   const [isSavingHours, setIsSavingHours] = useState(false);
+  const hoursSave = useSaveFeedback();
+  const restSave = useSaveFeedback();
   const [conflictsList, setConflictsList] = useState<Array<{ studentName: string; weekday: string; startTime: string }>>([]);
 
   // Tab 2: Horários de descanso state
@@ -209,15 +213,17 @@ export function CentralAvailabilityModal({
 
     try {
       setIsSavingHours(true);
+      hoursSave.start();
       const res = await saveTeacherWorkingAvailability(teacherId, proposed);
       if (!res.success) {
-        toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
+        hoursSave.fail(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
         return;
       }
 
+      hoursSave.succeed();
       if (onSaved) onSaved();
     } catch (err: any) {
-      toast.error("Falha ao salvar horários de trabalho.");
+      hoursSave.fail(i18nT("errors.saveAvailability", currentLanguage()));
     } finally {
       setIsSavingHours(false);
     }
@@ -461,15 +467,17 @@ export function CentralAvailabilityModal({
 
   const handleSaveRestBlocksSubmit = async () => {
     setIsSavingRestBlocks(true);
+    restSave.start();
     try {
       const res = await saveTeacherRestBlocks(teacherId, restBlocksList);
       if (res.success) {
+        restSave.succeed();
         if (onSaved) onSaved();
       } else {
-        toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
+        restSave.fail(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
       }
     } catch (err) {
-      toast.error("Falha ao salvar horários de descanso.");
+      restSave.fail(i18nT("errors.saveAvailability", currentLanguage()));
     } finally {
       setIsSavingRestBlocks(false);
     }
@@ -1077,14 +1085,18 @@ export function CentralAvailabilityModal({
           </Button>
 
           {activeTab === "working_hours" ? (
+            <SaveErrorMessage message={hoursSave.errorMessage} />
+          ) : activeTab === "rest_blocks" ? (
+            <SaveErrorMessage message={restSave.errorMessage} />
+          ) : null}
+          {activeTab === "working_hours" ? (
             <Button
               type="button"
               onClick={handleSaveWorkingHours}
               disabled={isSavingHours}
               className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
-              <Save className="w-3.5 h-3.5 text-emerald-400" />
-              {isSavingHours ? t("availabilityUi.saving") : t("availabilityUi.saveWorkingHours")}
+              <SaveButtonLabel status={hoursSave.status} label={t("availabilityUi.saveWorkingHours")} icon={<Save className="w-3.5 h-3.5 text-emerald-400" />} />
             </Button>
           ) : activeTab === "rest_blocks" ? (
             <Button
@@ -1093,8 +1105,7 @@ export function CentralAvailabilityModal({
               disabled={isSavingRestBlocks}
               className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
-              <Save className="w-3.5 h-3.5 text-emerald-400" />
-              {isSavingRestBlocks ? "Salvando..." : "Salvar horários de descanso"}
+              <SaveButtonLabel status={restSave.status} label="Salvar horários de descanso" icon={<Save className="w-3.5 h-3.5 text-emerald-400" />} />
             </Button>
           ) : (
             <Button

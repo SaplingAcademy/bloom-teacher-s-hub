@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { useTeacherLanguages, CANONICAL_LANGUAGES } from "@/hooks/use-teacher-languages";
 import { toast } from "sonner";
+import { useSaveFeedback } from "@/hooks/use-save-feedback";
+import { SaveButtonLabel, SaveErrorMessage } from "@/components/bloom/SaveFeedback";
 import {
   Settings,
   Clock,
@@ -53,6 +55,7 @@ function SettingsPage() {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const automationSave = useSaveFeedback();
 
   const [automationSettings, setAutomationSettings] = useState<AutomationSettings>({
     teacher_id: user?.id || "",
@@ -81,13 +84,15 @@ function SettingsPage() {
     if (!user?.id) return;
 
     setSaving(true);
+    automationSave.start();
     const res = await saveAutomationSettings(user.id, automationSettings);
     setSaving(false);
 
     if (res.success) {
+      automationSave.succeed();
     } else {
       console.error("[Settings] Save error:", res.error);
-      toast.error(t("settings.saveError"));
+      automationSave.fail(t("settings.saveError"));
     }
   };
 
@@ -238,10 +243,10 @@ function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="pt-4 flex justify-end">
+                  <div className="pt-4 flex items-center justify-end gap-3">
+                    <SaveErrorMessage message={automationSave.errorMessage} />
                     <Button type="submit" disabled={saving} className="gap-2 shadow-sm">
-                      {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      {t("settingsUi.saveAutomation")}
+                      <SaveButtonLabel status={automationSave.status} label={t("settingsUi.saveAutomation")} icon={<Save className="w-4 h-4" />} />
                     </Button>
                   </div>
                 </div>
