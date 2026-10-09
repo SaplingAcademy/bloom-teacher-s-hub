@@ -28,6 +28,7 @@ import {
   Plus,
   Compass,
   Briefcase,
+  Droplets,
   MapPin,
   Lock,
   MessageCircle,
@@ -624,7 +625,7 @@ function ProfilePage() {
               </li>
               <li className="flex justify-between items-center py-3">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <span>🌱</span> {t.watersReceived}
+                  <Droplets className="h-3 w-3 text-muted-foreground" /> {t.watersReceived}
                 </span>
                 <span className="text-primary font-extrabold text-sm">{watersReceived}</span>
               </li>
@@ -682,7 +683,9 @@ function ProfilePage() {
                       </p>
                     </td>
                     <td className="py-3.5 text-center font-bold text-primary">
-                      🌱 {post.waterCount || 0}
+                      <span className="inline-flex items-center justify-center gap-1">
+                        <Droplets className="h-3 w-3" /> {post.waterCount || 0}
+                      </span>
                     </td>
                     <td className="py-3.5 text-right pr-2">
                       <div className="flex items-center justify-end gap-1.5">
@@ -1033,8 +1036,8 @@ function ProfilePage() {
 
                 <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground pt-1">
                   <span className="flex items-center gap-1">
-                    <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                    🌱 {viewingPost.waterCount || 0}
+                    <Droplets className="h-3.5 w-3.5 text-primary" />
+                    {viewingPost.waterCount || 0}
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
