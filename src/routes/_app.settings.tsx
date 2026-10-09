@@ -85,7 +85,6 @@ function SettingsPage() {
     setSaving(false);
 
     if (res.success) {
-      toast.success(t("settings.savedSuccessfully"));
     } else {
       console.error("[Settings] Save error:", res.error);
       toast.error(t("settings.saveError"));

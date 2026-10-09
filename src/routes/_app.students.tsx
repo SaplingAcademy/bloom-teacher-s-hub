@@ -1082,13 +1082,13 @@ function StudentsPage() {
     if (!selectedStudentId || !editName.trim() || !user) return;
 
     if (!editWhatsApp.trim()) {
-      toast.error(i18nT("students.toastPhoneRequired", lang));
+      toast.error(i18nT("classes.toastPhoneRequired", lang));
       return;
     }
 
     const invalidEditUrl = findInvalidMeetingUrl(editSchedulesList);
     if (invalidEditUrl >= 0) {
-      toast.error(i18nT("students.invalidMeetingUrl", lang).replace("{n}", String(invalidEditUrl + 1)));
+      toast.error(i18nT("classes.invalidMeetingUrl", lang).replace("{n}", String(invalidEditUrl + 1)));
       return;
     }
 
@@ -1169,7 +1169,6 @@ function StudentsPage() {
         console.error("Local calendar sync error:", calErr);
       }
 
-      toast.success(i18nT("students.toastSaveSuccess", lang));
       openPriorPaymentsIfNeeded();
 
       // Update state
@@ -1210,7 +1209,7 @@ function StudentsPage() {
       );
     } catch (error: any) {
       console.error("[Students] Error saving inline student settings:", error);
-      toast.error(i18nT("students.toastSaveError", lang));
+      toast.error(i18nT("classes.toastSaveError", lang));
     }
   };
 
@@ -1234,10 +1233,10 @@ function StudentsPage() {
         )
       );
 
-      toast.success(i18nT("students.toastReactivateSuccess", lang));
+      toast.success(i18nT("classes.toastReactivateSuccess", lang));
     } catch (err: any) {
       console.error("[Students] Error reactivating student:", err);
-      toast.error(i18nT("students.toastReactivateError", lang));
+      toast.error(i18nT("classes.toastReactivateError", lang));
     }
   };
 
@@ -1659,13 +1658,13 @@ function StudentsPage() {
     if (!formName.trim() || !user) return;
 
     if (!formWhatsApp.trim()) {
-      toast.error(i18nT("students.toastPhoneRequired", lang));
+      toast.error(i18nT("classes.toastPhoneRequired", lang));
       return;
     }
 
     const invalidFormUrl = findInvalidMeetingUrl(formSchedulesList);
     if (invalidFormUrl >= 0) {
-      toast.error(i18nT("students.invalidMeetingUrl", lang).replace("{n}", String(invalidFormUrl + 1)));
+      toast.error(i18nT("classes.invalidMeetingUrl", lang).replace("{n}", String(invalidFormUrl + 1)));
       return;
     }
 
@@ -1785,7 +1784,6 @@ function StudentsPage() {
       };
 
       if (editingStudentIdForModal) {
-        toast.success(i18nT("students.toastSaveSuccess", lang));
         setStudents((prev) =>
           prev.map((s) => (s.id === editingStudentIdForModal ? mappedStudent : s)),
         );
@@ -1802,7 +1800,6 @@ function StudentsPage() {
           setEditSchedulesList(formSchedulesList);
         }
       } else {
-        toast.success(i18nT("students.toastSaveSuccess", lang));
         setStudents((prev) => [...prev, mappedStudent]);
       }
 
@@ -1811,7 +1808,7 @@ function StudentsPage() {
       openPriorPaymentsIfNeeded();
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
-      toast.error(reportUserError(error, i18nT("students.toastSaveError", lang)));
+      toast.error(reportUserError(error, i18nT("classes.toastSaveError", lang)));
     } finally {
       setIsSaving(false);
     }
@@ -1831,13 +1828,13 @@ function StudentsPage() {
 
       if (error) throw error;
 
-      toast.success(i18nT("students.toastDeleteSuccess", lang));
+      toast.success(i18nT("classes.toastDeleteSuccess", lang));
 
       setStudents((prev) => prev.filter((s) => s.id !== id));
       setSelectedStudentId(null);
     } catch (error: any) {
       console.error("[Students] Error deleting student:", error);
-      toast.error(i18nT("students.toastDeleteError", lang));
+      toast.error(i18nT("classes.toastDeleteError", lang));
     }
   };
 

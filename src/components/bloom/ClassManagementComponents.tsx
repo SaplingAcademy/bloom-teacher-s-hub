@@ -291,7 +291,6 @@ export function ClassFormModal({
         existingClass?.id
       );
 
-      toast.success(t("classMgmt.classSavedSuccessfully"));
       onSuccess();
       onClose();
     } catch (err: any) {
