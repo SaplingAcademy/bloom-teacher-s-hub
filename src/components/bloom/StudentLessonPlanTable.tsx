@@ -20,7 +20,6 @@ import {
   Clock,
   BookOpen,
   Calendar,
-  Sparkles,
   Search,
   Filter,
   RefreshCw,
@@ -30,6 +29,7 @@ import {
   Download,
   History,
   CheckCheck,
+  CalendarClock,
 } from "lucide-react";
 import { exportLessonPlanPDF } from "@/lib/pdf-export";
 import { LessonNotesModal, LessonAttachment } from "./LessonNotesModal";
@@ -275,7 +275,7 @@ export function StudentLessonPlanTable({
       <div className="space-y-6">
         <div className="p-8 sm:p-12 rounded-2xl bg-card border border-border shadow-sm text-center max-w-2xl mx-auto space-y-4 my-6">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 text-primary grid place-items-center shadow-xs">
-            <Sparkles className="w-7 h-7" />
+            <BookOpen className="w-7 h-7" />
           </div>
           <div className="space-y-1.5">
             <h3 className="text-xl font-bold text-foreground tracking-tight">{t("students.createLessonPlanTitle")}</h3>
@@ -288,7 +288,7 @@ export function StudentLessonPlanTable({
               onClick={() => setIsAvailabilityConfirmationOpen(true)}
               className="h-11 px-6 text-sm font-semibold rounded-xl gap-2 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
+              <BookOpen className="w-4 h-4" />
               {t("students.generateLessonPlan")}
             </Button>
           </div>
@@ -452,7 +452,7 @@ export function StudentLessonPlanTable({
                       onClick={() => handleAutoRescheduleLesson(l.lesson_number)}
                       className="h-7 text-[11px] font-bold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-xs gap-1"
                     >
-                      <Sparkles className="w-3 h-3" /> Reagendar automaticamente
+                      <CalendarClock className="w-3 h-3" /> Reagendar automaticamente
                     </Button>
                     <Button
                       size="sm"

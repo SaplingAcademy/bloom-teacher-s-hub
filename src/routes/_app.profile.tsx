@@ -28,7 +28,6 @@ import {
   Plus,
   Compass,
   Briefcase,
-  Star,
   MapPin,
   Lock,
   MessageCircle,

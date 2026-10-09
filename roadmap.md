@@ -22,3 +22,5 @@
 - [x] Auditar e migrar todos os textos visíveis restantes para o i18n português/inglês
 - [x] Traduzir apenas labels de enums, preservando os valores canônicos armazenados
 - [x] Validar a interface, o typecheck e os testes existentes após a padronização
+
+- [ ] Replace decorative Sparkles/star icons with contextual Lucide outline icons; validate only these visual changes.

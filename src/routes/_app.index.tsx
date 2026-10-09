@@ -37,7 +37,6 @@ import {
   CalendarClock,
   Clock,
   Video,
-  Sparkles,
   CheckCircle2,
   Circle,
   Plus,
@@ -55,7 +54,6 @@ import {
   ShieldAlert,
   CheckSquare,
   MessageSquare,
-  Star,
   Calendar,
   FileText,
   Flag,
@@ -119,7 +117,7 @@ const CategoryIcon = ({ name, className }: { name: string; className?: string })
     case "MessageSquare":
       return <MessageSquare className={className} />;
     case "Star":
-      return <Star className={className} />;
+      return <Flag className={className} />;
     case "Calendar":
       return <Calendar className={className} />;
     case "FileText":
@@ -820,7 +818,7 @@ function TodayPage() {
         description={t.subtitle}
         actions={
           <button className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-warm px-4 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-sm)] transition-transform hover:-translate-y-0.5 cursor-pointer">
-            <Sparkles className="h-4 w-4" /> {t.planDay}
+            <CalendarClock className="h-4 w-4" /> {t.planDay}
           </button>
         }
       />
@@ -830,7 +828,7 @@ function TodayPage() {
         <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-300">
           <div className="flex items-start gap-3.5">
             <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-800 shrink-0 shadow-inner">
-              <Sparkles className="h-5 w-5 text-amber-800" />
+              <Settings className="h-5 w-5 text-amber-800" />
             </div>
             <div className="space-y-1">
               <h4 className="font-outfit font-extrabold text-base text-stone-900">

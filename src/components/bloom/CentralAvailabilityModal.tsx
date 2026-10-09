@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Clock,
   Calendar,
-  Sparkles,
   AlertTriangle,
   CheckCircle2,
   CalendarOff,
@@ -26,6 +25,7 @@ import {
   Trash2,
   Search,
   Check,
+  Save,
 } from "lucide-react";
 import {
   WorkingAvailability,
@@ -1085,7 +1085,7 @@ export function CentralAvailabilityModal({
               disabled={isSavingHours}
               className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <Save className="w-3.5 h-3.5 text-emerald-400" />
               {isSavingHours ? t("availabilityUi.saving") : t("availabilityUi.saveWorkingHours")}
             </Button>
           ) : activeTab === "rest_blocks" ? (
@@ -1095,7 +1095,7 @@ export function CentralAvailabilityModal({
               disabled={isSavingRestBlocks}
               className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <Save className="w-3.5 h-3.5 text-emerald-400" />
               {isSavingRestBlocks ? "Salvando..." : "Salvar horários de descanso"}
             </Button>
           ) : (

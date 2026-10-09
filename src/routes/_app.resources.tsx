@@ -13,7 +13,8 @@ import {
   Compass,
   Award,
   Search,
-  Star,
+  Bookmark,
+  BookmarkCheck,
   History,
   Plus,
   Trash2,
@@ -1023,7 +1024,7 @@ function ResourcesPage() {
                       }`}
                       title={isFav ? t.unfavorite : t.favorite}
                     >
-                      <Star className={`h-4 w-4 ${isFav ? "fill-amber-500" : ""}`} />
+                      {isFav ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
                     </button>
 
                     <div className="flex items-center gap-1.5">
@@ -1281,7 +1282,7 @@ function ResourcesPage() {
             {/* Favorites Column */}
             <PanelCard
               title={t.favoritesTitle}
-              icon={<Star className="h-4 w-4 text-amber-500 fill-amber-500" />}
+              icon={<Bookmark className="h-4 w-4 text-amber-500" />}
               contentClassName="p-4 space-y-2.5"
             >
               {favorites.length === 0 ? (
@@ -1316,7 +1317,7 @@ function ResourcesPage() {
                           className="p-1 text-amber-500 hover:bg-secondary rounded transition-colors cursor-pointer"
                           title={t.unfavorite}
                         >
-                          <Star className="h-3.5 w-3.5 fill-amber-500" />
+                          <BookmarkCheck className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
@@ -1365,7 +1366,7 @@ function ResourcesPage() {
                             isFav ? "text-amber-500" : "text-muted-foreground hover:bg-secondary"
                           }`}
                         >
-                          <Star className={`h-3.5 w-3.5 ${isFav ? "fill-amber-500" : ""}`} />
+                          {isFav ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
                         </button>
                       </div>
                     </div>

@@ -26,8 +26,7 @@ import {
   Users,
   Ban,
   RotateCcw,
-  Sparkles,
-} from "lucide-react";
+  } from "lucide-react";
 import { LessonNotesModal } from "./LessonNotesModal";
 import { GenerateClassLessonPlanModal } from "./GenerateClassLessonPlanModal";
 import { ClassWithDetails } from "@/lib/class-sync";
@@ -196,7 +195,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
             : "Generate the lesson plan using the class recurring schedule and your availability."}
         </p>
         <Button onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
-          <Sparkles className="w-3.5 h-3.5" />
+          <BookOpen className="w-3.5 h-3.5" />
           {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
         </Button>
         {generatorModal}
@@ -236,7 +235,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
               {isPt ? "Atualizar aulas" : "Refresh lessons"}
             </Button>
             <Button size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
+              <BookOpen className="w-3.5 h-3.5" />
               {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
             </Button>
           </div>

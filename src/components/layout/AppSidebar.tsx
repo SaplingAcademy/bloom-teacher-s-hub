@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Sparkles, Pin, PinOff } from "lucide-react";
+import { Pin, PinOff   MessageCircle,
+} from "lucide-react";
 import { navSections, bottomNav } from "@/lib/navigation";
 import { BloomLogo, BloomMark } from "@/components/bloom/Logo";
 import { cn } from "@/lib/utils";
@@ -258,7 +259,7 @@ export function AppSidebar({
                   className="flex w-full items-center justify-center rounded-xl bg-gradient-warm py-2.5 text-accent-foreground shadow-sm hover:opacity-90 cursor-pointer"
                   title={t("nav.askBloomAi")}
                 >
-                  <Sparkles className="h-[18px] w-[18px]" />
+                  <MessageCircle className="h-[18px] w-[18px]" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={10}>
@@ -270,7 +271,7 @@ export function AppSidebar({
               className="flex w-full items-center gap-2.5 rounded-xl bg-gradient-warm px-3 py-2.5 text-sm font-semibold text-accent-foreground shadow-sm hover:opacity-90 transition-all cursor-pointer"
               title={t("nav.askBloomAi")}
             >
-              <Sparkles className="h-[18px] w-[18px] shrink-0" />
+              <MessageCircle className="h-[18px] w-[18px] shrink-0" />
               <span>{t("nav.askBloomAi")}</span>
             </button>
           )}

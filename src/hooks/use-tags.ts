@@ -79,7 +79,6 @@ export const TAG_ICONS = [
   { id: "ShieldAlert", label: "Admin" },
   { id: "CheckSquare", label: "Task / Tarefa" },
   { id: "MessageSquare", label: "Feedback" },
-  { id: "Star", label: "Star / Estrela" },
   { id: "Calendar", label: "Calendar / Calendário" },
   { id: "FileText", label: "File / Arquivo" },
   { id: "Flag", label: "Priority / Prioridade" },

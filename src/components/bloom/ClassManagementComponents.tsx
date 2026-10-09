@@ -13,7 +13,6 @@ import {
   Check,
   Clock,
   Calendar,
-  Sparkles,
   X,
   FileText,
   CheckCircle2,
@@ -144,7 +143,7 @@ export function AddTypeSelectionModal({
             className="flex items-center gap-4 p-4 rounded-2xl border border-stone-200 bg-white hover:border-[#163020] hover:bg-stone-50 transition-all text-left group cursor-pointer shadow-sm"
           >
             <div className="h-12 w-12 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Sparkles className="h-6 w-6" />
+              <Users className="h-6 w-6" />
             </div>
             <div className="space-y-0.5">
               <span className="font-bold text-stone-900 text-base font-outfit block">

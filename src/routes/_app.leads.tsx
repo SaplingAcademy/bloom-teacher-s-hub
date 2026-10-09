@@ -19,7 +19,6 @@ import {
   MessageSquare,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
   ArrowRight,
   Filter,
   Kanban,
@@ -30,6 +29,7 @@ import {
   Tag,
   RefreshCw,
   Send,
+  Workflow,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -816,7 +816,7 @@ function LeadsPage() {
               {/* Bloom Activity History */}
               <div className="space-y-3 pt-2">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" /> {t("leadsUi.automationHistory")}
+                  <Workflow className="w-3.5 h-3.5 text-primary" /> {t("leadsUi.automationHistory")}
                 </h4>
 
                 {activities.length === 0 ? (
@@ -829,7 +829,7 @@ function LeadsPage() {
                       <div key={act.id} className="p-3 rounded-lg bg-card border border-border text-xs space-y-1">
                         <div className="flex items-center justify-between font-medium text-card-foreground">
                           <span className="text-primary flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" /> {act.description}
+                            <Workflow className="w-3 h-3" /> {act.description}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
                             {new Date(act.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}

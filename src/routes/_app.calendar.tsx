@@ -28,8 +28,7 @@ import {
   AlertCircle,
   AlertTriangle,
   RotateCcw,
-  Sparkles,
-} from "lucide-react";
+  } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1162,7 +1161,7 @@ function CalendarPage() {
                 }}
                 className="h-9 text-xs font-bold bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 shrink-0 gap-1.5 cursor-pointer shadow-xs"
               >
-                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <Settings className="w-4 h-4 text-emerald-400" />
                 {t("calendarUi.configureAvailability")}
               </Button>
             </div>

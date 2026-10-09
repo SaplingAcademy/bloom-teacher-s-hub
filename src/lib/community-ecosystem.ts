@@ -53,7 +53,7 @@ export const DEFAULT_THEMATIC_GARDENS: ThematicGarden[] = [
   { id: "tg-business", name: "Inglês para Negócios", slug: "business", category: "methodology", icon: "Briefcase" },
   { id: "tg-conversation", name: "Conversação & Fluência", slug: "conversation", category: "methodology", icon: "MessageSquare" },
   { id: "tg-grammar", name: "Gramática Prática", slug: "grammar", category: "methodology", icon: "BookOpen" },
-  { id: "tg-gamification", name: "Gamificação", slug: "gamification", category: "methodology", icon: "Sparkles" },
+  { id: "tg-gamification", name: "Gamificação", slug: "gamification", category: "methodology", icon: "Gamepad2" },
   { id: "tg-ai", name: "Inteligência Artificial", slug: "ai", category: "tech", icon: "Cpu" },
   { id: "tg-marketing", name: "Marketing & Leads", slug: "marketing", category: "business", icon: "TrendingUp" },
 ];

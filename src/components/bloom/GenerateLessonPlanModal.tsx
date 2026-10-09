@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sparkles,
   Calendar,
   Clock,
   Plus,
@@ -29,6 +28,8 @@ import {
   AlertCircle,
   CheckCircle2,
   HelpCircle,
+  BookOpen,
+  Loader2,
 } from "lucide-react";
 import {
   LessonScheduleInput,
@@ -261,7 +262,7 @@ export function GenerateLessonPlanModal({
         <DialogHeader className="space-y-2 pb-3 border-b border-border/60">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="w-5 h-5" />
+              <BookOpen className="w-5 h-5" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground">
@@ -474,12 +475,12 @@ export function GenerateLessonPlanModal({
           >
             {isGenerating ? (
               <>
-                <Sparkles className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 {t("students.modalGenerating")}
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
+                <BookOpen className="w-4 h-4" />
                 {t("students.modalGenerateBtn").replace("{count}", String(targetCount))}
               </>
             )}

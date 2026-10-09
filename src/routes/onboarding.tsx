@@ -18,7 +18,6 @@ import {
 import { parseMoneyBRL, saveMonthlyGoal } from "@/lib/growth-engine";
 import { toast } from "sonner";
 import {
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -38,6 +37,7 @@ import {
   ShieldCheck,
   ChevronRight,
   Pencil,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -706,7 +706,7 @@ export function OnboardingPage() {
         {isSuccessView ? (
           <div className="space-y-8 text-center max-w-lg mx-auto py-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 shadow-inner">
-              <Sparkles className="h-8 w-8 text-emerald-800" />
+              <CheckCircle2 className="h-8 w-8 text-emerald-800" />
             </div>
             <div className="space-y-3">
               <h2 className="text-3xl font-extrabold font-outfit text-[#163020]">
@@ -836,12 +836,12 @@ export function OnboardingPage() {
                   >
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin" />
                         {t("onboardingUi.preparingYourBloom")}
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5" />
+                        <CheckCircle2 className="h-5 w-5" />
                         {t("onboardingUi.prepareMyBloom")}
                       </span>
                     )}
@@ -2225,7 +2225,7 @@ function StepFinalSummary({ data, isPt }: { data: OnboardingData; isPt: boolean 
       {/* Title */}
       <div className="text-center space-y-2">
         <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-800 mx-auto flex items-center justify-center">
-          <Sparkles className="h-6 w-6" />
+          <CheckCircle2 className="h-6 w-6" />
         </div>
         <h2 className="text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
           {t("onboardingUi.everythingIsSet")}
