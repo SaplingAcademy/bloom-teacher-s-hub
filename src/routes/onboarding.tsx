@@ -773,6 +773,8 @@ export function OnboardingPage() {
 
               {currentStep === 1 && (
                 <Step1AboutYou
+                  nameError={nameError}
+                  setNameError={setNameError}
                   data={data}
                   updateData={updateData}
                   isPt={isPt}
@@ -1054,10 +1056,14 @@ function Step1AboutYou({
   data,
   updateData,
   isPt,
+  nameError,
+  setNameError,
 }: {
   data: OnboardingData;
   updateData: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   isPt: boolean;
+  nameError: boolean;
+  setNameError: (v: boolean) => void;
 }) {
   const { lang, t } = useLanguage();
   const toggleLanguage = (langId: string) => {
