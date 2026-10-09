@@ -326,7 +326,7 @@ Signature: _______________________`,
     section: "administrative",
     description: "Onboarding email template to send to new students.",
     placeholders: ["Student Name", "Course Name", "Next Class Date", "Material Link"],
-    content: `Subject: Welcome to [Course Name]! 🌟
+    content: `Subject: Welcome to [Course Name]!
 
 Hi [Student Name],
 

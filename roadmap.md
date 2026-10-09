@@ -23,4 +23,4 @@
 - [x] Traduzir apenas labels de enums, preservando os valores canônicos armazenados
 - [x] Validar a interface, o typecheck e os testes existentes após a padronização
 
-- [ ] Replace decorative Sparkles/star icons with contextual Lucide outline icons; validate only these visual changes.
+- [x] Replace decorative Sparkles/star icons with contextual Lucide outline icons; validate only these visual changes.
