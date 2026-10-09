@@ -248,6 +248,25 @@ function CommunityPage() {
     loadComments(postId);
   };
 
+  const { post: focusPost } = Route.useSearch();
+  const [handledFocus, setHandledFocus] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusPost || loading || handledFocus === focusPost) return;
+    if (!posts.some((p) => p.id === focusPost)) return;
+    setHandledFocus(focusPost);
+    setSearch("");
+    if (openComments !== focusPost) {
+      setOpenComments(focusPost);
+      setCommentDraft("");
+      setComments([]);
+      loadComments(focusPost);
+    }
+    requestAnimationFrame(() =>
+      document.getElementById(`post-${focusPost}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPost, loading, posts]);
+
   const syncCommentCount = (postId: string, delta: number) =>
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount + delta) } : p)));
 
