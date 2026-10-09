@@ -1,6 +1,17 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "lessonPresets": {
+      "lessons": "{0} aulas",
+      "custom": "Personalizado",
+      "specify": "Definir",
+      "edit": "Editar opções",
+      "done": "Concluir",
+      "addPlaceholder": "Nº de aulas",
+      "add": "Adicionar",
+      "remove": "Remover opção",
+      "saveError": "Não foi possível salvar suas opções. Tente novamente."
+    },
     "globalUi": {
       "openNavigation": "Abrir navegação",
       "selectLanguage": "Selecionar idioma",
@@ -965,6 +976,17 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "lessonPresets": {
+      "lessons": "{0} lessons",
+      "custom": "Custom",
+      "specify": "Specify",
+      "edit": "Edit options",
+      "done": "Done",
+      "addPlaceholder": "No. of lessons",
+      "add": "Add",
+      "remove": "Remove option",
+      "saveError": "Could not save your options. Please try again."
+    },
     "globalUi": {
       "openNavigation": "Open navigation",
       "selectLanguage": "Select language",
