@@ -638,15 +638,29 @@ function FinancePage() {
   // database and keep feeding KPIs/projections, but only appear when their month arrives.
   const ledgerInvoices = invoices.filter((inv) => isInvoiceVisibleInLedger(inv));
 
-  // Computed KPIs directly from real invoices and expenses (all invoices, including future)
+  // Monthly KPIs for the current calendar month (no month selector on this page).
+  const nowRef = new Date();
+  const currentMonthKey = `${nowRef.getFullYear()}-${String(nowRef.getMonth() + 1).padStart(2, "0")}`;
+  const monthOfPaidAt = (paidAt?: string | null) => {
+    if (!paidAt) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(paidAt)) return paidAt.slice(0, 7);
+    const d = new Date(paidAt);
+    if (Number.isNaN(d.getTime())) return paidAt.slice(0, 7);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
   const totalReceivedCents = invoices
-    .filter((inv) => inv.status === "paid")
+    .filter((inv) => inv.status === "paid" && monthOfPaidAt(inv.paidAt) === currentMonthKey)
     .reduce((sum, inv) => sum + inv.amountCents, 0);
 
-  const totalExpectedCents = invoices.reduce((sum, inv) => sum + inv.amountCents, 0);
+  const totalExpectedCents = invoices
+    .filter((inv) => (inv.dueDate || "").slice(0, 7) === currentMonthKey)
+    .reduce((sum, inv) => sum + inv.amountCents, 0);
+  const monthExpensesCents = Math.round(
+    expenses.filter((e) => (e.date || "").slice(0, 7) === currentMonthKey).reduce((sum, e) => sum + e.amount, 0) * 100
+  );
+  const netProfitCents = totalReceivedCents - monthExpensesCents;
   const totalExpensesCents = Math.round(expenses.reduce((sum, current) => sum + current.amount, 0) * 100);
   const totalExpenses = totalExpensesCents / 100;
-  const netProfitCents = totalReceivedCents - totalExpensesCents;
 
   return (
     <div className="space-y-6">
@@ -681,6 +695,27 @@ function FinancePage() {
       {/* TAB CONTENT: LEDGER */}
       {activeTab === "Ledger" && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/* KPI STAT CARDS */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard
+              label={t.kpiReceived}
+              value={formatCentsToBRL(totalReceivedCents)}
+              icon={CheckCircle2}
+              tone="primary"
+            />
+            <StatCard
+              label={t.kpiExpected}
+              value={formatCentsToBRL(totalExpectedCents)}
+              icon={TrendingUp}
+              tone="lilac"
+            />
+            <StatCard
+              label={t.kpiNetProfit}
+              value={formatCentsToBRL(netProfitCents)}
+              icon={Wallet}
+              tone={netProfitCents >= 0 ? "primary" : "warning"}
+            />
+          </div>
           {/* PACKAGE EXPIRATION MONITORING ALERT BANNER */}
           {expirationAlerts.length > 0 && (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
@@ -892,27 +927,6 @@ function FinancePage() {
             </ul>
           </section>
 
-          {/* KPI STAT CARDS */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard
-              label={t.kpiReceived}
-              value={formatCentsToBRL(totalReceivedCents)}
-              icon={CheckCircle2}
-              tone="primary"
-            />
-            <StatCard
-              label={t.kpiExpected}
-              value={formatCentsToBRL(totalExpectedCents)}
-              icon={TrendingUp}
-              tone="lilac"
-            />
-            <StatCard
-              label={t.kpiNetProfit}
-              value={formatCentsToBRL(netProfitCents)}
-              icon={Wallet}
-              tone={netProfitCents >= 0 ? "primary" : "warning"}
-            />
-          </div>
         </div>
       )}
 
