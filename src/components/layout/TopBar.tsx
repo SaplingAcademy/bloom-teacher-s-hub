@@ -1,5 +1,5 @@
 import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
-import { Menu, Search, Plus, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { Menu, Search, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -63,11 +63,6 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
       </label>
 
       <div className="ml-auto flex items-center gap-2">
-        <button className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-sm)] transition-colors hover:bg-primary/90">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">{t("common.new", "New")}</span>
-        </button>
-
         {/* Global Language Selector Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
