@@ -1,5 +1,5 @@
 import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
-import { Menu, Search, Plus, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { Menu, Search, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
