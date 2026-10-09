@@ -42,6 +42,7 @@ import { fetchTeacherTimeOff, TeacherTimeOff } from "@/lib/time-off-engine";
 import { CEFRLevel, CourseFocus } from "@/lib/calendar-sync";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/use-language";
+import { LessonCountPresetPicker, type LessonCountSelection } from "@/components/bloom/LessonCountPresetPicker";
 import { initialLessonPlanPeriod, clipToPeriod } from "@/lib/lesson-plan-period";
 
 interface Props {
@@ -77,10 +78,8 @@ export function GenerateLessonPlanModal({
 }: Props) {
   const { t } = useLanguage();
   // Form State
-  const [quantityType, setQuantityType] = useState<"package" | "20" | "23" | "40" | "custom">(
-    packageLessonCount ? "package" : "23"
-  );
-  const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 23);
+  const [quantityType, setQuantityType] = useState<LessonCountSelection>(20);
+  const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 20);
   const [startDate, setStartDate] = useState<string>(() => initialLessonPlanPeriod({ startDate: initialStartDate }).startDate);
   const [endDate, setEndDate] = useState<string>(() => initialLessonPlanPeriod({ endDate: initialEndDate }).endDate);
   const [schedules, setSchedules] = useState<LessonScheduleInput[]>([]);
@@ -142,20 +141,7 @@ export function GenerateLessonPlanModal({
 
   // Determine total lesson count to generate
   const getTargetLessonCount = (): number => {
-    switch (quantityType) {
-      case "package":
-        return packageLessonCount || 23;
-      case "20":
-        return 20;
-      case "23":
-        return 23;
-      case "40":
-        return 40;
-      case "custom":
-        return Number(customQuantity) || 1;
-      default:
-        return 23;
-    }
+    return quantityType === "custom" ? Number(customQuantity) || 1 : quantityType;
   };
 
   const targetCount = getTargetLessonCount();
@@ -306,91 +292,14 @@ export function GenerateLessonPlanModal({
               <span className="text-muted-foreground font-normal">{t("students.modalTargetLessons").replace("{count}", String(targetCount))}</span>
             </Label>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {packageLessonCount && (
-                <button
-                  type="button"
-                  onClick={() => setQuantityType("package")}
-                  className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
-                    quantityType === "package"
-                      ? "border-primary bg-primary/5 text-primary font-semibold shadow-xs"
-                      : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                  }`}
-                >
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalPkgCount")}</span>
-                  <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", String(packageLessonCount))}</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setQuantityType("20")}
-                className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
-                  quantityType === "20"
-                    ? "border-primary bg-primary/5 text-primary font-semibold shadow-xs"
-                    : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalStandard")}</span>
-                <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", "20")}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQuantityType("23")}
-                className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
-                  quantityType === "23"
-                    ? "border-primary bg-primary/5 text-primary font-semibold shadow-xs"
-                    : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalRecommended")}</span>
-                <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", "23")}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQuantityType("40")}
-                className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
-                  quantityType === "40"
-                    ? "border-primary bg-primary/5 text-primary font-semibold shadow-xs"
-                    : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalExtended")}</span>
-                <span className="text-sm font-bold text-foreground mt-1">{t("students.lessonsCountPlural").replace("{count}", "40")}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQuantityType("custom")}
-                className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
-                  quantityType === "custom"
-                    ? "border-primary bg-primary/5 text-primary font-semibold shadow-xs"
-                    : "border-border/80 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{t("students.modalCustom")}</span>
-                <span className="text-sm font-bold text-foreground mt-1">{t("students.modalSpecify")}</span>
-              </button>
-            </div>
-
-            {quantityType === "custom" && (
-              <div className="pt-2">
-                <Label htmlFor="custom-qty" className="text-xs text-muted-foreground mb-1 block">
-                  {t("students.modalEnterCustomQty")}
-                </Label>
-                <Input
-                  id="custom-qty"
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={customQuantity}
-                  onChange={(e) => setCustomQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="h-10 text-sm font-semibold max-w-xs"
-                />
-              </div>
-            )}
+            <LessonCountPresetPicker
+              selected={quantityType}
+              onSelect={setQuantityType}
+              customQuantity={customQuantity}
+              onCustomQuantityChange={setCustomQuantity}
+              inputId="custom-qty"
+              customLabel={t("students.modalEnterCustomQty")}
+            />
           </div>
 
           {/* STEP 2: START DATE */}
