@@ -262,6 +262,9 @@ export function OnboardingPage() {
 
   const [showHourlySkipModal, setShowHourlySkipModal] = useState(false);
   const [showSkipWarningModal, setShowSkipWarningModal] = useState(false);
+  const [showSkipNameModal, setShowSkipNameModal] = useState(false);
+  const [nameError, setNameError] = useState(false);
+  const [savingSkipName, setSavingSkipName] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccessView, setIsSuccessView] = useState(false);
 
@@ -412,6 +415,10 @@ export function OnboardingPage() {
   };
 
   const handleNext = () => {
+    if (currentStep === 1 && !toProfileFullName(data.preferredName)) {
+      setNameError(true);
+      return;
+    }
     if (currentStep === 5 && data.knowsHourlyRate === false) {
       setShowHourlySkipModal(true);
       return;
@@ -435,8 +442,29 @@ export function OnboardingPage() {
     setShowSkipWarningModal(true);
   };
 
-  const handleConfirmSkip = async () => {
+  const handleConfirmSkip = () => {
     setShowSkipWarningModal(false);
+    setNameError(false);
+    setShowSkipNameModal(true);
+  };
+
+  const handleFinishSkip = async () => {
+    const name = toProfileFullName(data.preferredName);
+    if (!name) {
+      setNameError(true);
+      return;
+    }
+    const userId = user?.id || session?.user?.id;
+    if (!userId) return;
+    setSavingSkipName(true);
+    const { error } = await supabase.from("profiles").update({ full_name: name }).eq("id", userId);
+    setSavingSkipName(false);
+    if (error) {
+      toast.error(t("onboardingUi.nameSaveError"));
+      return;
+    }
+    updateProfileState(profileNameState(name));
+    setShowSkipNameModal(false);
     await savePartialProgress("skipped", currentStep);
     updateProfileState({ onboarding_status: "skipped" });
     if (typeof window !== "undefined") {
@@ -450,6 +478,11 @@ export function OnboardingPage() {
 
   // Final finish handler: Save configuration to database
   const handleCompleteOnboarding = async () => {
+    if (!toProfileFullName(data.preferredName)) {
+      setNameError(true);
+      setCurrentStep(1);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const userId = user?.id || session?.user?.id;
@@ -890,6 +923,39 @@ export function OnboardingPage() {
         </div>
       )}
 
+      {/* Mandatory name after skipping (saved to profiles.full_name) */}
+      {showSkipNameModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleFinishSkip(); }}
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-center"
+          >
+            <label htmlFor="skip-preferred-name" className="block text-xl font-bold font-outfit text-stone-900">
+              {t("onboardingUi.skipNameTitle")}
+            </label>
+            <input
+              id="skip-preferred-name"
+              type="text"
+              autoFocus
+              autoComplete="given-name"
+              maxLength={80}
+              value={data.preferredName ?? ""}
+              onChange={(e) => { updateData("preferredName", e.target.value); setNameError(false); }}
+              placeholder={t("onboardingUi.eGDeBora")}
+              className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+            />
+            {nameError && <p role="alert" className="text-sm text-red-600">{t("onboardingUi.nameRequired")}</p>}
+            <button
+              type="submit"
+              disabled={savingSkipName}
+              className="w-full h-12 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-sm shadow-sm transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {t("onboardingUi.skipNameSave")}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Confirmation Modal for Skipping Hourly Rate in Step 5 */}
       {showHourlySkipModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -1027,10 +1093,12 @@ function Step1AboutYou({
           autoComplete="given-name"
           maxLength={80}
           value={data.preferredName ?? ""}
-          onChange={(e) => updateData("preferredName", e.target.value)}
+          onChange={(e) => { updateData("preferredName", e.target.value); setNameError(false); }}
           placeholder={t("onboardingUi.eGDeBora")}
+          aria-invalid={nameError}
           className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
         />
+        {nameError && <p role="alert" className="text-sm text-red-600">{t("onboardingUi.nameRequired")}</p>}
       </div>
 
       <div className="space-y-2">
