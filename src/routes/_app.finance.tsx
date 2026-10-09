@@ -661,7 +661,6 @@ function FinancePage() {
   const netProfitCents = totalReceivedCents - monthExpensesCents;
   const totalExpensesCents = Math.round(expenses.reduce((sum, current) => sum + current.amount, 0) * 100);
   const totalExpenses = totalExpensesCents / 100;
-  const netProfitCents = totalReceivedCents - totalExpensesCents;
 
   return (
     <div className="space-y-6">
