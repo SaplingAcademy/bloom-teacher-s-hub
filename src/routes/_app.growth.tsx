@@ -18,6 +18,7 @@ import {
   MRRResult,
   fetchTeacherExpenses,
   fetchEffectiveHourlyRate,
+  WEEKS_PER_MONTH,
   EffectiveHourlyResult,
 } from "@/lib/growth-engine";
 import { calculateRealCapacity, RealCapacityResult } from "@/lib/capacity-engine";
