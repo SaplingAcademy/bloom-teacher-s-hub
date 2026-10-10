@@ -10,6 +10,8 @@ export interface MRRResult {
   totalMRR: number;
   contributingStudentRevenues: number[];
   activeStudentCount: number;
+  /** Active students represented in totalMRR (individual payers + active members of billed classes). */
+  payingStudentCount: number;
   hasBillingData: boolean;
 }
 
@@ -143,6 +145,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
     totalMRR: 0,
     contributingStudentRevenues: [],
     activeStudentCount: 0,
+    payingStudentCount: 0,
     hasBillingData: false,
   };
 
@@ -193,6 +196,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
     let totalMRR = 0;
     const contributingStudentRevenues: number[] = [];
     let hasBillingData = false;
+    let payingStudentCount = 0;
 
     // --- A. Individual students ---
     const individualStudents = activeStudents.filter((s) => s.type !== "Group");
@@ -231,6 +235,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
       if (contribution > 0) {
         totalMRR += contribution;
         contributingStudentRevenues.push(contribution);
+        payingStudentCount += 1;
         hasBillingData = true;
       }
     });
@@ -256,6 +261,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
 
         if (classContribution > 0) {
           totalMRR += classContribution;
+          payingStudentCount += activeMembers.length;
           hasBillingData = true;
         }
       } else {
@@ -276,6 +282,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
           totalMRR += classTotal;
           hasBillingData = true;
           activeMembers.forEach(() => contributingStudentRevenues.push(perMemberContrib));
+          payingStudentCount += activeMembers.length;
         }
       }
     });
@@ -284,6 +291,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
       totalMRR: Math.round(totalMRR * 100) / 100,
       contributingStudentRevenues,
       activeStudentCount: activeStudents.length,
+      payingStudentCount,
       hasBillingData,
     };
   } catch (err) {
@@ -341,6 +349,8 @@ export interface EffectiveHourlyResult {
   totalMRR: number;
   activeStudentCount: number;
   billableHoursPerMonth: number;
+  /** Real recurring teaching minutes per week from active student/class schedules. */
+  weeklyTeachingMinutes: number;
   hasEnoughData: boolean;
 }
 
@@ -376,6 +386,7 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     totalMRR: 0,
     activeStudentCount: 0,
     billableHoursPerMonth: 0,
+    weeklyTeachingMinutes: 0,
     hasEnoughData: false,
   };
 
@@ -383,7 +394,6 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
 
   try {
     const mrrRes = await fetchCurrentMRR(teacherId);
-    if (!mrrRes.hasBillingData || mrrRes.totalMRR === 0) return empty;
 
     // Only active students and active classes represent current teaching workload.
     const [studentsRes, classesRes, spRes, pkgRes, settingsRes] = await Promise.all([
@@ -453,11 +463,19 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     studentSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch, studentPkgOf.get(String(sch.student_id))); });
     classSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch, classPkg.get(String(sch.class_id))); });
 
-    if (weeklyMinutes <= 0) {
-      return { ...empty, totalMRR: mrrRes.totalMRR, activeStudentCount: mrrRes.activeStudentCount };
+    const billableHoursPerMonth = weeklyMinutes > 0
+      ? Math.round(((weeklyMinutes / 60) * WEEKS_PER_MONTH) * 10) / 10
+      : 0;
+    if (weeklyMinutes <= 0 || !mrrRes.hasBillingData || mrrRes.totalMRR <= 0) {
+      return {
+        ...empty,
+        totalMRR: mrrRes.totalMRR,
+        activeStudentCount: mrrRes.activeStudentCount,
+        billableHoursPerMonth,
+        weeklyTeachingMinutes: weeklyMinutes,
+      };
     }
 
-    const billableHoursPerMonth = Math.round(((weeklyMinutes / 60) * WEEKS_PER_MONTH) * 10) / 10;
     const effectiveHourlyRate = Math.round((mrrRes.totalMRR / billableHoursPerMonth) * 100) / 100;
 
     return {
@@ -465,6 +483,7 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
       totalMRR: mrrRes.totalMRR,
       activeStudentCount: mrrRes.activeStudentCount,
       billableHoursPerMonth,
+      weeklyTeachingMinutes: weeklyMinutes,
       hasEnoughData: true,
     };
   } catch (err) {
