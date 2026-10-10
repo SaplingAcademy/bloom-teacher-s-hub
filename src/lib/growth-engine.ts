@@ -386,55 +386,72 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     if (!mrrRes.hasBillingData || mrrRes.totalMRR === 0) return empty;
 
     // Only active students and active classes represent current teaching workload.
-    const { data: studentsData } = await supabase
-      .from("students")
-      .select("id")
-      .eq("teacher_id", teacherId)
-      .eq("status", "Active");
+    const [studentsRes, classesRes, spRes, pkgRes, settingsRes] = await Promise.all([
+      supabase.from("students").select("id, type, package_id").eq("teacher_id", teacherId).eq("status", "Active"),
+      supabase.from("classes").select("id, package_id, class_members(student_id, status)").eq("teacher_id", teacherId).eq("status", "active"),
+      supabase.from("student_packages").select("student_id, package_id").eq("teacher_id", teacherId).eq("status", "active"),
+      supabase.from("packages").select("*").eq("teacher_id", teacherId),
+      supabase.from("settings").select("default_class_duration").eq("teacher_id", teacherId).maybeSingle(),
+    ]);
 
-    const studentIds = (studentsData || []).map((s: any) => s.id);
+    const activeStudents = (studentsRes.data || []) as any[];
+    const activeClasses = (classesRes.data || []) as any[];
+    const pkgMinutes = new Map<string, number>();
+    ((pkgRes.data || []) as any[]).forEach((p) => {
+      const m = Number(p.lesson_duration_minutes ?? p.duration);
+      if (Number.isFinite(m) && m > 0) pkgMinutes.set(String(p.id), m);
+    });
+    const spPackage = new Map<string, string>();
+    ((spRes.data || []) as any[]).forEach((sp) => { if (sp.package_id) spPackage.set(String(sp.student_id), String(sp.package_id)); });
+    const defaultMin = Number((settingsRes as any)?.data?.default_class_duration);
+    const teacherDefault = Number.isFinite(defaultMin) && defaultMin > 0 ? defaultMin : 0;
+
+    // Students whose teaching time is represented by a class schedule are not counted individually.
+    const classIds = activeClasses.map((c) => c.id);
+    const groupStudentIds = new Set<string>();
+    activeClasses.forEach((c) => (c.class_members || []).forEach((m: any) => {
+      if (!m.status || String(m.status).toLowerCase() === "active") groupStudentIds.add(String(m.student_id));
+    }));
+    const studentPkgOf = new Map<string, string | null>();
+    activeStudents.forEach((s) => {
+      studentPkgOf.set(String(s.id), spPackage.get(String(s.id)) ?? (s.package_id ? String(s.package_id) : null));
+    });
+    const studentIds = activeStudents
+      .filter((s) => !groupStudentIds.has(String(s.id)) && s.type !== "Group")
+      .map((s) => s.id);
 
     let studentSchedules: any[] = [];
     if (studentIds.length > 0) {
-      const { data: schData } = await supabase
-        .from("student_schedules")
-        .select("*")
-        .in("student_id", studentIds);
+      const { data: schData } = await supabase.from("student_schedules").select("*").in("student_id", studentIds);
       studentSchedules = schData || [];
     }
-
-    const { data: activeClasses } = await supabase
-      .from("classes")
-      .select("id")
-      .eq("teacher_id", teacherId)
-      .eq("status", "active");
-    const classIds = (activeClasses || []).map((c: any) => c.id);
-
     let classSchedules: any[] = [];
     if (classIds.length > 0) {
-      const { data: cData } = await supabase
-        .from("class_schedules")
-        .select("*")
-        .in("class_id", classIds);
+      const { data: cData } = await supabase.from("class_schedules").select("*").in("class_id", classIds);
       classSchedules = cData || [];
     }
+    const classPkg = new Map<string, string | null>(activeClasses.map((c) => [String(c.id), c.package_id ? String(c.package_id) : null]));
 
-    // Real lesson duration: explicit minutes first, then start/end times. Unknown durations are skipped.
-    const minutesOf = (sch: any): number => {
+    // Duration priority: explicit schedule minutes > start/end > assigned package > teacher default. Unknown = skipped.
+    const minutesOf = (sch: any, packageId: string | null | undefined): number => {
       const explicit = Number(sch.duration_minutes ?? sch.duration);
       if (Number.isFinite(explicit) && explicit > 0) return explicit;
       const st = sch.start_time as string | undefined;
       const et = sch.end_time as string | undefined;
-      if (!st || !et) return 0;
-      const [sh, sm] = st.split(":").map(Number);
-      const [eh, em] = et.split(":").map(Number);
-      const mins = (eh * 60 + em) - (sh * 60 + sm);
-      return mins > 0 ? mins : 0;
+      if (st && et) {
+        const [sh, sm] = st.split(":").map(Number);
+        const [eh, em] = et.split(":").map(Number);
+        const mins = (eh * 60 + em) - (sh * 60 + sm);
+        if (Number.isFinite(mins) && mins > 0) return mins;
+      }
+      const pm = packageId ? pkgMinutes.get(packageId) : undefined;
+      if (pm) return pm;
+      return teacherDefault;
     };
 
     let weeklyMinutes = 0;
-    studentSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch); });
-    classSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch); });
+    studentSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch, studentPkgOf.get(String(sch.student_id))); });
+    classSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch, classPkg.get(String(sch.class_id))); });
 
     if (weeklyMinutes <= 0) {
       return { ...empty, totalMRR: mrrRes.totalMRR, activeStudentCount: mrrRes.activeStudentCount };
