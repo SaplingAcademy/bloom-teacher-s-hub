@@ -453,7 +453,6 @@ function GrowthPage() {
       }
     });
     setTotalCapacity(totalSlots);
-    setAvailableWeeklySlots(totalSlots);
 
     // Get current week's events
     const allEvents = getCalendarEvents();
