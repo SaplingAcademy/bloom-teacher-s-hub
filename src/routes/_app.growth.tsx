@@ -267,6 +267,7 @@ function GrowthPage() {
     totalOccupiedSlots: 0,
     totalRemainingSlots: 0,
     occupancyPct: 0,
+    availableWeeklyMinutes: 0,
     slotDurationMinutes: 60,
     days: [],
   });
@@ -1330,7 +1331,34 @@ function GrowthPage() {
               const minHourlyRate = Math.round(
                 (expenses * (1 + safetyMarginPercent / 100)) / (monthlyBillableHours || 1),
               );
-              const recHourlyRate = Math.round(grossNeeded / (monthlyBillableHours || 1));
+              const recHourlyRate = Math.round((grossNeeded / (monthlyBillableHours || 1)) * 100) / 100;
+              const money = (v: number) =>
+                `${currency} ${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              const hoursFmt = (v: number) =>
+                v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 });
+              const fill = (key: string, vars: Record<string, string | number>) =>
+                Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), tr(key));
+
+              // Real Bloom data
+              const hasRealAvg = effectiveHourlyData.hasEnoughData && effectiveHourlyData.effectiveHourlyRate > 0;
+              const realAvg = hasRealAvg ? effectiveHourlyData.effectiveHourlyRate : 0;
+              const teachingHoursMonth = effectiveHourlyData.billableHoursPerMonth;
+              const availableHoursMonth = capacityData.hasWorkingHours
+                ? Math.round((capacityData.availableWeeklyMinutes / 60) * WEEKS_PER_MONTH * 10) / 10
+                : 0;
+              const hasCapacity = availableHoursMonth > 0 && teachingHoursMonth > 0;
+              const capacityPct = hasCapacity ? Math.round((teachingHoursMonth / availableHoursMonth) * 100) : null;
+              const realDiff = hasRealAvg ? Math.round((recHourlyRate - realAvg) * 100) / 100 : 0;
+              const canCompare = hasRealAvg && incomeGoal > 0;
+              const insight = !canCompare
+                ? null
+                : realAvg >= recHourlyRate * 0.95
+                  ? tr("auditUi.hiAligned")
+                  : capacityPct === null
+                    ? fill("auditUi.hiBelowNoCapacity", { diff: money(realDiff) })
+                    : capacityPct < 70
+                      ? fill("auditUi.hiLowOccupancy", { pct: capacityPct, diff: money(realDiff) })
+                      : fill("auditUi.hiHighOccupancy", { pct: capacityPct, diff: money(realDiff) });
               const adjustmentDiff = currentAvgHourlyRate > 0 ? recHourlyRate - currentAvgHourlyRate : 0;
               
               // Calendar Feasibility Check: Compare reserved lesson hours against real calendar capacity
@@ -1354,7 +1382,7 @@ function GrowthPage() {
                       {tr("auditUi.recommendedHourlyRate")}
                     </span>
                     <h3 className="font-display text-4xl font-extrabold text-white">
-                      {currency} {recHourlyRate}{" "}
+                      {money(recHourlyRate)}{" "}
                       <span className="text-sm font-semibold opacity-90">
                         /{tr("auditUi.hour")}
                       </span>
@@ -1365,6 +1393,49 @@ function GrowthPage() {
                         : `With ${teachHoursPerWeek} weekly reserved lesson hours and current cost structure.`}
                     </p>
                   </div>
+
+                  {/* Real Bloom data insights */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
+                    <div className="space-y-1 border-b border-lilac-foreground/10 pb-2">
+                      <span className="opacity-80 block">{tr("auditUi.hiCurrentAvg")}</span>
+                      {hasRealAvg ? (
+                        <>
+                          <span className="text-sm font-bold text-white block">{money(realAvg)}/h</span>
+                          <span className="text-[11px] font-medium opacity-80 block leading-snug">
+                            {fill("auditUi.hiCurrentAvgContext", {
+                              students: effectiveHourlyData.activeStudentCount,
+                              hours: hoursFmt(teachingHoursMonth),
+                            })}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] font-medium opacity-80 block leading-snug">{tr("auditUi.hiNoCurrentAvg")}</span>
+                      )}
+                    </div>
+                    <div className="space-y-1 border-b border-lilac-foreground/10 pb-2">
+                      <span className="opacity-80 block">{tr("auditUi.hiCapacity")}</span>
+                      {capacityData.hasWorkingHours && availableHoursMonth > 0 ? (
+                        <>
+                          <span className="text-sm font-bold text-white block">{capacityPct !== null ? `${capacityPct}%` : "—"}</span>
+                          <span className="text-[11px] font-medium opacity-80 block leading-snug">
+                            {tr("auditUi.hiTeachingHours")}: {teachingHoursMonth > 0 ? `${hoursFmt(teachingHoursMonth)}h` : "—"} · {tr("auditUi.hiAvailableHours")}: {hoursFmt(availableHoursMonth)}h
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] font-medium opacity-80 block leading-snug">{tr("auditUi.hiNoAvailability")}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {canCompare && (
+                    <div className="rounded-xl bg-white/10 border border-white/20 p-3.5 space-y-1.5 text-white text-xs">
+                      <h5 className="text-[10px] uppercase font-bold tracking-wider opacity-90">{tr("auditUi.hiCompare")}</h5>
+                      <div className="flex justify-between"><span className="opacity-85">{tr("auditUi.hiCurrent")}</span><span className="font-bold">{money(realAvg)}/h</span></div>
+                      <div className="flex justify-between"><span className="opacity-85">{tr("auditUi.hiRecommended")}</span><span className="font-bold">{money(recHourlyRate)}/h</span></div>
+                      <div className="flex justify-between border-t border-white/15 pt-1.5"><span className="opacity-85">{tr("auditUi.hiDifference")}</span><span className="font-bold">{realDiff > 0 ? "+" : ""}{money(realDiff)}/h</span></div>
+                      {insight && <p className="text-[11px] leading-snug opacity-95 pt-1">{insight}</p>}
+                    </div>
+                  )}
 
                   {/* Calculations Details grid */}
                   <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
@@ -1381,7 +1452,7 @@ function GrowthPage() {
                         </span>
                       </span>
                       <span className="text-sm font-bold text-white">
-                        {currency} {minHourlyRate}/h
+                        {money(minHourlyRate)}/h
                       </span>
                     </div>
 
@@ -1390,7 +1461,7 @@ function GrowthPage() {
                         {tr("auditUi.requiredGrossRevenue")}
                       </span>
                       <span className="text-sm font-bold text-white">
-                        {currency} {grossNeeded.toLocaleString()}/{t.month}
+                        {money(grossNeeded)}/{t.month}
                       </span>
                     </div>
 
@@ -1418,25 +1489,6 @@ function GrowthPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
-                      <span className="opacity-80 block">
-                        {tr("auditUi.currentRate")}
-                      </span>
-                      <span className="text-sm font-bold text-white">
-                        {currentAvgHourlyRate > 0 ? `${currency} ${currentAvgHourlyRate}/h` : "—"}
-                      </span>
-                    </div>
-
-                    <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
-                      <span className="opacity-80 block">
-                        {tr("auditUi.requiredDifference")}
-                      </span>
-                      <span className="text-sm font-bold text-white">
-                        {currentAvgHourlyRate > 0
-                          ? `${adjustmentDiff >= 0 ? "+" : ""}${currency} ${adjustmentDiff}/h`
-                          : "—"}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Calendar Feasibility Alert */}
@@ -1497,8 +1549,8 @@ function GrowthPage() {
                     <ul className="text-xs list-disc list-inside space-y-1 font-medium pl-1">
                       <li>
                         {lang === "pt"
-                          ? `${weeklyVIPsNeeded} alunos VIP semanais no valor hora recomendado de ${currency} ${recHourlyRate}`
-                          : `${weeklyVIPsNeeded} weekly VIP students at the recommended rate of ${currency} ${recHourlyRate}`}
+                          ? `${weeklyVIPsNeeded} alunos VIP semanais no valor hora recomendado de ${money(recHourlyRate)}`
+                          : `${weeklyVIPsNeeded} weekly VIP students at the recommended rate of ${money(recHourlyRate)}`}
                       </li>
                       <li className="list-none italic opacity-70 text-[10px] pl-3">
                         — {tr("auditUi.or")} —
