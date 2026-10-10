@@ -26,6 +26,8 @@ export interface RealCapacityResult {
   totalOccupiedSlots: number;
   totalRemainingSlots: number;
   occupancyPct: number;
+  /** Real weekly teaching availability (working hours minus rest blocks), in minutes. */
+  availableWeeklyMinutes: number;
   slotDurationMinutes: number;
   days: DayCapacity[];
 }
@@ -99,6 +101,7 @@ export async function calculateRealCapacity(
     totalOccupiedSlots: 0,
     totalRemainingSlots: 0,
     occupancyPct: 0,
+    availableWeeklyMinutes: 0,
     slotDurationMinutes: 60,
     days: [],
   };
@@ -161,6 +164,7 @@ export async function calculateRealCapacity(
     // 4. Calculate per weekday
     let totalValidSlots = 0;
     let totalOccupiedSlots = 0;
+    let availableWeeklyMinutes = 0;
     const daysResult: DayCapacity[] = [];
 
     for (const wItem of WEEKDAYS_MAP) {
@@ -200,6 +204,7 @@ export async function calculateRealCapacity(
       for (const seg of segments) {
         const durationMins = seg.end - seg.start;
         dayValidSlots += Math.max(0, Math.floor(durationMins / slotDuration));
+        availableWeeklyMinutes += Math.max(0, durationMins);
       }
 
       // Count occupied recurring schedules for this day
@@ -243,6 +248,7 @@ export async function calculateRealCapacity(
       totalOccupiedSlots,
       totalRemainingSlots,
       occupancyPct,
+      availableWeeklyMinutes,
       slotDurationMinutes: slotDuration,
       days: daysResult,
     };
