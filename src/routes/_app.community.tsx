@@ -38,6 +38,22 @@ export const Route = createFileRoute("/_app/community")({
 
 type Author = { full_name: string | null; avatar_url: string | null } | null;
 
+interface PublicTeacherProfile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+}
+
+async function fetchPublicTeacherProfiles(): Promise<Map<string, PublicTeacherProfile>> {
+  const map = new Map<string, PublicTeacherProfile>();
+  const { data, error } = await supabase.rpc("get_public_teacher_profiles");
+  if (error) return map;
+  for (const row of (Array.isArray(data) ? data : []) as any[]) {
+    if (row?.id) map.set(String(row.id), { id: String(row.id), full_name: row.full_name ?? null, avatar_url: row.avatar_url ?? null });
+  }
+  return map;
+}
+
 interface Post {
   id: string;
   author_id: string;
