@@ -164,7 +164,10 @@ const translations = {
     estimationGroup: "7 group enrollments",
     or: "or",
     capacityTitle: "Teaching Capacity",
-    capacitySubtitle: "occupied slots",
+    capacitySubtitle: "weekly",
+    capacityOccupied: "occupied",
+    capacityFreeHours: "free teaching hours per week",
+    capacityNoSchedule: "No lesson schedules with a known duration yet",
     capacityAvailable: "slots available",
     capacityBreakdown: "Weekly Slots Status",
     viewScheduleBtn: "View Schedule",
@@ -190,8 +193,8 @@ const translations = {
     metricNewStudents: "New Students This Month",
     metricRetention: "Student Retention",
     metricRenewal: "Renewal Rate",
-    metricAvgPackage: "Average Package Value",
-    metricAvgRevenue: "Avg Revenue per Student",
+    metricAvgPackage: "Avg Revenue per Student",
+    metricAvgRevenue: "Received per Student (month)",
     metricGrowthRate: "Monthly Growth Rate",
     opportunity1: "Tuesday still has 3 available lesson slots.",
     opportunity2: "Two student contracts are expiring this month.",
@@ -210,7 +213,10 @@ const translations = {
     estimationGroup: "7 matrículas em turmas",
     or: "ou",
     capacityTitle: "Capacidade de Aulas",
-    capacitySubtitle: "horários ocupados",
+    capacitySubtitle: "semanais",
+    capacityOccupied: "ocupado",
+    capacityFreeHours: "horas livres para aulas por semana",
+    capacityNoSchedule: "Ainda não há horários de aula com duração definida",
     capacityAvailable: "horários disponíveis",
     capacityBreakdown: "Status de Horários da Semana",
     viewScheduleBtn: "Ver Agenda",
@@ -236,8 +242,8 @@ const translations = {
     metricNewStudents: "Novos Alunos Este Mês",
     metricRetention: "Retenção de Alunos",
     metricRenewal: "Taxa de Renovação",
-    metricAvgPackage: "Valor Médio do Pacote",
-    metricAvgRevenue: "Receita Média por Aluno",
+    metricAvgPackage: "Receita Média por Aluno",
+    metricAvgRevenue: "Recebido por Aluno (mês)",
     metricGrowthRate: "Taxa de Crescimento Mensal",
     opportunity1: "Terça-feira ainda tem 3 horários livres para aulas.",
     opportunity2: "Dois contratos de alunos expiram este mês.",
@@ -260,6 +266,7 @@ function GrowthPage() {
     totalMRR: 0,
     contributingStudentRevenues: [],
     activeStudentCount: 0,
+    payingStudentCount: 0,
     hasBillingData: false,
   });
   const [capacityData, setCapacityData] = useState<RealCapacityResult>({
@@ -277,6 +284,7 @@ function GrowthPage() {
     totalMRR: 0,
     activeStudentCount: 0,
     billableHoursPerMonth: 0,
+    weeklyTeachingMinutes: 0,
     hasEnoughData: false,
   });
   const [realExpenses, setRealExpenses] = useState<number>(0);
@@ -314,9 +322,7 @@ function GrowthPage() {
 
   // Suggested / Prefilled Data States
   const [currentAvgHourlyRate, setCurrentAvgHourlyRate] = useState(0);
-  const [currentAvgPackageValue, setCurrentAvgPackageValue] = useState(0);
   const [currentStudentsCount, setCurrentStudentsCount] = useState(0);
-  const [availableWeeklySlots, setAvailableWeeklySlots] = useState(0);
   const [currentMRR, setCurrentMRR] = useState(0);
 
   // Real, teacher-scoped growth performance metrics
@@ -383,10 +389,10 @@ function GrowthPage() {
       setIsManualExpenses(true);
     }
 
-    if (capacityRes.hasWorkingHours) {
-      setWorkHoursPerWeek(capacityRes.totalValidSlots);
-      setTeachHoursPerWeek(capacityRes.totalOccupiedSlots || Math.min(20, capacityRes.totalValidSlots));
-      setAvailableWeeklySlots(capacityRes.totalValidSlots);
+    // Simulator inputs are scenario assumptions: only total work hours is prefilled
+    // from real available time; reserved teaching hours never mirror real schedules.
+    if (capacityRes.hasWorkingHours && capacityRes.availableWeeklyMinutes > 0) {
+      setWorkHoursPerWeek(Math.round(capacityRes.availableWeeklyMinutes / 60));
     }
 
     if (mrrRes.totalMRR > 0) setCurrentMRR(mrrRes.totalMRR);
@@ -447,7 +453,6 @@ function GrowthPage() {
       }
     });
     setTotalCapacity(totalSlots);
-    setAvailableWeeklySlots(totalSlots);
 
     // Get current week's events
     const allEvents = getCalendarEvents();
@@ -501,60 +506,6 @@ function GrowthPage() {
 
     setOccupiedCount(occupiedSlotsTotal);
     setWeekdayAvailabilities(weekdayAvails);
-
-    // Load dynamic students stats
-    const studentsStored = localStorage.getItem("bloom.students.list");
-    const packagesStored = localStorage.getItem("bloom.packages.list");
-    let parsedStudents = [];
-    let parsedPackages = [];
-    if (studentsStored) {
-      try {
-        parsedStudents = JSON.parse(studentsStored);
-      } catch (e) {}
-    }
-    if (packagesStored) {
-      try {
-        parsedPackages = JSON.parse(packagesStored);
-      } catch (e) {}
-    }
-
-    if (parsedStudents.length > 0) {
-      const activeStds = parsedStudents.filter(
-        (s: any) => s.status === "Active" || s.status === "Trial",
-      );
-      setCurrentStudentsCount(activeStds.length);
-
-      let mrr = 0;
-      let ratesSum = 0;
-      let rateCount = 0;
-
-      activeStds.forEach((s: any) => {
-        const pkg = parsedPackages.find((p: any) => p.id === s.packageId);
-        if (pkg) {
-          mrr += pkg.price;
-          const durationHrs = (s.scheduleDetails?.duration || 60) / 60;
-          const lessonsPerMonth = 4; // standard monthly frequency
-          const lessonHour = lessonsPerMonth * durationHrs;
-          if (lessonHour > 0) {
-            ratesSum += pkg.price / lessonHour;
-            rateCount++;
-          }
-        }
-      });
-
-      if (mrr > 0) {
-        setCurrentMRR(mrr);
-      }
-      if (rateCount > 0) {
-        setCurrentAvgHourlyRate(Math.round(ratesSum / rateCount));
-      }
-
-      if (parsedPackages.length > 0) {
-        const avgPkg =
-          parsedPackages.reduce((sum: number, p: any) => sum + p.price, 0) / parsedPackages.length;
-        setCurrentAvgPackageValue(Math.round(avgPkg));
-      }
-    }
 
     // Load saved pricing goal if exists
     const savedGoal = localStorage.getItem("bloom.pricing.goal");
@@ -622,6 +573,19 @@ function GrowthPage() {
   };
 
   const t = translations[lang];
+
+  // REAL Bloom data (Supabase): duration-aware schedules vs working hours minus rest blocks.
+  const realTeachWeeklyH = effectiveHourlyData.weeklyTeachingMinutes / 60;
+  const realAvailWeeklyH = capacityData.availableWeeklyMinutes / 60;
+  const realOccupancyPct = realAvailWeeklyH > 0 && realTeachWeeklyH > 0
+    ? Math.round((realTeachWeeklyH / realAvailWeeklyH) * 100)
+    : null;
+  const realFreeWeeklyH = Math.max(0, realAvailWeeklyH - realTeachWeeklyH);
+  const fmtH = (v: number) =>
+    v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 });
+  const avgRevenuePerPayingStudent = mrrData.hasBillingData && mrrData.payingStudentCount > 0 && mrrData.totalMRR > 0
+    ? Math.round((mrrData.totalMRR / mrrData.payingStudentCount) * 100) / 100
+    : null;
 
   // Real Growth Metrics calculations
   const metrics = computeGrowthMetrics(monthlyGoal || 0, mrrData);
@@ -875,16 +839,18 @@ function GrowthPage() {
 
             <div className="mt-4 flex items-baseline gap-2">
               <span className="font-display text-3xl font-extrabold text-foreground">
-                {capacityData.totalOccupiedSlots} / {capacityData.totalValidSlots}
+                {fmtH(realTeachWeeklyH)}h / {fmtH(realAvailWeeklyH)}h
               </span>
               <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                {t.capacitySubtitle} ({capacityData.occupancyPct}%{" "}
-                {tr("auditUi.occupied")})
+                {t.capacitySubtitle}
+                {realOccupancyPct !== null ? ` (${realOccupancyPct}% ${t.capacityOccupied})` : ""}
               </span>
             </div>
 
             <div className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {capacityData.totalRemainingSlots} {tr("auditUi.slotsAvailable")}
+              {realTeachWeeklyH > 0
+                ? `${fmtH(realFreeWeeklyH)}h ${t.capacityFreeHours}`
+                : t.capacityNoSchedule}
             </div>
 
             {/* Slots Availability Breakdown for working days only */}
@@ -947,10 +913,9 @@ function GrowthPage() {
           />
           <StatCard
             label={t.metricAvgPackage}
-            value={metricMoney(growthMetrics.avgPackageValue.value)}
+            value={metricMoney(avgRevenuePerPayingStudent)}
             icon={Briefcase}
             tone="warning"
-            trend={metricTrend(growthMetrics.avgPackageValue.change)}
           />
           <StatCard
             label={t.metricAvgRevenue}
@@ -1261,7 +1226,7 @@ function GrowthPage() {
                   <span className="text-muted-foreground block text-[9px] uppercase font-bold">
                     {tr("auditUi.agendaOccupied")}
                   </span>
-                  <span>{capacityData.occupancyPct}%</span>
+                  <span>{realOccupancyPct !== null ? `${realOccupancyPct}%` : tr("auditUi.noData")}</span>
                 </div>
               </div>
             </div>
@@ -1299,13 +1264,12 @@ function GrowthPage() {
                 onClick={() => {
                   setIncomeGoal(monthlyGoal ?? 0);
 
-                  if (capacityData.hasWorkingHours) {
-                    setWorkHoursPerWeek(capacityData.totalValidSlots);
-                    setTeachHoursPerWeek(capacityData.totalOccupiedSlots || Math.min(20, capacityData.totalValidSlots));
-                  } else {
-                    setWorkHoursPerWeek(40);
-                    setTeachHoursPerWeek(20);
-                  }
+                  setWorkHoursPerWeek(
+                    capacityData.hasWorkingHours && capacityData.availableWeeklyMinutes > 0
+                      ? Math.round(capacityData.availableWeeklyMinutes / 60)
+                      : 40,
+                  );
+                  setTeachHoursPerWeek(20);
 
                   setWeeksPerMonth(4.33);
                   setExpenses(realExpenses);
@@ -1362,13 +1326,10 @@ function GrowthPage() {
                       : fill("auditUi.hiHighOccupancy", { pct: capacityPct, diff: money(realDiff) });
               
               // Calendar Feasibility Check: Compare reserved lesson hours against real calendar capacity
-              const realCalendarSlots = capacityData.hasWorkingHours
-                ? capacityData.totalValidSlots
+              const realCalendarSlots = capacityData.hasWorkingHours && capacityData.availableWeeklyMinutes > 0
+                ? Math.round((capacityData.availableWeeklyMinutes / 60) * 10) / 10
                 : workHoursPerWeek;
               const isOverCalendarCapacity = teachHoursPerWeek > realCalendarSlots;
-              const occupiedVersusReservedPct = Math.round(
-                (capacityData.totalOccupiedSlots / (teachHoursPerWeek || 1)) * 100,
-              );
 
               // Projections
               const weeklyVIPsNeeded = Math.round(monthlyBillableHours / (weeksPerMonth || 1));
@@ -1472,23 +1433,6 @@ function GrowthPage() {
                       <span className="text-sm font-bold text-white">{monthlyBillableHours}h</span>
                     </div>
 
-                    <div className="space-y-0.5 border-b border-lilac-foreground/10 pb-2">
-                      <span className="opacity-80 flex items-center gap-1">
-                        <span>{tr("auditUi.reservedCapacityOccupancy")}</span>
-                        <span
-                          className="cursor-help opacity-70 hover:opacity-100"
-                          title={
-                            tr("auditUi.percentageOfYourReservedLessonHoursCurrently")
-                          }
-                        >
-                          <Info className="h-3 w-3 inline-block" />
-                        </span>
-                      </span>
-                      <span className="text-sm font-bold text-white">
-                        {capacityData.totalOccupiedSlots}h / {teachHoursPerWeek}h ({occupiedVersusReservedPct}%)
-                      </span>
-                    </div>
-
                   </div>
 
                   {/* Calendar Feasibility Alert */}
@@ -1583,15 +1527,9 @@ function GrowthPage() {
               name: tr("auditUi.currentPricing"),
               rate: currentAvgHourlyRate,
               mrr: currentMRR,
-              hours: Math.round(currentMRR / (currentAvgHourlyRate || 1)),
+              hours: effectiveHourlyData.billableHoursPerMonth,
               students: currentStudentsCount,
-              occupancy: Math.round(
-                (currentMRR /
-                  (currentAvgHourlyRate || 1) /
-                  (weeksPerMonth || 1) /
-                  (availableWeeklySlots || 1)) *
-                  100,
-              ),
+              occupancy: realOccupancyPct ?? 0,
             },
             {
               name: tr("auditUi.minSustainable"),
@@ -1599,7 +1537,7 @@ function GrowthPage() {
               mrr: incomeGoal + expenses,
               hours: monthlyBillableHours,
               students: Math.round(monthlyBillableHours / weeksPerMonth),
-              occupancy: Math.round((teachHoursPerWeek / (availableWeeklySlots || 1)) * 100),
+              occupancy: Math.round((teachHoursPerWeek / (realAvailWeeklyH || workHoursPerWeek || 1)) * 100),
             },
             {
               name: tr("auditUi.recommended"),
@@ -1607,7 +1545,7 @@ function GrowthPage() {
               mrr: grossNeeded,
               hours: monthlyBillableHours,
               students: Math.round(monthlyBillableHours / weeksPerMonth),
-              occupancy: Math.round((teachHoursPerWeek / (availableWeeklySlots || 1)) * 100),
+              occupancy: Math.round((teachHoursPerWeek / (realAvailWeeklyH || workHoursPerWeek || 1)) * 100),
             },
           ];
 
