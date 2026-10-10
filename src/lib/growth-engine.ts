@@ -333,6 +333,9 @@ export function computeGrowthMetrics(
   };
 }
 
+/** Average weeks per month (52 / 12). */
+export const WEEKS_PER_MONTH = 52 / 12;
+
 export interface EffectiveHourlyResult {
   effectiveHourlyRate: number;
   totalMRR: number;
@@ -382,10 +385,12 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     const mrrRes = await fetchCurrentMRR(teacherId);
     if (!mrrRes.hasBillingData || mrrRes.totalMRR === 0) return empty;
 
+    // Only active students and active classes represent current teaching workload.
     const { data: studentsData } = await supabase
       .from("students")
       .select("id")
-      .eq("teacher_id", teacherId);
+      .eq("teacher_id", teacherId)
+      .eq("status", "Active");
 
     const studentIds = (studentsData || []).map((s: any) => s.id);
 
@@ -393,35 +398,49 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     if (studentIds.length > 0) {
       const { data: schData } = await supabase
         .from("student_schedules")
-        .select("student_id, weekday, start_time, end_time")
+        .select("*")
         .in("student_id", studentIds);
       studentSchedules = schData || [];
     }
 
-    const { data: classSchedules } = await supabase
-      .from("class_schedules")
-      .select("class_id, weekday, start_time, end_time")
-      .eq("teacher_id", teacherId);
+    const { data: activeClasses } = await supabase
+      .from("classes")
+      .select("id")
+      .eq("teacher_id", teacherId)
+      .eq("status", "active");
+    const classIds = (activeClasses || []).map((c: any) => c.id);
 
-    let weeklyHours = 0;
+    let classSchedules: any[] = [];
+    if (classIds.length > 0) {
+      const { data: cData } = await supabase
+        .from("class_schedules")
+        .select("*")
+        .in("class_id", classIds);
+      classSchedules = cData || [];
+    }
 
-    const getHours = (st?: string, et?: string) => {
-      if (!st || !et) return 1.0;
+    // Real lesson duration: explicit minutes first, then start/end times. Unknown durations are skipped.
+    const minutesOf = (sch: any): number => {
+      const explicit = Number(sch.duration_minutes ?? sch.duration);
+      if (Number.isFinite(explicit) && explicit > 0) return explicit;
+      const st = sch.start_time as string | undefined;
+      const et = sch.end_time as string | undefined;
+      if (!st || !et) return 0;
       const [sh, sm] = st.split(":").map(Number);
       const [eh, em] = et.split(":").map(Number);
       const mins = (eh * 60 + em) - (sh * 60 + sm);
-      return mins > 0 ? mins / 60 : 1.0;
+      return mins > 0 ? mins : 0;
     };
 
-    (studentSchedules || []).forEach((sch) => {
-      weeklyHours += getHours(sch.start_time, sch.end_time);
-    });
+    let weeklyMinutes = 0;
+    studentSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch); });
+    classSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch); });
 
-    (classSchedules || []).forEach((sch) => {
-      weeklyHours += getHours(sch.start_time, sch.end_time);
-    });
+    if (weeklyMinutes <= 0) {
+      return { ...empty, totalMRR: mrrRes.totalMRR, activeStudentCount: mrrRes.activeStudentCount };
+    }
 
-    const billableHoursPerMonth = Math.max(1, Math.round(weeklyHours * 4.33));
+    const billableHoursPerMonth = Math.round(((weeklyMinutes / 60) * WEEKS_PER_MONTH) * 10) / 10;
     const effectiveHourlyRate = Math.round((mrrRes.totalMRR / billableHoursPerMonth) * 100) / 100;
 
     return {
