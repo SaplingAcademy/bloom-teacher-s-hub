@@ -134,7 +134,7 @@ function CommunityPage() {
     setLoadError(false);
     const { data, error } = await supabase
       .from("community_posts")
-      .select("id, author_id, title, content, tags, likes_count, created_at, updated_at, profiles:author_id(full_name, avatar_url)")
+      .select("id, author_id, title, content, tags, likes_count, created_at, updated_at")
       .order("created_at", { ascending: false });
     if (error) {
       reportUserError(error, t("communityV1.loadError"));
@@ -143,6 +143,7 @@ function CommunityPage() {
       return;
     }
     const ids = (data ?? []).map((p: any) => p.id);
+    const profilesMap = await fetchPublicTeacherProfiles();
     let reactions: { post_id: string; user_id: string }[] = [];
     let commentRows: { post_id: string }[] = [];
     if (ids.length) {
@@ -169,7 +170,7 @@ function CommunityPage() {
           content: p.content,
           tags: p.tags ?? [],
           created_at: p.created_at,
-          author: p.profiles ?? null,
+          author: profilesMap.get(String(p.author_id)) ?? null,
           waterCount: rs.length,
           wateredByMe: !!userId && rs.some((x) => x.user_id === userId),
           commentCount: commentRows.filter((x) => x.post_id === p.id).length,
@@ -241,14 +242,17 @@ function CommunityPage() {
     setCommentsLoading(true);
     const { data, error } = await supabase
       .from("comments")
-      .select("id, post_id, author_id, content, created_at, profiles:author_id(full_name, avatar_url)")
+      .select("id, post_id, author_id, content, created_at")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
     if (error) {
       toast.error(reportUserError(error, t("communityV1.loadError")));
       setComments([]);
     } else {
-      setComments((data ?? []).map((c: any) => ({ ...c, author: c.profiles ?? null })));
+      const profilesMap = await fetchPublicTeacherProfiles();
+      setComments(
+        (data ?? []).map((c: any) => ({ ...c, author: profilesMap.get(String(c.author_id)) ?? null })),
+      );
     }
     setCommentsLoading(false);
   };
