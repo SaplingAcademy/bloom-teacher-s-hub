@@ -1359,7 +1359,6 @@ function GrowthPage() {
                     : capacityPct < 70
                       ? fill("auditUi.hiLowOccupancy", { pct: capacityPct, diff: money(realDiff) })
                       : fill("auditUi.hiHighOccupancy", { pct: capacityPct, diff: money(realDiff) });
-              const adjustmentDiff = currentAvgHourlyRate > 0 ? recHourlyRate - currentAvgHourlyRate : 0;
               
               // Calendar Feasibility Check: Compare reserved lesson hours against real calendar capacity
               const realCalendarSlots = capacityData.hasWorkingHours
