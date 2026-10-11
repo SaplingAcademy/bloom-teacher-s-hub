@@ -84,6 +84,9 @@ import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictD
 import { resolveEventColorMeta } from "@/lib/brand-colors";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 
+// Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
+const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
+
 export const Route = createFileRoute("/_app/calendar")({
   validateSearch: (search: Record<string, unknown>): {
     availability?: "working_hours";
@@ -1179,7 +1182,7 @@ function CalendarPage() {
                 return (
                   <Badge key={a.day} variant="secondary" className="text-[11px] font-bold gap-1 bg-muted px-2 py-0.5">
                     <span>{label}</span>
-                    <span className="text-muted-foreground font-semibold">{a.startTime}–{a.endTime}</span>
+                    <span className="text-muted-foreground font-semibold">{fmtTime(a.startTime)}–{fmtTime(a.endTime)}</span>
                   </Badge>
                 );
               })}
@@ -1282,7 +1285,7 @@ function CalendarPage() {
               {availability.map((av) => (
                 <li key={av.day} className="flex justify-between border-b border-border/40 pb-1.5">
                   <span className="text-foreground/80">{av.day.substring(0, 3)}</span>
-                  <span>{av.enabled ? `${av.startTime} – ${av.endTime}` : "Closed"}</span>
+                  <span>{av.enabled ? `${fmtTime(av.startTime)} – ${fmtTime(av.endTime)}` : "Closed"}</span>
                 </li>
               ))}
             </ul>
@@ -1374,7 +1377,7 @@ function CalendarPage() {
                               </div>
                               <div className="min-w-0 text-[10px] font-semibold flex items-center justify-between gap-1 opacity-80">
                                 <span className="min-w-0 truncate">
-                                  {evt.startTime}–{evt.endTime}
+                                  {fmtTime(evt.startTime)}–{fmtTime(evt.endTime)}
                                 </span>
                                 <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>
                               </div>
@@ -1458,7 +1461,7 @@ function CalendarPage() {
                                   {evt.studentName}
                                 </h4>
                                 <p className="text-xs font-semibold opacity-85">
-                                  {evt.startTime} – {evt.endTime} ({evt.duration}m) · {evt.level} ·{" "}
+                                  {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)} ({evt.duration}m) · {evt.level} ·{" "}
                                   {evt.focus}
                                 </p>
                                 {evt.locationLink && (
@@ -1546,7 +1549,7 @@ function CalendarPage() {
                                 }}
                                 className={`text-[9px] font-bold truncate rounded px-1 py-0.5 cursor-pointer border ${colorMeta.calendarEventClass}`}
                               >
-                                {e.startTime} {e.studentName}
+                                {fmtTime(e.startTime)} {e.studentName}
                               </div>
                             );
                           })}
@@ -1603,7 +1606,7 @@ function CalendarPage() {
                   </span>
                   <span className="font-semibold text-foreground flex items-center gap-1">
                     <Clock className="h-4 w-4 text-accent shrink-0" />
-                    {selectedEvent.date} @ {selectedEvent.startTime} – {selectedEvent.endTime}
+                    {selectedEvent.date} @ {fmtTime(selectedEvent.startTime)} – {fmtTime(selectedEvent.endTime)}
                   </span>
                 </div>
                 <div className="space-y-1">
