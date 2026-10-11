@@ -1367,22 +1367,22 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`rounded-xl border p-2 text-left cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass}`}
                               >
-                              <div className="font-display text-xs font-bold leading-tight truncate text-foreground">
+                              <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
                               </div>
-                              <div className="text-[10px] font-semibold flex items-center justify-between opacity-80">
-                                <span>
+                              <div className="min-w-0 text-[10px] font-semibold flex items-center justify-between gap-1 opacity-80">
+                                <span className="min-w-0 truncate">
                                   {evt.startTime}–{evt.endTime}
                                 </span>
-                                <span>{evt.level}</span>
+                                <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>
                               </div>
-                              <div className="text-[9px] font-medium opacity-70 truncate">
+                              <div className="min-w-0 text-[9px] font-medium opacity-70 truncate">
                                 {evt.focus}
                               </div>
                               {/* Small status indicator pill */}
-                              <div className="text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
+                              <div className="min-w-0 max-w-full truncate text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
                                 {evt.status === "Needs Preparation" &&
                                   (t("auditUi.prepNeeded"))}
                                 {evt.status === "Lesson Ready" &&
