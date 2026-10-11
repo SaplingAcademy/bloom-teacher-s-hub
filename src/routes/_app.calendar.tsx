@@ -84,6 +84,9 @@ import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictD
 import { resolveEventColorMeta } from "@/lib/brand-colors";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 
+// Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
+const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
+
 export const Route = createFileRoute("/_app/calendar")({
   validateSearch: (search: Record<string, unknown>): {
     availability?: "working_hours";
