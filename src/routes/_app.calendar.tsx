@@ -1531,7 +1531,7 @@ function CalendarPage() {
                         <span className="text-xs font-bold text-foreground/60">
                           {cellDate.getDate()}
                         </span>
-                        <div className="space-y-0.5 flex-1 flex flex-col justify-end">
+                        <div className="min-w-0 space-y-0.5 flex-1 flex flex-col justify-end">
                           {cellEvents.slice(0, 3).map((e) => {
                             const colorMeta = resolveEventColorMeta(
                               e.studentId ? studentColorMap[e.studentId] : undefined,
