@@ -1349,7 +1349,7 @@ function CalendarPage() {
                         <div
                           key={dayIdx}
                           title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
-                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] ${
+                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] min-w-0 overflow-hidden ${
                             unavailable
                               ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
                               : "bg-card hover:bg-secondary/10"
