@@ -1524,7 +1524,7 @@ function CalendarPage() {
                     return (
                       <div
                         key={idx}
-                        className={`border border-border/80 rounded-xl min-h-[85px] p-1.5 space-y-1 transition-colors flex flex-col justify-between ${
+                        className={`border border-border/80 rounded-xl min-h-[85px] p-1.5 space-y-1 transition-colors flex flex-col justify-between min-w-0 overflow-hidden ${
                           isCurrentMonth ? "bg-secondary/5 hover:bg-secondary/10" : "bg-muted/10 opacity-50"
                         }`}
                       >
