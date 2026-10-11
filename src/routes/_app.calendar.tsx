@@ -1199,11 +1199,11 @@ function CalendarPage() {
       })()}
 
       {/* MAIN CONTAINER: SIDEBAR + GRID */}
-      <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[190px_1fr]">
         {/* LEFT COLUMN: FILTERS & INFOS */}
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Filters card */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+          <div className="rounded-2xl border border-border bg-card px-3.5 py-4 shadow-sm space-y-3.5">
             <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
               <Filter className="h-4 w-4 text-primary" />
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
@@ -1274,7 +1274,7 @@ function CalendarPage() {
           </div>
 
           {/* Quick working hours summary */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-3">
+          <div className="rounded-2xl border border-border bg-card px-3.5 py-4 shadow-sm space-y-2.5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
               {currentTranslation.workingHours}
             </h4>
@@ -1290,7 +1290,7 @@ function CalendarPage() {
         </div>
 
         {/* RIGHT COLUMN: CALENDAR RENDER CONTAINER */}
-        <div className="rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
+        <div className="min-w-0 rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
           {/* WEEK VIEW (DEFAULT) */}
           {viewMode === "week" && (
             <div className="overflow-x-auto min-w-[700px]">
