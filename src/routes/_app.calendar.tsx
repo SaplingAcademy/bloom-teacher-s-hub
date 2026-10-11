@@ -1349,7 +1349,7 @@ function CalendarPage() {
                         <div
                           key={dayIdx}
                           title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
-                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] ${
+                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] min-w-0 overflow-hidden ${
                             unavailable
                               ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
                               : "bg-card hover:bg-secondary/10"
@@ -1367,22 +1367,22 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`rounded-xl border p-2 text-left cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass}`}
                               >
-                              <div className="font-display text-xs font-bold leading-tight truncate text-foreground">
+                              <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
                               </div>
-                              <div className="text-[10px] font-semibold flex items-center justify-between opacity-80">
-                                <span>
+                              <div className="min-w-0 text-[10px] font-semibold flex items-center justify-between gap-1 opacity-80">
+                                <span className="min-w-0 truncate">
                                   {evt.startTime}–{evt.endTime}
                                 </span>
-                                <span>{evt.level}</span>
+                                <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>
                               </div>
-                              <div className="text-[9px] font-medium opacity-70 truncate">
+                              <div className="min-w-0 text-[9px] font-medium opacity-70 truncate">
                                 {evt.focus}
                               </div>
                               {/* Small status indicator pill */}
-                              <div className="text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
+                              <div className="min-w-0 max-w-full truncate text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
                                 {evt.status === "Needs Preparation" &&
                                   (t("auditUi.prepNeeded"))}
                                 {evt.status === "Lesson Ready" &&
@@ -1524,14 +1524,14 @@ function CalendarPage() {
                     return (
                       <div
                         key={idx}
-                        className={`border border-border/80 rounded-xl min-h-[85px] p-1.5 space-y-1 transition-colors flex flex-col justify-between ${
+                        className={`border border-border/80 rounded-xl min-h-[85px] p-1.5 space-y-1 transition-colors flex flex-col justify-between min-w-0 overflow-hidden ${
                           isCurrentMonth ? "bg-secondary/5 hover:bg-secondary/10" : "bg-muted/10 opacity-50"
                         }`}
                       >
                         <span className="text-xs font-bold text-foreground/60">
                           {cellDate.getDate()}
                         </span>
-                        <div className="space-y-0.5 flex-1 flex flex-col justify-end">
+                        <div className="min-w-0 space-y-0.5 flex-1 flex flex-col justify-end">
                           {cellEvents.slice(0, 3).map((e) => {
                             const colorMeta = resolveEventColorMeta(
                               e.studentId ? studentColorMap[e.studentId] : undefined,
