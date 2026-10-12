@@ -325,13 +325,20 @@ async function ensureStudentEvents(
 ): Promise<Array<string | null>> {
   const { data: existingEvents } = await supabase
     .from("calendar_events")
-    .select("id, date, start_time")
+    .select("id, date, start_time, original_date, original_start_time, rescheduled_at")
     .eq("teacher_id", teacherId)
     .eq("student_id", studentId);
 
   const keyOf = (date: string, time: string) => `${date}|${formatTimeHHMMSS(time).slice(0, 5)}`;
   const byKey = new Map<string, string>();
-  (existingEvents || []).forEach((e: any) => byKey.set(keyOf(e.date, e.start_time), e.id));
+  (existingEvents || []).forEach((e: any) => {
+    byKey.set(keyOf(e.date, e.start_time), e.id);
+    // A lesson still holding the pre-reschedule date resolves to the moved event, never a duplicate.
+    if (e.rescheduled_at && e.original_date) {
+      const k = keyOf(e.original_date, e.original_start_time || e.start_time);
+      if (!byKey.has(k)) byKey.set(k, e.id);
+    }
+  });
 
   const resolved: Array<string | null> = [];
 
