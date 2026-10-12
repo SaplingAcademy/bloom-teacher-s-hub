@@ -292,7 +292,7 @@ function CalendarPage() {
 
   // Load time off records and check first-time setup prompt
   const loadTimeOffData = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     const timeOff = await fetchTeacherTimeOff(user.id);
     setTimeOffList(timeOff);
 
@@ -308,7 +308,7 @@ function CalendarPage() {
 
   // Fetch events from Supabase
   const fetchEvents = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setIsLoadingEvents(true);
     setIsEventsError(false);
 
@@ -473,7 +473,7 @@ function CalendarPage() {
 
   // Fetch teacher's students for the manual class modal selector
   const fetchStudents = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     try {
       const { data, error } = await supabase
         .from("students")
@@ -511,7 +511,7 @@ function CalendarPage() {
   }, [user]);
 
   const loadWorkingAvailability = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     const snapshot = await getTeacherAvailability(user.id, { force: true });
     setAvailabilitySnapshot(snapshot);
     setAvailability(snapshot.days);
