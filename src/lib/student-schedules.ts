@@ -211,6 +211,8 @@ export interface FutureEventLite {
   status: string | null;
   schedule_id: string | null;
   is_recurring?: boolean | null;
+  original_date?: string | null;
+  rescheduled_at?: string | null;
 }
 
 export interface DesiredOccurrence {
@@ -239,6 +241,12 @@ export function planEventReconcile(existing: FutureEventLite[], desired: Desired
   const covered = new Set<string>();
 
   for (const evt of existing) {
+    // Intentionally rescheduled one-off occurrence: never touched, and it
+    // satisfies the recurring slot it replaced (original_date), not its new date.
+    if (evt.rescheduled_at) {
+      covered.add(`${evt.schedule_id}|${evt.original_date || evt.date}`);
+      continue;
+    }
     const key = `${evt.schedule_id}|${evt.date}`;
     if (LOCKED_STATUSES.has(evt.status || "")) {
       covered.add(key);

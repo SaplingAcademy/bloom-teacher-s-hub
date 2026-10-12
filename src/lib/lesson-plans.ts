@@ -300,12 +300,19 @@ export async function insertClassEvents(
 
   const { data: existing } = await supabase
     .from("calendar_events")
-    .select("date, start_time")
+    .select("date, start_time, original_date, original_start_time, rescheduled_at")
     .eq("teacher_id", teacherId)
     .eq("class_id", classId);
 
   const key = (d: string, t: string) => `${d}|${String(t).slice(0, 5)}`;
-  const seen = new Set((existing || []).map((e: any) => key(e.date, e.start_time)));
+  const seen = new Set<string>();
+  (existing || []).forEach((e: any) => {
+    seen.add(key(e.date, e.start_time));
+    // A rescheduled occurrence satisfies the recurring slot it replaced.
+    if (e.rescheduled_at && e.original_date) {
+      seen.add(key(e.original_date, e.original_start_time || e.start_time));
+    }
+  });
 
   const toInsert = rows.filter((r) => {
     const k = key(r.date, r.start_time);

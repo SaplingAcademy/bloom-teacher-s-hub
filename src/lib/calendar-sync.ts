@@ -303,9 +303,10 @@ export async function syncStudentSchedulesToSupabaseEvents(
   try {
     const { data: existingEvents, error: fetchErr } = await supabase
       .from("calendar_events")
-      .select("id, date, status, schedule_id, is_recurring")
+      .select("id, date, status, schedule_id, is_recurring, original_date, rescheduled_at")
       .eq("student_id", studentId)
-      .gte("date", todayStr);
+      // Also fetch rescheduled occurrences whose original slot is still upcoming.
+      .or(`date.gte.${todayStr},original_date.gte.${todayStr}`);
     if (fetchErr) throw fetchErr;
 
     const timeOffList = await fetchTeacherTimeOff(teacherId);
