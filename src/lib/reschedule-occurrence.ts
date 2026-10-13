@@ -98,29 +98,20 @@ export async function rescheduleOccurrence(eventId: string, newDate: string, new
     .eq("event_id", eventId)
     .maybeSingle();
 
-  // 1) Move the occurrence (same id).
-  const previous = {
-    date: event.date,
-    start_time: event.start_time,
-    end_time: event.end_time,
-    rescheduled_at: event.rescheduled_at ?? null,
-    original_date: event.original_date ?? null,
-    original_start_time: event.original_start_time ?? null,
-  };
-  const { error: evtErr } = await supabase.from("calendar_events").update(update).eq("id", eventId);
-  if (evtErr) return { ok: false, reason: "save_failed", message: evtErr.message };
-
-  if (!plan) return { ok: true, eventId, lessonPlanUpdated: false };
-
-  // 2) Move the linked lesson; on failure compensate so both stay aligned.
-  const { error: planErr } = await supabase
-    .from("lesson_plans")
-    .update({ scheduled_date: update.date, start_time: update.start_time, end_time: update.end_time })
-    .eq("id", plan.id);
-  if (planErr) {
-    await supabase.from("calendar_events").update(previous).eq("id", eventId);
-    return { ok: false, reason: "save_failed", message: planErr.message };
+  // Single atomic RPC: moves the occurrence (same id), preserves the original
+  // slot, stamps rescheduled_at and moves the linked lesson plan — all or nothing.
+  const { error: rpcErr } = await supabase.rpc("reschedule_calendar_occurrence", {
+    p_event_id: eventId,
+    p_new_date: update.date,
+    p_new_start_time: update.start_time,
+    p_new_end_time: update.end_time,
+  });
+  if (rpcErr) {
+    const msg = String(rpcErr.message || "");
+    if (/completed|closed|cancel|locked/i.test(msg)) return { ok: false, reason: "locked", message: msg };
+    if (/not found|not belong|permission|denied/i.test(msg)) return { ok: false, reason: "not_found", message: msg };
+    return { ok: false, reason: "save_failed", message: msg };
   }
 
-  return { ok: true, eventId, lessonPlanUpdated: true };
+  return { ok: true, eventId, lessonPlanUpdated: Boolean(plan) };
 }
