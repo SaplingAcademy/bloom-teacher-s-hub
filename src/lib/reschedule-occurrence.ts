@@ -33,13 +33,14 @@ export function intervalsOverlap(aStart: string, aEnd: string, bStart: string, b
 
 /** First reschedule stores the original slot; later ones keep it. */
 export function buildRescheduleUpdate(
-  event: { date: string; start_time: string; duration?: number | null; original_date?: string | null; original_start_time?: string | null; rescheduled_at?: string | null },
+  event: { date: string; start_time: string; end_time?: string | null; duration?: number | null; original_date?: string | null; original_start_time?: string | null; rescheduled_at?: string | null },
   newDate: string,
   newStartTime: string,
   nowIso: string
 ) {
   const start = formatTimeHHMMSS(newStartTime);
-  const duration = Number(event.duration) || toMinutes(String(event.start_time)) * 0 || 60;
+  const span = event.end_time ? toMinutes(event.end_time) - toMinutes(event.start_time) : 0;
+  const duration = Number(event.duration) || (span > 0 ? span : 60);
   const end = calculateEndTime(start, duration);
   const firstTime = !event.rescheduled_at && !event.original_date;
   return {
