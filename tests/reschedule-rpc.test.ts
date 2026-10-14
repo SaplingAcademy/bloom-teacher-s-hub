@@ -27,6 +27,10 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
   },
 }}));
 vi.mock("@/lib/time-off-engine", () => ({ fetchTeacherTimeOff: async () => [], checkDateIsNonWorking: () => false }));
+vi.mock("@/lib/teacher-availability", () => ({
+  getTeacherAvailability: async () => ({ isConfigured: true }),
+  isSlotAvailable: () => ({ available: true }),
+}));
 import { rescheduleOccurrence } from "@/lib/reschedule-occurrence";
 beforeEach(() => {
   calls.length = 0; rpcFail = false;

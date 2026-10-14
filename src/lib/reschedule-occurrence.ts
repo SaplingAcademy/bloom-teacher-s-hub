@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { calculateEndTime, formatTimeHHMMSS } from "@/lib/calendar-sync";
 import { fetchTeacherTimeOff, checkDateIsNonWorking } from "@/lib/time-off-engine";
+import { getTeacherAvailability, isSlotAvailable } from "@/lib/teacher-availability";
 
 /* =============================================================================
    Single-occurrence reschedule.
@@ -13,7 +14,7 @@ export type RescheduleResult =
   | { ok: true; eventId: string; lessonPlanUpdated: boolean }
   | {
       ok: false;
-      reason: "not_found" | "invalid_input" | "locked" | "non_working_day" | "conflict" | "save_failed";
+      reason: "not_found" | "invalid_input" | "locked" | "non_working_day" | "outside_working_hours" | "conflict" | "save_failed";
       conflictEventIds?: string[];
       message?: string;
     };
@@ -76,6 +77,15 @@ export async function rescheduleOccurrence(eventId: string, newDate: string, new
   if (checkDateIsNonWorking(newDate, timeOff)) return { ok: false, reason: "non_working_day" };
 
   const update = buildRescheduleUpdate(event, newDate, newStartTime, new Date().toISOString());
+
+  // Working-availability rule (same canonical source used elsewhere in Bloom):
+  // the entire lesson must fit inside a free working interval for that weekday
+  // (working hours minus rest blocks). Day-off/time-off was already checked above.
+  const availability = await getTeacherAvailability(teacherId);
+  const slotCheck = isSlotAvailable(availability, newDate, update.start_time, update.end_time);
+  if (!slotCheck.available) {
+    return { ok: false, reason: "outside_working_hours", message: slotCheck.reason?.message };
+  }
 
   // Overlap conflict check against the teacher's other occurrences that day.
   const { data: sameDay, error: dayErr } = await supabase
