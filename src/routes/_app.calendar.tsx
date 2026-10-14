@@ -83,6 +83,7 @@ import { fetchTeacherWorkingAvailability, WEEKDAYS_MAP } from "@/lib/availabilit
 import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictDialog";
 import { resolveEventColorMeta } from "@/lib/brand-colors";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
+import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialog";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -232,6 +233,7 @@ function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
 
   // Supabase Data State & Error Resilience
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
@@ -1569,6 +1571,13 @@ function CalendarPage() {
         </div>
       </div>
 
+      <RescheduleLessonDialog
+        lesson={rescheduleTarget}
+        open={rescheduleTarget !== null}
+        onOpenChange={(o) => !o && setRescheduleTarget(null)}
+        onRescheduled={() => fetchEvents()}
+      />
+
       {/* SIDE DETAILS MODAL PANEL */}
       <Dialog
         open={selectedEvent !== null}
@@ -1608,6 +1617,15 @@ function CalendarPage() {
                     <Clock className="h-4 w-4 text-accent shrink-0" />
                     {selectedEvent.date} @ {fmtTime(selectedEvent.startTime)} – {fmtTime(selectedEvent.endTime)}
                   </span>
+                  {!["Completed", "Closed", "Cancelled"].includes(selectedEvent.status) && (
+                    <button
+                      type="button"
+                      onClick={() => { setRescheduleTarget(selectedEvent); setSelectedEvent(null); }}
+                      className="mt-1 inline-flex h-7 items-center gap-1 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10 cursor-pointer"
+                    >
+                      <Clock className="h-3.5 w-3.5" /> {t("calendarUi.rescheduleAction")}
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-semibold block uppercase">
