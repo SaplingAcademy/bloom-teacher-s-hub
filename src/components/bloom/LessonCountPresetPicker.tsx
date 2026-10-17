@@ -24,14 +24,19 @@ interface Props {
   onSelect: (value: LessonCountSelection) => void;
   customQuantity: number;
   onCustomQuantityChange: (n: number) => void;
+  /** Reports whether the custom draft is currently empty/invalid (empty, 0, negative). */
+  onCustomValidityChange?: (invalid: boolean) => void;
   inputId: string;
   customLabel: string;
 }
 
 /** Lesson-count presets, stored per teacher in their account metadata (syncs across devices). */
-export function LessonCountPresetPicker({ selected, onSelect, customQuantity, onCustomQuantityChange, inputId, customLabel }: Props) {
+export function LessonCountPresetPicker({ selected, onSelect, customQuantity, onCustomQuantityChange, onCustomValidityChange, inputId, customLabel }: Props) {
   const { user } = useAuth();
   const { t } = useLanguage();
+  // Draft lets the field stay temporarily empty (or 0/negative) while typing;
+  // only valid values propagate to the parent. Validity is enforced on generate.
+  const [draft, setDraft] = useState(String(customQuantity));
   const [presets, setPresets] = useState<number[]>(DEFAULT_LESSON_COUNT_PRESETS);
   const [editing, setEditing] = useState(false);
   const [newValue, setNewValue] = useState("");
