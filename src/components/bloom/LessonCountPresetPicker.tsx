@@ -24,14 +24,27 @@ interface Props {
   onSelect: (value: LessonCountSelection) => void;
   customQuantity: number;
   onCustomQuantityChange: (n: number) => void;
+  /** Reports whether the custom draft is currently empty/invalid (empty, 0, negative). */
+  onCustomValidityChange?: (invalid: boolean) => void;
   inputId: string;
   customLabel: string;
 }
 
 /** Lesson-count presets, stored per teacher in their account metadata (syncs across devices). */
-export function LessonCountPresetPicker({ selected, onSelect, customQuantity, onCustomQuantityChange, inputId, customLabel }: Props) {
+export function LessonCountPresetPicker({ selected, onSelect, customQuantity, onCustomQuantityChange, onCustomValidityChange, inputId, customLabel }: Props) {
   const { user } = useAuth();
   const { t } = useLanguage();
+  // Draft lets the field stay temporarily empty (or 0/negative) while typing;
+  // only valid values propagate to the parent. Validity is enforced on generate.
+  const [draft, setDraft] = useState(String(customQuantity));
+
+  // When returning to the custom field with an empty/invalid draft, restore the last valid value.
+  useEffect(() => {
+    if (selected !== "custom") return;
+    const parsed = parseInt(draft, 10);
+    if (!Number.isInteger(parsed) || parsed < 1) setDraft(String(customQuantity));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, customQuantity]);
   const [presets, setPresets] = useState<number[]>(DEFAULT_LESSON_COUNT_PRESETS);
   const [editing, setEditing] = useState(false);
   const [newValue, setNewValue] = useState("");
@@ -136,8 +149,15 @@ export function LessonCountPresetPicker({ selected, onSelect, customQuantity, on
             type="number"
             min={1}
             max={200}
-            value={customQuantity}
-            onChange={(e) => onCustomQuantityChange(Math.max(1, parseInt(e.target.value) || 1))}
+            value={draft}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDraft(v);
+              const parsed = parseInt(v, 10);
+              const valid = Number.isInteger(parsed) && parsed >= 1;
+              onCustomValidityChange?.(!valid);
+              if (valid) onCustomQuantityChange(parsed);
+            }}
             className="h-10 text-sm font-semibold max-w-xs"
           />
         </div>

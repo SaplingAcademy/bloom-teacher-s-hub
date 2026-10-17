@@ -83,6 +83,7 @@ export function GenerateClassLessonPlanModal({
 }: Props) {
   const [quantityType, setQuantityType] = useState<LessonCountSelection>(20);
   const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 20);
+  const [customCountInvalid, setCustomCountInvalid] = useState(false);
   const [startDate, setStartDate] = useState<string>(
     cls.start_date || new Date().toISOString().split("T")[0]
   );
@@ -201,6 +202,12 @@ export function GenerateClassLessonPlanModal({
       toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
       return;
     }
+    if (quantityType === "custom" && customCountInvalid) {
+      const err = isPt ? "Informe um número de aulas válido (mínimo 1)." : "Enter a valid number of lessons (minimum 1).";
+      setErrorMessage(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
+      return;
+    }
     if (slots.length === 0) {
       const err = isPt ? "Informe ao menos um horário semanal." : "Add at least one weekly slot.";
       setErrorMessage(err);
@@ -284,6 +291,7 @@ export function GenerateClassLessonPlanModal({
               onSelect={setQuantityType}
               customQuantity={customQuantity}
               onCustomQuantityChange={setCustomQuantity}
+              onCustomValidityChange={setCustomCountInvalid}
               inputId="class-custom-qty"
               customLabel={isPt ? "Informe a quantidade de aulas" : "Enter the number of lessons"}
             />
