@@ -141,8 +141,15 @@ export function LessonCountPresetPicker({ selected, onSelect, customQuantity, on
             type="number"
             min={1}
             max={200}
-            value={customQuantity}
-            onChange={(e) => onCustomQuantityChange(Math.max(1, parseInt(e.target.value) || 1))}
+            value={draft}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDraft(v);
+              const parsed = parseInt(v, 10);
+              const valid = Number.isInteger(parsed) && parsed >= 1;
+              onCustomValidityChange?.(!valid);
+              if (valid) onCustomQuantityChange(parsed);
+            }}
             className="h-10 text-sm font-semibold max-w-xs"
           />
         </div>
