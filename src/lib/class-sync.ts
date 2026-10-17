@@ -94,6 +94,10 @@ export async function saveClassAndRelations(
   let savedClass: ClassEntity;
 
   if (classId) {
+    const { data: current, error: readError } = await supabase.from("classes")
+      .select("status").eq("teacher_id", teacherId).eq("id", classId).single();
+    if (readError) throw readError;
+    if (current?.status === "archived") throw new Error("Archived classes cannot be edited");
     // Update existing class
     const { data, error } = await supabase
       .from("classes")
@@ -139,14 +143,18 @@ export async function saveClassAndRelations(
 
   const targetClassId = savedClass.id;
 
-  // Sync Class Members (Upsert active members)
+  // Preserve historical memberships when reviewing enrollment in another class.
+  const { data: existingMembers, error: membersReadError } = await supabase.from("class_members")
+    .select("id, student_id, status, left_at").eq("teacher_id", teacherId).eq("class_id", targetClassId);
+  if (membersReadError) throw membersReadError;
+  const removedIds = (existingMembers || []).filter((m) => m.status === "active" && !m.left_at && !studentIds.includes(m.student_id)).map((m) => m.id);
+  if (removedIds.length) {
+    const { error } = await supabase.from("class_members")
+      .update({ status: "removed", left_at: formatLocalDateStr(new Date()) })
+      .eq("teacher_id", teacherId).eq("class_id", targetClassId).in("id", removedIds);
+    if (error) throw error;
+  }
   if (studentIds && studentIds.length > 0) {
-    // Delete existing members not in the current list
-    await supabase
-      .from("class_members")
-      .delete()
-      .eq("class_id", targetClassId)
-      .not("student_id", "in", `(${studentIds.map((id) => `"${id}"`).join(",")})`);
 
     // Insert new member rows
     const memberRows = studentIds.map((stdId) => ({
@@ -154,17 +162,18 @@ export async function saveClassAndRelations(
       student_id: stdId,
       teacher_id: teacherId,
       status: "active",
+      left_at: null,
     }));
 
     const { error: memberError } = await supabase
       .from("class_members")
       .upsert(memberRows, { onConflict: "class_id,student_id" });
 
-    if (memberError) console.warn("[class-sync] Member upsert warning:", memberError.message);
+    if (memberError) throw memberError;
   }
 
   // Sync Class Schedules
-  if (schedulesList && schedulesList.length > 0) {
+  if (savedClass.status === "active" && schedulesList && schedulesList.length > 0) {
     const savedSchedules = await persistClassSchedules(teacherId, targetClassId, schedulesList);
 
     // Project schedules to calendar_events
@@ -193,6 +202,10 @@ export async function projectClassSchedulesToCalendar(
   totalOccurrences = 12
 ) {
   if (!teacherId || !classId || !schedules || schedules.length === 0) return;
+  const { data: cls, error } = await supabase.from("classes").select("status")
+    .eq("teacher_id", teacherId).eq("id", classId).single();
+  if (error) throw error;
+  if (cls?.status !== "active") return;
 
   const timeOff = await fetchTeacherTimeOff(teacherId);
   const occurrences = generateOccurrences(

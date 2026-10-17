@@ -95,6 +95,10 @@ export const Route = createFileRoute("/_app/students")({
   head: () => ({
     meta: [
       { title: "Students · Bloom" },
+      { property: "og:title", content: "Students · Bloom" },
+      { property: "og:description", content: "Manage students, classes and their academic and financial history in Bloom." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Manage your students, progress and class history in one place.",
@@ -138,6 +142,7 @@ import {
   fetchActiveClassMemberStudentIds,
 } from "@/lib/class-sync";
 import { InactivateStudentModal } from "@/components/bloom/InactivateStudentModal";
+import { ClassRemovalModal, type StudentNextStep } from "@/components/bloom/ClassRemovalModal";
 
 export interface ScheduleInput {
   id?: string;

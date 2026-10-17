@@ -200,6 +200,10 @@ export async function generateClassLessonPlan(
     availability?: TeacherAvailabilitySnapshot | null;
   }
 ): Promise<LessonPlan[]> {
+  const { data: currentClass, error: classError } = await supabase.from("classes").select("status")
+    .eq("teacher_id", teacherId).eq("id", cls.id).single();
+  if (classError) throw classError;
+  if (currentClass?.status === "archived") throw new Error("Archived classes cannot generate lessons");
   // Time off is always loaded right before generating (never rely on an async UI snapshot).
   const loadedTimeOff = await fetchTeacherTimeOff(teacherId);
   const timeOff = [...loadedTimeOff, ...(params.timeOff || [])];
@@ -345,6 +349,10 @@ export async function insertClassEvents(
   rows: Array<Record<string, any>>
 ): Promise<{ inserted: number; error?: string }> {
   if (rows.length === 0) return { inserted: 0 };
+  const { data: cls, error: classError } = await supabase.from("classes").select("status")
+    .eq("teacher_id", teacherId).eq("id", classId).single();
+  if (classError) return { inserted: 0, error: classError.message };
+  if (cls?.status === "archived") return { inserted: 0, error: "Archived classes cannot generate lessons" };
 
   const { data: existing } = await supabase
     .from("calendar_events")
@@ -775,9 +783,8 @@ export async function fetchStudentClassLessons(studentId: string): Promise<Stude
 
   const { data: memberships } = await supabase
     .from("class_members")
-    .select("class_id, classes(name)")
-    .eq("student_id", studentId)
-    .eq("status", "active");
+    .select("class_id, joined_at, left_at, classes(name)")
+    .eq("student_id", studentId);
 
   const classIds = (memberships || []).map((m: any) => m.class_id);
   if (classIds.length === 0) return [];
@@ -797,7 +804,10 @@ export async function fetchStudentClassLessons(studentId: string): Promise<Stude
     return [];
   }
 
-  const plans = (data || []).map(mapPlanRow);
+  const plans = (data || []).map(mapPlanRow).filter((plan) => (memberships || []).some((m: any) =>
+    m.class_id === plan.class_id && (!m.joined_at || plan.scheduled_date >= m.joined_at) &&
+    (!m.left_at || plan.scheduled_date <= m.left_at)
+  ));
   const attendance = await fetchAttendanceForEvents(plans.map((p) => p.event_id));
 
   return plans.map((p) => ({

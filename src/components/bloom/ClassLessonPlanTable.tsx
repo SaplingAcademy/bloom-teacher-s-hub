@@ -201,7 +201,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
             ? "Gere o plano de aulas usando os horários recorrentes da turma e a sua disponibilidade."
             : "Generate the lesson plan using the class recurring schedule and your availability."}
         </p>
-        <Button onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+        <Button disabled={cls.status === "archived"} onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
           <BookOpen className="w-3.5 h-3.5" />
           {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
         </Button>
@@ -241,7 +241,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
               <RefreshCw className="w-3.5 h-3.5" />
               {isPt ? "Atualizar aulas" : "Refresh lessons"}
             </Button>
-            <Button size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+            <Button disabled={cls.status === "archived"} size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
               <BookOpen className="w-3.5 h-3.5" />
               {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
             </Button>
