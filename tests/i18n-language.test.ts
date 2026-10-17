@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { detectLanguage, matchLanguage, fmt, t, translations } from "../src/lib/i18n";
+import { detectLanguage, formatStatusLabel, matchLanguage, fmt, t, translations } from "../src/lib/i18n";
 import { uiTranslations } from "../src/lib/i18n-ui";
 
 describe("language detection", () => {
