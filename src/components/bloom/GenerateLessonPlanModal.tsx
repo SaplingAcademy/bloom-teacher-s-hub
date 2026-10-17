@@ -81,6 +81,7 @@ export function GenerateLessonPlanModal({
   // Form State
   const [quantityType, setQuantityType] = useState<LessonCountSelection>(20);
   const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 20);
+  const [customCountInvalid, setCustomCountInvalid] = useState(false);
   const [startDate, setStartDate] = useState<string>(() => initialLessonPlanPeriod({ startDate: initialStartDate }).startDate);
   const [endDate, setEndDate] = useState<string>(() => initialLessonPlanPeriod({ endDate: initialEndDate }).endDate);
   const [schedules, setSchedules] = useState<LessonScheduleInput[]>([]);
@@ -206,6 +207,13 @@ export function GenerateLessonPlanModal({
       return;
     }
 
+    if (quantityType === "custom" && customCountInvalid) {
+      const err = isPt ? "Informe um número de aulas válido (mínimo 1)." : "Enter a valid number of lessons (minimum 1).";
+      setErrorMessage(err);
+      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
+      return;
+    }
+
     if (targetCount <= 0) {
       const err = "Please select a positive number of lessons to generate.";
       setErrorMessage(err);
@@ -298,6 +306,7 @@ export function GenerateLessonPlanModal({
               onSelect={setQuantityType}
               customQuantity={customQuantity}
               onCustomQuantityChange={setCustomQuantity}
+              onCustomValidityChange={setCustomCountInvalid}
               inputId="custom-qty"
               customLabel={t("students.modalEnterCustomQty")}
             />
