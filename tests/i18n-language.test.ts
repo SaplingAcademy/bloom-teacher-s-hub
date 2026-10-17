@@ -29,3 +29,23 @@ describe("ui dictionaries", () => {
     expect(fmt(t("onboardingUi.stepOf", "en"), 2, 7)).toBe("Step 2 of 7");
   });
 });
+
+describe("calendar lesson details enum labels", () => {
+  it("translates level values without changing stored values", () => {
+    expect(formatStatusLabel("Beginner", "pt")).toBe("Iniciante");
+    expect(formatStatusLabel("Beginner", "en")).toBe("Beginner");
+    expect(formatStatusLabel("Advanced", "pt")).toBe("Avançado");
+    expect(formatStatusLabel("A1", "pt")).toBe("A1");
+  });
+  it("translates focus values", () => {
+    expect(formatStatusLabel("General", "pt")).toBe("Geral");
+    expect(formatStatusLabel("General English", "pt")).toBe("Inglês Geral");
+    expect(formatStatusLabel("General English", "en")).toBe("General English");
+  });
+  it("translates student type and modality", () => {
+    expect(formatStatusLabel("Group", "pt")).toBe("Turma");
+    expect(formatStatusLabel("Private", "pt")).toBe("VIP");
+    expect(formatStatusLabel("In person", "pt")).toBe("Presencial");
+    expect(formatStatusLabel("Online", "en")).toBe("Online");
+  });
+});
