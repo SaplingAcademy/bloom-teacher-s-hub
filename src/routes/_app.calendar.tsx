@@ -1686,7 +1686,7 @@ function CalendarPage() {
                     {t("calendarUi.levelAndFocus")}
                   </span>
                   <span className="font-semibold text-foreground">
-                    {selectedEvent.level} · {selectedEvent.focus} ({selectedEvent.type})
+                    {formatStatus(selectedEvent.level)} · {formatStatus(selectedEvent.focus)} ({formatStatus(selectedEvent.type)})
                   </span>
                 </div>
                 <div className="space-y-1">
