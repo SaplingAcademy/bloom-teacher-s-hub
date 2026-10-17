@@ -1,7 +1,7 @@
 import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -146,6 +146,10 @@ export const Route = createFileRoute("/_app/growth")({
     meta: [
       { title: "Growth · Bloom" },
       { name: "description", content: "Optimize and scale your language teaching school." },
+      { property: "og:title", content: "Growth · Bloom" },
+      { property: "og:description", content: "Track teaching capacity, available lesson times and revenue with Bloom." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: GrowthPage,
@@ -254,7 +258,7 @@ const translations = {
 };
 
 function GrowthPage() {
-  const { lang, t: tr } = useLanguage();
+  const { lang, t: tr, formatWeekday } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -294,6 +298,15 @@ function GrowthPage() {
   const [editGoalInputValue, setEditGoalInputValue] = useState("");
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+  const [selectedCapacityDay, setSelectedCapacityDay] = useState<string | null>(null);
+  const availableTimesRef = useRef<HTMLElement>(null);
+  const showAvailableTimes = (day: string) => {
+    setSelectedCapacityDay(day);
+    availableTimesRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  };
 
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
   const [occupiedCount, setOccupiedCount] = useState(32);
@@ -335,13 +348,14 @@ function GrowthPage() {
     queryKey: ["growth-data", user?.id],
     enabled: Boolean(user?.id),
     queryFn: async () => {
+      if (!user?.id) throw new Error("Authentication required");
       const [goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes] = await Promise.all([
-        fetchMonthlyGoal(user!.id),
-        fetchCurrentMRR(user!.id),
-        calculateRealCapacity(user!.id),
-        fetchTeacherExpenses(user!.id),
-        fetchEffectiveHourlyRate(user!.id),
-        fetchGrowthMetrics(user!.id),
+        fetchMonthlyGoal(user.id),
+        fetchCurrentMRR(user.id),
+        calculateRealCapacity(user.id),
+        fetchTeacherExpenses(user.id),
+        fetchEffectiveHourlyRate(user.id),
+        fetchGrowthMetrics(user.id),
       ]);
       return { goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes };
     },
@@ -586,6 +600,8 @@ function GrowthPage() {
   const avgRevenuePerPayingStudent = mrrData.hasBillingData && mrrData.payingStudentCount > 0 && mrrData.totalMRR > 0
     ? Math.round((mrrData.totalMRR / mrrData.payingStudentCount) * 100) / 100
     : null;
+  const capacityDays = capacityData.days.filter((day) => day.enabled);
+  const currentCapacityDay = capacityDays.find((day) => day.day === selectedCapacityDay) ?? capacityDays[0];
 
   // Real Growth Metrics calculations
   const metrics = computeGrowthMetrics(monthlyGoal || 0, mrrData);
@@ -789,7 +805,13 @@ function GrowthPage() {
         )}
 
         {/* TEACHING CAPACITY CARD */}
-        {!capacityData.hasWorkingHours ? (
+        {growthQuery.isError ? (
+          <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
+            <h3 className="font-display text-lg font-bold text-foreground">{t.capacityTitle}</h3>
+            <p role="alert" className="text-sm text-destructive">{tr("growthAvailability.loadError")}</p>
+            <Button variant="outline" size="sm" onClick={() => growthQuery.refetch()}>{tr("growthAvailability.retry")}</Button>
+          </div>
+        ) : !capacityData.hasWorkingHours ? (
           /* EMPTY STATE: No Working Availability Configured */
           <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
             <div className="flex items-center justify-between">
@@ -860,15 +882,18 @@ function GrowthPage() {
                 {capacityData.days
                   .filter((day) => day.enabled)
                   .map((day) => (
-                    <div
+                    <Button
                       key={day.day}
-                      className={`rounded-lg p-2 border ${
+                      variant="ghost"
+                      onClick={() => showAvailableTimes(day.day)}
+                      aria-controls="growth-available-times"
+                      className={`h-auto min-w-0 flex-col items-start gap-0 whitespace-normal rounded-lg p-2 border text-left ${
                         day.remainingSlots === 0
                           ? "bg-secondary/40 border-border/40"
                           : "bg-accent-soft/40 border-accent/10"
                       }`}
                     >
-                      <span className="block font-semibold text-foreground/70">{day.dayLabelPt}</span>
+                      <span className="block font-semibold text-foreground/70">{formatWeekday(day.day, true)}</span>
                       <span
                         className={`text-[10px] font-bold ${
                           day.remainingSlots === 0 ? "text-success uppercase" : "text-accent"
@@ -878,13 +903,47 @@ function GrowthPage() {
                           ? t.full
                           : `${day.remainingSlots} ${t.available}`}
                       </span>
-                    </div>
+                    </Button>
                   ))}
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {capacityData.hasWorkingHours && !growthQuery.isError && (
+        <section id="growth-available-times" ref={availableTimesRef} aria-labelledby="growth-available-times-title" className="scroll-mt-24 space-y-3 border-y border-border py-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 id="growth-available-times-title" className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+              <Clock className="h-5 w-5 text-accent" />{tr("growthAvailability.title")}
+            </h3>
+            <span className="text-xs text-muted-foreground">{tr("growthAvailability.period")}</span>
+          </div>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label={tr("growthAvailability.title")}>
+            {capacityDays.map((day) => (
+              <Button key={day.day} id={`capacity-tab-${day.day}`} role="tab" aria-selected={currentCapacityDay?.day === day.day} aria-controls="capacity-times-panel" variant={currentCapacityDay?.day === day.day ? "default" : "secondary"} size="sm" onClick={() => setSelectedCapacityDay(day.day)}>
+                {formatWeekday(day.day, true)} <span className="opacity-70">{day.remainingSlots}</span>
+              </Button>
+            ))}
+          </div>
+          {currentCapacityDay && (
+            <div id="capacity-times-panel" role="tabpanel" aria-labelledby={`capacity-tab-${currentCapacityDay.day}`} className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground">
+                {formatWeekday(currentCapacityDay.day)} · {new Date(`${currentCapacityDay.date}T12:00:00`).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US", { day: "numeric", month: "short" })}
+              </p>
+              {currentCapacityDay.availableSlots.length > 0 ? (
+                <ul className="flex flex-wrap gap-2" aria-label={formatWeekday(currentCapacityDay.day)}>
+                  {currentCapacityDay.availableSlots.map((slot) => (
+                    <li key={slot.startTime} className="flex items-center gap-2 rounded-lg border border-accent/15 bg-accent-soft/40 px-3 py-2 text-sm font-medium text-foreground tabular-nums">
+                      <Clock className="h-3.5 w-3.5 text-accent" />{slot.startTime} – {slot.endTime}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground py-3">{tr("growthAvailability.empty")}</p>}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* METRICS DASHBOARD SECTION — 100% real, teacher-scoped data */}
       <section className="space-y-4">
