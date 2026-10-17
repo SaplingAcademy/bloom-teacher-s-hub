@@ -103,9 +103,14 @@ export function NonWorkingDaysModal({
   const loadData = async () => {
     if (!teacherId) return;
     setLoading(true);
-    const list = await fetchTeacherTimeOff(teacherId);
-    setTimeOffList(list);
-    setLoading(false);
+    try {
+      const list = await fetchTeacherTimeOff(teacherId);
+      setTimeOffList(list);
+    } catch (error) {
+      toast.error(toUserMessage(error, t("errors.load")));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

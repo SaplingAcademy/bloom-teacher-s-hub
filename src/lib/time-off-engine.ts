@@ -34,23 +34,15 @@ export interface TimeOffInput {
 export async function fetchTeacherTimeOff(teacherId: string): Promise<TeacherTimeOff[]> {
   if (!teacherId) return [];
 
-  const localKey = `bloom.time_off.${teacherId}`;
-  let cached: TeacherTimeOff[] = [];
-  if (typeof localStorage !== "undefined") {
-    try {
-      const raw = localStorage.getItem(localKey);
-      if (raw) cached = JSON.parse(raw);
-    } catch (e) {}
-  }
-
-  try {
     const { data, error } = await supabase
       .from("teacher_time_off")
       .select("*")
       .eq("teacher_id", teacherId)
       .order("start_date", { ascending: true });
 
-    if (!error && data) {
+    // A failed read is not an empty vacation list. Let callers handle the error.
+    if (error) throw error;
+    if (!data) throw new Error("Unable to load teacher time off");
       const mapped: TeacherTimeOff[] = data.map((item: any) => ({
         id: item.id,
         teacherId: item.teacher_id,
@@ -61,16 +53,7 @@ export async function fetchTeacherTimeOff(teacherId: string): Promise<TeacherTim
         notes: item.notes || undefined,
         createdAt: item.created_at,
       }));
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(localKey, JSON.stringify(mapped));
-      }
       return mapped;
-    }
-  } catch (err) {
-    console.warn("[time-off-engine] Error fetching time off records:", err);
-  }
-
-  return cached;
 }
 
 /**
@@ -187,42 +170,8 @@ export async function createTeacherTimeOffBatch(
         createdAt: item.created_at,
       }));
       return { success: true, count: mapped.length, data: mapped };
-    } else {
-      // Fallback for offline/test environments: generate local entries
-      const fallbackMapped: TeacherTimeOff[] = payloadArray.map((p) => ({
-        id: `tof-${crypto.randomUUID()}`,
-        teacherId: p.teacher_id,
-        startDate: p.start_date,
-        endDate: p.end_date,
-        type: p.type as TimeOffType,
-        title: p.title || undefined,
-        notes: p.notes || undefined,
-        createdAt: new Date().toISOString(),
-      }));
-
-      const updatedList = [...existing, ...fallbackMapped];
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(`bloom.time_off.${teacherId}`, JSON.stringify(updatedList));
-      }
-      return { success: true, count: fallbackMapped.length, data: fallbackMapped };
     }
-
-    const created: TeacherTimeOff[] = (data || []).map((item: any) => ({
-      id: item.id,
-      teacherId: item.teacher_id,
-      startDate: item.start_date,
-      endDate: item.end_date,
-      type: item.type as TimeOffType,
-      title: item.title || undefined,
-      notes: item.notes || undefined,
-      createdAt: item.created_at,
-    }));
-
-    return {
-      success: true,
-      count: created.length,
-      data: created,
-    };
+    return { success: false, error: error?.message || "Erro ao salvar período sem aula." };
   } catch (err: any) {
     console.error("[time-off-engine] Error in createTeacherTimeOffBatch:", err);
     return { success: false, error: err?.message || String(err) };
