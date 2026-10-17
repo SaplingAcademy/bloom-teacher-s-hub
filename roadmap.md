@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Add week-only drag rescheduling through the existing occurrence function and verify targeted drag/rollback/locked scenarios.
+
 - [x] Add canonical financial domain rules and additive migration proposal (do not execute)
 - [x] Update package creation/editing/onboarding for monthly fixed or continuous duration
 - [x] Update student assignment and renewal snapshots for all three billing models
