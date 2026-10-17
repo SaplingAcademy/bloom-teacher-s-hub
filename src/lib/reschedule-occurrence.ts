@@ -10,12 +10,15 @@ import { getTeacherAvailability, isSlotAvailable } from "@/lib/teacher-availabil
    reschedule-aware sync treats rescheduled_at IS NOT NULL as satisfied.
    ========================================================================== */
 
+export type RescheduleWarning = "conflict" | "outside_working_hours" | "non_working_day";
+
 export type RescheduleResult =
   | { ok: true; eventId: string; lessonPlanUpdated: boolean }
   | {
       ok: false;
       reason: "not_found" | "invalid_input" | "locked" | "non_working_day" | "outside_working_hours" | "conflict" | "save_failed";
       conflictEventIds?: string[];
+      warnings?: RescheduleWarning[];
       message?: string;
     };
 
@@ -54,7 +57,7 @@ export function buildRescheduleUpdate(
   };
 }
 
-export async function rescheduleOccurrence(eventId: string, newDate: string, newStartTime: string): Promise<RescheduleResult> {
+export async function rescheduleOccurrence(eventId: string, newDate: string, newStartTime: string, options: { confirmedWarnings?: readonly RescheduleWarning[] } = {}): Promise<RescheduleResult> {
   if (!eventId || !/^\d{4}-\d{2}-\d{2}$/.test(newDate) || !/^\d{1,2}:\d{2}/.test(newStartTime || "")) {
     return { ok: false, reason: "invalid_input" };
   }
@@ -73,8 +76,9 @@ export async function rescheduleOccurrence(eventId: string, newDate: string, new
   if (LOCKED.has(event.status || "")) return { ok: false, reason: "locked" };
 
   // Existing time-off / day-off rule (same one used by the generators).
+  const warnings: RescheduleWarning[] = [];
   const timeOff = await fetchTeacherTimeOff(teacherId);
-  if (checkDateIsNonWorking(newDate, timeOff)) return { ok: false, reason: "non_working_day" };
+  if (checkDateIsNonWorking(newDate, timeOff)) warnings.push("non_working_day");
 
   const update = buildRescheduleUpdate(event, newDate, newStartTime, new Date().toISOString());
 
@@ -84,7 +88,7 @@ export async function rescheduleOccurrence(eventId: string, newDate: string, new
   const availability = await getTeacherAvailability(teacherId);
   const slotCheck = isSlotAvailable(availability, newDate, update.start_time, update.end_time);
   if (!slotCheck.available) {
-    return { ok: false, reason: "outside_working_hours", message: slotCheck.reason?.message };
+    warnings.push("outside_working_hours");
   }
 
   // Overlap conflict check against the teacher's other occurrences that day.
@@ -99,7 +103,12 @@ export async function rescheduleOccurrence(eventId: string, newDate: string, new
     (e: any) => e.status !== "Cancelled" && intervalsOverlap(update.start_time, update.end_time, e.start_time, e.end_time)
   );
   if (conflicts.length > 0) {
-    return { ok: false, reason: "conflict", conflictEventIds: conflicts.map((c: any) => c.id) };
+    warnings.push("conflict");
+  }
+  const unconfirmed = warnings.filter((warning) => !options.confirmedWarnings?.includes(warning));
+  const firstWarning = unconfirmed[0];
+  if (firstWarning) {
+    return { ok: false, reason: firstWarning, warnings: unconfirmed, conflictEventIds: conflicts.map((c: any) => c.id) };
   }
 
   const { data: plan } = await supabase
