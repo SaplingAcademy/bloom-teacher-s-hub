@@ -10,8 +10,9 @@ import type { ClassWithDetails } from "@/lib/class-sync";
 import type { ClassMember } from "@/types/classes";
 
 export type StudentNextStep = "package" | "enroll" | "inactivate";
-export function ClassRemovalModal({ cls, classes, onClose, onChanged, onStudentAction }: {
+export function ClassRemovalModal({ cls, classes, hidden = false, onClose, onChanged, onStudentAction }: {
   cls: ClassWithDetails; classes: ClassWithDetails[]; onClose: () => void;
+  hidden?: boolean;
   onChanged: () => void;
   onStudentAction: (studentId: string, action: StudentNextStep, classId?: string) => void;
 }) {
@@ -53,7 +54,7 @@ export function ClassRemovalModal({ cls, classes, onClose, onChanged, onStudentA
   };
   const availableClasses = classes.filter((c) => c.id !== cls.id && c.status === "active");
   return (
-    <Dialog open onOpenChange={(open) => { if (!open && !saving) onClose(); }}>
+    <Dialog open={!hidden} onOpenChange={(open) => { if (!open && !saving && !hidden) onClose(); }}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display">

@@ -3687,9 +3687,10 @@ function StudentsPage() {
         }}
       />
 
-      {classToRemove && !isClassModalOpen && !isInactivateModalOpen && !isStudentRenewalModalOpen && (
+      {classToRemove && (
         <ClassRemovalModal
           cls={classToRemove}
+          hidden={isClassModalOpen || isInactivateModalOpen || isStudentRenewalModalOpen}
           classes={classesList}
           onClose={() => setClassToRemove(null)}
           onChanged={() => {
