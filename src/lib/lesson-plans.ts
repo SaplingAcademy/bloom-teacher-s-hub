@@ -200,11 +200,14 @@ export async function generateClassLessonPlan(
     availability?: TeacherAvailabilitySnapshot | null;
   }
 ): Promise<LessonPlan[]> {
+  // Time off is always loaded right before generating (never rely on an async UI snapshot).
+  const loadedTimeOff = await fetchTeacherTimeOff(teacherId);
+  const timeOff = [...loadedTimeOff, ...(params.timeOff || [])];
   const occurrences = generateOccurrences(
     params.startDate,
     params.slots,
     params.totalOccurrences,
-    params.timeOff || [],
+    timeOff,
     params.availability
   );
 
@@ -239,30 +242,45 @@ export async function generateClassLessonPlan(
 
   const { data: events } = await supabase
     .from("calendar_events")
-    .select("id, date, start_time, end_time, duration, status")
+    .select("id, date, start_time, end_time, duration, status, class_schedule_id, original_date, original_start_time, rescheduled_at")
     .eq("teacher_id", teacherId)
-    .eq("class_id", cls.id)
-    .order("date", { ascending: true })
-    .order("start_time", { ascending: true });
+    .eq("class_id", cls.id);
+
+  // Link only the occurrences computed for this generation.
+  const matched = matchOccurrencesToEvents(occurrences, events || []);
+
+  // Pre-existing matching events missing their schedule identity get it filled in.
+  await Promise.all(
+    matched
+      .filter(({ event, occurrence }) => !event.class_schedule_id && occurrence.schedule_id)
+      .map(({ event, occurrence }) =>
+        supabase
+          .from("calendar_events")
+          .update({ class_schedule_id: occurrence.schedule_id })
+          .eq("id", event.id)
+          .eq("teacher_id", teacherId)
+          .is("class_schedule_id", null)
+      )
+  );
 
   const existing = await fetchLessonPlans({ classId: cls.id });
   const byEvent = new Map(existing.map((p) => [p.event_id, p]));
-  const missing = (events || []).filter((e: any) => !byEvent.has(e.id));
+  const missing = matched.filter(({ event }) => !byEvent.has(event.id));
 
   if (missing.length > 0) {
     let nextNumber = existing.reduce((max, p) => Math.max(max, p.lesson_number || 0), 0);
     const saveResult = await saveLessonPlans(
       teacherId,
-      missing.map((e: any) => ({
+      missing.map(({ event: e, occurrence: o }) => ({
         teacher_id: teacherId,
         event_id: e.id,
         class_id: cls.id,
         student_id: null,
         lesson_number: ++nextNumber,
         scheduled_date: e.date,
-        start_time: e.start_time,
-        end_time: e.end_time || calculateEndTime((e.start_time || "09:00").slice(0, 5), e.duration || 60),
-        duration: e.duration || 60,
+        start_time: e.start_time || o.start_time,
+        end_time: e.end_time || o.end_time,
+        duration: e.duration || o.duration,
         content: "",
         homework: "",
         homework_posted: null,
@@ -281,6 +299,36 @@ export async function generateClassLessonPlan(
     throw new Error("O plano de aulas não pôde ser salvo. Tente novamente.");
   }
   return plans.map((p, idx) => ({ ...p, lesson_number: p.lesson_number || idx + 1 }));
+}
+
+/**
+ * Pairs each generated occurrence with its calendar event (same date + start,
+ * or a rescheduled event whose original slot it was). Unrelated events are ignored.
+ */
+export function matchOccurrencesToEvents<E extends Record<string, any>>(
+  occurrences: GeneratedOccurrence[],
+  events: E[]
+): Array<{ occurrence: GeneratedOccurrence; event: E }> {
+  const key = (d: string, t: string) => `${d}|${String(t || "").slice(0, 5)}`;
+  const byKey = new Map<string, E>();
+  for (const e of events) {
+    if (e.rescheduled_at && e.original_date) {
+      byKey.set(key(e.original_date, e.original_start_time || e.start_time), e);
+    }
+  }
+  for (const e of events) {
+    const k = key(e.date, e.start_time);
+    if (!byKey.has(k)) byKey.set(k, e);
+  }
+  const used = new Set<string>();
+  const out: Array<{ occurrence: GeneratedOccurrence; event: E }> = [];
+  for (const o of occurrences) {
+    const e = byKey.get(key(o.date, o.start_time));
+    if (!e || used.has(e.id)) continue;
+    used.add(e.id);
+    out.push({ occurrence: o, event: e });
+  }
+  return out;
 }
 
 function normalizeAttachments(raw: any): LessonPlanAttachment[] {
