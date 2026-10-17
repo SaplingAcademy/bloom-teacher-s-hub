@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import { StudentClassLesson, fetchStudentClassLessons } from "@/lib/lesson-plans";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
+import { fetchStudentClassParticipation, type StudentClassParticipation } from "@/lib/class-lifecycle";
+import { Link } from "@tanstack/react-router";
 
 const STATUS_CLASS: Record<string, string> = {
   present: "bg-emerald-100 text-emerald-800",
@@ -12,21 +15,29 @@ const STATUS_CLASS: Record<string, string> = {
 
 export function StudentClassLessonsHistory({ studentId }: { studentId: string; isPt?: boolean }) {
   const { t, formatStatus } = useLanguage();
+  const { user } = useAuth();
   const [lessons, setLessons] = useState<StudentClassLesson[]>([]);
+  const [participations, setParticipations] = useState<StudentClassParticipation[]>([]);
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
+    if (!user?.id) return;
     setLoading(true);
-    fetchStudentClassLessons(studentId)
-      .then((list) => active && setLessons(list))
+    setError(false);
+    Promise.all([fetchStudentClassLessons(studentId), fetchStudentClassParticipation(user.id, studentId)])
+      .then(([list, membership]) => { if (active) { setLessons(list); setParticipations(membership); } })
+      .catch(() => { if (active) setError(true); })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [studentId]);
+  }, [studentId, user?.id]);
 
-  if (loading || lessons.length === 0) return null;
+  if (loading) return null;
+  if (error) return <p role="alert" className="text-sm text-destructive">{t("errors.load")}</p>;
+  if (lessons.length === 0 && participations.length === 0) return null;
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-4">
@@ -39,6 +50,19 @@ export function StudentClassLessonsHistory({ studentId }: { studentId: string; i
       </div>
 
       <div className="space-y-2">
+        {participations.map((membership) => (
+          <div key={membership.id} className="border-b border-border pb-3 space-y-1 text-xs">
+            <Link to="/students" search={{ classId: membership.class_id }} className="font-semibold text-primary underline">
+              {membership.class_name}
+            </Link>
+            <span className="ml-2 text-muted-foreground">{membership.class_status === "archived" ? t("classRemoval.archived") : formatStatus(membership.class_status)}</span>
+            <p className="text-muted-foreground">
+              {membership.class_start_date && `${t("classRemoval.started")}: ${membership.class_start_date} · `}
+              {t("classRemoval.joined")}: {membership.joined_at}
+              {membership.left_at && ` · ${t("classRemoval.left")}: ${membership.left_at}`}
+            </p>
+          </div>
+        ))}
         {lessons.map((l) => {
           const cancelled = l.event_status === "Cancelled";
           const statusClass = l.attendance_status ? STATUS_CLASS[l.attendance_status] : null;
