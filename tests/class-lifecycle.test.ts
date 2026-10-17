@@ -67,7 +67,7 @@ describe("safe class removal", () => {
     await expect(removeClassSafely("teacher", "class", "2026-10-17", "delete", "pt")).rejects.toThrow();
     expect(operations.some((o) => o.action !== "select")).toBe(false);
   });
-  test("archive changes only status, ends active memberships and closes future Scheduled events", async () => {
+  test("archive changes only status, ends active memberships and cancels future Scheduled events", async () => {
     historyTable = "lesson_plans";
     const result = await removeClassSafely("teacher", "class", "2026-10-17", "archive", "pt");
     expect(result.activeMembers[0].student_id).toBe("student");
@@ -75,7 +75,7 @@ describe("safe class removal", () => {
     expect(writes.map((o) => [o.table, o.action, o.payload])).toEqual([
       ["classes", "update", { status: "archived" }],
       ["class_members", "update", { status: "removed", left_at: "2026-10-17" }],
-      ["calendar_events", "update", { status: "Closed" }],
+      ["calendar_events", "update", { status: "Cancelled" }],
     ]);
     expect(writes[1].filters).toContainEqual(["eq", "status", "active"]);
     expect(writes[1].filters).toContainEqual(["is", "left_at", null]);

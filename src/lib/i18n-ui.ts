@@ -4,7 +4,7 @@ export const uiTranslations = {
     "classRemoval": {
       "title": "Excluir turma", "delete": "Excluir permanentemente", "archive": "Arquivar turma",
       "deleteDescription": "Esta turma não possui histórico acadêmico ou financeiro. A turma, seus vínculos atuais e aulas futuras serão excluídos permanentemente. Os alunos permanecerão cadastrados. Esta ação não pode ser desfeita.",
-      "archiveDescription": "Esta turma possui histórico e será arquivada, não excluída. Aulas passadas, planos, presenças, cobranças, pagamentos e participação dos alunos serão preservados. Matrículas ativas serão encerradas e aulas futuras agendadas serão fechadas. Os alunos continuarão ativos, sem alterações em seus pacotes.",
+      "archiveDescription": "Esta turma possui histórico e será arquivada, não excluída. Aulas passadas, planos, presenças, cobranças, pagamentos e participação dos alunos serão preservados. Matrículas ativas serão encerradas e aulas futuras agendadas serão canceladas. Os alunos continuarão ativos, sem alterações em seus pacotes.",
       "loading": "Verificando histórico da turma...", "loadError": "Não foi possível verificar o histórico. Nenhuma exclusão foi realizada. Tente novamente.",
       "saveError": "Não foi possível concluir todas as etapas. O histórico foi preservado. Tente novamente para concluir.",
       "changed": "O histórico da turma mudou. Revise a confirmação antes de continuar.",
@@ -1051,7 +1051,7 @@ export const uiTranslations = {
     "classRemoval": {
       "title": "Delete class", "delete": "Delete permanently", "archive": "Archive class",
       "deleteDescription": "This class has no academic or financial history. The class, current memberships and future lessons will be permanently deleted. Students will remain registered. This cannot be undone.",
-      "archiveDescription": "This class has history and will be archived, not deleted. Past lessons, plans, attendance, invoices, payments and student participation will be preserved. Active memberships will end and future scheduled lessons will be closed. Students will remain active and their packages will not change.",
+      "archiveDescription": "This class has history and will be archived, not deleted. Past lessons, plans, attendance, invoices, payments and student participation will be preserved. Active memberships will end and future scheduled lessons will be cancelled. Students will remain active and their packages will not change.",
       "loading": "Checking class history...", "loadError": "Could not verify the history. Nothing was deleted. Please try again.",
       "saveError": "Could not complete every step. History was preserved. Please retry to finish.",
       "changed": "The class history changed. Review the confirmation before continuing.",

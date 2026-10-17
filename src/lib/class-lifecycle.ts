@@ -87,7 +87,8 @@ export async function removeClassSafely(
   const ended = await supabase.from("class_members").update({ status: "removed", left_at: today })
     .eq("teacher_id", teacherId).eq("class_id", classId).eq("status", "active").is("left_at", null);
   if (ended.error) throw ended.error;
-  const closed = await supabase.from("calendar_events").update({ status: "Closed" })
+  // Cancelled is the existing non-blocking occurrence state; Closed still participates in conflict checks.
+  const closed = await supabase.from("calendar_events").update({ status: "Cancelled" })
     .eq("teacher_id", teacherId).eq("class_id", classId).gt("date", today).eq("status", "Scheduled");
   if (closed.error) throw closed.error;
   // Retain schedule rows/IDs: archived status disables recurrence in every scheduling consumer.
