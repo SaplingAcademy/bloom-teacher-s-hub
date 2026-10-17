@@ -85,7 +85,8 @@ import { resolveEventColorMeta } from "@/lib/brand-colors";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialog";
 import { useWeekLessonDrag } from "@/hooks/use-week-lesson-drag";
-import { rescheduleOccurrence } from "@/lib/reschedule-occurrence";
+import { useRescheduleConfirmation } from "@/hooks/use-reschedule-confirmation";
+import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDialog";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -242,6 +243,7 @@ function CalendarPage() {
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
   const pendingMoves = useRef(new Set<string>());
   const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
+  const rescheduleConfirmation = useRescheduleConfirmation();
 
   // Supabase Data State & Error Resilience
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
@@ -541,7 +543,8 @@ function CalendarPage() {
     pendingMoves.current.add(eventId);
     setMovingIds(new Set(pendingMoves.current));
     try {
-      const result = await rescheduleOccurrence(eventId, position.date, position.startTime);
+      const result = await rescheduleConfirmation.request(eventId, position.date, position.startTime);
+      if (!result) return;
       if (!result.ok) {
         const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
         const reason = known.includes(result.reason) ? result.reason : "save_failed";
@@ -1622,7 +1625,9 @@ function CalendarPage() {
         open={rescheduleTarget !== null}
         onOpenChange={(o) => !o && setRescheduleTarget(null)}
         onRescheduled={() => fetchEvents()}
+        onRequestReschedule={rescheduleConfirmation.request}
       />
+      <RescheduleWarningDialog warnings={rescheduleConfirmation.warnings} onAnswer={rescheduleConfirmation.respond} />
 
       {/* SIDE DETAILS MODAL PANEL */}
       <Dialog

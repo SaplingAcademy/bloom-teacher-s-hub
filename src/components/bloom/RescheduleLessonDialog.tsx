@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/hooks/use-language";
 import { SaveErrorMessage } from "@/components/bloom/SaveFeedback";
-import { rescheduleOccurrence } from "@/lib/reschedule-occurrence";
+import type { RescheduleResult } from "@/lib/reschedule-occurrence";
 
 const toMin = (t: string) => {
   const [h, m] = String(t || "").split(":").map(Number);
@@ -30,11 +30,13 @@ export function RescheduleLessonDialog({
   open,
   onOpenChange,
   onRescheduled,
+  onRequestReschedule,
 }: {
   lesson: RescheduleLessonTarget | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRescheduled: () => void | Promise<void>;
+  onRequestReschedule: (eventId: string, date: string, startTime: string) => Promise<RescheduleResult | null>;
 }) {
   const { t } = useLanguage();
   const [newDate, setNewDate] = useState("");
@@ -58,16 +60,22 @@ export function RescheduleLessonDialog({
   const handleConfirm = async () => {
     setSaving(true);
     setError(null);
-    const res = await rescheduleOccurrence(lesson.id, newDate, newStart);
-    setSaving(false);
-    if (res.ok) {
-      onOpenChange(false);
-      await onRescheduled();
-      return;
+    try {
+      const res = await onRequestReschedule(lesson.id, newDate, newStart);
+      if (!res) return;
+      if (res.ok) {
+        onOpenChange(false);
+        await onRescheduled();
+        return;
+      }
+      const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
+      const key = known.includes(res.reason) ? res.reason : "save_failed";
+      setError(t(`calendarUi.rescheduleErr_${key}`));
+    } catch {
+      setError(t("calendarUi.rescheduleErr_save_failed"));
+    } finally {
+      setSaving(false);
     }
-    const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
-    const key = known.includes(res.reason) ? res.reason : "save_failed";
-    setError(t(`calendarUi.rescheduleErr_${key}`));
   };
 
   return (
