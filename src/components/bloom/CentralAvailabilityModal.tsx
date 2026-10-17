@@ -165,8 +165,12 @@ export function CentralAvailabilityModal({
   };
 
   const loadDaysOffData = async () => {
-    const list = await fetchTeacherTimeOff(teacherId);
-    setTimeOffList(list);
+    try {
+      const list = await fetchTeacherTimeOff(teacherId);
+      setTimeOffList(list);
+    } catch (error) {
+      toast.error(toUserMessage(error, t("errors.loadTimeOff")));
+    }
   };
 
   // Toggle Weekday Selection
@@ -343,7 +347,7 @@ export function CentralAvailabilityModal({
       const res = await createTeacherTimeOffBatch(teacherId, payload);
 
       if (!res.success) {
-        toast.error(toUserMessage(res.error, i18nT("errors.saveAvailability", currentLanguage())));
+        toast.error(toUserMessage(res.error, i18nT("errors.saveTimeOff", currentLanguage())));
         return;
       }
 
@@ -358,7 +362,7 @@ export function CentralAvailabilityModal({
       await loadDaysOffData();
       if (onSaved) onSaved();
     } catch (err: any) {
-      toast.error("Falha ao salvar dias sem aula.");
+      toast.error(toUserMessage(err, t("errors.saveTimeOff")));
     } finally {
       setIsSavingDaysOff(false);
     }
