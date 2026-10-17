@@ -3,13 +3,8 @@ import {
   getTeacherAvailability, getAvailableSlots, isSlotAvailable, minutesToTime,
   type TeacherAvailabilitySnapshot,
 } from "@/lib/teacher-availability";
-import {
-  WorkingAvailability,
-  RestBlock,
-  fetchTeacherWorkingAvailability,
-  fetchTeacherRestBlocks,
-  WEEKDAYS_MAP,
-} from "@/lib/availability-engine";
+import { type WorkingAvailability, type RestBlock, WEEKDAYS_MAP } from "@/lib/availability-engine";
+import { rowDurationMinutes } from "@/lib/student-schedules";
 
 export interface DayCapacity {
   day: string; // "Monday", "Tuesday", etc.
@@ -94,9 +89,10 @@ export function getWorkingSegments(
 export interface CapacityBooking {
   id: string;
   weekday?: string;
-  start_time: string;
+  start_time: string | null;
   end_time?: string | null;
   duration?: number | null;
+  duration_minutes?: number | null;
 }
 export interface CapacityEvent extends CapacityBooking {
   date: string;
@@ -135,8 +131,9 @@ export function buildCapacityDays(
       ...events.filter((event) => event.date === dateStr && event.status !== "Cancelled"),
     ];
     const intervals = booked.map((row) => {
-      const start = timeToMinutes(row.start_time);
-      const end = row.duration && row.duration > 0 ? start + row.duration : timeToMinutes(row.end_time || "");
+      const start = timeToMinutes(row.start_time || "");
+      const duration = row.duration ?? rowDurationMinutes({ duration_minutes: row.duration_minutes ?? null, start_time: row.start_time, end_time: row.end_time ?? null });
+      const end = duration && duration > 0 ? start + duration : timeToMinutes(row.end_time || "");
       if (!row.start_time || end <= start) throw new Error("Invalid booked lesson interval");
       return { start, end };
     });
@@ -162,7 +159,16 @@ export async function calculateRealCapacity(teacherId: string): Promise<RealCapa
     slotDurationMinutes: 60, days: [],
   };
   if (!teacherId) return empty;
-  const snapshot = await getTeacherAvailability(teacherId, { force: true });
+  const [snapshot, settingsRes] = await Promise.all([
+    getTeacherAvailability(teacherId, { force: true }),
+    supabase.from("settings").select("working_availability, rest_blocks, default_class_duration").eq("teacher_id", teacherId).maybeSingle(),
+  ]);
+  // Capacity must not advertise slots from an old rest-block browser cache or a failed read.
+  if (settingsRes.error) throw settingsRes.error;
+  snapshot.days = (settingsRes.data?.working_availability || []) as WorkingAvailability[];
+  snapshot.restBlocks = (settingsRes.data?.rest_blocks || []) as RestBlock[];
+  snapshot.defaultDuration = settingsRes.data?.default_class_duration || 60;
+  snapshot.isConfigured = snapshot.days.some((day) => day.enabled);
   if (!snapshot.isConfigured) return empty;
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: snapshot.timezone, year: "numeric", month: "2-digit", day: "2-digit",
@@ -184,7 +190,7 @@ export async function calculateRealCapacity(teacherId: string): Promise<RealCapa
   const studentIds = (studentsRes.data || []).map((row) => row.id);
   const classIds = (classesRes.data || []).map((row) => row.id);
   const [studentSchedules, classSchedules] = await Promise.all([
-    studentIds.length ? supabase.from("student_schedules").select("id, weekday, start_time, end_time").in("student_id", studentIds) : { data: [], error: null },
+    studentIds.length ? supabase.from("student_schedules").select("id, weekday, start_time, end_time, duration_minutes").in("student_id", studentIds) : { data: [], error: null },
     classIds.length ? supabase.from("class_schedules").select("id, weekday, start_time, end_time, duration").in("class_id", classIds) : { data: [], error: null },
   ]);
   if (studentSchedules.error) throw studentSchedules.error;

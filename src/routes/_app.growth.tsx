@@ -877,7 +877,7 @@ function GrowthPage() {
 
             {/* Slots Availability Breakdown for working days only */}
             <div className="mt-4 space-y-2">
-              <p className="text-xs font-bold text-foreground/80">{t.capacityBreakdown}:</p>
+              <p className="text-xs font-bold text-foreground/80">{t.capacityBreakdown}: <span className="font-normal text-muted-foreground">{tr("growthAvailability.period")}</span></p>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs">
                 {capacityData.days
                   .filter((day) => day.enabled)
@@ -919,15 +919,15 @@ function GrowthPage() {
             </h3>
             <span className="text-xs text-muted-foreground">{tr("growthAvailability.period")}</span>
           </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label={tr("growthAvailability.title")}>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={tr("growthAvailability.title")}>
             {capacityDays.map((day) => (
-              <Button key={day.day} id={`capacity-tab-${day.day}`} role="tab" aria-selected={currentCapacityDay?.day === day.day} aria-controls="capacity-times-panel" variant={currentCapacityDay?.day === day.day ? "default" : "secondary"} size="sm" onClick={() => setSelectedCapacityDay(day.day)}>
+              <Button key={day.day} id={`capacity-tab-${day.day}`} aria-pressed={currentCapacityDay?.day === day.day} aria-controls="capacity-times-panel" variant={currentCapacityDay?.day === day.day ? "default" : "secondary"} size="sm" onClick={() => setSelectedCapacityDay(day.day)}>
                 {formatWeekday(day.day, true)} <span className="opacity-70">{day.remainingSlots}</span>
               </Button>
             ))}
           </div>
           {currentCapacityDay && (
-            <div id="capacity-times-panel" role="tabpanel" aria-labelledby={`capacity-tab-${currentCapacityDay.day}`} className="space-y-3">
+            <div id="capacity-times-panel" role="region" aria-labelledby={`capacity-tab-${currentCapacityDay.day}`} className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground">
                 {formatWeekday(currentCapacityDay.day)} · {new Date(`${currentCapacityDay.date}T12:00:00`).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US", { day: "numeric", month: "short" })}
               </p>
