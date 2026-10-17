@@ -1,5 +1,6 @@
 # Roadmap
 
+- [ ] Support 1–7 weekly class/group schedules in create/edit and preserve schedule IDs; verify Calendar projection for 1, 2, 3 slots.
 - [x] Link Calendar and Lesson Plan homework status through lesson_plans.homework_posted by event_id; 8 targeted tests and isolated two-way/readback/error checks passed, no schema changes.
 - [ ] Verify homework status with a real authenticated lesson; blocked by no available authenticated session (preview opens /auth).
 
