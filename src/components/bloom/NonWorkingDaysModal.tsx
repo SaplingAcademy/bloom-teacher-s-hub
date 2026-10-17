@@ -107,7 +107,7 @@ export function NonWorkingDaysModal({
       const list = await fetchTeacherTimeOff(teacherId);
       setTimeOffList(list);
     } catch (error) {
-      toast.error(toUserMessage(error, t("errors.loadTimeOff")));
+      toast.error(toUserMessage(error, t("errors.load")));
     } finally {
       setLoading(false);
     }
