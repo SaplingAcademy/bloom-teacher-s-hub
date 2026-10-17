@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Show Growth weekday capacity as clickable chips and a compact available-times section, using one shared capacity result; focused availability checks only.
+
 - [x] Implement safe class deletion/archive, retain student history and offer individual next steps; focused lifecycle and schedule tests passed, no schema changes.
 - [ ] Verify class archival/deletion with a real authenticated class; blocked by external app authentication (live preview redirects to /auth, no managed session available).
 
