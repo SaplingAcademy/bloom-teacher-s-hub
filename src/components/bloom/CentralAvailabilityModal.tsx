@@ -489,29 +489,29 @@ export function CentralAvailabilityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] rounded-2xl p-6 bg-card border-border shadow-xl flex flex-col">
+      <DialogContent className="w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[90vh] rounded-2xl p-6 sm:p-8 bg-card border-border shadow-xl flex flex-col">
         {/* Header */}
-        <DialogHeader className="pb-3 border-b border-border/60 shrink-0">
+        <DialogHeader className="pb-4 border-b border-border/60 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#163020] text-[#F4EBE1]">
-              <Clock className="w-5 h-5" />
+            <div className="p-3 rounded-xl bg-[#163020] text-[#F4EBE1]">
+              <Clock className="w-6 h-6" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-foreground font-display">
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground font-display">
                 {t("calendar.settingsAvailability")}
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              <DialogDescription className="text-sm text-muted-foreground">
                 {t("calendar.subtitle")}
               </DialogDescription>
             </div>
           </div>
 
           {/* Tab Switcher */}
-          <div className="flex items-center gap-2 pt-4 flex-wrap">
+          <div className="flex items-center gap-2.5 pt-5 flex-wrap">
             <button
               type="button"
               onClick={() => setActiveTab("working_hours")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "working_hours"
                   ? "bg-[#163020] text-[#F4EBE1] shadow-xs"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -529,7 +529,7 @@ export function CentralAvailabilityModal({
             <button
               type="button"
               onClick={() => setActiveTab("rest_blocks")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "rest_blocks"
                   ? "bg-[#163020] text-[#F4EBE1] shadow-xs"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -547,7 +547,7 @@ export function CentralAvailabilityModal({
             <button
               type="button"
               onClick={() => setActiveTab("days_off")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "days_off"
                   ? "bg-[#163020] text-[#F4EBE1] shadow-xs"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -565,25 +565,25 @@ export function CentralAvailabilityModal({
         </DialogHeader>
 
         {/* Scrollable Content Container */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-6 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto py-6 space-y-7 scrollbar-thin">
           {/* TAB 1: HORÁRIOS DE TRABALHO */}
           {activeTab === "working_hours" && (
             <div className="space-y-6">
               {/* Conflict Warning Banner */}
               {conflictsList.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-sm space-y-2">
                   <div className="flex items-center gap-2 font-bold">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                     <span>{t("availabilityUi.workingConflict")}</span>
                   </div>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300">
+                  <ul className="list-disc list-inside space-y-1.5 text-xs text-amber-800 dark:text-amber-300">
                     {conflictsList.map((c, idx) => (
                       <li key={idx}>
                         <strong>{c.studentName}</strong> — {c.weekday} às {c.startTime}
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[10px] text-muted-foreground italic">
+                  <p className="text-xs text-muted-foreground italic">
                     {t("availabilityUi.workingConflictHelp")}
                   </p>
                 </div>
@@ -591,7 +591,7 @@ export function CentralAvailabilityModal({
 
               {/* 1. Weekday Buttons Selector */}
               <div className="space-y-3">
-                <Label className="text-xs font-bold text-foreground block">
+                <Label className="text-sm font-bold text-foreground block">
                   {t("availabilityUi.workingDaysQuestion")}
                 </Label>
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
@@ -608,7 +608,7 @@ export function CentralAvailabilityModal({
                             : "bg-card text-muted-foreground hover:border-border border-border/60 font-medium"
                         }`}
                       >
-                        <span className="text-xs font-bold">{formatWeekday(w.key, true)}</span>
+                        <span className="text-sm font-bold">{formatWeekday(w.key, true)}</span>
                         {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
                       </button>
                     );
@@ -619,7 +619,7 @@ export function CentralAvailabilityModal({
               {/* 2. Same vs Different Hours Toggle */}
               {selectedWeekdays.size > 0 && (
                 <div className="space-y-4 pt-2 border-t border-border/60">
-                  <Label className="text-xs font-bold text-foreground block">
+                  <Label className="text-sm font-bold text-foreground block">
                     {t("availabilityUi.sameHoursQuestion")}
                   </Label>
 
@@ -652,7 +652,7 @@ export function CentralAvailabilityModal({
                   {sameHours ? (
                     <div className="p-4 rounded-xl bg-muted/30 border border-border/60 grid grid-cols-2 gap-4 max-w-md">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground">{t("availabilityUi.startTime")}</Label>
+                        <Label className="text-sm font-semibold text-muted-foreground">{t("availabilityUi.startTime")}</Label>
                         <Input
                           type="time"
                           value={sharedStartTime}
@@ -661,7 +661,7 @@ export function CentralAvailabilityModal({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground">{t("availabilityUi.endTime")}</Label>
+                        <Label className="text-sm font-semibold text-muted-foreground">{t("availabilityUi.endTime")}</Label>
                         <Input
                           type="time"
                           value={sharedEndTime}
@@ -691,7 +691,7 @@ export function CentralAvailabilityModal({
                                     [w.key]: { ...currentTimes, startTime: e.target.value },
                                   }))
                                 }
-                                className="h-9 text-xs font-mono bg-background border-border w-28"
+                                className="h-10 text-sm font-mono bg-background border-border w-28"
                               />
                               <span className="text-muted-foreground">{t("availabilityUi.until")}</span>
                               <Input
@@ -703,7 +703,7 @@ export function CentralAvailabilityModal({
                                     [w.key]: { ...currentTimes, endTime: e.target.value },
                                   }))
                                 }
-                                className="h-9 text-xs font-mono bg-background border-border w-28"
+                                className="h-10 text-sm font-mono bg-background border-border w-28"
                               />
                             </div>
                           </div>
@@ -721,33 +721,33 @@ export function CentralAvailabilityModal({
             <div className="space-y-6">
               {/* Conflict Warning Banner for Rest Blocks */}
               {restConflictsList.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-sm space-y-2">
                   <div className="flex items-center gap-2 font-bold">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                     <span>{t("availabilityUi.restConflict")}</span>
                   </div>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300">
+                  <ul className="list-disc list-inside space-y-1.5 text-xs text-amber-800 dark:text-amber-300">
                     {restConflictsList.map((c, idx) => (
                       <li key={idx}>
                         <strong>{c.targetName}</strong> — {c.weekday} ({c.timeRange}) com descanso "{c.restLabel}"
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[10px] text-muted-foreground italic">
+                  <p className="text-xs text-muted-foreground italic">
                     {t("availabilityUi.restConflictHelp")}
                   </p>
                 </div>
               )}
 
               {/* Supporting Text */}
-              <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground leading-relaxed">
+              <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-sm text-muted-foreground leading-relaxed">
                 <p className="font-semibold text-foreground mb-1">{t("availabilityUi.recurringRest")}</p>
                 {t("availabilityUi.recurringRestHelp")}
               </div>
 
               {/* Quick Presets */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-foreground block">{t("availabilityUi.quickSuggestions")}</Label>
+                <Label className="text-sm font-bold text-foreground block">{t("availabilityUi.quickSuggestions")}</Label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {[
                     { label: "Almoço", startTime: "12:00", endTime: "13:30" },
@@ -760,7 +760,7 @@ export function CentralAvailabilityModal({
                       key={idx}
                       type="button"
                       onClick={() => handleApplyPreset(preset)}
-                      className="px-3 py-1.5 rounded-lg border border-border/80 bg-card hover:bg-secondary text-xs font-medium text-foreground transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg border border-border/80 bg-card hover:bg-secondary text-sm font-medium text-foreground transition-colors cursor-pointer"
                     >
                       {preset.label} ({preset.startTime}–{preset.endTime})
                     </button>
@@ -770,7 +770,7 @@ export function CentralAvailabilityModal({
 
               {/* Weekday Selection for Rest Block */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-foreground block">{t("availabilityUi.applyWeekdays")}</Label>
+                <Label className="text-sm font-bold text-foreground block">{t("availabilityUi.applyWeekdays")}</Label>
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                   {WEEKDAYS_MAP.map((w) => {
                     const isSelected = restSelectedWeekdays.has(w.key);
@@ -785,7 +785,7 @@ export function CentralAvailabilityModal({
                             : "bg-card text-muted-foreground hover:border-border border-border/60 font-medium"
                         }`}
                       >
-                        <span className="text-xs font-bold">{formatWeekday(w.key, true)}</span>
+                        <span className="text-sm font-bold">{formatWeekday(w.key, true)}</span>
                         {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
                       </button>
                     );
@@ -797,31 +797,31 @@ export function CentralAvailabilityModal({
               <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-foreground block">{t("availabilityUi.startTime")}</Label>
+                    <Label className="text-sm font-semibold text-foreground block">{t("availabilityUi.startTime")}</Label>
                     <Input
                       type="time"
                       value={restStartTime}
                       onChange={(e) => setRestStartTime(e.target.value)}
-                      className="h-9 text-xs font-mono bg-background border-border"
+                      className="h-10 text-sm font-mono bg-background border-border"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-foreground block">{t("availabilityUi.endTime")}</Label>
+                    <Label className="text-sm font-semibold text-foreground block">{t("availabilityUi.endTime")}</Label>
                     <Input
                       type="time"
                       value={restEndTime}
                       onChange={(e) => setRestEndTime(e.target.value)}
-                      className="h-9 text-xs font-mono bg-background border-border"
+                      className="h-10 text-sm font-mono bg-background border-border"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-foreground block">{t("availabilityUi.reason")}</Label>
+                    <Label className="text-sm font-semibold text-foreground block">{t("availabilityUi.reason")}</Label>
                     <Input
                       type="text"
                       placeholder={t("availabilityUi.reasonPlaceholder")}
                       value={restLabel}
                       onChange={(e) => setRestLabel(e.target.value)}
-                      className="h-9 text-xs bg-background border-border"
+                      className="h-10 text-sm bg-background border-border"
                     />
                   </div>
                 </div>
@@ -829,7 +829,7 @@ export function CentralAvailabilityModal({
                 <Button
                   type="button"
                   onClick={handleAddRestBlocks}
-                  className="w-full h-9 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold text-xs cursor-pointer"
+                  className="w-full h-10 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold text-sm cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   {t("availabilityUi.addRest")}
@@ -839,13 +839,13 @@ export function CentralAvailabilityModal({
               {/* Configured Rest Blocks List */}
               <div className="space-y-3 pt-2 border-t border-border/60">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-foreground">
+                  <Label className="text-sm font-bold text-foreground">
                     {t("availabilityUi.configuredRest")} ({restBlocksList.length}):
                   </Label>
                 </div>
 
                 {restBlocksList.length === 0 ? (
-                  <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground">
+                  <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-sm text-muted-foreground">
                     {t("availabilityUi.noRest")}
                   </div>
                 ) : (
@@ -855,7 +855,7 @@ export function CentralAvailabilityModal({
                       if (dayBlocks.length === 0) return null;
                       return (
                         <div key={w.key} className="p-3 rounded-xl border border-border/60 bg-card space-y-2">
-                          <span className="text-xs font-bold text-primary block">{formatWeekday(w.key)}</span>
+                          <span className="text-sm font-bold text-primary block">{formatWeekday(w.key)}</span>
                           <div className="space-y-1.5">
                             {dayBlocks.map((b) => (
                               <div
@@ -893,7 +893,7 @@ export function CentralAvailabilityModal({
             <div className="space-y-6">
               {/* Range hint + current selection */}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Clique em uma data para o <strong>início</strong> e em outra para o <strong>fim</strong> do período. Um único clique registra um dia isolado.
                 </p>
                 {rangeStart && (
@@ -903,7 +903,7 @@ export function CentralAvailabilityModal({
                       clearRangeSelection();
                       setEditingRecordId(null);
                     }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted transition-all cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-border bg-card text-muted-foreground hover:bg-muted transition-all cursor-pointer"
                   >
                     Limpar seleção
                   </button>
@@ -911,7 +911,7 @@ export function CentralAvailabilityModal({
               </div>
 
               {rangeStart && (
-                <div className="px-3 py-2 rounded-xl bg-[#163020]/5 border border-[#163020]/20 text-xs font-semibold text-foreground">
+                <div className="px-3 py-2 rounded-xl bg-[#163020]/5 border border-[#163020]/20 text-sm font-semibold text-foreground">
                   {rangeEnd && rangeEnd !== rangeStart
                     ? `Período selecionado: ${formatBr(rangeStart)} → ${formatBr(rangeEnd)} (${rangeDayCount} dias)`
                     : rangeEnd
@@ -958,7 +958,7 @@ export function CentralAvailabilityModal({
 
                 <div className="grid grid-cols-7 gap-1 text-center" onMouseLeave={() => setHoverDate("")}>
                   {monthDaysGrid.map((item, idx) => {
-                    if (!item.isCurrentMonth) return <div key={idx} className="h-8" />;
+                    if (!item.isCurrentMonth) return <div key={idx} className="h-9" />;
                     const { start, end } = effectiveRange;
                     const inRange = !!start && item.dateStr >= start && item.dateStr <= end;
                     const isEdge = item.dateStr === start || item.dateStr === end;
@@ -970,7 +970,7 @@ export function CentralAvailabilityModal({
                         type="button"
                         onClick={() => handleRangeDateClick(item.dateStr)}
                         onMouseEnter={() => setHoverDate(item.dateStr)}
-                        className={`h-8 rounded-lg text-xs font-semibold transition-all relative cursor-pointer ${
+                        className={`h-8 rounded-lg text-sm font-semibold transition-all relative cursor-pointer ${
                           inRange && isEdge
                             ? "bg-[#163020] text-[#F4EBE1] font-bold shadow-2xs"
                             : inRange
@@ -991,7 +991,7 @@ export function CentralAvailabilityModal({
               {/* Optional Category and Title */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">{t("availabilityUi.optionalCategory")}</Label>
+                  <Label className="text-sm font-semibold text-muted-foreground">{t("availabilityUi.optionalCategory")}</Label>
                   <select
                     value={timeOffCategory}
                     onChange={(e) => setTimeOffCategory(e.target.value as any)}
@@ -1007,13 +1007,13 @@ export function CentralAvailabilityModal({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">{t("availabilityUi.optionalName")}</Label>
+                  <Label className="text-sm font-semibold text-muted-foreground">{t("availabilityUi.optionalName")}</Label>
                   <Input
                     type="text"
                     placeholder={t("availabilityUi.namePlaceholder")}
                     value={timeOffTitle}
                     onChange={(e) => setTimeOffTitle(e.target.value)}
-                    className="h-9 text-xs bg-background border-border"
+                    className="h-10 text-sm bg-background border-border"
                   />
                 </div>
               </div>
@@ -1035,7 +1035,7 @@ export function CentralAvailabilityModal({
                 </div>
 
                 {filteredDaysOffRecords.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic text-center py-4">{t("availabilityUi.noDaysFound")}</p>
+                  <p className="text-sm text-muted-foreground italic text-center py-4">{t("availabilityUi.noDaysFound")}</p>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
                     {filteredDaysOffRecords.map((item) => (
@@ -1068,7 +1068,7 @@ export function CentralAvailabilityModal({
                         <button
                           type="button"
                           onClick={() => loadExistingPeriod(item)}
-                          className="px-2 py-1 rounded-lg text-[11px] font-semibold border border-border text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+                          className="px-2 py-1 rounded-lg text-xs font-semibold border border-border text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
                           title={t("availabilityUi.showOnCalendar")}
                         >
                           {t("availabilityUi.viewOnCalendar")}
@@ -1083,8 +1083,8 @@ export function CentralAvailabilityModal({
         </div>
 
         {/* Footer Actions */}
-        <DialogFooter className="pt-3 border-t border-border/60 shrink-0 gap-2">
-          <Button type="button" variant="outline" onClick={onClose} className="h-9 text-xs">
+        <DialogFooter className="pt-4 border-t border-border/60 shrink-0 gap-2">
+          <Button type="button" variant="outline" onClick={onClose} className="h-10 text-sm">
             {t("settingsUi.close")}
           </Button>
 
@@ -1098,7 +1098,7 @@ export function CentralAvailabilityModal({
               type="button"
               onClick={handleSaveWorkingHours}
               disabled={isSavingHours}
-              className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
+              className="h-10 text-sm font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
               <SaveButtonLabel status={hoursSave.status} label={t("availabilityUi.saveWorkingHours")} icon={<Save className="w-3.5 h-3.5 text-emerald-400" />} />
             </Button>
@@ -1107,7 +1107,7 @@ export function CentralAvailabilityModal({
               type="button"
               onClick={handleSaveRestBlocksSubmit}
               disabled={isSavingRestBlocks}
-              className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
+              className="h-10 text-sm font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
               <SaveButtonLabel status={restSave.status} label="Salvar horários de descanso" icon={<Save className="w-3.5 h-3.5 text-emerald-400" />} />
             </Button>
@@ -1116,7 +1116,7 @@ export function CentralAvailabilityModal({
               type="button"
               onClick={handleSaveDaysOff}
               disabled={isSavingDaysOff}
-              className="h-9 text-xs font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
+              className="h-10 text-sm font-bold gap-1.5 bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90"
             >
               <Plus className="w-3.5 h-3.5 text-emerald-400" />
               {isSavingDaysOff ? "Salvando..." : "Adicionar dias sem aula"}
