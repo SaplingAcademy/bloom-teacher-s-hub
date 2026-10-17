@@ -52,6 +52,7 @@ interface ScheduleRow {
   weekday: string;
   startTime: string;
   endTime: string;
+  duration: number;
 }
 
 const WEEKDAYS = [
@@ -96,17 +97,17 @@ export function GenerateClassLessonPlanModal({
     setErrorMessage(null);
     setStartDate(cls.start_date || new Date().toISOString().split("T")[0]);
 
-    const existing = (cls.schedules || []).map((s) => ({
-      id: s.id,
-      weekday: s.weekday || "Monday",
-      startTime: (s.start_time || "19:00").slice(0, 5),
-      endTime: (s.end_time || calculateEndTime((s.start_time || "19:00").slice(0, 5), s.duration || 60)).slice(0, 5),
-    }));
+    // class_schedules is canonical: start_time + duration, end derived.
+    const existing = (cls.schedules || []).map((s) => {
+      const startTime = (s.start_time || "19:00").slice(0, 5);
+      const duration = s.duration && s.duration > 0 ? s.duration : minutesBetween(startTime, (s.end_time || "").slice(0, 5));
+      return { id: s.id, weekday: s.weekday || "Monday", startTime, duration, endTime: calculateEndTime(startTime, duration) };
+    });
 
     setRows(
       existing.length > 0
         ? existing
-        : [{ weekday: "Monday", startTime: "19:00", endTime: "20:00" }]
+        : [{ weekday: "Monday", startTime: "19:00", endTime: "20:00", duration: 60 }]
     );
 
     if (teacherId) getTeacherAvailability(teacherId, { force: true }).then(setAvailability);
@@ -121,7 +122,7 @@ export function GenerateClassLessonPlanModal({
       rows.map((r) => ({
         weekday: r.weekday,
         startTime: r.startTime,
-        duration: minutesBetween(r.startTime, r.endTime),
+        duration: r.duration,
         scheduleId: r.id || null,
         deliveryMode: "Online" as const,
       })),
@@ -170,7 +171,7 @@ export function GenerateClassLessonPlanModal({
   }, [isOpen, teacherId, slots, cls.name]);
 
   const addRow = () =>
-    setRows((prev) => [...prev, { weekday: "Friday", startTime: "19:00", endTime: "20:00" }]);
+    setRows((prev) => [...prev, { weekday: "Friday", startTime: "19:00", endTime: "20:00", duration: 60 }]);
 
   const removeRow = (index: number) => {
     if (rows.length <= 1) {
@@ -180,8 +181,16 @@ export function GenerateClassLessonPlanModal({
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateRow = (index: number, field: keyof ScheduleRow, value: string) =>
-    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  // Start keeps the duration (end follows); editing end updates the duration.
+  const updateRow = (index: number, field: "weekday" | "startTime" | "endTime", value: string) =>
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== index) return r;
+        if (field === "startTime") return { ...r, startTime: value, endTime: calculateEndTime(value, r.duration) };
+        if (field === "endTime") return { ...r, endTime: value, duration: minutesBetween(r.startTime, value) };
+        return { ...r, weekday: value };
+      })
+    );
 
   const handleGenerate = async () => {
     setErrorMessage(null);
