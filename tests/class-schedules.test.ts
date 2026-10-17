@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const db = vi.hoisted(() => ({ rows: [] as Array<Record<string, any>>, insertedEvents: [] as any[], fail: false, next: 0 }));
-vi.mock("@/lib/supabase", () => ({ supabase: { from: () => {
+const db = vi.hoisted(() => ({ rows: [] as Array<Record<string, any>>, insertedEvents: [] as any[], fail: false, next: 0, classStatus: "active" }));
+vi.mock("@/lib/supabase", () => ({ supabase: { from: (table: string) => {
   const filters: Array<(row: any) => boolean> = [];
   let mode = "read"; let payload: any;
   const run = () => {
     if (db.fail) return { data: null, error: new Error("failed") };
+    if (table === "classes") return { data: [{ id: "class", teacher_id: "teacher", status: db.classStatus }], error: null };
     const matches = (row: any) => filters.every((filter) => filter(row));
     if (mode === "delete") db.rows = db.rows.filter((row) => !matches(row));
     if (mode === "update") db.rows.filter(matches).forEach((row) => Object.assign(row, payload));
@@ -45,9 +46,16 @@ const slots: ClassScheduleInput[] = [
   { weekday: "Wednesday", startTime: "14:00", duration: 90, deliveryMode: "In person" },
   { weekday: "Friday", startTime: "11:00", duration: 30, deliveryMode: "Online" },
 ];
-beforeEach(() => { db.rows = []; db.insertedEvents = []; db.fail = false; db.next = 0; });
+beforeEach(() => { db.rows = []; db.insertedEvents = []; db.fail = false; db.next = 0; db.classStatus = "active"; });
 
 describe("Multiple weekly class schedules", () => {
+  it("archived class retains schedule IDs but projects no future lessons", async () => {
+    const saved = await persistClassSchedules("teacher", "class", slots);
+    db.classStatus = "archived";
+    await projectClassSchedulesToCalendar("teacher", "class", "Archived", "B1", saved);
+    expect(db.insertedEvents).toEqual([]);
+    expect(db.rows.map((row) => row.id)).toEqual(["new-1", "new-2", "new-3"]);
+  });
   it.each([1, 2, 3])("persists and projects every slot of a class with %i weekly lessons", async (count) => {
     const saved = await persistClassSchedules("teacher", "class", slots.slice(0, count));
     expect(db.rows).toHaveLength(count);

@@ -77,6 +77,9 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
     () => (cls.members || []).filter((m) => m.status === "active" && !m.left_at),
     [cls.members]
   );
+  const membersForLesson = (date: string) => (cls.members || []).filter((m) =>
+    (!m.joined_at || date >= m.joined_at) && (!m.left_at || date <= m.left_at));
+  const attendanceMembers = attendancePlan ? membersForLesson(attendancePlan.scheduled_date) : activeMembers;
 
   const load = useCallback(async () => {
     if (!teacherId || !cls?.id) return;
@@ -178,7 +181,9 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
     const list = attendance[eventId] || [];
     if (list.length === 0) return isPt ? "Registrar" : "Record";
     const present = list.filter((a) => a.status === "present" || a.status === "late").length;
-    return `${present}/${activeMembers.length} ${isPt ? "presentes" : "present"}`;
+    const plan = plans.find((p) => p.event_id === eventId);
+    const count = plan ? membersForLesson(plan.scheduled_date).length : activeMembers.length;
+    return `${present}/${count} ${isPt ? "presentes" : "present"}`;
   };
 
   if (loading) {
@@ -201,7 +206,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
             ? "Gere o plano de aulas usando os horários recorrentes da turma e a sua disponibilidade."
             : "Generate the lesson plan using the class recurring schedule and your availability."}
         </p>
-        <Button onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+        <Button disabled={cls.status === "archived"} onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
           <BookOpen className="w-3.5 h-3.5" />
           {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
         </Button>
@@ -241,7 +246,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
               <RefreshCw className="w-3.5 h-3.5" />
               {isPt ? "Atualizar aulas" : "Refresh lessons"}
             </Button>
-            <Button size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
+            <Button disabled={cls.status === "archived"} size="sm" onClick={() => setGeneratorOpen(true)} className="gap-2 text-xs h-9 font-semibold">
               <BookOpen className="w-3.5 h-3.5" />
               {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
             </Button>
@@ -466,12 +471,12 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
           </DialogHeader>
 
           <div className="space-y-2 max-h-[50vh] overflow-y-auto pt-1">
-            {activeMembers.length === 0 && (
+            {attendanceMembers.length === 0 && (
               <p className="text-xs text-stone-500">
                 {isPt ? "Nenhum aluno ativo nesta turma." : "No active students in this class."}
               </p>
             )}
-            {activeMembers.map((m) => {
+            {attendanceMembers.map((m) => {
               const current = (attendance[attendancePlan?.event_id || ""] || []).find(
                 (a) => a.student_id === m.student_id
               );

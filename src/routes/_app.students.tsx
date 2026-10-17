@@ -95,6 +95,10 @@ export const Route = createFileRoute("/_app/students")({
   head: () => ({
     meta: [
       { title: "Students · Bloom" },
+      { property: "og:title", content: "Students · Bloom" },
+      { property: "og:description", content: "Manage students, classes and their academic and financial history in Bloom." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Manage your students, progress and class history in one place.",
@@ -138,6 +142,7 @@ import {
   fetchActiveClassMemberStudentIds,
 } from "@/lib/class-sync";
 import { InactivateStudentModal } from "@/components/bloom/InactivateStudentModal";
+import { ClassRemovalModal, type StudentNextStep } from "@/components/bloom/ClassRemovalModal";
 
 export interface ScheduleInput {
   id?: string;
@@ -620,6 +625,32 @@ function StudentsPage() {
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [attendanceClass, setAttendanceClass] = useState<ClassWithDetails | null>(null);
   const [classesList, setClassesList] = useState<ClassWithDetails[]>([]);
+  const [classToRemove, setClassToRemove] = useState<ClassWithDetails | null>(null);
+
+  const handleArchivedStudentAction = (studentId: string, action: StudentNextStep, classId?: string) => {
+    const student = students.find((s) => s.id === studentId);
+    if (!student) return;
+    if (action === "enroll") {
+      const target = classesList.find((c) => c.id === classId && c.status === "active");
+      if (!target) return;
+      // Existing enrollment editor; preselect this student but require the teacher to save.
+      setEditingClass({ ...target, members: target.members.some((m) => m.student_id === studentId && m.status === "active" && !m.left_at)
+        ? target.members : [...target.members, {
+          id: `pending-${studentId}`, class_id: target.id, teacher_id: target.teacher_id,
+          student_id: studentId, student_name: student.name, status: "active", joined_at: "",
+        }] });
+      setClassModalType(target.type);
+      setIsClassModalOpen(true);
+    } else if (action === "inactivate") {
+      setStudentToInactivate(student);
+      setIsInactivateModalOpen(true);
+    } else {
+      setSelectedClassId(null);
+      setSelectedStudentId(studentId);
+      setHubTab("Finance");
+      setIsStudentRenewalModalOpen(true);
+    }
+  };
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -2409,6 +2440,7 @@ function StudentsPage() {
           cls={selectedClass}
           requestedEventId={requestedEventId}
           onBack={() => setSelectedClassId(null)}
+          onDeleteClass={() => setClassToRemove(selectedClass)}
           onEditClass={() => {
             setEditingClass(selectedClass);
             setClassModalType(selectedClass.type);
@@ -3655,6 +3687,22 @@ function StudentsPage() {
         }}
       />
 
+      {classToRemove && (
+        <ClassRemovalModal
+          cls={classToRemove}
+          hidden={isClassModalOpen || isInactivateModalOpen || isStudentRenewalModalOpen}
+          classes={classesList}
+          onClose={() => setClassToRemove(null)}
+          onChanged={() => {
+            refreshStudentData();
+            if (user?.id) fetchTeacherClasses(user.id).then((list) => {
+              setClassesList(list);
+              if (!list.some((c) => c.id === classToRemove.id)) setSelectedClassId(null);
+            });
+          }}
+          onStudentAction={handleArchivedStudentAction}
+        />
+      )}
       {/* CLASS FORM MODAL */}
       <ClassFormModal
         open={isClassModalOpen}

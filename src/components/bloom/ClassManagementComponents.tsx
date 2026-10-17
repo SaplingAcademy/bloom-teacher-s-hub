@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -211,7 +212,7 @@ export function ClassFormModal({
       setLevel(existingClass.level || "B1");
       setStatus(existingClass.status);
       setColorKey(existingClass.color_key || "default");
-      setSelectedStudentIds((existingClass.members || []).map((m) => m.student_id));
+      setSelectedStudentIds((existingClass.members || []).filter((m) => m.status === "active" && !m.left_at).map((m) => m.student_id));
       if (existingClass.schedules && existingClass.schedules.length > 0) {
         setSchedulesList(
           existingClass.schedules.map((s) => ({
@@ -763,6 +764,7 @@ export function ClassCard({
         </div>
 
         <button
+          disabled={cls.status === "archived"}
           onClick={(e) => {
             e.stopPropagation();
             onEdit();
@@ -804,6 +806,7 @@ export function ClassCard({
       {/* Action CTA */}
       <div className="pt-2 flex items-center gap-2">
         <button
+          disabled={cls.status === "archived"}
           onClick={(e) => {
             e.stopPropagation();
             onOpenAttendance();
@@ -826,6 +829,7 @@ export function ClassDetailsView({
   requestedEventId,
   onBack,
   onEditClass,
+  onDeleteClass,
   onSelectStudent,
   onOpenAttendance,
   isPt,
@@ -834,6 +838,7 @@ export function ClassDetailsView({
   requestedEventId?: string;
   onBack: () => void;
   onEditClass: () => void;
+  onDeleteClass: () => void;
   onSelectStudent: (studentId: string) => void;
   onOpenAttendance: (cls: ClassWithDetails) => void;
   isPt: boolean;
@@ -887,8 +892,13 @@ export function ClassDetailsView({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onDeleteClass}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+            {t("classRemoval.title")}
+          </Button>
           <button
             onClick={onEditClass}
+            disabled={cls.status === "archived"}
             className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-700 hover:bg-stone-50 transition-all cursor-pointer shadow-sm"
           >
             <Edit2 className="h-4 w-4" />
@@ -897,6 +907,7 @@ export function ClassDetailsView({
 
           <button
             onClick={() => onOpenAttendance(cls)}
+            disabled={cls.status === "archived"}
             className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-700 hover:bg-stone-50 transition-all cursor-pointer shadow-sm"
           >
             <CheckCircle2 className="h-4 w-4 text-emerald-700" />
@@ -1003,7 +1014,7 @@ export function ClassDetailsView({
                         {m.student_name ?? ""}
                       </span>
                       <span className="text-[11px] text-stone-500 font-semibold block">
-                        {t("classMgmt.viewProfilePrivateNotes")}
+                        {m.left_at ? `${t("classRemoval.joined")}: ${m.joined_at} · ${t("classRemoval.left")}: ${m.left_at}` : t("classMgmt.viewProfilePrivateNotes")}
                       </span>
                     </div>
                   </div>
