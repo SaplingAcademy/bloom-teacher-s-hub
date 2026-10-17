@@ -12,7 +12,8 @@ export const uiTranslations = {
       "nextTitle": "Turma arquivada — próximos passos", "nextDescription": "Os alunos abaixo continuam ativos. Escolha o próximo passo de cada um, agora ou depois. Pacotes e cobranças não foram alterados.",
       "package": "Definir pacote", "keep": "Manter ativo por enquanto", "kept": "Mantido ativo, sem novas alterações", "inactivate": "Inativar aluno",
       "selectClass": "Selecionar outra turma", "enroll": "Revisar matrícula", "participation": "Participação em turmas",
-      "joined": "Entrada", "left": "Saída", "started": "Início da turma", "archived": "Arquivada", "active": "Ativa"
+      "joined": "Entrada", "left": "Saída", "started": "Início da turma", "archived": "Arquivada", "active": "Ativa",
+      "classCharges": "Cobranças da turma", "received": "Recebido"
     },
     "saveFeedback": {
       "save": "Salvar Alterações",
@@ -1058,7 +1059,8 @@ export const uiTranslations = {
       "nextTitle": "Class archived — next steps", "nextDescription": "These students remain active. Choose each student's next step now or later. Packages and charges were not changed.",
       "package": "Assign package", "keep": "Keep active for now", "kept": "Kept active, without further changes", "inactivate": "Inactivate student",
       "selectClass": "Select another class", "enroll": "Review enrollment", "participation": "Class participation",
-      "joined": "Joined", "left": "Left", "started": "Class start", "archived": "Archived", "active": "Active"
+      "joined": "Joined", "left": "Left", "started": "Class start", "archived": "Archived", "active": "Active",
+      "classCharges": "Class charges", "received": "Received"
     },
     "saveFeedback": {
       "save": "Save Changes",

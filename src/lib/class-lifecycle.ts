@@ -99,6 +99,38 @@ export interface StudentClassParticipation {
   class_name: string; class_start_date: string; class_status: string;
 }
 
+export interface ParticipationEvent {
+  id: string; class_id: string; date: string; start_time: string; status: string;
+  attendance_status: string | null;
+}
+export interface ParticipationInvoice {
+  id: string; class_id: string; due_date: string; status: string; amount_cents: number;
+  payments: Array<{ id: string; received_at: string; amount_cents: number }>;
+}
+
+/** Historical class charges remain class-level amounts, never apportioned to a student. */
+export async function fetchParticipationHistory(teacherId: string, studentId: string, memberships: StudentClassParticipation[]) {
+  const classIds = memberships.map((m) => m.class_id);
+  if (!classIds.length) return { events: [] as ParticipationEvent[], invoices: [] as ParticipationInvoice[] };
+  const [events, invoices] = await Promise.all([
+    supabase.from("calendar_events").select("id, class_id, date, start_time, status, attendance_records(student_id, status)")
+      .eq("teacher_id", teacherId).in("class_id", classIds).order("date", { ascending: false }),
+    supabase.from("invoices").select("id, class_id, due_date, status, amount_cents, payments(id, received_at, amount_cents)")
+      .eq("teacher_id", teacherId).in("class_id", classIds).order("due_date", { ascending: false }),
+  ]);
+  if (events.error) throw events.error;
+  if (invoices.error) throw invoices.error;
+  const participated = (classId: string, date: string) => memberships.some((m) =>
+    m.class_id === classId && (!m.joined_at || date >= m.joined_at) && (!m.left_at || date <= m.left_at));
+  return {
+    events: (events.data || []).filter((e) => participated(e.class_id, e.date)).map((e: any) => ({
+      id: e.id, class_id: e.class_id, date: e.date, start_time: e.start_time, status: e.status,
+      attendance_status: (e.attendance_records || []).find((a: any) => a.student_id === studentId)?.status || null,
+    })) as ParticipationEvent[],
+    invoices: (invoices.data || []).filter((i) => participated(i.class_id, i.due_date)) as ParticipationInvoice[],
+  };
+}
+
 export async function fetchStudentClassParticipation(teacherId: string, studentId: string): Promise<StudentClassParticipation[]> {
   const { data, error } = await supabase.from("class_members")
     .select("id, class_id, joined_at, left_at, classes(name, start_date, status)")
