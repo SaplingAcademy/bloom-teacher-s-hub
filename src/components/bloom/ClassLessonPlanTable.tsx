@@ -29,6 +29,8 @@ import {
   } from "lucide-react";
 import { LessonNotesModal } from "./LessonNotesModal";
 import { GenerateClassLessonPlanModal } from "./GenerateClassLessonPlanModal";
+import { useHomeworkStatus } from "@/hooks/use-homework-status";
+import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 import { ClassWithDetails } from "@/lib/class-sync";
 import {
   AttendanceRecordRow,
@@ -58,6 +60,11 @@ const STATUS_LABELS: Record<AttendanceStatus, { pt: string; en: string; cls: str
 
 export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }: Props) {
   const [plans, setPlans] = useState<LessonPlan[]>([]);
+  const homeworkStatus = useHomeworkStatus(teacherId, plans.map((plan) => plan.event_id), (statuses) => {
+    setPlans((current) => current.map((plan) => plan.event_id in statuses
+      ? { ...plan, homework_posted: statuses[plan.event_id] }
+      : plan));
+  });
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecordRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -312,8 +319,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
               ) : (
                 filtered.map((plan) => {
                   const isCancelled = plan.event_status === "Cancelled";
-                  const hwStatus =
-                    plan.homework_posted === true ? "posted" : plan.homework_posted === false ? "pending" : "unrecorded";
+                  const hwStatus = homeworkStatusValue(homeworkStatus.statuses[plan.event_id]);
                   const attCount = (attendance[plan.event_id] || []).length;
                   const noteCount = (plan.attachments || []).length;
                   const hasNotes = Boolean(plan.notes && plan.notes.trim());
@@ -368,11 +374,8 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
                       <td className="py-1.5 px-3 border-r border-border/40">
                         <Select
                           value={hwStatus}
-                          onValueChange={(val) =>
-                            patchPlan(plan.event_id, {
-                              homework_posted: val === "posted" ? true : val === "pending" ? false : null,
-                            })
-                          }
+                          disabled={homeworkStatus.loading || homeworkStatus.saving || !(plan.event_id in homeworkStatus.statuses)}
+                          onValueChange={(val) => void homeworkStatus.save(plan.event_id, val as HomeworkStatus)}
                         >
                           <SelectTrigger
                             className={`h-8 text-xs font-semibold border cursor-pointer ${
@@ -391,6 +394,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
                             <SelectItem value="posted">{isPt ? "Entregue" : "Posted"}</SelectItem>
                           </SelectContent>
                         </Select>
+                        {homeworkStatus.error && <p role="alert" className="mt-1 text-xs text-destructive">{homeworkStatus.error}</p>}
                       </td>
                       <td className="py-1.5 px-3 border-r border-border/40">
                         <button

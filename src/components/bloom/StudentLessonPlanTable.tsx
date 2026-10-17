@@ -45,6 +45,8 @@ import {
   formatLocalDateStr,
 } from "@/lib/time-off-engine";
 import { generateLessonPlanOccurrences } from "@/lib/lesson-plan-sync";
+import { useHomeworkStatus } from "@/hooks/use-homework-status";
+import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 
 interface Props {
   studentId: string;
@@ -76,6 +78,11 @@ export function StudentLessonPlanTable({
   onLessonsChange,
 }: Props) {
   const { t, formatStatus } = useLanguage();
+  const homeworkStatus = useHomeworkStatus(teacherId, lessons.flatMap((lesson) => lesson.event_id ? [lesson.event_id] : []), (statuses) => {
+    onLessonsChange(lessons.map((lesson) => lesson.event_id && lesson.event_id in statuses
+      ? { ...lesson, homework_posted: statuses[lesson.event_id] }
+      : lesson));
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "present" | "absent" | "rescheduled">("all");
   const [isSaving, setIsSaving] = useState(false);
@@ -561,15 +568,7 @@ export function StudentLessonPlanTable({
                   const originalIndex = lessons.findIndex((l) => l.lesson_number === lesson.lesson_number);
                   const isDone = lesson.completed;
                   
-                  // Homework status: true -> Entregue (posted), false -> Pendente (pending), null/undefined -> — Selecionar — (unrecorded)
-                  let hwStatus: "posted" | "pending" | "unrecorded" = "unrecorded";
-                  if (lesson.homework_posted === true) {
-                    hwStatus = "posted";
-                  } else if (lesson.homework_posted === false) {
-                    hwStatus = "pending";
-                  } else {
-                    hwStatus = "unrecorded";
-                  }
+                  const hwStatus = homeworkStatusValue(lesson.event_id ? homeworkStatus.statuses[lesson.event_id] : null);
 
                   return (
                     <tr
@@ -634,13 +633,10 @@ export function StudentLessonPlanTable({
                       <td className="py-1.5 px-3 border-r border-border/40">
                         <Select
                           value={hwStatus}
-                          onValueChange={(val) =>
-                            handleCellChange(
-                              originalIndex,
-                              "homework_posted" as any,
-                              val === "posted" ? true : val === "pending" ? false : null
-                            )
-                          }
+                          disabled={homeworkStatus.loading || homeworkStatus.saving || !lesson.event_id || !(lesson.event_id in homeworkStatus.statuses)}
+                          onValueChange={(val) => {
+                            if (lesson.event_id) void homeworkStatus.save(lesson.event_id, val as HomeworkStatus);
+                          }}
                         >
                           <SelectTrigger
                             className={`h-8 text-xs font-semibold border cursor-pointer ${
@@ -665,6 +661,7 @@ export function StudentLessonPlanTable({
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                        {homeworkStatus.error && <p role="alert" className="mt-1 text-xs text-destructive">{homeworkStatus.error}</p>}
                       </td>
 
                       {/* Attendance Status (Select Dropdown) */}
