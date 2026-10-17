@@ -764,6 +764,7 @@ export function ClassCard({
         </div>
 
         <button
+          disabled={cls.status === "archived"}
           onClick={(e) => {
             e.stopPropagation();
             onEdit();
@@ -805,6 +806,7 @@ export function ClassCard({
       {/* Action CTA */}
       <div className="pt-2 flex items-center gap-2">
         <button
+          disabled={cls.status === "archived"}
           onClick={(e) => {
             e.stopPropagation();
             onOpenAttendance();

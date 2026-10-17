@@ -6,6 +6,7 @@ let historyTable = "";
 let failureTable = "";
 let failedAction = "select";
 let classStatus = "active";
+let historyRows: Record<string, any[]> = {};
 const members = [{ id: "membership", class_id: "class", teacher_id: "teacher", student_id: "student", status: "active", joined_at: "2026-09-01", left_at: null, students: { full_name: "Ana" } }];
 const from = mock((table: string) => {
   const op: Operation = { table, action: "select", filters: [] };
@@ -16,7 +17,7 @@ const from = mock((table: string) => {
       if (op.action === "update") classStatus = op.payload.status;
       return { data: { id: "class", status: classStatus }, count: 0, error: null };
     }
-    return { data: table === "class_members" ? members : [], count: table === historyTable ? 1 : 0, error: null };
+    return { data: historyRows[table] || (table === "class_members" ? members : []), count: table === historyTable ? 1 : 0, error: null };
   };
   const chain: any = {
     select: () => chain,
@@ -25,14 +26,28 @@ const from = mock((table: string) => {
     single: async () => result(),
     then: (resolve: any, reject: any) => Promise.resolve(result()).then(resolve, reject),
   };
-  for (const method of ["eq", "gt", "or", "is", "order"]) chain[method] = (...args: any[]) => { op.filters.push([method, ...args]); return chain; };
+  for (const method of ["eq", "gt", "or", "is", "in", "order"]) chain[method] = (...args: any[]) => { op.filters.push([method, ...args]); return chain; };
   return chain;
 });
 mock.module("@/lib/supabase", () => ({ supabase: { from } }));
-const { reviewClassRemoval, removeClassSafely, teacherCalendarDate } = await import("../src/lib/class-lifecycle");
+const { reviewClassRemoval, removeClassSafely, teacherCalendarDate, fetchStudentClassParticipation, fetchParticipationHistory } = await import("../src/lib/class-lifecycle");
 
-beforeEach(() => { operations = []; historyTable = ""; failureTable = ""; failedAction = "select"; classStatus = "active"; });
+beforeEach(() => { operations = []; historyRows = {}; historyTable = ""; failureTable = ""; failedAction = "select"; classStatus = "active"; });
 describe("safe class removal", () => {
+  test("ended membership still exposes class dates, lessons, attendance and class invoices/payments", async () => {
+    historyRows.class_members = [{ ...members[0], status: "removed", left_at: "2026-10-17", classes: { name: "Monday class", start_date: "2026-09-01", status: "archived" } }];
+    historyRows.calendar_events = [
+      { id: "past", class_id: "class", date: "2026-10-12", start_time: "18:00", status: "Completed", attendance_records: [{ student_id: "student", status: "present" }] },
+      { id: "future", class_id: "class", date: "2026-10-19", status: "Closed" },
+    ];
+    historyRows.invoices = [{ id: "invoice", class_id: "class", due_date: "2026-10-20", amount_cents: 10000, status: "paid", payments: [{ id: "payment", received_at: "2026-10-21", amount_cents: 10000 }] }];
+    const participation = await fetchStudentClassParticipation("teacher", "student");
+    expect(participation[0]).toMatchObject({ class_name: "Monday class", class_start_date: "2026-09-01", joined_at: "2026-09-01", left_at: "2026-10-17", class_status: "archived" });
+    const history = await fetchParticipationHistory("teacher", "student", participation);
+    expect(history.events.map((e) => [e.id, e.attendance_status])).toEqual([["past", "present"]]);
+    expect(history.invoices[0].payments[0].id).toBe("payment");
+    expect(operations[0].filters.some((f) => f[1] === "status")).toBe(false);
+  });
   test("unused class can be permanently deleted, without deleting students", async () => {
     expect((await reviewClassRemoval("teacher", "class", "2026-10-17")).mode).toBe("delete");
     await removeClassSafely("teacher", "class", "2026-10-17", "delete", "pt");

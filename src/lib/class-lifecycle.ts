@@ -127,7 +127,7 @@ export async function fetchParticipationHistory(teacherId: string, studentId: st
       id: e.id, class_id: e.class_id, date: e.date, start_time: e.start_time, status: e.status,
       attendance_status: (e.attendance_records || []).find((a: any) => a.student_id === studentId)?.status || null,
     })) as ParticipationEvent[],
-    invoices: (invoices.data || []).filter((i) => participated(i.class_id, i.due_date)) as ParticipationInvoice[],
+    invoices: (invoices.data || []) as ParticipationInvoice[],
   };
 }
 

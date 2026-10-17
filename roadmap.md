@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Implement safe class deletion/archive, retain student history and offer individual next steps; targeted checks only.
+- [x] Implement safe class deletion/archive, retain student history and offer individual next steps; focused lifecycle and schedule tests passed, no schema changes.
+- [ ] Verify class archival/deletion with a real authenticated class; blocked by external app authentication (live preview redirects to /auth, no managed session available).
 
 - [x] Support 1–7 weekly class/group schedules in create/edit and preserve schedule IDs; 6 targeted persistence/projection checks plus isolated UI checks for 1, 2, 3 slots passed.
 - [ ] Verify class creation/editing against saved teacher data; blocked by no available authenticated session (preview opens /auth).
