@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Replace scheduling rejections with shared manual/drag confirmations; verify normal moves and warning overrides without changing the RPC or records outside the occurrence.
+- [x] Replace scheduling rejections with shared manual/drag confirmations; 17 occurrence tests and isolated warning UI checks passed without RPC changes.
+- [ ] Verify confirmed rescheduling end-to-end with a real authenticated lesson; blocked by the absence of an available session and deployed RPC definition.
 
 - [x] Add week-only drag rescheduling through the existing occurrence function; 20 targeted tests and isolated pointer checks passed. Real authenticated lesson move remains unverified without a session.
 
