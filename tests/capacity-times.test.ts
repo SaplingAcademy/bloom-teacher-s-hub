@@ -12,6 +12,11 @@ const snapshot: TeacherAvailabilitySnapshot = {
 const student = { id: "s1", weekday: "Monday", start_time: "16:00:00", end_time: "17:00:00" };
 const monday = (days: ReturnType<typeof buildCapacityDays>) => days.find((d) => d.day === "Monday");
 describe("Growth shared capacity times", () => {
+  it("honors the student's canonical duration_minutes even if legacy end_time is stale", () => {
+    const day = monday(buildCapacityDays(snapshot, [{ ...student, start_time: "16:00", end_time: "16:30", duration_minutes: 120 }], [], [], "2026-10-19"));
+    expect(day?.availableSlots).toEqual([{ startTime: "14:00", endTime: "15:00" }]);
+    expect(day?.remainingSlots).toBe(1);
+  });
   it("returns actual 14:00–15:00 and 17:00–18:00 slots after breaks and student lessons; count equals visible slots", () => {
     const day = monday(buildCapacityDays(snapshot, [student], [], [], "2026-10-19"));
     expect(day?.availableSlots).toEqual([{ startTime: "14:00", endTime: "15:00" }, { startTime: "17:00", endTime: "18:00" }]);
