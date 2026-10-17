@@ -16,6 +16,7 @@
 - Never infer commercial choices for new packages or agreements; lesson minutes, fixed contract months, and installment count must come from the teacher.
 
 ## Attendance priorities
+- Homework status controls in Calendar and individual/class Lesson Plans read and patch only `lesson_plans.homework_posted` by teacher and event ID, with mount/focus and successful-mutation refreshes; this avoids duplicate status and unrelated occurrence/attendance writes.
 - Week-view drag gestures only resolve a date/time target; manual and drag moves share `useRescheduleConfirmation` and `rescheduleOccurrence`, then read back saved events. Confirmations pass occurrence-scoped warning reasons to the existing atomic RPC path; locked statuses are never bypassed.
 - Derive attendance priorities from lesson-plan `calendar_events` plus `attendance_records`; never persist duplicate tasks, and escalate unresolved records after five calendar days.
 - Student academic period lives in students.course_start_date/course_end_date; lesson plans prefill from it and never from billing dates (student_packages, invoices) — keeps academic and financial periods separate.

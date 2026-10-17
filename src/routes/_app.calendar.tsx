@@ -87,6 +87,8 @@ import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialo
 import { useWeekLessonDrag } from "@/hooks/use-week-lesson-drag";
 import { useRescheduleConfirmation } from "@/hooks/use-reschedule-confirmation";
 import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDialog";
+import { useHomeworkStatus } from "@/hooks/use-homework-status";
+import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -240,6 +242,7 @@ function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const homeworkStatus = useHomeworkStatus(user?.id, selectedEvent ? [selectedEvent.id] : []);
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
   const pendingMoves = useRef(new Set<string>());
   const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
@@ -1789,6 +1792,24 @@ function CalendarPage() {
               {/* Homework management */}
               <div className="space-y-2 border-b border-border/60 pb-4">
                 <h5 className="font-bold text-xs uppercase text-foreground">{t("calendarUi.homeworkStatus")}</h5>
+                <Select
+                  value={homeworkStatusValue(selectedEvent && homeworkStatus.statuses[selectedEvent.id])}
+                  disabled={homeworkStatus.loading || homeworkStatus.saving || !(selectedEvent.id in homeworkStatus.statuses)}
+                  onValueChange={(value) => void homeworkStatus.save(selectedEvent.id, value as HomeworkStatus)}
+                >
+                  <SelectTrigger className="h-9 text-xs" aria-label={t("calendarUi.homeworkStatus")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unrecorded">{t("calendarUi.homeworkUnrecorded")}</SelectItem>
+                    <SelectItem value="pending">{t("calendarUi.homeworkPending")}</SelectItem>
+                    <SelectItem value="posted">{t("calendarUi.homeworkSubmitted")}</SelectItem>
+                  </SelectContent>
+                </Select>
+                {homeworkStatus.error && <p role="alert" className="text-xs text-destructive">{homeworkStatus.error}</p>}
+                {!homeworkStatus.loading && !homeworkStatus.error && !(selectedEvent.id in homeworkStatus.statuses) && (
+                  <p className="text-xs text-muted-foreground">{t("calendarUi.homeworkNoPlan")}</p>
+                )}
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder={t("calendarUi.homeworkPlaceholder")}
