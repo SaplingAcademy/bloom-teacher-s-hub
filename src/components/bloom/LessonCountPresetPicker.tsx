@@ -37,6 +37,14 @@ export function LessonCountPresetPicker({ selected, onSelect, customQuantity, on
   // Draft lets the field stay temporarily empty (or 0/negative) while typing;
   // only valid values propagate to the parent. Validity is enforced on generate.
   const [draft, setDraft] = useState(String(customQuantity));
+
+  // When returning to the custom field with an empty/invalid draft, restore the last valid value.
+  useEffect(() => {
+    if (selected !== "custom") return;
+    const parsed = parseInt(draft, 10);
+    if (!Number.isInteger(parsed) || parsed < 1) setDraft(String(customQuantity));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, customQuantity]);
   const [presets, setPresets] = useState<number[]>(DEFAULT_LESSON_COUNT_PRESETS);
   const [editing, setEditing] = useState(false);
   const [newValue, setNewValue] = useState("");
