@@ -3,6 +3,7 @@ const db: any = {};
 const calls: any[] = [];
 let rpcFail = false;
 let available = true;
+let nonWorking = false;
 function q(table: string) {
   const f: any[] = []; let mode = "select";
   const b: any = {
@@ -27,18 +28,50 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
     return { error: null };
   },
 }}));
-vi.mock("@/lib/time-off-engine", () => ({ fetchTeacherTimeOff: async () => [], checkDateIsNonWorking: () => false }));
+vi.mock("@/lib/time-off-engine", () => ({ fetchTeacherTimeOff: async () => [], checkDateIsNonWorking: () => nonWorking }));
 vi.mock("@/lib/teacher-availability", () => ({
   getTeacherAvailability: async () => ({ isConfigured: true }),
    isSlotAvailable: () => ({ available }),
 }));
 import { rescheduleOccurrence } from "@/lib/reschedule-occurrence";
 beforeEach(() => {
-  calls.length = 0; rpcFail = false; available = true;
+  calls.length = 0; rpcFail = false; available = true; nonWorking = false;
   db.calendar_events = [{ id: "e1", teacher_id: "t1", date: "2026-10-05", start_time: "09:00:00", end_time: "10:00:00", duration: 60, status: "Scheduled" }];
   db.lesson_plans = [{ id: "p1", event_id: "e1", scheduled_date: "2026-10-05", start_time: "09:00:00" }];
 });
 describe("reschedule via RPC", () => {
+  it("confirmed conflict moves only the requested occurrence through the RPC", async () => {
+    const other = { id: "other", teacher_id: "t1", date: "2026-10-06", start_time: "16:00:00", end_time: "17:00:00", status: "Scheduled" };
+    db.calendar_events.push(other);
+    const before = { ...other };
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00")).toMatchObject({ ok: false, warnings: ["conflict"] });
+    expect(calls).toEqual([]);
+    expect((await rescheduleOccurrence("e1", "2026-10-06", "16:00", { confirmedWarnings: ["conflict"] })).ok).toBe(true);
+    expect(db.calendar_events[0]).toMatchObject({ id: "e1", date: "2026-10-06", start_time: "16:00:00" });
+    expect(other).toEqual(before);
+    expect(calls).toEqual([["rpc", "reschedule_calendar_occurrence"]]);
+  });
+  it("working-hours/rest warning requires confirmation before saving", async () => {
+    available = false;
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00")).toMatchObject({ ok: false, warnings: ["outside_working_hours"] });
+    expect(calls).toEqual([]);
+    expect((await rescheduleOccurrence("e1", "2026-10-06", "16:00", { confirmedWarnings: ["outside_working_hours"] })).ok).toBe(true);
+    expect(db.calendar_events[0].start_time).toBe("16:00:00");
+  });
+  it("unavailable date and working-hours warnings must both be confirmed", async () => {
+    nonWorking = true; available = false;
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00")).toMatchObject({ ok: false, warnings: ["non_working_day", "outside_working_hours"] });
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00", { confirmedWarnings: ["non_working_day"] })).toMatchObject({ ok: false, warnings: ["outside_working_hours"] });
+    expect(calls).toEqual([]);
+    expect((await rescheduleOccurrence("e1", "2026-10-06", "16:00", { confirmedWarnings: ["non_working_day", "outside_working_hours"] })).ok).toBe(true);
+    expect(db.calendar_events[0].date).toBe("2026-10-06");
+  });
+  it.each(["Completed", "Closed", "Cancelled"])("confirming warnings never overrides %s", async (status) => {
+    db.calendar_events[0].status = status;
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00", { confirmedWarnings: ["conflict", "outside_working_hours", "non_working_day"] })).toMatchObject({ ok: false, reason: "locked" });
+    expect(calls).toEqual([]);
+    expect(db.calendar_events[0].date).toBe("2026-10-05");
+  });
   it.each(["student", "class"])("moves one %s occurrence Tuesday 14:00 → Thursday 16:00, retaining duration and next week", async (kind) => {
     Object.assign(db.calendar_events[0], { date: "2026-10-20", start_time: "14:00:00", end_time: "14:45:00", duration: 45, student_id: kind === "student" ? "s1" : null, class_id: kind === "class" ? "c1" : null });
     const next = { ...db.calendar_events[0], id: "e2", date: "2026-10-27" };
