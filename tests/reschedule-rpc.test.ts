@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const db: any = {};
 const calls: any[] = [];
 let rpcFail = false;
+let available = true;
 function q(table: string) {
   const f: any[] = []; let mode = "select";
   const b: any = {
@@ -29,15 +30,50 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
 vi.mock("@/lib/time-off-engine", () => ({ fetchTeacherTimeOff: async () => [], checkDateIsNonWorking: () => false }));
 vi.mock("@/lib/teacher-availability", () => ({
   getTeacherAvailability: async () => ({ isConfigured: true }),
-  isSlotAvailable: () => ({ available: true }),
+   isSlotAvailable: () => ({ available }),
 }));
 import { rescheduleOccurrence } from "@/lib/reschedule-occurrence";
 beforeEach(() => {
-  calls.length = 0; rpcFail = false;
+  calls.length = 0; rpcFail = false; available = true;
   db.calendar_events = [{ id: "e1", teacher_id: "t1", date: "2026-10-05", start_time: "09:00:00", end_time: "10:00:00", duration: 60, status: "Scheduled" }];
   db.lesson_plans = [{ id: "p1", event_id: "e1", scheduled_date: "2026-10-05", start_time: "09:00:00" }];
 });
 describe("reschedule via RPC", () => {
+  it.each(["student", "class"])("moves one %s occurrence Tuesday 14:00 → Thursday 16:00, retaining duration and next week", async (kind) => {
+    Object.assign(db.calendar_events[0], { date: "2026-10-20", start_time: "14:00:00", end_time: "14:45:00", duration: 45, student_id: kind === "student" ? "s1" : null, class_id: kind === "class" ? "c1" : null });
+    const next = { ...db.calendar_events[0], id: "e2", date: "2026-10-27" };
+    db.calendar_events.push(next);
+    const before = { ...next };
+    expect((await rescheduleOccurrence("e1", "2026-10-22", "16:00")).ok).toBe(true);
+    expect(db.calendar_events[0]).toMatchObject({ id: "e1", date: "2026-10-22", start_time: "16:00:00", end_time: "16:45:00" });
+    expect(next).toEqual(before);
+    expect(calls).toEqual([["rpc", "reschedule_calendar_occurrence"]]);
+  });
+  it("allows a same-day 14:00 → 16:00 move", async () => {
+    Object.assign(db.calendar_events[0], { start_time: "14:00:00", end_time: "15:00:00" });
+    expect((await rescheduleOccurrence("e1", "2026-10-05", "16:00")).ok).toBe(true);
+    expect(db.calendar_events[0]).toMatchObject({ date: "2026-10-05", start_time: "16:00:00", end_time: "17:00:00" });
+  });
+  it("conflict rejection leaves the original occurrence untouched", async () => {
+    db.calendar_events.push({ id: "other", teacher_id: "t1", date: "2026-10-06", start_time: "16:00:00", end_time: "17:00:00", status: "Scheduled" });
+    const before = { ...db.calendar_events[0] };
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00")).toMatchObject({ ok: false, reason: "conflict" });
+    expect(db.calendar_events[0]).toEqual(before);
+    expect(calls).toEqual([]);
+  });
+  it("outside-working-hours rejection leaves the original occurrence untouched", async () => {
+    available = false;
+    const before = { ...db.calendar_events[0] };
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00")).toMatchObject({ ok: false, reason: "outside_working_hours" });
+    expect(db.calendar_events[0]).toEqual(before);
+    expect(calls).toEqual([]);
+  });
+  it.each(["Completed", "Closed", "Cancelled"])("rejects locked %s without saving", async (status) => {
+    db.calendar_events[0].status = status;
+    expect(await rescheduleOccurrence("e1", "2026-10-06", "16:00")).toMatchObject({ ok: false, reason: "locked" });
+    expect(db.calendar_events[0].date).toBe("2026-10-05");
+    expect(calls).toEqual([]);
+  });
   it("X→Y uses one RPC, no direct updates, moves both", async () => {
     const r = await rescheduleOccurrence("e1", "2026-10-06", "11:00");
     expect(r.ok).toBe(true);

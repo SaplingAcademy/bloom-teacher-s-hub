@@ -1,7 +1,7 @@
 import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -84,6 +84,8 @@ import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictD
 import { resolveEventColorMeta } from "@/lib/brand-colors";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialog";
+import { useWeekLessonDrag } from "@/hooks/use-week-lesson-drag";
+import { rescheduleOccurrence } from "@/lib/reschedule-occurrence";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -103,6 +105,10 @@ export const Route = createFileRoute("/_app/calendar")({
         name: "description",
         content: "Schedule classes, manage availability, and review classroom timeline.",
       },
+      { property: "og:title", content: "Calendar · Bloom" },
+      { property: "og:description", content: "Schedule classes, manage availability, and review classroom timeline." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CalendarPage,
@@ -234,6 +240,8 @@ function CalendarPage() {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
+  const pendingMoves = useRef(new Set<string>());
+  const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
 
   // Supabase Data State & Error Resilience
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
@@ -525,6 +533,30 @@ function CalendarPage() {
     fetchStudents();
     loadWorkingAvailability();
   }, [fetchEvents, fetchStudents, loadWorkingAvailability]);
+
+  const weekDrag = useWeekLessonDrag(async (eventId, position) => {
+    const event = events.find((item) => item.id === eventId);
+    if (!event || pendingMoves.current.has(eventId)) return;
+    if (event.date === position.date && fmtTime(event.startTime) === position.startTime) return;
+    pendingMoves.current.add(eventId);
+    setMovingIds(new Set(pendingMoves.current));
+    try {
+      const result = await rescheduleOccurrence(eventId, position.date, position.startTime);
+      if (!result.ok) {
+        const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
+        const reason = known.includes(result.reason) ? result.reason : "save_failed";
+        toast.error(t(`calendarUi.rescheduleErr_${reason}`));
+        return;
+      }
+      // Read back the canonical saved occurrence; no optimistic move or local storage writes.
+      await fetchEvents();
+    } catch {
+      toast.error(t("calendarUi.rescheduleErr_save_failed"));
+    } finally {
+      pendingMoves.current.delete(eventId);
+      setMovingIds(new Set(pendingMoves.current));
+    }
+  });
 
   // Re-save calendar events and state
   const updateEventsState = (newEvents: CalendarEvent[]) => {
@@ -1353,14 +1385,23 @@ function CalendarPage() {
                       return (
                         <div
                           key={dayIdx}
+                          data-calendar-drop-cell=""
+                          data-date={dateStr}
+                          data-hour={hour}
                           title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
                           className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] min-w-0 overflow-hidden ${
                             unavailable
                               ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
                               : "bg-card hover:bg-secondary/10"
-                          }`}
+                          } ${weekDrag.target?.date === dateStr && weekDrag.target.hour === hour ? "ring-2 ring-inset ring-primary bg-primary-soft/30" : ""}`}
                         >
+                          {weekDrag.target?.date === dateStr && weekDrag.target.hour === hour && (
+                            <span className="pointer-events-none absolute bottom-0 right-0 z-10 max-w-full truncate rounded bg-primary px-1 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                              {dateStr} · {weekDrag.target.startTime}
+                            </span>
+                          )}
                           {cellEvents.map((evt) => {
+                            const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
                             const colorMeta = resolveEventColorMeta(
                               evt.studentId ? studentColorMap[evt.studentId] : undefined,
                               evt.groupId ? classColorMap[evt.groupId] : undefined
@@ -1368,11 +1409,16 @@ function CalendarPage() {
                             return (
                               <div
                                 key={evt.id}
+                                aria-busy={movingIds.has(evt.id)}
+                                onPointerDown={(event) => {
+                                  if (canDrag && !pendingMoves.current.has(evt.id)) weekDrag.start(event, evt.id);
+                                }}
                                 onClick={() => {
+                                  if (weekDrag.consumeClick(evt.id) || pendingMoves.current.has(evt.id)) return;
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}

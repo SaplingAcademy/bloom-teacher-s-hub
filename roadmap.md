@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Add week-only drag rescheduling through the existing occurrence function; 20 targeted tests and isolated pointer checks passed. Real authenticated lesson move remains unverified without a session.
+
 - [x] Add canonical financial domain rules and additive migration proposal (do not execute)
 - [x] Update package creation/editing/onboarding for monthly fixed or continuous duration
 - [x] Update student assignment and renewal snapshots for all three billing models
