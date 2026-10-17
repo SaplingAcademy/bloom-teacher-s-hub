@@ -1,6 +1,12 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "growthAvailability": {
+      "title": "Horários disponíveis", "period": "Próximos 7 dias",
+      "empty": "Este dia está totalmente ocupado ou indisponível. Confira outro dia.",
+      "loadError": "Não foi possível carregar os horários disponíveis. Tente novamente.",
+      "retry": "Tentar novamente"
+    },
     "classRemoval": {
       "title": "Excluir turma", "delete": "Excluir permanentemente", "archive": "Arquivar turma",
       "deleteDescription": "Esta turma não possui histórico acadêmico ou financeiro. A turma, seus vínculos atuais e aulas futuras serão excluídos permanentemente. Os alunos permanecerão cadastrados. Esta ação não pode ser desfeita.",
@@ -1048,6 +1054,12 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "growthAvailability": {
+      "title": "Available times", "period": "Next 7 days",
+      "empty": "This day is fully booked or unavailable. Check another day.",
+      "loadError": "Could not load available times. Please try again.",
+      "retry": "Try again"
+    },
     "classRemoval": {
       "title": "Delete class", "delete": "Delete permanently", "archive": "Archive class",
       "deleteDescription": "This class has no academic or financial history. The class, current memberships and future lessons will be permanently deleted. Students will remain registered. This cannot be undone.",
