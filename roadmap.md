@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Link Calendar and Lesson Plan homework status through lesson_plans.homework_posted by event_id; targeted checks only, no schema changes.
+
 - [x] Replace scheduling rejections with shared manual/drag confirmations; 17 occurrence tests and isolated warning UI checks passed without RPC changes.
 - [ ] Verify confirmed rescheduling end-to-end with a real authenticated lesson; blocked by the absence of an available session and deployed RPC definition.
 
