@@ -27,7 +27,7 @@ describe("class lesson plan generation", () => {
   });
 
   it("skips vacations without consuming a lesson number", () => {
-    const vacation = [{ id: "v", start_date: "2026-10-20", end_date: "2026-10-27" } as any];
+    const vacation = [{ id: "v", startDate: "2026-10-20", endDate: "2026-10-27" } as any];
     const out = generateOccurrences("2026-10-19", [mon, wed], 3, vacation);
     expect(out.map((o) => o.date)).toEqual(["2026-10-19", "2026-10-28", "2026-11-02"]);
   });
