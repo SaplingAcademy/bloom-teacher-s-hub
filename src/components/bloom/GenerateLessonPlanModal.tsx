@@ -208,7 +208,7 @@ export function GenerateLessonPlanModal({
     }
 
     if (quantityType === "custom" && customCountInvalid) {
-      const err = isPt ? "Informe um número de aulas válido (mínimo 1)." : "Enter a valid number of lessons (minimum 1).";
+      const err = t("students.modalInvalidLessonCount");
       setErrorMessage(err);
       toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
       return;
