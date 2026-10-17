@@ -1,8 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { ClassEntity, ClassMember, ClassSchedule } from "@/types/classes";
-import { formatTimeHHMMSS, calculateEndTime } from "./calendar-sync";
 import { generateOccurrences, insertClassEvents } from "./lesson-plans";
 import { fetchTeacherTimeOff, formatLocalDateStr } from "./time-off-engine";
+import { persistClassSchedules, type ClassScheduleInput } from "./class-schedules";
 
 export interface ClassWithDetails extends ClassEntity {
   members: ClassMember[];
@@ -86,7 +86,7 @@ export async function saveClassAndRelations(
   teacherId: string,
   classData: Partial<ClassEntity>,
   studentIds: string[],
-  schedulesList: Array<{ weekday: string; startTime: string; duration: number; deliveryMode: "Online" | "In person"; locationLink?: string }>,
+  schedulesList: ClassScheduleInput[],
   classId?: string | null
 ): Promise<ClassEntity | null> {
   if (!teacherId || !classData.name) throw new Error("Missing required class fields");
@@ -165,21 +165,7 @@ export async function saveClassAndRelations(
 
   // Sync Class Schedules
   if (schedulesList && schedulesList.length > 0) {
-    await supabase.from("class_schedules").delete().eq("class_id", targetClassId);
-
-    const scheduleRows = schedulesList.map((s) => ({
-      class_id: targetClassId,
-      teacher_id: teacherId,
-      weekday: s.weekday,
-      start_time: formatTimeHHMMSS(s.startTime),
-      end_time: formatTimeHHMMSS(calculateEndTime(s.startTime, s.duration || 60)),
-      duration: s.duration || 60,
-      delivery_mode: s.deliveryMode || "Online",
-      location_link: s.locationLink || "",
-    }));
-
-    const { error: scheduleError } = await supabase.from("class_schedules").insert(scheduleRows);
-    if (scheduleError) console.warn("[class-sync] Schedule insert warning:", scheduleError.message);
+    const savedSchedules = await persistClassSchedules(teacherId, targetClassId, schedulesList);
 
     // Project schedules to calendar_events
     await projectClassSchedulesToCalendar(
@@ -187,7 +173,7 @@ export async function saveClassAndRelations(
       targetClassId,
       savedClass.name,
       savedClass.level || "B1",
-      schedulesList
+      savedSchedules
     );
   }
 
@@ -203,7 +189,7 @@ export async function projectClassSchedulesToCalendar(
   classId: string,
   className: string,
   level: string,
-  schedules: Array<{ weekday: string; startTime: string; duration: number; deliveryMode: "Online" | "In person"; locationLink?: string }>,
+  schedules: ClassScheduleInput[],
   totalOccurrences = 12
 ) {
   if (!teacherId || !classId || !schedules || schedules.length === 0) return;
@@ -215,6 +201,7 @@ export async function projectClassSchedulesToCalendar(
       weekday: s.weekday,
       startTime: s.startTime,
       duration: s.duration || 60,
+      scheduleId: s.id || null,
       deliveryMode: s.deliveryMode || "Online",
       locationLink: s.locationLink || null,
     })),
@@ -227,6 +214,7 @@ export async function projectClassSchedulesToCalendar(
   const calendarRows = occurrences.map((o) => ({
     teacher_id: teacherId,
     class_id: classId,
+    class_schedule_id: o.schedule_id,
     event_type: "class",
     student_name: className,
     level,
@@ -241,7 +229,8 @@ export async function projectClassSchedulesToCalendar(
     status: "Scheduled",
   }));
 
-  await insertClassEvents(teacherId, classId, calendarRows);
+  const result = await insertClassEvents(teacherId, classId, calendarRows);
+  if (result.error) throw new Error(result.error);
 }
 
 /**

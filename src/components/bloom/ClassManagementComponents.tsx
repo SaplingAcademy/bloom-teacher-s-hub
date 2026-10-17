@@ -4,6 +4,8 @@ import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
+import { ClassWeeklySchedules } from "@/components/bloom/ClassWeeklySchedules";
+import type { ClassScheduleInput } from "@/lib/class-schedules";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
@@ -192,7 +194,7 @@ export function ClassFormModal({
   const [colorKey, setColorKey] = useState<string>("default");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [schedulesList, setSchedulesList] = useState<
-    Array<{ weekday: string; startTime: string; duration: number; deliveryMode: "Online" | "In person"; locationLink?: string }>
+    ClassScheduleInput[]
   >([{ weekday: "Monday", startTime: "19:00", duration: 60, deliveryMode: "Online", locationLink: "" }]);
 
   // Inline student creation state
@@ -213,6 +215,7 @@ export function ClassFormModal({
       if (existingClass.schedules && existingClass.schedules.length > 0) {
         setSchedulesList(
           existingClass.schedules.map((s) => ({
+            id: s.id,
             weekday: s.weekday,
             startTime: s.start_time ? s.start_time.substring(0, 5) : "19:00",
             duration: s.duration || 60,
@@ -220,6 +223,8 @@ export function ClassFormModal({
             locationLink: s.location_link || "",
           }))
         );
+      } else {
+        setSchedulesList([{ weekday: "Monday", startTime: "19:00", duration: 60, deliveryMode: "Online", locationLink: "" }]);
       }
     } else {
       setName("");
@@ -274,6 +279,11 @@ export function ClassFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !user) return;
+    const scheduleKeys = schedulesList.map((slot) => `${slot.weekday}|${slot.startTime}`);
+    if (new Set(scheduleKeys).size !== scheduleKeys.length) {
+      toast.error(t("classMgmt.duplicateSchedule"));
+      return;
+    }
     setIsSaving(true);
     try {
       await saveClassAndRelations(
@@ -449,40 +459,7 @@ export function ClassFormModal({
                 {t("classMgmt.classScheduleSlots")}
               </Label>
 
-              {schedulesList.map((sch, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200">
-                  <Select
-                    value={sch.weekday}
-                    onValueChange={(val) => {
-                      const copy = [...schedulesList];
-                      copy[idx].weekday = val;
-                      setSchedulesList(copy);
-                    }}
-                  >
-                    <SelectTrigger className="h-9 w-28 text-xs font-bold bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Input
-                    type="time"
-                    value={sch.startTime}
-                    onChange={(e) => {
-                      const copy = [...schedulesList];
-                      copy[idx].startTime = e.target.value;
-                      setSchedulesList(copy);
-                    }}
-                    className="h-9 w-24 text-xs font-bold bg-white"
-                  />
-
-                  <span className="text-xs text-stone-400 font-bold">60 min</span>
-                </div>
-              ))}
+              <ClassWeeklySchedules slots={schedulesList} onChange={setSchedulesList} disabled={isSaving} />
             </div>
           </div>
 
