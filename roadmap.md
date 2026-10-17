@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Replace scheduling rejections with shared manual/drag confirmations; verify normal moves and warning overrides without changing the RPC or records outside the occurrence.
+
 - [x] Add week-only drag rescheduling through the existing occurrence function; 20 targeted tests and isolated pointer checks passed. Real authenticated lesson move remains unverified without a session.
 
 - [x] Add canonical financial domain rules and additive migration proposal (do not execute)
