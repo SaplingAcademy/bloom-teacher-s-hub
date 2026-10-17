@@ -3,7 +3,7 @@ import { Users } from "lucide-react";
 import { StudentClassLesson, fetchStudentClassLessons } from "@/lib/lesson-plans";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
-import { fetchStudentClassParticipation, type StudentClassParticipation } from "@/lib/class-lifecycle";
+import { fetchStudentClassParticipation, fetchParticipationHistory, type StudentClassParticipation, type ParticipationEvent, type ParticipationInvoice } from "@/lib/class-lifecycle";
 import { Link } from "@tanstack/react-router";
 
 const STATUS_CLASS: Record<string, string> = {
@@ -14,10 +14,12 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 export function StudentClassLessonsHistory({ studentId }: { studentId: string; isPt?: boolean }) {
-  const { t, formatStatus } = useLanguage();
+  const { t, lang, formatStatus } = useLanguage();
   const { user } = useAuth();
   const [lessons, setLessons] = useState<StudentClassLesson[]>([]);
   const [participations, setParticipations] = useState<StudentClassParticipation[]>([]);
+  const [events, setEvents] = useState<ParticipationEvent[]>([]);
+  const [invoices, setInvoices] = useState<ParticipationInvoice[]>([]);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +29,10 @@ export function StudentClassLessonsHistory({ studentId }: { studentId: string; i
     setLoading(true);
     setError(false);
     Promise.all([fetchStudentClassLessons(studentId), fetchStudentClassParticipation(user.id, studentId)])
-      .then(([list, membership]) => { if (active) { setLessons(list); setParticipations(membership); } })
+      .then(async ([list, membership]) => {
+        const history = await fetchParticipationHistory(user.id, studentId, membership);
+        if (active) { setLessons(list); setParticipations(membership); setEvents(history.events); setInvoices(history.invoices); }
+      })
       .catch(() => { if (active) setError(true); })
       .finally(() => active && setLoading(false));
     return () => {
@@ -38,6 +43,7 @@ export function StudentClassLessonsHistory({ studentId }: { studentId: string; i
   if (loading) return null;
   if (error) return <p role="alert" className="text-sm text-destructive">{t("errors.load")}</p>;
   if (lessons.length === 0 && participations.length === 0) return null;
+  const money = (cents: number) => new Intl.NumberFormat(lang === "pt" ? "pt-BR" : "en-US", { style: "currency", currency: "BRL" }).format(cents / 100);
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-4">
@@ -61,6 +67,18 @@ export function StudentClassLessonsHistory({ studentId }: { studentId: string; i
               {t("classRemoval.joined")}: {membership.joined_at}
               {membership.left_at && ` · ${t("classRemoval.left")}: ${membership.left_at}`}
             </p>
+            {invoices.filter((invoice) => invoice.class_id === membership.class_id).map((invoice) => (
+              <div key={invoice.id} className="text-muted-foreground pt-1">
+                <p>{t("classRemoval.classCharges")}: {invoice.due_date} · {money(invoice.amount_cents)} · {formatStatus(invoice.status)}</p>
+                {(invoice.payments || []).map((payment) => <p key={payment.id}>{t("classRemoval.received")}: {payment.received_at?.slice(0, 10)} · {money(payment.amount_cents)}</p>)}
+              </div>
+            ))}
+          </div>
+        ))}
+        {events.filter((event) => !lessons.some((lesson) => lesson.event_id === event.id)).map((event) => (
+          <div key={event.id} className="flex flex-wrap justify-between gap-2 border-b border-border py-2 text-xs">
+            <span>{event.date} · {event.start_time?.slice(0, 5)} · {participations.find((m) => m.class_id === event.class_id)?.class_name}</span>
+            <span className="text-muted-foreground">{event.attendance_status ? formatStatus(event.attendance_status) : formatStatus(event.status)}</span>
           </div>
         ))}
         {lessons.map((l) => {
