@@ -661,6 +661,7 @@ export function StudentLessonPlanTable({
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                        {homeworkStatus.error && <p role="alert" className="mt-1 text-xs text-destructive">{homeworkStatus.error}</p>}
                       </td>
 
                       {/* Attendance Status (Select Dropdown) */}

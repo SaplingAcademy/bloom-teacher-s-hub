@@ -394,6 +394,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
                             <SelectItem value="posted">{isPt ? "Entregue" : "Posted"}</SelectItem>
                           </SelectContent>
                         </Select>
+                        {homeworkStatus.error && <p role="alert" className="mt-1 text-xs text-destructive">{homeworkStatus.error}</p>}
                       </td>
                       <td className="py-1.5 px-3 border-r border-border/40">
                         <button
