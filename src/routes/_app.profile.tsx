@@ -183,7 +183,7 @@ const translations = {
 
 function ProfilePage() {
   const { lang, setLang, t: tr } = useLanguage();
-  const { user, profile: authProfile, retryProfileSync } = useAuth();
+  const { user, profile: authProfile, retryProfileSync, updateProfileState } = useAuth();
   const t = translations[lang];
 
   const profile = {
@@ -399,6 +399,8 @@ function ProfilePage() {
       setLang(targetLang);
       setIsEditOpen(false);
       clearAvatarSelection();
+      // Reflect the saved row in shared auth state so the header updates immediately.
+      updateProfileState(payload);
       retryProfileSync();
     } finally {
       setSavingProfile(false);
