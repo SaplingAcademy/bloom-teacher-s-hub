@@ -32,3 +32,9 @@
 - Browser storage is per-account: personal data uses `src/lib/user-storage.ts` (keys suffixed with user id, purge on logout/account switch, never `localStorage.clear()`); cached data never feeds Supabase writes — prevents cross-teacher contamination.
 - Teacher profile lives only in `public.profiles` (name, avatar, locale, timezone); the frontend only reads/updates it and never creates the row or infers the name — single source of truth, created by the database on signup.
 - UI text goes through `t()`; inline pt/en ternaries are forbidden and onboarding/package/class strings live in `src/lib/i18n-ui.ts` — adding a language means adding one dictionary, not editing components. Language precedence: `profiles.locale` > manual device choice > browser locale (`detectLanguage`).
+
+## Manual lesson scheduling
+- Manual multi-student scheduling inserts individual occurrences in one batch, then upserts one plan per returned event ID; no classes or recurring schedules are created, preserving per-student academic identity.
+- Retain saved occurrence IDs if plan persistence fails and retry only those plans, never reinsert events; failed writes must not become local calendar success.
+- One-time lesson tags use the canonical calendar occurrence's `lesson_tags` text array, following Bloom's existing entity-tag representation; built-in values are stable and translated only for display, and custom labels remain teacher-entered.
+- Optional lesson-tag schema SQL stays in docs/migrations for manual production application only; untagged scheduling omits the column until available.

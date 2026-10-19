@@ -1,6 +1,18 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "manualLesson": {
+      "students": "Aluno(s)", "searchStudents": "Buscar e selecionar alunos", "noResults": "Nenhum aluno encontrado.",
+      "requiredStudents": "Selecione pelo menos um aluno.", "startTime": "Horário inicial", "endTime": "Horário final",
+      "invalidInterval": "Informe um horário final posterior ao inicial, no mesmo dia.",
+      "tags": "Tags", "tag_conversation": "Conversação", "tag_makeup": "Reposição", "tag_exam": "Exam",
+      "customTag": "Criar tag personalizada", "addTag": "Adicionar tag", "remove": "Remover",
+      "saving": "Agendando…", "retryPlans": "Concluir planos de aula",
+      "tagsSchemaRequired": "Para salvar aulas com tags, aplique primeiro a SQL fornecida. Nenhuma aula foi criada.",
+      "saveError": "Não foi possível agendar as aulas. Tente novamente.",
+      "planSaveError": "As aulas foram salvas na agenda, mas seus planos ainda não. Clique em Concluir planos de aula para tentar novamente, sem duplicar aulas.",
+      "outsideAvailability": "Horário fora da sua disponibilidade."
+    },
     "customCalendar": {
       "new": "Novo evento", "details": "Detalhes do evento", "title": "Título", "category": "Categoria",
       "category_appointment": "Compromisso", "category_meeting": "Reunião", "category_personal": "Pessoal", "category_blocked": "Horário bloqueado", "category_other": "Outro",
@@ -235,7 +247,7 @@ export const uiTranslations = {
       "scheduleAction": "Agendar",
       "scheduleChoiceTitle": "O que você deseja agendar?",
       "scheduleLessonOption": "Aula",
-      "scheduleLessonDescription": "Aula com um aluno",
+      "scheduleLessonDescription": "Aula com um ou mais alunos",
       "scheduleEventOption": "Evento",
       "scheduleEventDescription": "Compromissos, reuniões, eventos pessoais ou horários bloqueados",
       "rescheduleAction": "Remarcar aula",
@@ -1072,6 +1084,18 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "manualLesson": {
+      "students": "Student(s)", "searchStudents": "Search and select students", "noResults": "No students found.",
+      "requiredStudents": "Select at least one student.", "startTime": "Start time", "endTime": "End time",
+      "invalidInterval": "Choose an end time later than the start time, on the same day.",
+      "tags": "Tags", "tag_conversation": "Conversation", "tag_makeup": "Make-up", "tag_exam": "Exam",
+      "customTag": "Create custom tag", "addTag": "Add tag", "remove": "Remove",
+      "saving": "Scheduling…", "retryPlans": "Complete lesson plans",
+      "tagsSchemaRequired": "To save lessons with tags, apply the supplied SQL first. No lessons were created.",
+      "saveError": "The lessons could not be scheduled. Please try again.",
+      "planSaveError": "Lessons were saved in the calendar, but their plans were not. Click Complete lesson plans to retry without duplicating lessons.",
+      "outsideAvailability": "Time outside your working availability."
+    },
     "customCalendar": {
       "new": "New event", "details": "Event details", "title": "Title", "category": "Category",
       "category_appointment": "Appointment", "category_meeting": "Meeting", "category_personal": "Personal", "category_blocked": "Blocked time", "category_other": "Other",
@@ -1306,7 +1330,7 @@ export const uiTranslations = {
       "scheduleAction": "Schedule",
       "scheduleChoiceTitle": "What would you like to schedule?",
       "scheduleLessonOption": "Lesson",
-      "scheduleLessonDescription": "Lesson with a student",
+      "scheduleLessonDescription": "Lesson with one or more students",
       "scheduleEventOption": "Event",
       "scheduleEventDescription": "Appointments, meetings, personal commitments or blocked time",
       "rescheduleAction": "Reschedule lesson",
