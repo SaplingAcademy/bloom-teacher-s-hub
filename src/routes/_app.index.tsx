@@ -92,6 +92,10 @@ export const Route = createFileRoute("/_app/")({
         name: "description",
         content: "Your teaching day at a glance — classes, tasks and quick actions.",
       },
+      { property: "og:title", content: "Today · Bloom" },
+      { property: "og:description", content: "Your teaching day at a glance — classes, tasks and quick actions." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: TodayPage,
@@ -849,12 +853,6 @@ function TodayPage() {
         </div>
       )}
 
-      {/* SINGLE URGENT SECTION */}
-      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
-
-      {/* DAILY PRIORITIES SECTION */}
-      {user?.id && <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />}
-
       {/* STATS CARDS */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
@@ -891,11 +889,18 @@ function TodayPage() {
           }
           icon={Wallet}
           tone="warning"
+          appearance="forest"
           trend={metrics.monthRevenueTrend ?? undefined}
         />
       </div>
 
       {/* TODAY'S SCHEDULE (real calendar_events) */}
+      {/* DAILY PRIORITIES SECTION */}
+      {user?.id && <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />}
+
+      {/* SINGLE URGENT SECTION */}
+      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
+
       <div className="grid gap-5">
         <PanelCard
           title={t.scheduleTitle}

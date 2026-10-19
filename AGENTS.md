@@ -17,8 +17,8 @@
 
 ## Attendance priorities
 - Custom Calendar mutations use owner/type-scoped writes in custom-calendar-events.ts, never lesson rescheduling or lesson-plan APIs; this isolates personal bookings from academic history. Their successful mutations invalidate teacher-scoped Growth data; capacity continues to read the same calendar_events intervals.
-- Calendar empty-cell creation captures date/time context before opening the shared scheduling selector; event-marked descendants remain excluded so existing details and drag-click suppression stay isolated.
-- Calendar header and grid reuse one lesson/custom-event selector; header clears slot context, and choosing a form applies only that entry's defaults without duplicating forms or scheduling logic.
+- Calendar header/grid reuse one selector and both forms: grid captures date/time, header clears context; exclude event descendants to preserve details and drag-click guards.
+- Today count/agenda share a teacher/date-scoped calendar_events read, ordered by start_time; always refetch on remount and keep invalidation callbacks stable to avoid loops.
 - Lesson slot prefills are derived in scheduling-context.ts using the existing form duration; this keeps date/time context separate from persistence and recurring scheduling rules.
 - Unapplied custom-event schema SQL lives in docs/migrations for manual production application; this avoids applying production changes through managed migration tools.
 - Growth capacity counts and visible time slots come from the same capacity-engine result using canonical teacher availability and date-specific bookings; this prevents conflicting availability displays.
