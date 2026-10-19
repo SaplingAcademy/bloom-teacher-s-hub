@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Refine Today: move the existing summary row above daily priorities, reuse canonical Calendar lessons for the local date with navigation refresh, and style only the monthly revenue card dark green; targeted checks only, no database or financial calculation changes.
+- [x] Refine Today: moved the existing summary row above daily priorities, removed the invalid legacy group_id projection from the canonical Calendar read, scoped individual/class non-cancelled lessons to the local date in start-time order, enabled remount refresh with stable invalidation, and styled only the monthly revenue card using forest tokens. All 7 targeted checks passed; preview build OK; no database or financial calculation changes.
+- [ ] Verify Today cards and agenda with saved teacher data; blocked by unavailable authenticated session (opening / redirects to /auth).
 
 - [x] Unify empty Calendar slot and header entry through the existing Aula / Evento selector; preserve clicked date/time for either form, clear slot context from the header and retain existing event-detail guards. Reconfirmed existing week/day/month handlers on 2026-10-19; all 14 focused context/custom-event tests passed without scheduling code changes.
 - [ ] Verify unified grid scheduling in the signed-in Calendar; blocked by the unavailable teacher session (Calendar redirects to /auth).
