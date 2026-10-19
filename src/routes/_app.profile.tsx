@@ -399,6 +399,8 @@ function ProfilePage() {
       setLang(targetLang);
       setIsEditOpen(false);
       clearAvatarSelection();
+      // Reflect the saved row in shared auth state so the header updates immediately.
+      updateProfileState(payload);
       retryProfileSync();
     } finally {
       setSavingProfile(false);

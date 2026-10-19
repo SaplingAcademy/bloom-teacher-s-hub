@@ -37,6 +37,10 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
   }, []);
 
   const teacherName = resolveTeacherName(profile, user);
+  // Same canonical source Community uses: public.profiles.avatar_url.
+  const avatarUrl = (profile?.avatar_url as string | null | undefined) || null;
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => setAvatarFailed(false), [avatarUrl]);
 
   const getInitials = () => teacherInitials(teacherName, lang);
 
@@ -120,10 +124,20 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
         <div className="relative" ref={profileDropdownRef}>
           <button
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-            className="grid h-10 w-10 place-items-center rounded-full bg-gradient-lilac text-sm font-semibold text-lilac-foreground cursor-pointer transition-transform hover:scale-105"
+            className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-gradient-lilac text-sm font-semibold text-lilac-foreground cursor-pointer transition-transform hover:scale-105"
             aria-label={t("globalUi.accountMenu")}
           >
-            {getInitials()}
+            {avatarUrl && !avatarFailed ? (
+              <img
+                key={avatarUrl}
+                src={avatarUrl}
+                alt={teacherName || ""}
+                className="h-full w-full object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              getInitials()
+            )}
           </button>
 
           {profileDropdownOpen && (
