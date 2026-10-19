@@ -47,6 +47,7 @@ import {
 import { generateLessonPlanOccurrences } from "@/lib/lesson-plan-sync";
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
+import { lessonSequenceMap, rescheduledOriginal, formatOriginalDate } from "@/lib/lesson-order";
 
 interface Props {
   studentId: string;
@@ -565,21 +566,25 @@ export function StudentLessonPlanTable({
                 </tr>
               ) : (
                 filteredLessons.map((lesson, idx) => {
-                  const originalIndex = lessons.findIndex((l) => l.lesson_number === lesson.lesson_number);
+                  const originalIndex = lesson.event_id
+                    ? lessons.findIndex((l) => l.event_id === lesson.event_id)
+                    : lessons.indexOf(lesson);
                   const isDone = lesson.completed;
-                  
+                  const seq = (lesson.event_id && sequence.get(lesson.event_id)) || originalIndex + 1;
+                  const original = rescheduledOriginal(lesson);
+
                   const hwStatus = homeworkStatusValue(lesson.event_id ? homeworkStatus.statuses[lesson.event_id] : null);
 
                   return (
                     <tr
-                      key={`lesson-row-${lesson.lesson_number}`}
+                      key={lesson.event_id || `lesson-row-${idx}`}
                       className={`hover:bg-muted/40 transition-all group ${
                         isDone ? "opacity-75 bg-emerald-950/5 text-muted-foreground/80 dark:bg-emerald-950/20" : ""
                       }`}
                     >
                       {/* Lesson # */}
                       <td className="py-2 px-3 text-center font-semibold text-xs border-r border-border/40 bg-muted/10 group-hover:bg-muted/30">
-                        L{lesson.lesson_number}
+                        L{seq}
                       </td>
 
                       {/* Completed Checkbox */}
@@ -603,6 +608,14 @@ export function StudentLessonPlanTable({
                           }
                           className="h-8 text-xs font-mono bg-transparent border-transparent hover:border-border focus:border-primary focus:bg-background transition-all cursor-pointer"
                         />
+                        {original && (
+                          <p className="mt-0.5 px-1 text-[10px] text-muted-foreground flex items-center gap-1">
+                            <CalendarClock className="w-3 h-3" />
+                            {t("lessonOrder.rescheduledOriginal")
+                              .replace("{date}", formatOriginalDate(original.date))
+                              .replace("{time}", original.time)}
+                          </p>
+                        )}
                       </td>
 
                       {/* Time (Editable Input) */}
