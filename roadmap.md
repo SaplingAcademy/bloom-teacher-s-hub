@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Unify empty Calendar slot and header entry through the existing Aula / Evento selector, preserve clicked context for either form and verify only targeted behavior.
+
 - [x] Refine manual lesson scheduling: searchable multi-student selection without classes, start/end validation, compact tags and event-linked plans; 9 targeted checks passed and preview build OK. Prepared minimal lesson_tags column SQL without applying it.
 - [ ] Enable lesson-tag persistence in production; waiting for the user to manually apply the supplied lesson_tags SQL.
 - [ ] Verify manual multi-student scheduling in the signed-in Calendar; browser check redirects to /auth, no available authenticated teacher session.
