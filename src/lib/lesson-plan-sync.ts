@@ -40,6 +40,8 @@ export interface StudentLesson {
   notes: string;
   attachments?: LessonAttachment[];
   created_at?: string;
+  original_date?: string | null;
+  original_start_time?: string | null;
   updated_at?: string;
 }
 
