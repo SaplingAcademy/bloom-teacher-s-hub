@@ -1,8 +1,9 @@
 # Roadmap
 
 - [x] Add one-time custom Calendar events, isolated create/edit/delete/drag, and focused occupancy checks; 34 tests passed, preview build OK.
-- [x] Prepare exact safe migration SQL in docs/migrations for manual production application; not applied.
-- [ ] Verify custom events against saved teacher data; blocked by unapplied schema and unavailable authentication (Calendar redirects to /auth).
+- [x] Prepare exact safe migration SQL in docs/migrations for manual production application; user confirmed successful production application and verification on 2026-10-19.
+- [x] Confirm existing custom Calendar integration needs no changes for the live schema; all 8 targeted custom-event checks passed.
+- [ ] Verify custom events against saved teacher data; schema blocker resolved, authenticated end-to-end verification still requires an available teacher session.
 
 - [x] Show Growth weekday capacity as clickable chips and a compact available-times section, using one shared capacity result; focused availability checks passed.
 - [ ] Verify Growth times with an authenticated teacher; blocked because the app redirects to /auth and no managed session is available.
