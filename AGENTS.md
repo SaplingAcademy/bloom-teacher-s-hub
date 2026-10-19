@@ -16,6 +16,8 @@
 - Never infer commercial choices for new packages or agreements; lesson minutes, fixed contract months, and installment count must come from the teacher.
 
 ## Attendance priorities
+- Custom Calendar mutations use owner/type-scoped writes in custom-calendar-events.ts, never lesson rescheduling or lesson-plan APIs; this isolates personal bookings from academic history. Their successful mutations invalidate teacher-scoped Growth data; capacity continues to read the same calendar_events intervals.
+- Unapplied custom-event schema SQL lives in docs/migrations for manual production application; this avoids applying production changes through managed migration tools.
 - Growth capacity counts and visible time slots come from the same capacity-engine result using canonical teacher availability and date-specific bookings; this prevents conflicting availability displays.
 - Class lifecycle mutations are centralized in `class-lifecycle.ts`; fail-closed history checks select delete versus idempotent archival, with no historical or financial deletes during archival.
 - Archived classes retain schedule IDs but cannot project/generate new occurrences or be edited; student class history includes ended memberships and their participation dates.

@@ -91,6 +91,7 @@ import { useHomeworkStatus } from "@/hooks/use-homework-status";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
 import { customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -236,6 +237,7 @@ const getStatusStyles = (status: TimelineStatus) => {
 function CalendarPage() {
   const { lang, t, formatStatus, formatWeekday } = useLanguage();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { availability: requestedAvailability, eventId: requestedEventId } = Route.useSearch();
 
@@ -555,6 +557,7 @@ function CalendarPage() {
       if (event.eventType === "custom") {
         if (!user?.id) return;
         await moveCustomEvent(user.id, eventId, position.date, position.startTime, event.duration);
+        await queryClient.invalidateQueries({ queryKey: ["growth-data", user.id] });
         await fetchEvents();
         return;
       }
@@ -1063,7 +1066,7 @@ function CalendarPage() {
     [availabilitySnapshot]
   );
 
-  const gridHours = [
+  const gridHours = Array.from(new Set([
     "08:00",
     "09:00",
     "10:00",
@@ -1078,7 +1081,8 @@ function CalendarPage() {
     "19:00",
     "20:00",
     "21:00",
-  ];
+    ...events.filter((event) => event.eventType === "custom").map((event) => `${event.startTime.slice(0, 2)}:00`),
+  ])).sort();
 
   return (
     <div className="space-y-6">
@@ -1495,6 +1499,9 @@ function CalendarPage() {
                 return (
                   <div
                     key={hour}
+                    data-calendar-drop-cell=""
+                    data-date={dateStr}
+                    data-hour={hour}
                     className={`grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center ${unavailable ? "bg-muted/50" : ""}`}
                   >
                     <div className="text-right pr-4 text-xs font-bold text-muted-foreground">
@@ -1516,11 +1523,13 @@ function CalendarPage() {
                           return (
                             <div
                               key={evt.id}
+                              onPointerDown={(event) => { if (evt.eventType === "custom" && !movingIds.has(evt.id)) weekDrag.start(event, evt.id); }}
                               onClick={() => {
+                                if (evt.eventType === "custom" && (weekDrag.consumeClick(evt.id) || pendingMoves.current.has(evt.id))) return;
                                 setSelectedEvent(evt);
                                 setNotesText(evt.notes || "");
                               }}
-                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? "bg-lilac-soft border-lilac/40 border-dashed" : colorMeta.cardTintClass} ${
+                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? "bg-lilac-soft border-lilac/40 border-dashed touch-none select-none cursor-grab" : colorMeta.cardTintClass} ${
                                 evt.eventType === "custom" ? "" : colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
                               }`}
                             >
@@ -1533,9 +1542,9 @@ function CalendarPage() {
                                 </p>
                                 {evt.locationLink && (
                                   <p className="text-[11px] opacity-75 flex items-center gap-1">
-                                    <Video className="h-3.5 w-3.5" />
+                                    {evt.eventType === "custom" ? <MapPin className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
                                     <a
-                                      href={evt.locationLink}
+                                      href={evt.eventType === "custom" && !/^https?:\/\//i.test(evt.locationLink) ? undefined : evt.locationLink}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="hover:underline flex items-center gap-0.5"
@@ -1651,7 +1660,11 @@ function CalendarPage() {
         event={selectedEvent?.eventType === "custom" ? selectedEvent : null}
         date={formatDateString(currentDate)}
         onClose={() => { setIsNewEventOpen(false); setSelectedEvent(null); }}
-        onSaved={async (date) => { setCurrentDate(new Date(`${date}T12:00:00`)); await fetchEvents(); }}
+        onSaved={async (date) => {
+          setCurrentDate(new Date(`${date}T12:00:00`));
+          if (user?.id) await queryClient.invalidateQueries({ queryKey: ["growth-data", user.id] });
+          await fetchEvents();
+        }}
       />}
       <Dialog
         open={selectedEvent !== null && selectedEvent.eventType !== "custom"}
