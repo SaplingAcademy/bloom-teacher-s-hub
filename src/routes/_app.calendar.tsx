@@ -479,8 +479,8 @@ function CalendarPage() {
       if (totalFailed === 0) {
         toast.success(
           lang === "pt"
-            ? `Agenda sincronizada! Ocorrências geradas: ${totalGenerated}, Inseridas/Upsert: ${totalInserted}.`
-            : `Schedule synced! Occurrences generated: ${totalGenerated}, Inserted: ${totalInserted}.`
+            ? "Agenda sincronizada com sucesso!"
+            : "Calendar synced successfully!"
         );
       } else {
         toast.error(
