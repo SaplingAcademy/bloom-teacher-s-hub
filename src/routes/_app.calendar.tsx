@@ -90,7 +90,7 @@ import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDia
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
-import { customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
+import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
 import { useQueryClient } from "@tanstack/react-query";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
@@ -247,6 +247,7 @@ function CalendarPage() {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isNewEventOpen, setIsNewEventOpen] = useState(false);
+  const [newEventDefaults, setNewEventDefaults] = useState(customEventDefaults(formatDateString(new Date())));
   const homeworkStatus = useHomeworkStatus(user?.id, selectedEvent && selectedEvent.eventType !== "custom" ? [selectedEvent.id] : []);
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
   const pendingMoves = useRef(new Set<string>());
@@ -1084,6 +1085,16 @@ function CalendarPage() {
     ...events.filter((event) => event.eventType === "custom").map((event) => `${event.startTime.slice(0, 2)}:00`),
   ])).sort();
 
+  const openNewEvent = (date: string, startTime = "") => {
+    setNewEventDefaults(customEventDefaults(date, startTime, availabilitySnapshot?.defaultDuration));
+    setSelectedEvent(null);
+    setIsNewEventOpen(true);
+  };
+  const createFromCell = (event: React.MouseEvent<HTMLElement>, date: string, time = "") => {
+    if (event.target instanceof Element && event.target.closest("[data-calendar-event]")) return;
+    openNewEvent(date, time);
+  };
+
   return (
     <div className="space-y-6">
       {/* PAGE HEADER */}
@@ -1092,7 +1103,7 @@ function CalendarPage() {
         description={currentTranslation.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setIsNewEventOpen(true)}><Plus className="h-4 w-4" />{t("customCalendar.new")}</Button>
+            <Button onClick={() => openNewEvent(formatDateString(currentDate))}><Plus className="h-4 w-4" />{t("customCalendar.new")}</Button>
             <button
               onClick={handleManualSyncAgenda}
               disabled={isSyncingAgenda}
@@ -1412,6 +1423,7 @@ function CalendarPage() {
                           data-calendar-drop-cell=""
                           data-date={dateStr}
                           data-hour={hour}
+                          onClick={(event) => createFromCell(event, dateStr, hour)}
                           title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
                           className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] min-w-0 overflow-hidden ${
                             unavailable
@@ -1433,6 +1445,7 @@ function CalendarPage() {
                             return (
                               <div
                                 key={evt.id}
+                                data-calendar-event=""
                                 aria-busy={movingIds.has(evt.id)}
                                 onPointerDown={(event) => {
                                   if (canDrag && !pendingMoves.current.has(evt.id)) weekDrag.start(event, evt.id);
@@ -1454,7 +1467,7 @@ function CalendarPage() {
                                 {evt.eventType !== "custom" && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}
                               </div>
                               <div className="min-w-0 text-[9px] font-medium opacity-70 truncate">
-                                {evt.eventType === "custom" ? t(`customCalendar.category_${evt.category || "other"}`) : evt.focus}
+                                {evt.eventType === "custom" ? evt.category : evt.focus}
                               </div>
                               {/* Small status indicator pill */}
                               {evt.eventType !== "custom" && <div className="min-w-0 max-w-full truncate text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
@@ -1502,6 +1515,7 @@ function CalendarPage() {
                     data-calendar-drop-cell=""
                     data-date={dateStr}
                     data-hour={hour}
+                    onClick={(event) => createFromCell(event, dateStr, hour)}
                     className={`grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center ${unavailable ? "bg-muted/50" : ""}`}
                   >
                     <div className="text-right pr-4 text-xs font-bold text-muted-foreground">
@@ -1523,6 +1537,7 @@ function CalendarPage() {
                           return (
                             <div
                               key={evt.id}
+                              data-calendar-event=""
                               onPointerDown={(event) => { if (evt.eventType === "custom" && !movingIds.has(evt.id)) weekDrag.start(event, evt.id); }}
                               onClick={() => {
                                 if (evt.eventType === "custom" && (weekDrag.consumeClick(evt.id) || pendingMoves.current.has(evt.id))) return;
@@ -1538,7 +1553,7 @@ function CalendarPage() {
                                   {evt.studentName}
                                 </h4>
                                 <p className="text-xs font-semibold opacity-85">
-                                  {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)} ({evt.duration}m) · {evt.eventType === "custom" ? t(`customCalendar.category_${evt.category || "other"}`) : `${evt.level} · ${evt.focus}`}
+                                  {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)} ({evt.duration}m) · {evt.eventType === "custom" ? evt.category : `${evt.level} · ${evt.focus}`}
                                 </p>
                                 {evt.locationLink && (
                                   <p className="text-[11px] opacity-75 flex items-center gap-1">
@@ -1559,7 +1574,7 @@ function CalendarPage() {
                                   variant="outline"
                                   className="text-[10px] font-bold border-current py-0.5"
                                 >
-                                  {evt.eventType === "custom" ? t(`customCalendar.category_${evt.category || "other"}`) : formatStatus(evt.status)}
+                                  {evt.eventType === "custom" ? evt.category : formatStatus(evt.status)}
                                 </Badge>
                               </div>
                             </div>
@@ -1603,6 +1618,7 @@ function CalendarPage() {
                     return (
                       <div
                         key={idx}
+                        onClick={(event) => createFromCell(event, dateStr)}
                         className={`border border-border/80 rounded-xl min-h-[85px] p-1.5 space-y-1 transition-colors flex flex-col justify-between min-w-0 overflow-hidden ${
                           isCurrentMonth ? "bg-secondary/5 hover:bg-secondary/10" : "bg-muted/10 opacity-50"
                         }`}
@@ -1619,6 +1635,7 @@ function CalendarPage() {
                             return (
                               <div
                                 key={e.id}
+                                data-calendar-event=""
                                 onClick={() => {
                                   setSelectedEvent(e);
                                   setNotesText(e.notes || "");
@@ -1658,7 +1675,9 @@ function CalendarPage() {
       {(isNewEventOpen || selectedEvent?.eventType === "custom") && <CustomCalendarEventDialog
         key={selectedEvent?.eventType === "custom" ? selectedEvent.id : "new-custom-event"}
         event={selectedEvent?.eventType === "custom" ? selectedEvent : null}
-        date={formatDateString(currentDate)}
+        date={newEventDefaults.date}
+        startTime={newEventDefaults.startTime}
+        endTime={newEventDefaults.endTime}
         onClose={() => { setIsNewEventOpen(false); setSelectedEvent(null); }}
         onSaved={async (date) => {
           setCurrentDate(new Date(`${date}T12:00:00`));

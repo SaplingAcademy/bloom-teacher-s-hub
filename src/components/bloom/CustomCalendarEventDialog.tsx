@@ -8,12 +8,11 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CUSTOM_EVENT_CATEGORIES, customEventErrorKey, deleteCustomEvent, saveCustomEvent, type CustomEventInput } from "@/lib/custom-calendar-events";
+import { customEventErrorKey, deleteCustomEvent, saveCustomEvent, type CustomEventInput } from "@/lib/custom-calendar-events";
 import type { CalendarEvent } from "@/lib/calendar-sync";
 
-export function CustomCalendarEventDialog({ event, date, onClose, onSaved }: {
-  event: CalendarEvent | null; date: string; onClose: () => void; onSaved: (date: string) => Promise<void>;
+export function CustomCalendarEventDialog({ event, date, startTime = "", endTime = "", onClose, onSaved }: {
+  event: CalendarEvent | null; date: string; startTime?: string; endTime?: string; onClose: () => void; onSaved: (date: string) => Promise<void>;
 }) {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -22,8 +21,8 @@ export function CustomCalendarEventDialog({ event, date, onClose, onSaved }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState<CustomEventInput>({
-    title: event?.title || "", category: event?.category || "other", date: event?.date || date,
-    startTime: event?.startTime.slice(0, 5) || "", endTime: event?.endTime.slice(0, 5) || "",
+    title: event?.title || "", category: event?.category || "", date: event?.date || date,
+    startTime: event?.startTime.slice(0, 5) || startTime, endTime: event?.endTime.slice(0, 5) || endTime,
     locationLink: event?.locationLink || "", notes: event?.notes || "",
   });
   const field = (key: keyof CustomEventInput, value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -46,11 +45,11 @@ export function CustomCalendarEventDialog({ event, date, onClose, onSaved }: {
       <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2"><CalendarDays className="h-5 w-5 text-lilac" />{t(event ? "customCalendar.details" : "customCalendar.new")}</DialogTitle>
-          <DialogDescription>{t(`customCalendar.category_${form.category}`)}</DialogDescription>
+          <DialogDescription>{form.category || t("customCalendar.category")}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void finish(false); }}>
           {textField("title", "title")}
-          <div className="space-y-2"><Label htmlFor="custom-category">{t("customCalendar.category")}</Label><Select value={form.category} onValueChange={(value) => field("category", value)} disabled={!editing || busy}><SelectTrigger id="custom-category"><SelectValue /></SelectTrigger><SelectContent>{CUSTOM_EVENT_CATEGORIES.map((category) => <SelectItem key={category} value={category}>{t(`customCalendar.category_${category}`)}</SelectItem>)}</SelectContent></Select></div>
+          {textField("category", "category")}
           {textField("date", "date", "date")}
           <div className="grid grid-cols-2 gap-4">{textField("startTime", "start", "time")}{textField("endTime", "end", "time")}</div>
           {textField("locationLink", "location")}
