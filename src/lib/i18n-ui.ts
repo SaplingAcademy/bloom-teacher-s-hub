@@ -1,6 +1,17 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "customCalendar": {
+      "new": "Novo evento", "details": "Detalhes do evento", "title": "Título", "category": "Categoria",
+      "category_appointment": "Compromisso", "category_meeting": "Reunião", "category_personal": "Pessoal", "category_blocked": "Horário bloqueado", "category_other": "Outro",
+      "date": "Data", "start": "Início", "end": "Fim", "location": "Local ou link (opcional)", "notes": "Notas (opcional)",
+      "close": "Fechar", "cancel": "Cancelar", "edit": "Editar", "save": "Salvar", "saving": "Salvando…", "delete": "Excluir",
+      "deleteTitle": "Excluir evento?", "deleteDescription": "Este evento será excluído e o horário ficará livre. Esta ação não pode ser desfeita.",
+      "requiredTitle": "Informe um título para o evento.", "invalidCategory": "Selecione uma categoria válida.",
+      "invalidInterval": "Informe uma data válida e um horário de fim posterior ao início, no mesmo dia.",
+      "schemaRequired": "Os eventos próprios ainda não estão habilitados no banco. Aplique a SQL fornecida antes de salvar.",
+      "saveError": "Não foi possível salvar a alteração do evento. Tente novamente."
+    },
     "growthAvailability": {
       "title": "Horários disponíveis", "period": "Próximos 7 dias",
       "empty": "Este dia está totalmente ocupado ou indisponível. Confira outro dia.",
@@ -1055,6 +1066,17 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "customCalendar": {
+      "new": "New event", "details": "Event details", "title": "Title", "category": "Category",
+      "category_appointment": "Appointment", "category_meeting": "Meeting", "category_personal": "Personal", "category_blocked": "Blocked time", "category_other": "Other",
+      "date": "Date", "start": "Start", "end": "End", "location": "Location or link (optional)", "notes": "Notes (optional)",
+      "close": "Close", "cancel": "Cancel", "edit": "Edit", "save": "Save", "saving": "Saving…", "delete": "Delete",
+      "deleteTitle": "Delete event?", "deleteDescription": "This event will be deleted and the time released. This cannot be undone.",
+      "requiredTitle": "Enter an event title.", "invalidCategory": "Select a valid category.",
+      "invalidInterval": "Enter a valid date and an end time after the start, on the same day.",
+      "schemaRequired": "Custom events are not enabled in the database yet. Apply the supplied SQL before saving.",
+      "saveError": "Could not save the event change. Please try again."
+    },
     "growthAvailability": {
       "title": "Available times", "period": "Next 7 days",
       "empty": "This day is fully booked or unavailable. Check another day.",

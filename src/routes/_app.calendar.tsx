@@ -89,6 +89,8 @@ import { useRescheduleConfirmation } from "@/hooks/use-reschedule-confirmation";
 import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDialog";
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
+import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
+import { customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -242,7 +244,8 @@ function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const homeworkStatus = useHomeworkStatus(user?.id, selectedEvent ? [selectedEvent.id] : []);
+  const [isNewEventOpen, setIsNewEventOpen] = useState(false);
+  const homeworkStatus = useHomeworkStatus(user?.id, selectedEvent && selectedEvent.eventType !== "custom" ? [selectedEvent.id] : []);
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
   const pendingMoves = useRef(new Set<string>());
   const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
@@ -352,11 +355,14 @@ function CalendarPage() {
       if (data) {
         const mapped: CalendarEvent[] = data.map((d: any) => ({
           id: d.id,
+          eventType: d.event_type,
+          title: d.title || undefined,
+          category: d.category || undefined,
           teacherId: d.teacher_id,
           studentId: d.student_id,
           classId: d.class_id,
           scheduleId: d.schedule_id,
-          studentName: d.student_name || "Aula",
+          studentName: d.event_type === "custom" ? d.title : d.student_name || "Aula",
           level: (d.level as CEFRLevel) || "A1",
           focus: (d.focus as CourseFocus) || "General English",
           date: d.date,
@@ -546,6 +552,12 @@ function CalendarPage() {
     pendingMoves.current.add(eventId);
     setMovingIds(new Set(pendingMoves.current));
     try {
+      if (event.eventType === "custom") {
+        if (!user?.id) return;
+        await moveCustomEvent(user.id, eventId, position.date, position.startTime, event.duration);
+        await fetchEvents();
+        return;
+      }
       const result = await rescheduleConfirmation.request(eventId, position.date, position.startTime);
       if (!result) return;
       if (!result.ok) {
@@ -556,8 +568,8 @@ function CalendarPage() {
       }
       // Read back the canonical saved occurrence; no optimistic move or local storage writes.
       await fetchEvents();
-    } catch {
-      toast.error(t("calendarUi.rescheduleErr_save_failed"));
+    } catch (error) {
+      toast.error(t(event.eventType === "custom" ? `customCalendar.${customEventErrorKey(error)}` : "calendarUi.rescheduleErr_save_failed"));
     } finally {
       pendingMoves.current.delete(eventId);
       setMovingIds(new Set(pendingMoves.current));
@@ -762,6 +774,7 @@ function CalendarPage() {
 
   // Filter logic
   const filteredEvents = events.filter((evt) => {
+    if (evt.eventType === "custom") return filterType === "All" && filterFormat === "All" && (filterStatus === "All" || evt.status === filterStatus);
     const matchType = filterType === "All" || evt.type === filterType;
     const matchFormat = filterFormat === "All" || evt.deliveryMode === filterFormat;
     const matchStatus = filterStatus === "All" || evt.status === filterStatus;
@@ -1074,7 +1087,8 @@ function CalendarPage() {
         title={currentTranslation.title}
         description={currentTranslation.description}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => setIsNewEventOpen(true)}><Plus className="h-4 w-4" />{t("customCalendar.new")}</Button>
             <button
               onClick={handleManualSyncAgenda}
               disabled={isSyncingAgenda}
@@ -1424,7 +1438,7 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${colorMeta.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? "bg-lilac-soft text-foreground border-lilac/40 border-dashed" : colorMeta.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
@@ -1433,13 +1447,13 @@ function CalendarPage() {
                                 <span className="min-w-0 truncate">
                                   {fmtTime(evt.startTime)}–{fmtTime(evt.endTime)}
                                 </span>
-                                <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>
+                                {evt.eventType !== "custom" && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}
                               </div>
                               <div className="min-w-0 text-[9px] font-medium opacity-70 truncate">
-                                {evt.focus}
+                                {evt.eventType === "custom" ? t(`customCalendar.category_${evt.category || "other"}`) : evt.focus}
                               </div>
                               {/* Small status indicator pill */}
-                              <div className="min-w-0 max-w-full truncate text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
+                              {evt.eventType !== "custom" && <div className="min-w-0 max-w-full truncate text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
                                 {evt.status === "Needs Preparation" &&
                                   (t("auditUi.prepNeeded"))}
                                 {evt.status === "Lesson Ready" &&
@@ -1454,7 +1468,7 @@ function CalendarPage() {
                                   (t("auditUi.completed"))}
                                 {evt.status === "Closed" &&
                                   (t("auditUi.closed"))}
-                              </div>
+                              </div>}
                             </div>
                           );
                         })}
@@ -1506,8 +1520,8 @@ function CalendarPage() {
                                 setSelectedEvent(evt);
                                 setNotesText(evt.notes || "");
                               }}
-                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${colorMeta.cardTintClass} ${
-                                colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
+                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? "bg-lilac-soft border-lilac/40 border-dashed" : colorMeta.cardTintClass} ${
+                                evt.eventType === "custom" ? "" : colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
                               }`}
                             >
                               <div className="space-y-1">
@@ -1515,8 +1529,7 @@ function CalendarPage() {
                                   {evt.studentName}
                                 </h4>
                                 <p className="text-xs font-semibold opacity-85">
-                                  {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)} ({evt.duration}m) · {evt.level} ·{" "}
-                                  {evt.focus}
+                                  {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)} ({evt.duration}m) · {evt.eventType === "custom" ? t(`customCalendar.category_${evt.category || "other"}`) : `${evt.level} · ${evt.focus}`}
                                 </p>
                                 {evt.locationLink && (
                                   <p className="text-[11px] opacity-75 flex items-center gap-1">
@@ -1537,7 +1550,7 @@ function CalendarPage() {
                                   variant="outline"
                                   className="text-[10px] font-bold border-current py-0.5"
                                 >
-                                  {formatStatus(evt.status)}
+                                  {evt.eventType === "custom" ? t(`customCalendar.category_${evt.category || "other"}`) : formatStatus(evt.status)}
                                 </Badge>
                               </div>
                             </div>
@@ -1601,7 +1614,7 @@ function CalendarPage() {
                                   setSelectedEvent(e);
                                   setNotesText(e.notes || "");
                                 }}
-                                className={`text-[9px] font-bold truncate rounded px-1 py-0.5 cursor-pointer border ${colorMeta.calendarEventClass}`}
+                                className={`text-[9px] font-bold truncate rounded px-1 py-0.5 cursor-pointer border ${e.eventType === "custom" ? "bg-lilac-soft border-lilac/40 border-dashed text-foreground" : colorMeta.calendarEventClass}`}
                               >
                                 {fmtTime(e.startTime)} {e.studentName}
                               </div>
@@ -1633,11 +1646,18 @@ function CalendarPage() {
       <RescheduleWarningDialog warnings={rescheduleConfirmation.warnings} onAnswer={rescheduleConfirmation.respond} />
 
       {/* SIDE DETAILS MODAL PANEL */}
+      {(isNewEventOpen || selectedEvent?.eventType === "custom") && <CustomCalendarEventDialog
+        key={selectedEvent?.eventType === "custom" ? selectedEvent.id : "new-custom-event"}
+        event={selectedEvent?.eventType === "custom" ? selectedEvent : null}
+        date={formatDateString(currentDate)}
+        onClose={() => { setIsNewEventOpen(false); setSelectedEvent(null); }}
+        onSaved={async (date) => { setCurrentDate(new Date(`${date}T12:00:00`)); await fetchEvents(); }}
+      />}
       <Dialog
-        open={selectedEvent !== null}
+        open={selectedEvent !== null && selectedEvent.eventType !== "custom"}
         onOpenChange={(open) => !open && setSelectedEvent(null)}
       >
-        {selectedEvent && (
+        {selectedEvent && selectedEvent.eventType !== "custom" && (
           <DialogContent className="max-w-xl rounded-2xl p-6 overflow-y-auto max-h-[85vh]">
             <DialogHeader className="border-b border-border/60 pb-3">
               <DialogTitle className="font-display text-lg font-bold text-foreground flex items-center justify-between">
