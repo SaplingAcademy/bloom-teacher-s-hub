@@ -1,10 +1,10 @@
 # Roadmap
 
-- [x] Unify empty Calendar slot and header entry through the existing Aula / Evento selector; preserve clicked date/time for either form, clear slot context from the header and retain existing event-detail guards. All 14 focused context/custom-event tests passed; preview build OK.
+- [x] Unify empty Calendar slot and header entry through the existing Aula / Evento selector; preserve clicked date/time for either form, clear slot context from the header and retain existing event-detail guards. Reconfirmed existing week/day/month handlers on 2026-10-19; all 14 focused context/custom-event tests passed without scheduling code changes.
 - [ ] Verify unified grid scheduling in the signed-in Calendar; blocked by the unavailable teacher session (Calendar redirects to /auth).
 
 - [x] Refine manual lesson scheduling: searchable multi-student selection without classes, start/end validation, compact tags and event-linked plans; 9 targeted checks passed and preview build OK. Prepared minimal lesson_tags column SQL without applying it.
-- [ ] Enable lesson-tag persistence in production; waiting for the user to manually apply the supplied lesson_tags SQL.
+- [x] Enable lesson-tag persistence in production; user confirmed successful manual application of the lesson_tags SQL on 2026-10-19.
 - [ ] Verify manual multi-student scheduling in the signed-in Calendar; browser check redirects to /auth, no available authenticated teacher session.
 
 - [x] Unify Calendar header scheduling into a lightweight lesson/event choice, reuse both existing forms and preserve direct empty-slot creation; targeted entry-point checks passed and preview build OK. Signed-in UI verification remains unavailable (Calendar redirects to /auth).
