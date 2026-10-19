@@ -18,6 +18,7 @@ type StatCardProps = {
   tone?: Tone;
   trend?: { value: string; positive?: boolean };
   hint?: string;
+  appearance?: "light" | "forest";
 };
 
 export function StatCard({
@@ -27,18 +28,20 @@ export function StatCard({
   tone = "primary",
   trend,
   hint,
+  appearance = "light",
 }: StatCardProps) {
+  const forest = appearance === "forest";
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
+    <div className={cn("flex flex-col gap-3 rounded-2xl border p-5 shadow-[var(--shadow-sm)]", forest ? "border-sidebar-border bg-sidebar text-sidebar-accent-foreground" : "border-border bg-card")}>
       <div className="flex items-center justify-between">
-        <span className={cn("grid h-10 w-10 place-items-center rounded-xl", toneMap[tone])}>
+        <span className={cn("grid h-10 w-10 place-items-center rounded-xl", forest ? "bg-sidebar-accent text-sidebar-accent-foreground" : toneMap[tone])}>
           <Icon className="h-5 w-5" />
         </span>
         {trend && (
           <span
             className={cn(
               "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold",
-              trend.positive ? "bg-primary-soft text-primary" : "bg-accent-soft text-accent",
+              forest ? "bg-sidebar-accent text-sidebar-accent-foreground" : trend.positive ? "bg-primary-soft text-primary" : "bg-accent-soft text-accent",
             )}
           >
             {trend.positive ? (
@@ -51,9 +54,9 @@ export function StatCard({
         )}
       </div>
       <div>
-        <p className="font-display text-2xl font-bold text-card-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        {hint && <p className="mt-1 text-xs text-muted-foreground/80">{hint}</p>}
+        <p className={cn("font-display text-2xl font-bold", forest ? "text-sidebar-accent-foreground" : "text-card-foreground")}>{value}</p>
+        <p className={cn("text-sm", forest ? "text-sidebar-foreground" : "text-muted-foreground")}>{label}</p>
+        {hint && <p className={cn("mt-1 text-xs", forest ? "text-sidebar-foreground" : "text-muted-foreground/80")}>{hint}</p>}
       </div>
     </div>
   );

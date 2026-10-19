@@ -54,10 +54,11 @@ function countTrend(current: number, previous: number): MetricTrend | null {
 function mapEvent(d: any): CalendarEvent {
   return {
     id: d.id,
+    eventType: d.event_type,
     teacherId: d.teacher_id,
     studentId: d.student_id || undefined,
+    classId: d.class_id || undefined,
     scheduleId: d.schedule_id || undefined,
-    groupId: d.group_id || undefined,
     studentName: d.student_name || "Aula",
     level: (d.level as CEFRLevel) || "A1",
     focus: (d.focus as CourseFocus) || "General English",
@@ -92,9 +93,12 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
   const [eventsRes, studentsRes, leadsRes, paymentsRes] = await Promise.all([
     supabase
       .from("calendar_events")
-      .select("id, teacher_id, student_id, schedule_id, group_id, student_name, level, focus, date, start_time, end_time, duration, type, delivery_mode, location_link, status, attendance_recorded, attendance_status, notes, homework_title")
+      // Same canonical occurrence rows as Calendar; no legacy group_id projection.
+      .select("*")
       .eq("teacher_id", teacherId)
       .eq("date", todayStr)
+      .in("event_type", ["individual", "class"])
+      .neq("status", "Cancelled")
       .order("start_time", { ascending: true }),
     supabase
       .from("students")
@@ -112,13 +116,12 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
       .gte("received_at", prevStart.toISOString()),
   ]);
 
-  if (eventsRes.error) console.error("[dashboard-metrics] events:", eventsRes.error.message);
+  if (eventsRes.error) throw eventsRes.error;
   if (studentsRes.error) console.error("[dashboard-metrics] students:", studentsRes.error.message);
   if (leadsRes.error) console.error("[dashboard-metrics] leads:", leadsRes.error.message);
   if (paymentsRes.error) console.error("[dashboard-metrics] payments:", paymentsRes.error.message);
 
   const todayEvents = (eventsRes.data || [])
-    .filter((d: any) => d.status !== "Cancelled" && d.status !== "Closed")
     .map(mapEvent);
 
   const students = studentsRes.data || [];
