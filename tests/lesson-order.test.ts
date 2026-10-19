@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rescheduledOriginal, lessonSequenceMap } from "./lesson-order";
+import { rescheduledOriginal, lessonSequenceMap } from "../src/lib/lesson-order";
 
 describe("rescheduledOriginal", () => {
   it("shows original when date changed", () => {
