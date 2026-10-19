@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Refine Today: move the existing summary row above daily priorities, reuse canonical Calendar lessons for the local date with navigation refresh, and style only the monthly revenue card dark green; targeted checks only, no database or financial calculation changes.
+
 - [x] Unify empty Calendar slot and header entry through the existing Aula / Evento selector; preserve clicked date/time for either form, clear slot context from the header and retain existing event-detail guards. Reconfirmed existing week/day/month handlers on 2026-10-19; all 14 focused context/custom-event tests passed without scheduling code changes.
 - [ ] Verify unified grid scheduling in the signed-in Calendar; blocked by the unavailable teacher session (Calendar redirects to /auth).
 
