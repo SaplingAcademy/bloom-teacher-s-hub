@@ -18,6 +18,7 @@
 ## Attendance priorities
 - Custom Calendar mutations use owner/type-scoped writes in custom-calendar-events.ts, never lesson rescheduling or lesson-plan APIs; this isolates personal bookings from academic history. Their successful mutations invalidate teacher-scoped Growth data; capacity continues to read the same calendar_events intervals.
 - Calendar empty-cell creation passes date/time defaults into the existing custom-event dialog; event-marked descendants are excluded so details and drag-click suppression remain isolated.
+- Calendar header scheduling selects between the existing lesson and custom-event dialogs; empty-cell shortcuts bypass this selector to avoid duplicating forms or scheduling logic.
 - Unapplied custom-event schema SQL lives in docs/migrations for manual production application; this avoids applying production changes through managed migration tools.
 - Growth capacity counts and visible time slots come from the same capacity-engine result using canonical teacher availability and date-specific bookings; this prevents conflicting availability displays.
 - Class lifecycle mutations are centralized in `class-lifecycle.ts`; fail-closed history checks select delete versus idempotent archival, with no historical or financial deletes during archival.

@@ -247,6 +247,7 @@ function CalendarPage() {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("week");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isNewEventOpen, setIsNewEventOpen] = useState(false);
+  const [isScheduleChoiceOpen, setIsScheduleChoiceOpen] = useState(false);
   const [newEventDefaults, setNewEventDefaults] = useState(customEventDefaults(formatDateString(new Date())));
   const homeworkStatus = useHomeworkStatus(user?.id, selectedEvent && selectedEvent.eventType !== "custom" ? [selectedEvent.id] : []);
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
@@ -1103,7 +1104,7 @@ function CalendarPage() {
         description={currentTranslation.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => openNewEvent(formatDateString(currentDate))}><Plus className="h-4 w-4" />{t("customCalendar.new")}</Button>
+            <Button onClick={() => setIsScheduleChoiceOpen(true)}><Plus className="h-4 w-4" />{t("calendarUi.scheduleAction")}</Button>
             <button
               onClick={handleManualSyncAgenda}
               disabled={isSyncingAgenda}
@@ -1122,13 +1123,6 @@ function CalendarPage() {
             >
               <Settings className="h-4 w-4 text-muted-foreground" />
               <span>{currentTranslation.settingsAvailability}</span>
-            </button>
-            <button
-              onClick={() => setIsAddClassOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/95 shadow-sm cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>{currentTranslation.addClass}</span>
             </button>
           </div>
         }
@@ -1661,6 +1655,38 @@ function CalendarPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={isScheduleChoiceOpen} onOpenChange={setIsScheduleChoiceOpen}>
+        <DialogContent className="max-w-sm p-6">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">{t("calendarUi.scheduleChoiceTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Button
+              variant="outline"
+              className="h-auto justify-start gap-3 whitespace-normal px-4 py-4 text-left"
+              onClick={() => { setIsScheduleChoiceOpen(false); setIsAddClassOpen(true); }}
+            >
+              <BookOpen className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0">
+                <span className="block font-semibold">{t("calendarUi.scheduleLessonOption")}</span>
+                <span className="mt-1 block text-sm font-normal text-muted-foreground">{t("calendarUi.scheduleLessonDescription")}</span>
+              </span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto justify-start gap-3 whitespace-normal px-4 py-4 text-left"
+              onClick={() => { setIsScheduleChoiceOpen(false); openNewEvent(formatDateString(currentDate)); }}
+            >
+              <CalendarIcon className="h-5 w-5 shrink-0 text-lilac" />
+              <span className="min-w-0">
+                <span className="block font-semibold">{t("calendarUi.scheduleEventOption")}</span>
+                <span className="mt-1 block text-sm font-normal text-muted-foreground">{t("calendarUi.scheduleEventDescription")}</span>
+              </span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <RescheduleLessonDialog
         lesson={rescheduleTarget}

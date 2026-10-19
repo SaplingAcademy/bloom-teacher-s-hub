@@ -232,6 +232,12 @@ export const uiTranslations = {
       "removeAnyway": "Remover mesmo assim"
     },
     "calendarUi": {
+      "scheduleAction": "Agendar",
+      "scheduleChoiceTitle": "O que você deseja agendar?",
+      "scheduleLessonOption": "Aula",
+      "scheduleLessonDescription": "Aula com um aluno",
+      "scheduleEventOption": "Evento",
+      "scheduleEventDescription": "Compromissos, reuniões, eventos pessoais ou horários bloqueados",
       "rescheduleAction": "Remarcar aula",
       "rescheduleTitle": "Remarcar aula",
       "rescheduleCurrent": "Horário atual",
@@ -1297,6 +1303,12 @@ export const uiTranslations = {
       "removeAnyway": "Remove anyway"
     },
     "calendarUi": {
+      "scheduleAction": "Schedule",
+      "scheduleChoiceTitle": "What would you like to schedule?",
+      "scheduleLessonOption": "Lesson",
+      "scheduleLessonDescription": "Lesson with a student",
+      "scheduleEventOption": "Event",
+      "scheduleEventDescription": "Appointments, meetings, personal commitments or blocked time",
       "rescheduleAction": "Reschedule lesson",
       "rescheduleTitle": "Reschedule lesson",
       "rescheduleCurrent": "Current time",
