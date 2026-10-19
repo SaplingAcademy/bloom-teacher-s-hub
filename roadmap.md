@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Refine manual lesson scheduling: searchable multi-student selection without classes, start/end validation, compact tags and event-linked plans; 9 targeted checks passed and preview build OK. Prepared minimal lesson_tags column SQL without applying it.
+- [ ] Enable lesson-tag persistence in production; waiting for the user to manually apply the supplied lesson_tags SQL.
+- [ ] Verify manual multi-student scheduling in the signed-in Calendar; browser check redirects to /auth, no available authenticated teacher session.
+
 - [x] Unify Calendar header scheduling into a lightweight lesson/event choice, reuse both existing forms and preserve direct empty-slot creation; targeted entry-point checks passed and preview build OK. Signed-in UI verification remains unavailable (Calendar redirects to /auth).
 
 - [x] Refine custom Calendar events with empty-slot click-to-create and teacher-entered categories; 13 focused default/category/drag checks passed and preview build OK. Signed-in interaction verification remains blocked by unavailable teacher session.

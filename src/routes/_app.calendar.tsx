@@ -92,6 +92,8 @@ import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status"
 import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
 import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
 import { useQueryClient } from "@tanstack/react-query";
+import { LessonStudentsSelect, LessonTagsSelect } from "@/components/bloom/LessonSchedulingSelections";
+import { lessonDuration, saveManualLessons, manualLessonErrorKey, ManualLessonPlanError, LESSON_QUICK_TAGS, type ManualLessonInput, type SavedManualEvent } from "@/lib/manual-lesson-scheduling";
 
 // Display-only: formats "HH:mm:ss" as "HH:mm" without touching stored values
 const fmtTime = (time?: string | null) => (time ? time.slice(0, 5) : "");
@@ -261,7 +263,7 @@ function CalendarPage() {
   const [studentsList, setStudentsList] = useState<Array<{ id: string; full_name: string; level?: string; language_studied?: string; type?: string }>>([]);
   const [studentColorMap, setStudentColorMap] = useState<Record<string, string>>({});
   const [classColorMap, setClassColorMap] = useState<Record<string, string>>({});
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("none");
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
   // Filters State
   const [filterType, setFilterType] = useState<string>("All");
@@ -274,10 +276,13 @@ function CalendarPage() {
 
   // Add Class Modal State
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
-  const [addName, setAddName] = useState("");
   const [addDate, setAddDate] = useState(formatDateString(new Date()));
   const [addTime, setAddTime] = useState("09:00");
-  const [addDuration, setAddDuration] = useState(60);
+  const [addEndTime, setAddEndTime] = useState("10:00");
+  const [addTags, setAddTags] = useState<string[]>([]);
+  const [lessonSaveError, setLessonSaveError] = useState<string | null>(null);
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
+  const [pendingLessonPlans, setPendingLessonPlans] = useState<{ input: ManualLessonInput; events: SavedManualEvent[] } | null>(null);
   const [addType, setAddType] = useState<"Private" | "Group">("Private");
   const [addLevel, setAddLevel] = useState<CEFRLevel>("B2");
   const [addFocus, setAddFocus] = useState<CourseFocus>("General English");
@@ -304,7 +309,7 @@ function CalendarPage() {
   const [isNonWorkingModalOpen, setIsNonWorkingModalOpen] = useState(false);
   const [conflictTimeOff, setConflictTimeOff] = useState<TeacherTimeOff | null>(null);
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
-  const [pendingClassData, setPendingClassData] = useState<any | null>(null);
+  const [pendingClassData, setPendingClassData] = useState<ManualLessonInput | null>(null);
 
   useEffect(() => {
     if (requestedAvailability !== "working_hours") return;
@@ -362,6 +367,7 @@ function CalendarPage() {
           eventType: d.event_type,
           title: d.title || undefined,
           category: d.category || undefined,
+          lessonTags: Array.isArray(d.lesson_tags) ? d.lesson_tags : [],
           teacherId: d.teacher_id,
           studentId: d.student_id,
           classId: d.class_id,
@@ -627,153 +633,73 @@ function CalendarPage() {
     setIsAvailOpen(false);
   };
 
-  // Create class execution logic
-  const executeCreateClass = async (overrideData?: any) => {
-    const targetName = overrideData ? overrideData.name : addName;
-    const targetDate = overrideData ? overrideData.date : addDate;
-    const targetTime = overrideData ? overrideData.time : addTime;
-    const targetDuration = overrideData ? overrideData.duration : addDuration;
-    const targetType = overrideData ? overrideData.type : addType;
-    const targetLevel = overrideData ? overrideData.level : addLevel;
-    const targetFocus = overrideData ? overrideData.focus : addFocus;
-    const targetMode = overrideData ? overrideData.mode : addMode;
-    const targetLink = overrideData ? overrideData.link : addLink;
-    const targetStudentId = overrideData ? overrideData.selectedStudentId : selectedStudentId;
-
-    if (!targetName.trim()) return;
-
-    const chosenStudent = studentsList.find((s) => s.id === targetStudentId);
-
-    if (user) {
-      const payload = {
-        teacher_id: user.id,
-        student_id: chosenStudent ? chosenStudent.id : null,
-        student_name: targetName,
-        level: targetLevel,
-        focus: targetFocus,
-        date: targetDate,
-        start_time: targetTime,
-        end_time: calculateEndTime(targetTime, targetDuration),
-        duration: targetDuration,
-        type: targetType,
-        delivery_mode: targetMode,
-        location_link: targetLink || null,
-        status: "Scheduled",
-        is_recurring: false,
-      };
-
-      try {
-        const { data, error } = await supabase
-          .from("calendar_events")
-          .insert(payload)
-          .select()
-          .single();
-
-        if (error) {
-          console.warn("[Calendar] Supabase insert failed, adding locally:", error.message);
-          const fallbackEvt: CalendarEvent = {
-            id: `evt-${crypto.randomUUID()}`,
-            studentId: chosenStudent?.id,
-            studentName: targetName,
-            level: targetLevel,
-            focus: targetFocus,
-            date: targetDate,
-            startTime: targetTime,
-            endTime: calculateEndTime(targetTime, targetDuration),
-            duration: targetDuration,
-            type: targetType,
-            deliveryMode: targetMode,
-            locationLink: targetLink || undefined,
-            status: "Scheduled",
-          };
-          updateEventsState([...events, fallbackEvt]);
-        } else if (data) {
-          const createdEvt: CalendarEvent = {
-            id: data.id,
-            teacherId: data.teacher_id,
-            studentId: data.student_id,
-            studentName: data.student_name,
-            level: data.level as CEFRLevel,
-            focus: data.focus as CourseFocus,
-            date: data.date,
-            startTime: data.start_time,
-            endTime: data.end_time,
-            duration: data.duration,
-            type: data.type as StudentType,
-            deliveryMode: data.delivery_mode as "Online" | "In person",
-            locationLink: data.location_link || undefined,
-            status: data.status as TimelineStatus,
-          };
-          setEvents((prev) => [...prev, createdEvt]);
-          toast.success(t("auditUi.classScheduledSuccessfully"));
-        }
-      } catch (err) {
-        console.error("Failed to create class:", err);
+  // One individual occurrence and linked plan per selected student; no permanent group.
+  const executeCreateClass = async (overrideData?: ManualLessonInput) => {
+    if (!user?.id || isSavingLesson) return;
+    const input = pendingLessonPlans?.input || overrideData || {
+      students: studentsList.filter(student => selectedStudentIds.includes(student.id)),
+      date: addDate, startTime: addTime, endTime: addEndTime,
+      type: addType, level: addLevel, focus: addFocus, mode: addMode, link: addLink, tags: addTags,
+    };
+    setIsSavingLesson(true);
+    setLessonSaveError(null);
+    try {
+      await saveManualLessons(user.id, input, pendingLessonPlans?.events);
+      setPendingLessonPlans(null);
+      setIsAddClassOpen(false);
+      setSelectedStudentIds([]);
+      setAddTags([]);
+      setAddDate(formatDateString(new Date()));
+      setAddTime("09:00");
+      setAddEndTime("10:00");
+      await fetchEvents();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["growth", user.id] }),
+        queryClient.invalidateQueries({ queryKey: ["students", user.id] }),
+      ]);
+      toast.success(t("auditUi.classScheduledSuccessfully"));
+    } catch (error) {
+      if (error instanceof ManualLessonPlanError) {
+        setPendingLessonPlans({ input, events: error.events });
+        await fetchEvents();
       }
-    } else {
-      const newEvt: CalendarEvent = {
-        id: `evt-${crypto.randomUUID()}`,
-        studentId: chosenStudent?.id,
-        studentName: targetName,
-        level: targetLevel,
-        focus: targetFocus,
-        date: targetDate,
-        startTime: targetTime,
-        endTime: calculateEndTime(targetTime, targetDuration),
-        duration: targetDuration,
-        type: targetType,
-        deliveryMode: targetMode,
-        locationLink: targetLink || undefined,
-        status: "Scheduled",
-      };
-      updateEventsState([...events, newEvt]);
+      setLessonSaveError(t(`manualLesson.${manualLessonErrorKey(error)}`));
+    } finally {
+      setIsSavingLesson(false);
     }
-
-    setIsAddClassOpen(false);
-    setAddName("");
-    setSelectedStudentId("none");
-    setAddDate(formatDateString(new Date()));
-    setAddTime("09:00");
   };
 
-  // Create class form submit handler with conflict check
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addName.trim()) return;
-
-    // Warn (never silently block) when the slot falls outside the teacher availability
+    if (!user?.id || isSavingLesson) return;
+    if (pendingLessonPlans) { await executeCreateClass(); return; }
+    setLessonSaveError(null);
+    if (selectedStudentIds.length === 0) {
+      setLessonSaveError(t("manualLesson.requiredStudents"));
+      return;
+    }
+    try { lessonDuration(addTime, addEndTime); } catch {
+      setLessonSaveError(t("manualLesson.invalidInterval"));
+      return;
+    }
+    // Preserve the existing availability warning and time-off confirmation.
     if (availabilitySnapshot) {
-      const check = isSlotAvailable(
-        availabilitySnapshot,
-        addDate,
-        addTime,
-        calculateEndTime(addTime, addDuration).slice(0, 5)
-      );
+      const check = isSlotAvailable(availabilitySnapshot, addDate, addTime, addEndTime);
       if (!check.available && check.reason?.kind !== "time_off") {
-        toast.warning(check.reason?.message || "Horário fora da sua disponibilidade.");
+        toast.warning(check.reason?.message || t("manualLesson.outsideAvailability"));
       }
     }
-
-    // Check if scheduling on a non-working date
     const matchedTimeOff = checkDateIsNonWorking(addDate, timeOffList);
     if (matchedTimeOff) {
       setConflictTimeOff(matchedTimeOff);
       setPendingClassData({
-        name: addName,
-        date: addDate,
-        time: addTime,
-        duration: addDuration,
-        type: addType,
-        level: addLevel,
-        focus: addFocus,
-        mode: addMode,
-        link: addLink,
-        selectedStudentId,
+        students: studentsList.filter(student => selectedStudentIds.includes(student.id)),
+        date: addDate, startTime: addTime, endTime: addEndTime,
+        type: addType, level: addLevel, focus: addFocus, mode: addMode, link: addLink, tags: addTags,
       });
       setIsConflictDialogOpen(true);
       return;
     }
-
     await executeCreateClass();
   };
 
@@ -1805,6 +1731,12 @@ function CalendarPage() {
                 </div>
               )}
 
+              {Boolean(selectedEvent.lessonTags?.length) && <div className="flex flex-wrap gap-1.5">
+                {selectedEvent.lessonTags?.map(tag => <Badge key={tag} variant="secondary" className="max-w-full break-words">
+                  {LESSON_QUICK_TAGS.some(value => value === tag) ? t(`manualLesson.tag_${tag}`) : tag}
+                </Badge>)}
+              </div>}
+
               {/* Attendance Track */}
               {!selectedEvent.classId && selectedEvent.studentId && (
               <div className="space-y-2 border-b border-border/60 pb-4 bg-secondary/10 p-3 rounded-xl">
@@ -2075,9 +2007,9 @@ function CalendarPage() {
         </DialogContent>
       </Dialog>
 
-      {/* SCHEDULE CUSTOM CLASS MODAL */}
-      <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6">
+      {/* SCHEDULE ONE-TIME LESSON MODAL */}
+      <Dialog open={isAddClassOpen} onOpenChange={(open) => { if (!isSavingLesson) setIsAddClassOpen(open); }}>
+        <DialogContent className="sm:max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl p-5 sm:p-6">
           <DialogHeader className="border-b border-border pb-3">
             <DialogTitle className="font-display text-lg font-bold text-foreground">
               {t("auditUi.scheduleClass")}
@@ -2085,138 +2017,30 @@ function CalendarPage() {
           </DialogHeader>
 
           <form onSubmit={handleCreateClass} className="space-y-4 pt-3 text-sm">
-            {/* Student Selector */}
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-foreground">
-                {t("auditUi.selectStudentOptional")}
-              </Label>
-              {studentsList.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-3 text-center space-y-2 bg-secondary/20">
-                  <p className="text-xs text-muted-foreground">
-                    {t("calendarUi.noStudents")}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-semibold"
-                    onClick={() => {
-                      setIsAddClassOpen(false);
-                      navigate({ to: "/students" });
-                    }}
-                  >
-                    <User className="w-3.5 h-3.5 mr-1.5" />
-                    {t("auditUi.addStudent")}
-                  </Button>
-                </div>
-              ) : (
-                <Select
-                  value={selectedStudentId}
-                  onValueChange={(val) => {
-                    setSelectedStudentId(val);
-                    const matched = studentsList.find((s) => s.id === val);
-                    if (matched) {
-                      setAddName(matched.full_name);
-                      if (matched.level) setAddLevel(matched.level as CEFRLevel);
-                      if (matched.language_studied) setAddFocus(matched.language_studied as CourseFocus);
-                      if (matched.type) setAddType(matched.type as StudentType);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-10 rounded-xl">
-                    <SelectValue placeholder={t("auditUi.chooseAStudentOrEnterCustomName")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      {t("auditUi.nonePersonalEventOther")}
-                    </SelectItem>
-                    {studentsList.map((st) => (
-                      <SelectItem key={st.id} value={st.id}>
-                        {st.full_name} {st.level ? `(${st.level})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
+            <fieldset disabled={isSavingLesson || Boolean(pendingLessonPlans)} className="space-y-4 min-w-0">
+            <LessonStudentsSelect students={studentsList} selected={selectedStudentIds} t={t} onChange={(ids) => {
+              setSelectedStudentIds(ids);
+              if (!selectedStudentIds.length && ids.length === 1) {
+                const matched = studentsList.find(student => student.id === ids[0]);
+                if (matched?.level) setAddLevel(matched.level as CEFRLevel);
+              }
+            }} />
+            {studentsList.length === 0 && <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{t("calendarUi.noStudents")}</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => { setIsAddClassOpen(false); navigate({ to: "/students" }); }}>
+                <User className="size-4" />{t("auditUi.addStudent")}
+              </Button>
+            </div>}
 
-            {/* Student / Event Name */}
-            <div className="space-y-1">
-              <Label htmlFor="add-name" className="text-xs font-semibold text-foreground">
-                {t("auditUi.studentOrEventName")}
-              </Label>
-              <Input
-                id="add-name"
-                value={addName}
-                onChange={(e) => setAddName(e.target.value)}
-                placeholder={t("calendarUi.namePlaceholder")}
-                required
-                className="h-10 rounded-xl"
-              />
-            </div>
-
-            {/* Date & Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="add-date" className="text-xs font-semibold text-foreground">
-                  {t("calendarUi.date")}
-                </Label>
-                <Input
-                  id="add-date"
-                  type="date"
-                  value={addDate}
-                  onChange={(e) => setAddDate(e.target.value)}
-                  required
-                  className="h-10 rounded-xl"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-date">{t("calendarUi.date")}</Label>
+                <Input id="add-date" type="date" value={addDate} onChange={(e) => setAddDate(e.target.value)} required className="h-10 rounded-xl" />
               </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="add-time" className="text-xs font-semibold text-foreground">
-                  {t("calendarUi.startTime")}
-                </Label>
-                <Input
-                  id="add-time"
-                  type="time"
-                  value={addTime}
-                  onChange={(e) => setAddTime(e.target.value)}
-                  required
-                  className="h-10 rounded-xl"
-                />
-              </div>
-            </div>
-
-            {/* Duration & Type */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="add-duration" className="text-xs font-semibold text-foreground">
-                  {t("calendarUi.durationMinutes")}
-                </Label>
-                <Select
-                  value={String(addDuration)}
-                  onValueChange={(val) => setAddDuration(Number(val))}
-                >
-                  <SelectTrigger id="add-duration" className="h-10 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">30 min</SelectItem>
-                    <SelectItem value="45">45 min</SelectItem>
-                    <SelectItem value="60">60 min (1h)</SelectItem>
-                    <SelectItem value="90">90 min</SelectItem>
-                    <SelectItem value="120">120 min (2h)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="add-type" className="text-xs font-semibold text-foreground">
-                  {t("calendarUi.classType")}
-                </Label>
-                <Select value={addType} onValueChange={(val: any) => setAddType(val)}>
-                  <SelectTrigger id="add-type" className="h-10 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-type">{t("calendarUi.classType")}</Label>
+                <Select value={addType} onValueChange={(val: StudentType) => setAddType(val)}>
+                  <SelectTrigger id="add-type" className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Private">{formatStatus("Private")}</SelectItem>
                     <SelectItem value="Group">{formatStatus("Group")}</SelectItem>
@@ -2224,9 +2048,19 @@ function CalendarPage() {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-time">{t("manualLesson.startTime")}</Label>
+                <Input id="add-time" type="time" value={addTime} onChange={(e) => setAddTime(e.target.value)} required className="h-10 rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-end-time">{t("manualLesson.endTime")}</Label>
+                <Input id="add-end-time" type="time" value={addEndTime} onChange={(e) => setAddEndTime(e.target.value)} required className="h-10 rounded-xl" />
+              </div>
+            </div>
 
             {/* Level & Focus */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-level" className="text-xs font-semibold text-foreground">
                   {t("calendarUi.cefrLevel")}
@@ -2269,7 +2103,7 @@ function CalendarPage() {
             </div>
 
             {/* Mode & Link */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="add-mode" className="text-xs font-semibold text-foreground">
                   {t("calendarUi.format")}
@@ -2299,21 +2133,14 @@ function CalendarPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4">
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
-                >
-                  {t("common.cancel")}
-                </button>
-              </DialogClose>
-              <button
-                type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/95 transition-all cursor-pointer"
-              >
-                {t("calendarUi.scheduleClass")}
-              </button>
+            <LessonTagsSelect tags={addTags} onChange={setAddTags} t={t} />
+            </fieldset>
+            {lessonSaveError && <p role="alert" className="text-sm text-destructive">{lessonSaveError}</p>}
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingLesson}>{t("common.cancel")}</Button></DialogClose>
+              <Button type="submit" disabled={isSavingLesson || !user?.id}>
+                {isSavingLesson ? t("manualLesson.saving") : pendingLessonPlans ? t("manualLesson.retryPlans") : t("calendarUi.scheduleClass")}
+              </Button>
             </div>
           </form>
         </DialogContent>

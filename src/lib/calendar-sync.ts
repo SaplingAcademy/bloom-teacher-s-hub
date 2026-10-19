@@ -43,6 +43,7 @@ export interface CalendarEvent {
   eventType?: "individual" | "class" | "custom";
   title?: string;
   category?: string;
+  lessonTags?: string[];
   teacherId?: string; // Links to Auth Teacher ID
   studentId?: string; // Links to Student ID
   classId?: string; // Links to Class ID
