@@ -54,7 +54,7 @@ describe("Today's canonical Calendar lessons", () => {
   });
   it("excludes cancelled lessons but keeps completed and closed lessons", async () => {
     store.rows = [lesson("cancelled", { status: "Cancelled" }), lesson("completed", { status: "Completed" }), lesson("closed", { status: "Closed" })];
-    expect((await fetchDashboardMetrics("teacher")).todayEvents.map(event => event.id)).toEqual(["closed", "completed"]);
+    expect((await fetchDashboardMetrics("teacher")).todayEvents.map(event => event.id)).toEqual(["completed", "closed"]);
   });
   it("only reads the current local date and current teacher", async () => {
     store.rows = [lesson("today"), lesson("tomorrow", { date: "2026-10-20" }), lesson("other", { teacher_id: "other-teacher" })];

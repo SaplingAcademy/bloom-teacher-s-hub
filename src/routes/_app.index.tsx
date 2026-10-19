@@ -365,7 +365,7 @@ function TodayPage() {
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const { metrics, isLoading: metricsLoading, invalidateMetrics } = useDashboardMetricsQuery(user?.id);
+  const { metrics, isLoading: metricsLoading, error: metricsError, invalidateMetrics } = useDashboardMetricsQuery(user?.id);
   const [refreshKey, setRefreshKey] = useState(0);
   const todayEvents = metrics.todayEvents;
 
@@ -857,11 +857,11 @@ function TodayPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={t.classesToday}
-          value={metricsLoading ? "—" : String(todayEvents.length)}
+          value={metricsLoading || metricsError ? "—" : String(todayEvents.length)}
           icon={CalendarClock}
           tone="primary"
           hint={
-            todayEvents.length > 0
+            !metricsError && todayEvents.length > 0
               ? t.nextAt.replace("{time}", todayEvents[0].startTime)
               : undefined
           }
@@ -894,13 +894,13 @@ function TodayPage() {
         />
       </div>
 
-      {/* TODAY'S SCHEDULE (real calendar_events) */}
       {/* DAILY PRIORITIES SECTION */}
       {user?.id && <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />}
 
       {/* SINGLE URGENT SECTION */}
       {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
 
+      {/* TODAY'S SCHEDULE (real calendar_events) */}
       <div className="grid gap-5">
         <PanelCard
           title={t.scheduleTitle}
@@ -914,7 +914,9 @@ function TodayPage() {
           contentClassName="p-0"
         >
           <ul className="divide-y divide-border/70">
-            {metricsLoading ? (
+            {metricsError ? (
+              <li role="alert" className="p-5 text-center text-sm text-destructive">{tr("errors.loadAgenda")}</li>
+            ) : metricsLoading ? (
               <li className="p-5 text-center text-xs text-muted-foreground">…</li>
             ) : todayEvents.length === 0 ? (
               <li className="p-5 text-center text-xs text-muted-foreground">
