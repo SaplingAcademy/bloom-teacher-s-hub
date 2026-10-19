@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Unify Calendar header scheduling into a lightweight lesson/event choice, reuse both existing forms and preserve direct empty-slot creation; targeted UI checks only.
+- [x] Unify Calendar header scheduling into a lightweight lesson/event choice, reuse both existing forms and preserve direct empty-slot creation; targeted entry-point checks passed and preview build OK. Signed-in UI verification remains unavailable (Calendar redirects to /auth).
 
 - [x] Refine custom Calendar events with empty-slot click-to-create and teacher-entered categories; 13 focused default/category/drag checks passed and preview build OK. Signed-in interaction verification remains blocked by unavailable teacher session.
 
