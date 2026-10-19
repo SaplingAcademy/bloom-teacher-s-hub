@@ -210,6 +210,7 @@ export function StudentLessonPlanTable({
   };
 
   // Filter lessons
+  const sequence = useMemo(() => lessonSequenceMap(lessons), [lessons]);
   const filteredLessons = useMemo(() => {
     return lessons.filter((l) => {
       // Search filter
@@ -611,7 +612,7 @@ export function StudentLessonPlanTable({
                         {original && (
                           <p className="mt-0.5 px-1 text-[10px] text-muted-foreground flex items-center gap-1">
                             <CalendarClock className="w-3 h-3" />
-                            {t("lessonOrder.rescheduledOriginal")
+                            {t("students.rescheduledOriginal")
                               .replace("{date}", formatOriginalDate(original.date))
                               .replace("{time}", original.time)}
                           </p>
