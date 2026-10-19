@@ -183,7 +183,7 @@ const translations = {
 
 function ProfilePage() {
   const { lang, setLang, t: tr } = useLanguage();
-  const { user, profile: authProfile, retryProfileSync } = useAuth();
+  const { user, profile: authProfile, retryProfileSync, updateProfileState } = useAuth();
   const t = translations[lang];
 
   const profile = {
