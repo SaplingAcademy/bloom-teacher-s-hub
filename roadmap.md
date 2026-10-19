@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Add one-time custom Calendar events, isolated create/edit/delete/drag, and focused occupancy checks.
+- [ ] Prepare exact safe migration SQL for manual production application; do not apply it.
+- [ ] Verify custom events against saved teacher data; requires manual schema application and an authenticated session.
+
 - [x] Show Growth weekday capacity as clickable chips and a compact available-times section, using one shared capacity result; focused availability checks passed.
 - [ ] Verify Growth times with an authenticated teacher; blocked because the app redirects to /auth and no managed session is available.
 
