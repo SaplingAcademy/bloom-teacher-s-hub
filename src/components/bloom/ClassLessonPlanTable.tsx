@@ -31,6 +31,7 @@ import { LessonNotesModal } from "./LessonNotesModal";
 import { GenerateClassLessonPlanModal } from "./GenerateClassLessonPlanModal";
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
+import { lessonSequenceMap, rescheduledOriginal, formatOriginalDate, sortLessonsChronologically } from "@/lib/lesson-order";
 import { ClassWithDetails } from "@/lib/class-sync";
 import {
   AttendanceRecordRow,
@@ -134,8 +135,9 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
   const completedCount = plans.filter((p) => p.completed).length;
   const progressPercent = plans.length > 0 ? Math.round((completedCount / plans.length) * 100) : 0;
 
+  const sequence = useMemo(() => lessonSequenceMap(plans), [plans]);
   const filtered = useMemo(() => {
-    return plans.filter((p) => {
+    return sortLessonsChronologically(plans).filter((p) => {
       const term = searchTerm.toLowerCase();
       const matches =
         !term ||
@@ -337,7 +339,7 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
                       }`}
                     >
                       <td className="py-2 px-3 text-center font-semibold text-xs border-r border-border/40 bg-muted/10">
-                        L{plan.lesson_number}
+                        L{sequence.get(plan.event_id) ?? plan.lesson_number}
                       </td>
                       <td className="py-2 px-4 text-center border-r border-border/40">
                         <Checkbox
@@ -354,6 +356,16 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
                           onChange={(e) => patchPlan(plan.event_id, { scheduled_date: e.target.value })}
                           className="h-8 text-xs font-mono bg-transparent border-transparent hover:border-border focus:border-primary focus:bg-background"
                         />
+                        {(() => {
+                          const original = rescheduledOriginal(plan);
+                          return original ? (
+                            <p className="mt-0.5 px-1 text-[10px] text-muted-foreground">
+                              {isPt
+                                ? `Reagendada · Original: ${formatOriginalDate(original.date)} às ${original.time}`
+                                : `Rescheduled · Original: ${formatOriginalDate(original.date)} at ${original.time}`}
+                            </p>
+                          ) : null;
+                        })()}
                       </td>
                       <td className="py-1.5 px-2 border-r border-border/40">
                         <Input

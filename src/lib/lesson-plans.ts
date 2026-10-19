@@ -51,6 +51,9 @@ export interface LessonPlan {
   completed: boolean;
   /** derived from calendar_events.status */
   event_status?: string;
+  /** read-only rescheduling history from calendar_events */
+  original_date?: string | null;
+  original_start_time?: string | null;
 }
 
 export interface AttendanceRecordRow {
@@ -406,6 +409,8 @@ function mapPlanRow(row: any): LessonPlan {
     attachments: normalizeAttachments(row.attachments),
     completed: Boolean(row.completed),
     event_status: row.calendar_events?.status || row.event_status,
+    original_date: row.calendar_events?.original_date ?? null,
+    original_start_time: row.calendar_events?.original_start_time ?? null,
   };
 }
 
@@ -421,7 +426,7 @@ export async function fetchLessonPlans(params: {
 
   let query = supabase
     .from("lesson_plans")
-    .select("*, calendar_events:event_id (status)")
+    .select("*, calendar_events:event_id (status, original_date, original_start_time, rescheduled_at)")
     // Planos concluídos viram documentos no Histórico e saem do plano ativo.
     .is("archived_document_id", null)
     .order("scheduled_date", { ascending: true })

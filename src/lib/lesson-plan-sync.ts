@@ -40,6 +40,8 @@ export interface StudentLesson {
   notes: string;
   attachments?: LessonAttachment[];
   created_at?: string;
+  original_date?: string | null;
+  original_start_time?: string | null;
   updated_at?: string;
 }
 
@@ -288,9 +290,15 @@ export async function fetchStudentLessons(
             completed: p.completed,
             notes: p.notes,
             attachments: p.attachments as LessonAttachment[],
+            original_date: p.original_date ?? null,
+            original_start_time: p.original_start_time ?? null,
           } as StudentLesson;
         })
-        .sort((a, b) => a.lesson_number - b.lesson_number);
+        .sort((a, b) =>
+          `${a.scheduled_date} ${String(a.start_time).slice(0, 5)}`.localeCompare(
+            `${b.scheduled_date} ${String(b.start_time).slice(0, 5)}`
+          )
+        );
 
       localStorage.setItem(`bloom.student_lessons.${studentId}`, JSON.stringify(mapped));
       return mapped;
