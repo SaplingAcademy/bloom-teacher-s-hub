@@ -1,6 +1,11 @@
 import { supabase } from "@/lib/supabase";
-export const CUSTOM_EVENT_CATEGORIES = ["appointment", "meeting", "personal", "blocked", "other"] as const;
 export interface CustomEventInput { title: string; category: string; date: string; startTime: string; endTime: string; locationLink: string; notes: string; }
+export function customEventDefaults(date: string, startTime = "", duration?: number) {
+  const end = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3, 5)) + (duration ?? 0);
+  const endTime = startTime && duration && duration > 0 && end < 1440
+    ? `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}` : "";
+  return { date, startTime, endTime };
+}
 export class CustomEventValidationError extends Error {}
 export function customEventInterval(date: string, startTime: string, endTime: string) {
   const validTime = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -13,7 +18,6 @@ export function customEventInterval(date: string, startTime: string, endTime: st
 }
 export function customEventPayload(input: CustomEventInput) {
   if (!input.title.trim()) throw new CustomEventValidationError("requiredTitle");
-  if (!CUSTOM_EVENT_CATEGORIES.some((category) => category === input.category)) throw new CustomEventValidationError("invalidCategory");
   return { ...customEventInterval(input.date, input.startTime, input.endTime), title: input.title.trim(), category: input.category, location_link: input.locationLink.trim() || null, notes: input.notes.trim() || null };
 }
 // Owner/type-scoped writes never enter lesson-plan or academic rescheduling paths.

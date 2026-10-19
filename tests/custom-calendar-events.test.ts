@@ -7,14 +7,24 @@ const { query, client } = vi.hoisted(() => {
   return { query, client };
 });
 vi.mock("@/lib/supabase", () => ({ supabase: client }));
-import { CUSTOM_EVENT_CATEGORIES, customEventPayload, deleteCustomEvent, moveCustomEvent, saveCustomEvent } from "@/lib/custom-calendar-events";
+import { customEventDefaults, customEventPayload, deleteCustomEvent, moveCustomEvent, saveCustomEvent } from "@/lib/custom-calendar-events";
 import { buildCapacityDays } from "@/lib/capacity-engine";
 import type { TeacherAvailabilitySnapshot } from "@/lib/teacher-availability";
 const input = { title: "Consulta médica", category: "appointment", date: "2026-10-20", startTime: "14:00", endTime: "15:00", locationLink: "", notes: "" };
 beforeEach(() => vi.clearAllMocks());
 describe("one-time custom Calendar events", () => {
-  it("uses exactly the requested categories, not structural event types", () => {
-    expect(CUSTOM_EVENT_CATEGORIES).toEqual(["appointment", "meeting", "personal", "blocked", "other"]);
+  it("saves teacher-entered categories on creation and editing without restricting them", async () => {
+    await saveCustomEvent("teacher", { ...input, category: "Médico" });
+    expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({ category: "Médico" }));
+    await saveCustomEvent("teacher", { ...input, category: "Faculdade" }, "custom-1");
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ category: "Faculdade" }));
+  });
+  it("prefills the exact clicked date/time and reuses the supplied default duration", () => {
+    expect(customEventDefaults("2026-10-21", "14:00", 45)).toEqual({ date: "2026-10-21", startTime: "14:00", endTime: "14:45" });
+  });
+  it("does not invent a time or duration for date-only clicks", () => {
+    expect(customEventDefaults("2026-10-21")).toEqual({ date: "2026-10-21", startTime: "", endTime: "" });
+    expect(customEventDefaults("2026-10-21", "14:00").endTime).toBe("");
   });
   it("inserts a custom event without student/class schedules or recurrence", async () => {
     await saveCustomEvent("teacher", input);
