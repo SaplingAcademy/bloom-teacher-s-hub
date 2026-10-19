@@ -92,6 +92,7 @@ import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status"
 import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
 import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
 import { useQueryClient } from "@tanstack/react-query";
+import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
 import { LessonStudentsSelect, LessonTagsSelect } from "@/components/bloom/LessonSchedulingSelections";
 import { lessonDuration, saveManualLessons, manualLessonErrorKey, ManualLessonPlanError, LESSON_QUICK_TAGS, type ManualLessonInput, type SavedManualEvent } from "@/lib/manual-lesson-scheduling";
 
@@ -250,6 +251,7 @@ function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isNewEventOpen, setIsNewEventOpen] = useState(false);
   const [isScheduleChoiceOpen, setIsScheduleChoiceOpen] = useState(false);
+  const [schedulingContext, setSchedulingContext] = useState<SchedulingContext | null>(null);
   const [newEventDefaults, setNewEventDefaults] = useState(customEventDefaults(formatDateString(new Date())));
   const homeworkStatus = useHomeworkStatus(user?.id, selectedEvent && selectedEvent.eventType !== "custom" ? [selectedEvent.id] : []);
   const [rescheduleTarget, setRescheduleTarget] = useState<CalendarEvent | null>(null);
@@ -1019,7 +1021,26 @@ function CalendarPage() {
   };
   const createFromCell = (event: React.MouseEvent<HTMLElement>, date: string, time = "") => {
     if (event.target instanceof Element && event.target.closest("[data-calendar-event]")) return;
-    openNewEvent(date, time);
+    setSchedulingContext({ date, startTime: time || undefined });
+    setIsScheduleChoiceOpen(true);
+  };
+
+  const chooseLesson = () => {
+    if (!pendingLessonPlans) {
+      let duration = 60;
+      try { duration = lessonDuration(addTime, addEndTime); } catch { /* Retain the form's normal initial duration. */ }
+      const defaults = lessonSlotDefaults(schedulingContext, formatDateString(new Date()), duration);
+      setAddDate(defaults.date);
+      setAddTime(defaults.startTime);
+      setAddEndTime(defaults.endTime);
+    }
+    setIsScheduleChoiceOpen(false);
+    setIsAddClassOpen(true);
+  };
+
+  const chooseEvent = () => {
+    setIsScheduleChoiceOpen(false);
+    openNewEvent(schedulingContext?.date || formatDateString(currentDate), schedulingContext?.startTime || "");
   };
 
   return (
@@ -1030,7 +1051,7 @@ function CalendarPage() {
         description={currentTranslation.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setIsScheduleChoiceOpen(true)}><Plus className="h-4 w-4" />{t("calendarUi.scheduleAction")}</Button>
+            <Button onClick={() => { setSchedulingContext(null); setIsScheduleChoiceOpen(true); }}><Plus className="h-4 w-4" />{t("calendarUi.scheduleAction")}</Button>
             <button
               onClick={handleManualSyncAgenda}
               disabled={isSyncingAgenda}
@@ -1591,7 +1612,7 @@ function CalendarPage() {
             <Button
               variant="outline"
               className="h-auto justify-start gap-3 whitespace-normal px-4 py-4 text-left"
-              onClick={() => { setIsScheduleChoiceOpen(false); setIsAddClassOpen(true); }}
+              onClick={chooseLesson}
             >
               <BookOpen className="h-5 w-5 shrink-0 text-primary" />
               <span className="min-w-0">
@@ -1602,7 +1623,7 @@ function CalendarPage() {
             <Button
               variant="outline"
               className="h-auto justify-start gap-3 whitespace-normal px-4 py-4 text-left"
-              onClick={() => { setIsScheduleChoiceOpen(false); openNewEvent(formatDateString(currentDate)); }}
+              onClick={chooseEvent}
             >
               <CalendarIcon className="h-5 w-5 shrink-0 text-lilac" />
               <span className="min-w-0">
