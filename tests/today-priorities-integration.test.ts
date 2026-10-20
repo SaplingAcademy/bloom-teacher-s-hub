@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-type Filter = { method: string; column: string; value: unknown };
+type Filter = { method: string; column: string; value: unknown; operand?: unknown };
 type Query = { table: string; columns: string; filters: Filter[] };
 const queries: Query[] = [];
 let taskError = false;
@@ -34,7 +34,7 @@ const from = (table: string) => {
     },
   };
   for (const method of ["eq", "not", "in", "lte", "lt", "neq", "order", "gte", "ilike"]) {
-    builder[method] = (column: string, value: unknown) => { query.filters.push({ method, column, value }); return builder; };
+    builder[method] = (column: string, value: unknown, operand?: unknown) => { query.filters.push({ method, column, value, ...(operand === undefined ? {} : { operand }) }); return builder; };
   }
   return builder;
 };
@@ -84,7 +84,9 @@ describe("Today production task and independent lead discovery", () => {
     expect(leads).toHaveLength(2);
     expect(leads.every((q) => q.filters.some((f) => f.method === "eq" && f.column === "teacher_id" && f.value === "teacher"))).toBe(true);
     expect(leads[0].filters).toContainEqual({ method: "in", column: "stage", value: ["Proposta enviada", "proposal"] });
-    expect(leads[1].filters).toContainEqual({ method: "not", column: "stage", value: "in" });
+    expect(leads[1].filters).toContainEqual({ method: "not", column: "stage", value: "in", operand: '("Convertido","won","Perdido","lost")' });
+    expect(leads[1].filters).toContainEqual({ method: "lt", column: "updated_at", value: new Date(2026, 9, 13).toISOString() });
+    expect(result.failed).toEqual([]);
     expect(result.items.some((i) => i.reason === "lead_trial_soon")).toBe(false);
     expect(queries.filter((q) => q.table === "calendar_events")).toHaveLength(1);
     expect(queries.some((q) => q.columns.includes("lead_id"))).toBe(false);

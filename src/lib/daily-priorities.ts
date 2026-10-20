@@ -304,7 +304,7 @@ async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowSt
   return items;
 }
 
-async function fetchLeads(teacherId: string, staleBeforeIso: string): Promise<DailyPriorityItem[]> {
+async function fetchLeads(teacherId: string, todayStr: string, staleBeforeIso: string): Promise<DailyPriorityItem[]> {
   const closed = `(${CLOSED_LEAD_STAGES.map((s) => `"${s}"`).join(",")})`;
   // No trial alert without a confirmed persisted lead/occurrence relationship.
   // Names and free-text notes cannot establish that association.
@@ -372,7 +372,7 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
     fetchContracts(teacherId, todayStr),
     fetchHomework(teacherId, todayStr),
     fetchPendingTasks(teacherId, todayStr, tomorrowStartIso),
-    fetchLeads(teacherId, staleBeforeIso),
+    fetchLeads(teacherId, todayStr, staleBeforeIso),
   ]);
 
   const failed = new Set<DailyPriorityCategory>();
