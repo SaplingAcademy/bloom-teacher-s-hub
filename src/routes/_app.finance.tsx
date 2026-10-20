@@ -671,9 +671,11 @@ function FinancePage() {
   // database and keep feeding KPIs/projections, but only appear when their month arrives.
   // "current" keeps the existing ledger visibility; explicit periods show charges due in that month/year.
   const ledgerYear = ledgerMonth.length === 4 ? ledgerMonth : null;
-  const ledgerInvoices = filterReceivables(
-    ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
-    { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
+  const ledgerInvoices = sortReceivables(
+    filterReceivables(
+      ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
+      { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
+    ),
   );
   const formatDay = (value?: string | null) => {
     if (!value) return "";
