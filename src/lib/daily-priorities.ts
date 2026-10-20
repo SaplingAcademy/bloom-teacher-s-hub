@@ -260,7 +260,7 @@ async function fetchHomework(teacherId: string, todayStr: string): Promise<Daily
     .lte("scheduled_date", todayStr)
     .order("scheduled_date", { ascending: true });
   if (error) throw error;
-  return ((data || []) as any[]).filter(homeworkRequiresAction).map((p) => ({
+  return ((data || []) as any[]).filter(homeworkRequiresAction).map((p): DailyPriorityItem => ({
     id: `homework:${p.event_id}`,
     category: "task" as const,
     urgency: p.scheduled_date < todayStr ? "critical" as const : "today" as const,
