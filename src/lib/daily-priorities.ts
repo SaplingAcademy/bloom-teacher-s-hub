@@ -139,64 +139,43 @@ export function sortDailyPriorities(items: DailyPriorityItem[]): DailyPriorityIt
 // ---------------------------------------------------------------------------
 
 async function fetchAttendance(teacherId: string, todayStr: string, nowHHMM: string): Promise<DailyPriorityItem[]> {
-  // Only occurrences linked to a lesson plan, already started/past, not cancelled/closed.
-  // Attendance is canonical in attendance_records (calendar_events.attendance_recorded is not maintained).
-  const base = () =>
-    supabase
-      .from("calendar_events")
-      .select("id, student_id, class_id, student_name, date, start_time, end_time, status, event_type, lesson_plans!inner(event_id), attendance_records(student_id)")
-      .eq("teacher_id", teacherId)
-      .lte("date", todayStr)
-      .not("status", "in", "(Cancelled,cancelled,Closed,closed)");
+  // calendar_events.attendance_recorded is the canonical completion flag (maintained on every
+  // attendance save/clear and backfilled historically). One filtered query, no age cutoff.
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select("id, student_id, class_id, student_name, date, start_time, end_time, event_type, lesson_plans!inner(event_id), classes(name)")
+    .eq("teacher_id", teacherId)
+    .eq("attendance_recorded", false)
+    .in("event_type", ["individual", "class"])
+    .lte("date", todayStr)
+    .not("status", "in", "(Cancelled,cancelled,Closed,closed)")
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return buildAttendanceItems((data || []) as any[], todayStr, nowHHMM);
+}
 
-  const [individual, classes] = await Promise.all([
-    base().eq("event_type", "individual").not("student_id", "is", null),
-    base().eq("event_type", "class").not("class_id", "is", null),
-  ]);
-  if (individual.error) throw individual.error;
-  if (classes.error) throw classes.error;
-
+/** Pure: past, attendance-workflow occurrences (individual with student / class with class) → items. */
+export function buildAttendanceItems(rows: any[], todayStr: string, nowHHMM: string): DailyPriorityItem[] {
   const isPast = (e: any) => e.date < todayStr || (e.end_time || e.start_time || "23:59").slice(0, 5) <= nowHHMM;
   const items: DailyPriorityItem[] = [];
-  const push = (e: any, studentId: string, studentName: string) =>
+  for (const e of rows) {
+    const isIndividual = e.event_type === "individual" && !!e.student_id;
+    const isClass = e.event_type === "class" && !!e.class_id;
+    if ((!isIndividual && !isClass) || !isPast(e)) continue;
     items.push({
-      id: `attendance:${e.id}:${studentId}`,
+      id: `attendance:${e.id}`,
       category: "attendance",
       urgency: attendanceUrgency(e.date, todayStr),
       reason: "attendance_missing",
-      title: studentName,
+      title: isClass ? (e.classes?.name || "") : (e.student_name || ""),
       params: { date: e.date, time: (e.start_time || "").slice(0, 5), daysLate: Math.max(0, daysBetween(e.date, todayStr)) },
       date: e.date,
       time: e.start_time,
-      ref: { studentId, eventId: e.id, classId: e.class_id || undefined },
-      action: e.class_id
+      ref: { studentId: isIndividual ? e.student_id : undefined, eventId: e.id, classId: e.class_id || undefined },
+      action: isClass
         ? { route: "/students", params: { classId: e.class_id, eventId: e.id } }
         : { route: "/calendar", params: { eventId: e.id } },
     });
-
-  for (const e of (individual.data || []) as any[]) {
-    if (!isPast(e)) continue;
-    const recorded = (e.attendance_records || []).some((r: any) => r.student_id === e.student_id);
-    if (!recorded) push(e, e.student_id, e.student_name || "");
-  }
-
-  const classEvents = ((classes.data || []) as any[]).filter(isPast);
-  const classIds = [...new Set(classEvents.map((e) => e.class_id))];
-  if (classIds.length > 0) {
-    const { data: members, error } = await supabase
-      .from("class_members")
-      .select("class_id, student_id, joined_at, left_at, status, students(full_name)")
-      .eq("teacher_id", teacherId)
-      .in("class_id", classIds);
-    if (error) throw error;
-    for (const e of classEvents) {
-      const recorded = new Set((e.attendance_records || []).map((r: any) => r.student_id));
-      for (const m of (members || []) as any[]) {
-        if (m.class_id !== e.class_id || m.status !== "active" || m.left_at) continue;
-        if (m.joined_at && String(m.joined_at).slice(0, 10) > e.date) continue;
-        if (!recorded.has(m.student_id)) push(e, m.student_id, m.students?.full_name || "");
-      }
-    }
   }
   return items;
 }
