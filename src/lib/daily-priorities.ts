@@ -286,8 +286,10 @@ async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowSt
   const rows = (data || []) as any[];
   const items: DailyPriorityItem[] = [];
   for (const t of rows) {
-    if (!t.due_date || t.due_date >= tomorrowStartIso) continue;
-    const day = formatLocalDateStr(new Date(t.due_date));
+    if (!t.due_date) continue;
+    const dueDate = new Date(t.due_date);
+    if (!Number.isFinite(dueDate.getTime()) || dueDate.getTime() >= new Date(tomorrowStartIso).getTime()) continue;
+    const day = formatLocalDateStr(dueDate);
     const overdue = day < todayStr;
     items.push({
       id: `task:${t.id}`,
