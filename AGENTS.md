@@ -40,3 +40,4 @@
 - Retain saved occurrence IDs if plan persistence fails and retry only those plans, never reinsert events; failed writes must not become local calendar success.
 - One-time lesson tags use the canonical calendar occurrence's `lesson_tags` text array, following Bloom's existing entity-tag representation; built-in values are stable and translated only for display, and custom labels remain teacher-entered.
 - Optional lesson-tag schema SQL stays in docs/migrations for manual production application only; untagged scheduling omits the column until available.
+- Categorized Today priorities are derived read-only in `src/lib/daily-priorities.ts` (attendance/payment/contract/task/lead) with bounded per-category queries run in parallel; failed categories are reported, never shown as empty.
