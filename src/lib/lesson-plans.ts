@@ -7,6 +7,7 @@ import {
   TeacherTimeOff,
 } from "./time-off-engine";
 import { TeacherAvailabilitySnapshot, isSlotAvailable } from "./teacher-availability";
+import { syncEventAttendanceRecorded } from "./attendance-recorded";
 
 /* =============================================================================
    Unified lesson plans & attendance (individual, pair and group)
@@ -575,15 +576,18 @@ export async function saveAttendanceRecords(
     .upsert(rows, { onConflict: "event_id,student_id" });
 
   if (error) throw error;
+  await syncEventAttendanceRecorded(teacherId, eventId);
 }
 
 export async function clearAttendanceRecord(teacherId: string, eventId: string, studentId: string) {
-  await supabase
+  const { error } = await supabase
     .from("attendance_records")
     .delete()
     .eq("teacher_id", teacherId)
     .eq("event_id", eventId)
     .eq("student_id", studentId);
+  if (error) throw error;
+  await syncEventAttendanceRecorded(teacherId, eventId);
 }
 
 /**
