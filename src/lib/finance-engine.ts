@@ -149,6 +149,8 @@ export interface RealInvoice {
   status: "pending" | "paid" | "overdue" | "cancelled";
   dueDate: string; // YYYY-MM-DD
   paidAt?: string | null;
+  /** Canonical received-payment date (payments.received_at). */
+  receivedAt?: string | null;
   billingPeriod: string; // YYYY-MM
   billingMode: "individual" | "per_member" | "shared_class";
   snapshotPackageName?: string | null;
@@ -667,6 +669,7 @@ export async function syncTeacherReceivablesDetailed(
         status: computedStatus,
         dueDate: inv.due_date,
         paidAt: inv.paid_at,
+        receivedAt: inv.payments?.[0]?.received_at ?? null,
         billingPeriod,
         billingMode,
         snapshotPackageName,
@@ -1014,6 +1017,7 @@ export async function fetchTeacherInvoices(teacherId: string): Promise<RealInvoi
         status: computedStatus,
         dueDate: inv.due_date,
         paidAt: inv.paid_at,
+        receivedAt: inv.payments?.[0]?.received_at ?? null,
         billingPeriod,
         billingMode,
         snapshotPackageName,

@@ -44,6 +44,8 @@ import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
+import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
+import { filterReceivables, receivedMonthOf, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
@@ -390,6 +392,9 @@ function FinancePage() {
   const { lang, t: tr } = useLanguage();
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<"Ledger" | "Packages" | "Expenses">("Ledger");
+  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [ledgerStatus, setLedgerStatus] = useState<ReceivableStatusFilter>("all");
+  const [ledgerMonth, setLedgerMonth] = useState<string>("current");
 
   // TanStack Query Cache
   const { packages: queryPackages, refetch: refetchPackages } = usePackagesQuery(user?.id);
@@ -659,7 +664,21 @@ function FinancePage() {
 
   // Main ledger list: current month + any unpaid past charges. Future charges stay in the
   // database and keep feeding KPIs/projections, but only appear when their month arrives.
-  const ledgerInvoices = invoices.filter((inv) => isInvoiceVisibleInLedger(inv));
+  // "current" keeps the existing ledger visibility; a chosen month shows every charge due that month.
+  const ledgerInvoices = filterReceivables(
+    ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
+    { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" ? null : ledgerMonth },
+  );
+  const ledgerMonthOptions = [...new Set(invoices.map((inv) => (inv.dueDate || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+  const formatMonthKey = (key: string) => {
+    const [y, m] = key.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US", { month: "long", year: "numeric" });
+  };
+  const formatDay = (value?: string | null) => {
+    if (!value) return "";
+    const [y, m, d] = value.slice(0, 10).split("-");
+    return lang === "pt" ? `${d}/${m}/${y}` : `${m}/${d}/${y}`;
+  };
 
   // Monthly KPIs for the current calendar month (no month selector on this page).
   const nowRef = new Date();
@@ -672,7 +691,7 @@ function FinancePage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   };
   const totalReceivedCents = invoices
-    .filter((inv) => inv.status === "paid" && monthOfPaidAt(inv.paidAt) === currentMonthKey)
+    .filter((inv) => receivedMonthOf(inv) === currentMonthKey)
     .reduce((sum, inv) => sum + inv.amountCents, 0);
 
   const totalExpectedCents = invoices
@@ -739,6 +758,7 @@ function FinancePage() {
               tone={netProfitCents >= 0 ? "primary" : "warning"}
             />
           </div>
+          <MonthlyCashFlowChart invoices={invoices} expenses={expenses} lang={lang} />
           {/* PACKAGE EXPIRATION MONITORING ALERT BANNER */}
           {expirationAlerts.length > 0 && (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
@@ -809,6 +829,34 @@ function FinancePage() {
               </div>
             )}
 
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={ledgerSearch}
+                onChange={(e) => setLedgerSearch(e.target.value)}
+                placeholder={lang === "pt" ? "Buscar aluno" : "Search student"}
+                aria-label={lang === "pt" ? "Buscar aluno" : "Search student"}
+                className="h-9 rounded-xl text-xs sm:max-w-xs"
+              />
+              <Select value={ledgerStatus} onValueChange={(v) => setLedgerStatus(v as ReceivableStatusFilter)}>
+                <SelectTrigger className="h-9 rounded-xl text-xs sm:w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">{lang === "pt" ? "Todos" : "All"}</SelectItem>
+                  <SelectItem value="pending" className="text-xs">{lang === "pt" ? "Pendentes" : "Pending"}</SelectItem>
+                  <SelectItem value="paid" className="text-xs">{lang === "pt" ? "Pagos" : "Paid"}</SelectItem>
+                  <SelectItem value="overdue" className="text-xs">{lang === "pt" ? "Atrasados" : "Overdue"}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={ledgerMonth} onValueChange={setLedgerMonth}>
+                <SelectTrigger className="h-9 rounded-xl text-xs sm:w-52"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current" className="text-xs">{lang === "pt" ? "Mês atual e em aberto" : "Current month & open"}</SelectItem>
+                  {ledgerMonthOptions.map((m) => (
+                    <SelectItem key={m} value={m} className="text-xs capitalize">{formatMonthKey(m)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <ul className="mt-4 divide-y divide-border/60">
               {isLoadingInvoices ? (
                 <div className="py-8 text-center text-xs text-muted-foreground font-medium animate-pulse">
@@ -862,13 +910,22 @@ function FinancePage() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 font-medium flex items-center gap-1.5 flex-wrap">
-                          <span>{t.studentCardClasses} <strong className="text-stone-800 font-bold">{inv.dueDate}</strong></span>
+                          <span>{t.studentCardClasses} <strong className="text-foreground font-bold">{formatDay(inv.dueDate)}</strong></span>
                           <span>•</span>
                           <span>{t.kpiExpected}: <strong className="text-foreground font-bold">{inv.amountFormatted}</strong></span>
                           {inv.isInstallment && inv.currentInstallmentLabel && (
                             <>
                               <span>•</span>
                               <span className="text-stone-500 font-semibold">{inv.currentInstallmentLabel}</span>
+                            </>
+                          )}
+                          {inv.status === "paid" && (inv.receivedAt || inv.paidAt) && (
+                            <>
+                              <span>•</span>
+                              <span>
+                                {lang === "pt" ? "Pago em" : "Paid on"} <strong className="text-foreground font-bold">{formatDay(inv.receivedAt || inv.paidAt)}</strong>
+                                {inv.paymentMethod && ` · ${formatOnboardingPaymentMethod(inv.paymentMethod, lang === "pt" ? "pt" : "en")}`}
+                              </span>
                             </>
                           )}
                         </p>
@@ -890,6 +947,21 @@ function FinancePage() {
                               <History className="h-3.5 w-3.5 text-stone-600" />
                               <span className="hidden sm:inline">{tr("auditUi.history")}</span>
                             </button>
+
+                            {inv.status !== "paid" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDrawerStudentId(inv.studentId!);
+                                  setDrawerStudentName(inv.targetName);
+                                  setIsDrawerOpen(true);
+                                }}
+                                className="inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-bold border border-border bg-card hover:bg-secondary text-foreground cursor-pointer"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">{lang === "pt" ? "Editar cobrança" : "Edit charge"}</span>
+                              </button>
+                            )}
 
                             {studentAlert && (
                               <button
