@@ -59,3 +59,4 @@
 - [x] Validar a interface, o typecheck e os testes existentes após a padronização
 
 - [x] Replace decorative Sparkles/star icons with contextual Lucide outline icons; validate only these visual changes.
+- [x] Financeiro: marcar como pago abre dialog de confirmação com data (padrão hoje) e meio de pagamento via recordInvoicePayment; cobranças pagas ganham "Editar pagamento" (updateInvoicePaymentDate); markInvoiceAsPaid removido da página

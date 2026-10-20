@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import {
   FinanceSyncError,
-  markInvoiceAsPaid,
   updateInvoiceStatus,
   formatCentsToBRL,
   formatReaisToBRL,
@@ -44,6 +43,7 @@ import { StatCard } from "@/components/bloom/StatCard";
 import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
+import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
@@ -247,6 +247,16 @@ const translations = {
     confirmDelete: "Are you sure you want to delete this?",
     studentCardClasses: "Due Date:",
     month: "month",
+    editPayment: "Edit payment",
+    payDialogTitle: "Confirm payment",
+    payDialogEditTitle: "Edit payment",
+    payDialogDescription: "Enter when and how this charge was paid.",
+    payDialogDate: "Payment date",
+    payDialogConfirm: "Confirm payment",
+    payDialogSave: "Save changes",
+    payDialogSaving: "Saving...",
+    paymentRecorded: "Payment recorded.",
+    paymentUpdated: "Payment updated.",
   },
   pt: {
     langToggle: "EN",
@@ -305,6 +315,16 @@ const translations = {
     confirmDelete: "Tem certeza que deseja excluir?",
     studentCardClasses: "Vencimento:",
     month: "mês",
+    editPayment: "Editar pagamento",
+    payDialogTitle: "Confirmar pagamento",
+    payDialogEditTitle: "Editar pagamento",
+    payDialogDescription: "Informe quando e como esta cobrança foi paga.",
+    payDialogDate: "Data do pagamento",
+    payDialogConfirm: "Confirmar pagamento",
+    payDialogSave: "Salvar alterações",
+    payDialogSaving: "Salvando...",
+    paymentRecorded: "Pagamento registrado.",
+    paymentUpdated: "Pagamento atualizado.",
   },
 };
 
@@ -411,6 +431,7 @@ function FinancePage() {
   const [renewalStudentName, setRenewalStudentName] = useState("");
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<{ invoice: RealInvoice; mode: "pay" | "edit" } | null>(null);
   const [drawerStudentId, setDrawerStudentId] = useState("");
   const [drawerStudentName, setDrawerStudentName] = useState("");
 
@@ -571,15 +592,17 @@ function FinancePage() {
 
   const invalidateFinanceData = useInvalidateFinanceData(user?.id);
 
-  // Helper Change invoice payment status
-  const handleStatusChange = async (invoiceId: string, newStatus: "paid" | "pending" | "overdue") => {
+  // Helper Change invoice payment status.
+  // "paid" never writes directly: it opens the confirmation dialog so the teacher
+  // chooses the real payment date/method (recordInvoicePayment), never a silent today.
+  const handleStatusChange = async (invoice: RealInvoice, newStatus: "paid" | "pending" | "overdue") => {
     if (!user) return;
+    if (newStatus === "paid") {
+      setPaymentDialog({ invoice, mode: "pay" });
+      return;
+    }
     try {
-      if (newStatus === "paid") {
-        await markInvoiceAsPaid(invoiceId, user.id, "Pix");
-      } else {
-        await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
-      }
+      await updateInvoiceStatus(invoice.id, user.id, "pending");
       invalidateFinanceData();
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotUpdateStatus")));
@@ -885,10 +908,22 @@ function FinancePage() {
                           </>
                         )}
 
+                        {inv.status === "paid" && (
+                          <button
+                            type="button"
+                            onClick={() => setPaymentDialog({ invoice: inv, mode: "edit" })}
+                            className="inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-bold border border-border bg-card hover:bg-secondary text-foreground cursor-pointer"
+                            title={t.editPayment}
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-stone-600" />
+                            <span className="hidden sm:inline">{t.editPayment}</span>
+                          </button>
+                        )}
+
                         <Select
                           value={inv.status}
                           onValueChange={(val: "paid" | "pending" | "overdue") =>
-                            handleStatusChange(inv.id, val)
+                            handleStatusChange(inv, val)
                           }
                         >
                           <SelectTrigger
@@ -1452,6 +1487,33 @@ function FinancePage() {
             setRenewalStudentName(drawerStudentName);
             setIsRenewalModalOpen(true);
           }}
+        />
+      )}
+
+      {/* PAYMENT CONFIRMATION / EDIT DIALOG */}
+      {user && (
+        <PaymentConfirmationDialog
+          invoice={paymentDialog?.invoice || null}
+          mode={paymentDialog?.mode || "pay"}
+          teacherId={user.id}
+          lang={lang}
+          labels={{
+            titlePay: t.payDialogTitle,
+            titleEdit: t.payDialogEditTitle,
+            description: t.payDialogDescription,
+            paymentDate: t.payDialogDate,
+            paymentMethod: t.paymentMethod,
+            confirmPay: t.payDialogConfirm,
+            confirmEdit: t.payDialogSave,
+            cancel: t.btnCancel,
+            saving: t.payDialogSaving,
+            dueLabel: t.studentCardClasses,
+            successPay: t.paymentRecorded,
+            successEdit: t.paymentUpdated,
+            errorFallback: tr("auditUi.couldNotUpdateStatus"),
+          }}
+          onClose={() => setPaymentDialog(null)}
+          onConfirmed={invalidateFinanceData}
         />
       )}
 
