@@ -46,7 +46,7 @@ import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawe
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
 import { PeriodPicker } from "@/components/bloom/PeriodPicker";
-import { filterReceivables, receivedMonthOf, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
+import { filterReceivables, receivedMonthOf, sortReceivables, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
@@ -671,9 +671,11 @@ function FinancePage() {
   // database and keep feeding KPIs/projections, but only appear when their month arrives.
   // "current" keeps the existing ledger visibility; explicit periods show charges due in that month/year.
   const ledgerYear = ledgerMonth.length === 4 ? ledgerMonth : null;
-  const ledgerInvoices = filterReceivables(
-    ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
-    { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
+  const ledgerInvoices = sortReceivables(
+    filterReceivables(
+      ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
+      { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
+    ),
   );
   const formatDay = (value?: string | null) => {
     if (!value) return "";

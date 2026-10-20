@@ -44,6 +44,20 @@ export function buildMonthlyCashFlow(
   return [...rows.values()];
 }
 
+/**
+ * Alphabetical receivable ordering: student name A→Z (locale-aware, case- and accent-friendly),
+ * installments of the same student kept together and ordered by due date, oldest to newest.
+ */
+const receivableNameCollator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+
+export function sortReceivables<T extends Pick<RealInvoice, "targetName" | "dueDate">>(invoices: T[]): T[] {
+  return [...invoices].sort((a, b) => {
+    const byName = receivableNameCollator.compare(a.targetName ?? "", b.targetName ?? "");
+    if (byName !== 0) return byName;
+    return (a.dueDate || "").localeCompare(b.dueDate || "");
+  });
+}
+
 export type ReceivableStatusFilter = "all" | "pending" | "paid" | "overdue";
 
 export function filterReceivables<T extends Pick<RealInvoice, "targetName" | "status" | "dueDate">>(

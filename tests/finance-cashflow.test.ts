@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMonthlyCashFlow, filterReceivables } from "@/lib/finance-cashflow";
+import { buildMonthlyCashFlow, filterReceivables, sortReceivables } from "@/lib/finance-cashflow";
 import { isInvoiceVisibleInLedger } from "@/lib/billing-domain";
 
 const now = new Date(2026, 9, 20);
@@ -61,5 +61,22 @@ describe("monthly cash flow", () => {
       .toEqual(["Past open", "Current open"]);
     expect(filterReceivables(list, { search: "", status: "all", month: "2026-10" }).map((inv) => inv.targetName))
       .toEqual(["Current paid", "Current open"]);
+  });
+  it("sorts the ledger alphabetically with accents natural and installments by due date", () => {
+    const list = [
+      { targetName: "bruno", status: "pending" as const, dueDate: "2026-10-20" },
+      { targetName: "Álvaro", status: "pending" as const, dueDate: "2026-10-10" },
+      { targetName: "Ana", status: "paid" as const, dueDate: "2026-10-15" },
+      { targetName: "ana", status: "overdue" as const, dueDate: "2026-09-05" },
+      { targetName: "Ana", status: "pending" as const, dueDate: "2026-11-01" },
+    ];
+    expect(sortReceivables(list).map((inv) => `${inv.targetName} ${inv.dueDate}`)).toEqual([
+      "Álvaro 2026-10-10",
+      "ana 2026-09-05",
+      "Ana 2026-10-15",
+      "Ana 2026-11-01",
+      "bruno 2026-10-20",
+    ]);
+    expect(sortReceivables(filterReceivables(list, { search: "", status: "all", month: null }))).toHaveLength(5);
   });
 });
