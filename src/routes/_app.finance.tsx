@@ -908,10 +908,22 @@ function FinancePage() {
                           </>
                         )}
 
+                        {inv.status === "paid" && (
+                          <button
+                            type="button"
+                            onClick={() => setPaymentDialog({ invoice: inv, mode: "edit" })}
+                            className="inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-bold border border-border bg-card hover:bg-secondary text-foreground cursor-pointer"
+                            title={t.editPayment}
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-stone-600" />
+                            <span className="hidden sm:inline">{t.editPayment}</span>
+                          </button>
+                        )}
+
                         <Select
                           value={inv.status}
                           onValueChange={(val: "paid" | "pending" | "overdue") =>
-                            handleStatusChange(inv.id, val)
+                            handleStatusChange(inv, val)
                           }
                         >
                           <SelectTrigger
@@ -1475,6 +1487,33 @@ function FinancePage() {
             setRenewalStudentName(drawerStudentName);
             setIsRenewalModalOpen(true);
           }}
+        />
+      )}
+
+      {/* PAYMENT CONFIRMATION / EDIT DIALOG */}
+      {user && (
+        <PaymentConfirmationDialog
+          invoice={paymentDialog?.invoice || null}
+          mode={paymentDialog?.mode || "pay"}
+          teacherId={user.id}
+          lang={lang}
+          labels={{
+            titlePay: t.payDialogTitle,
+            titleEdit: t.payDialogEditTitle,
+            description: t.payDialogDescription,
+            paymentDate: t.payDialogDate,
+            paymentMethod: t.paymentMethod,
+            confirmPay: t.payDialogConfirm,
+            confirmEdit: t.payDialogSave,
+            cancel: t.btnCancel,
+            saving: t.payDialogSaving,
+            dueLabel: t.studentCardClasses,
+            successPay: t.paymentRecorded,
+            successEdit: t.paymentUpdated,
+            errorFallback: tr("auditUi.couldNotUpdateStatus"),
+          }}
+          onClose={() => setPaymentDialog(null)}
+          onConfirmed={invalidateFinanceData}
         />
       )}
 
