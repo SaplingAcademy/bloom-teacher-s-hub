@@ -14,6 +14,7 @@
 ## Financial model
 - Normalize package billing through `src/lib/billing-domain.ts`; new records use `lesson_duration_minutes` and `contract_duration_months`, while old fields are read-only legacy fallbacks.
 - Never infer commercial choices for new packages or agreements; lesson minutes, fixed contract months, and installment count must come from the teacher.
+- PeriodPicker reuses month/year/current ledger filters; financial calculations stay independent.
 
 ## Attendance priorities
 - Custom Calendar mutations use owner/type-scoped writes in custom-calendar-events.ts, never lesson rescheduling or lesson-plan APIs; this isolates personal bookings from academic history. Their successful mutations invalidate teacher-scoped Growth data; capacity continues to read the same calendar_events intervals.
