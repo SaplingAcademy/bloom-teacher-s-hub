@@ -63,3 +63,4 @@
 
 - [x] Replace decorative Sparkles/star icons with contextual Lucide outline icons; validate only these visual changes.
 - [x] Financeiro: marcar como pago abre dialog de confirmação com data (padrão hoje) e meio de pagamento via recordInvoicePayment; cobranças pagas ganham "Editar pagamento" (updateInvoicePaymentDate); markInvoiceAsPaid removido da página
+- [x] Today priorities Phase 2: DailyPrioritiesCard now reads the unified daily-priorities module with compact category filter chips (local filtering, live counts), urgency-grouped sections in "Todas", localized reason lines, per-category failure notice, truthful "{count} prioridades" summary, and a positive empty state. priority-engine.ts is now unused (kept, pending removal with UrgentWidget in Phase 3). 24 targeted tests pass; typecheck and build OK.
