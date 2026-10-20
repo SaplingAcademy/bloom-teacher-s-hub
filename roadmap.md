@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Fix confirmed Today priority integration bugs only: existing teacher-task fields, independently loaded proposal/stale Leads without guessed trial associations, nested PT/EN reasons and six persistent chips with truthful zero/error states. Six focused tests and six isolated browser checks passed; build OK; attendance, database and other workflows unchanged.
+- [ ] Verify corrected priorities against saved teacher data; blocked by unavailable authenticated session.
+
 - [x] Replace Finance's long period dropdown with reusable year/month popover, year-scoped full-year option and retained current/open view; financial calculations and other Finance UI unchanged. Six focused tests and isolated PT/EN picker interactions passed; preview build OK.
 - [ ] Verify period filtering against saved teacher data in Finance; blocked by unavailable authenticated session (/finance redirects to /auth). The real picker was checked in isolation, including year arrows, monthly/full-year selection, dismissal and narrow-screen fit.
 

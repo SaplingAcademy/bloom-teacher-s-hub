@@ -279,43 +279,38 @@ async function fetchHomework(teacherId: string, todayStr: string): Promise<Daily
 async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowStartIso: string) {
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, title, due_date, lead_id, student_id")
+    .select("id, title, due_date")
     .eq("teacher_id", teacherId)
     .eq("status", "pending");
   if (error) throw error;
   const rows = (data || []) as any[];
-  const leadsWithPendingTask = new Set<string>(rows.filter((t) => t.lead_id).map((t) => t.lead_id));
   const items: DailyPriorityItem[] = [];
   for (const t of rows) {
-    if (!t.due_date || t.due_date >= tomorrowStartIso) continue;
-    const day = formatLocalDateStr(new Date(t.due_date));
+    if (!t.due_date) continue;
+    const dueDate = new Date(t.due_date);
+    if (!Number.isFinite(dueDate.getTime()) || dueDate.getTime() >= new Date(tomorrowStartIso).getTime()) continue;
+    const day = formatLocalDateStr(dueDate);
     const overdue = day < todayStr;
     items.push({
       id: `task:${t.id}`,
-      category: t.lead_id ? "lead" : "task",
+      category: "task",
       urgency: overdue ? "critical" : "today",
-      reason: t.lead_id ? (overdue ? "lead_task_overdue" : "lead_task_due_today") : overdue ? "task_overdue" : "task_due_today",
+      reason: overdue ? "task_overdue" : "task_due_today",
       title: t.title || "",
       params: { dueDate: day },
       date: day,
-      ref: { taskId: t.id, leadId: t.lead_id || undefined, studentId: t.student_id || undefined },
-      action: t.lead_id ? { route: "/leads", params: { leadId: t.lead_id } } : { route: "/" },
+      ref: { taskId: t.id },
+      action: { route: "/" },
     });
   }
-  return { items, leadsWithPendingTask };
+  return items;
 }
 
-async function fetchLeads(teacherId: string, todayStr: string, trialEndStr: string, staleBeforeIso: string): Promise<DailyPriorityItem[]> {
+async function fetchLeads(teacherId: string, todayStr: string, staleBeforeIso: string): Promise<DailyPriorityItem[]> {
   const closed = `(${CLOSED_LEAD_STAGES.map((s) => `"${s}"`).join(",")})`;
-  const [trials, proposals, stale] = await Promise.all([
-    supabase
-      .from("calendar_events")
-      .select("id, student_name, date, start_time, lead_id")
-      .eq("teacher_id", teacherId)
-      .eq("status", "Scheduled")
-      .gte("date", todayStr)
-      .lte("date", trialEndStr)
-      .ilike("notes", "%experimental%"),
+  // No trial alert without a confirmed persisted lead/occurrence relationship.
+  // Names and free-text notes cannot establish that association.
+  const [proposals, stale] = await Promise.all([
     supabase.from("leads").select("id, full_name, updated_at").eq("teacher_id", teacherId).in("stage", PROPOSAL_STAGES),
     supabase
       .from("leads")
@@ -324,23 +319,9 @@ async function fetchLeads(teacherId: string, todayStr: string, trialEndStr: stri
       .not("stage", "in", closed)
       .lt("updated_at", staleBeforeIso),
   ]);
-  for (const r of [trials, proposals, stale]) if (r.error) throw r.error;
+  for (const r of [proposals, stale]) if (r.error) throw r.error;
 
   const items: DailyPriorityItem[] = [];
-  for (const e of (trials.data || []) as any[]) {
-    items.push({
-      id: `lead-trial:${e.id}`,
-      category: "lead",
-      urgency: e.date === todayStr ? "today" : "upcoming",
-      reason: "lead_trial_soon",
-      title: e.student_name || "",
-      params: { date: e.date, time: (e.start_time || "").slice(0, 5) },
-      date: e.date,
-      time: e.start_time,
-      ref: { eventId: e.id, leadId: e.lead_id || undefined },
-      action: { route: "/calendar", params: { eventId: e.id } },
-    });
-  }
   const proposalIds = new Set<string>();
   for (const l of (proposals.data || []) as any[]) {
     proposalIds.add(l.id);
@@ -384,7 +365,6 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
   const todayStr = formatLocalDateStr(now);
   const nowHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const reminderEndStr = formatLocalDateStr(addDays(now, PAYMENT_REMINDER_DAYS));
-  const trialEndStr = formatLocalDateStr(addDays(now, TRIAL_LOOKAHEAD_DAYS));
   const tomorrowStartIso = addDays(now, 1).toISOString();
   const staleBeforeIso = addDays(now, -LEAD_STALE_DAYS).toISOString();
 
@@ -394,7 +374,7 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
     fetchContracts(teacherId, todayStr),
     fetchHomework(teacherId, todayStr),
     fetchPendingTasks(teacherId, todayStr, tomorrowStartIso),
-    fetchLeads(teacherId, todayStr, trialEndStr, staleBeforeIso),
+    fetchLeads(teacherId, todayStr, staleBeforeIso),
   ]);
 
   const failed = new Set<DailyPriorityCategory>();
@@ -408,16 +388,8 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
   take(contracts, "contract");
   take(homework, "task");
 
-  let leadsWithPendingTask = new Set<string>();
-  if (tasks.status === "fulfilled") {
-    items.push(...tasks.value.items);
-    leadsWithPendingTask = tasks.value.leadsWithPendingTask;
-  } else {
-    failed.add("task");
-    failed.add("lead");
-    console.error("[daily-priorities] tasks failed:", tasks.reason);
-  }
+  take(tasks, "task");
   take(leads, "lead");
 
-  return { items: sortDailyPriorities(suppressCoveredLeadItems(items, leadsWithPendingTask)), failed: [...failed] };
+  return { items: sortDailyPriorities(items), failed: [...failed] };
 }

@@ -18,6 +18,7 @@ import {
   fetchDailyPriorities,
 } from "@/lib/daily-priorities";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
@@ -225,57 +226,62 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       </div>
 
       {/* Category filter chips (local filtering, no refetch) */}
-      {!loading && (items.length > 0 || failed.length > 0) && (
+      {!loading && (
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            aria-pressed={filter === "all"}
             onClick={() => setFilter("all")}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-colors cursor-pointer ${
+            className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
               filter === "all"
-                ? "bg-emerald-800 text-white border-emerald-800"
-                : "bg-white text-stone-600 border-stone-200 hover:border-stone-300 hover:text-stone-900"
+                ? "bg-primary text-primary-foreground border-primary hover:bg-primary hover:text-primary-foreground"
+                : "bg-card text-muted-foreground border-border hover:bg-card hover:text-foreground"
             }`}
           >
             {t("today.filterAll")}
             <span
               className={`text-[10px] font-extrabold rounded-full px-1.5 py-px ${
-                filter === "all" ? "bg-emerald-700 text-emerald-50" : "bg-stone-100 text-stone-500"
+                filter === "all" ? "bg-primary-foreground/10 text-primary-foreground" : "bg-muted text-muted-foreground"
               }`}
             >
               {items.length}
             </span>
-          </button>
+          </Button>
           {CATEGORY_ORDER.map((cat) => {
             const meta = CATEGORY_META[cat];
             const Icon = meta.icon;
             const isFailed = failed.includes(cat);
             const count = counts.get(cat) || 0;
-            if (!isFailed && count === 0) return null;
             return (
-              <button
+              <Button
                 key={cat}
                 type="button"
+                variant="outline"
+                size="sm"
+                aria-pressed={filter === cat}
                 onClick={() => setFilter(cat)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-colors cursor-pointer ${
+                className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
                   filter === cat
-                    ? "bg-emerald-800 text-white border-emerald-800"
-                    : "bg-white text-stone-600 border-stone-200 hover:border-stone-300 hover:text-stone-900"
+                    ? "bg-primary text-primary-foreground border-primary hover:bg-primary hover:text-primary-foreground"
+                    : "bg-card text-muted-foreground border-border hover:bg-card hover:text-foreground"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {t(meta.labelKey)}
                 {isFailed ? (
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-label={t("today.categoryLoadError").replace("{categories}", t(meta.labelKey))} />
                 ) : (
                   <span
                     className={`text-[10px] font-extrabold rounded-full px-1.5 py-px ${
-                      filter === cat ? "bg-emerald-700 text-emerald-50" : "bg-stone-100 text-stone-500"
+                      filter === cat ? "bg-primary-foreground/10 text-primary-foreground" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {count}
                   </span>
                 )}
-              </button>
+              </Button>
             );
           })}
         </div>
