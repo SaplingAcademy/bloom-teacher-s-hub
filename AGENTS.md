@@ -21,7 +21,7 @@
 - Calendar header/grid reuse one selector and both forms: grid captures date/time, header clears context; exclude event descendants to preserve details and drag-click guards.
 - Today count/agenda share a teacher/date-scoped calendar_events read, ordered by start_time; always refetch on remount and keep invalidation callbacks stable to avoid loops.
 - Lesson slot prefills are derived in scheduling-context.ts using the existing form duration; this keeps date/time context separate from persistence and recurring scheduling rules.
-- Unapplied custom-event schema SQL lives in docs/migrations for manual production application; this avoids applying production changes through managed migration tools.
+- Unapplied schema SQL lives in docs/migrations for manual production application, never managed migration tools.
 - Growth capacity counts and visible time slots come from the same capacity-engine result using canonical teacher availability and date-specific bookings; this prevents conflicting availability displays.
 - Class lifecycle mutations are centralized in `class-lifecycle.ts`; fail-closed history checks select delete versus idempotent archival, with no historical or financial deletes during archival.
 - Archived classes retain schedule IDs but cannot project/generate new occurrences or be edited; student class history includes ended memberships and their participation dates.
@@ -39,5 +39,4 @@
 - Manual multi-student scheduling inserts individual occurrences in one batch, then upserts one plan per returned event ID; no classes or recurring schedules are created, preserving per-student academic identity.
 - Retain saved occurrence IDs if plan persistence fails and retry only those plans, never reinsert events; failed writes must not become local calendar success.
 - One-time lesson tags use the canonical calendar occurrence's `lesson_tags` text array, following Bloom's existing entity-tag representation; built-in values are stable and translated only for display, and custom labels remain teacher-entered.
-- Optional lesson-tag schema SQL stays in docs/migrations for manual production application only; untagged scheduling omits the column until available.
-- Categorized Today priorities are derived read-only in `src/lib/daily-priorities.ts` (attendance/payment/contract/task/lead) with bounded per-category queries run in parallel; failed categories are reported, never shown as empty.
+- Optional lesson-tag SQL stays in docs/migrations for manual application; untagged scheduling omits the column.
