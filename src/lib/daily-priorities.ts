@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { formatLocalDateStr } from "@/lib/time-off-engine";
-import { checkPackageExpirationAlerts } from "@/lib/finance-engine";
+import { calculateLastDueDate } from "@/lib/finance-engine";
+import { billingModelFromAgreement } from "@/lib/billing-domain";
 
 /**
  * Unified, categorized Today priorities data layer (Phase 1).
