@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import {
   FinanceSyncError,
-  markInvoiceAsPaid,
   updateInvoiceStatus,
   formatCentsToBRL,
   formatReaisToBRL,
@@ -44,6 +43,7 @@ import { StatCard } from "@/components/bloom/StatCard";
 import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
 import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFormModal";
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
+import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
@@ -247,6 +247,16 @@ const translations = {
     confirmDelete: "Are you sure you want to delete this?",
     studentCardClasses: "Due Date:",
     month: "month",
+    editPayment: "Edit payment",
+    payDialogTitle: "Confirm payment",
+    payDialogEditTitle: "Edit payment",
+    payDialogDescription: "Enter when and how this charge was paid.",
+    payDialogDate: "Payment date",
+    payDialogConfirm: "Confirm payment",
+    payDialogSave: "Save changes",
+    payDialogSaving: "Saving...",
+    paymentRecorded: "Payment recorded.",
+    paymentUpdated: "Payment updated.",
   },
   pt: {
     langToggle: "EN",
@@ -305,6 +315,16 @@ const translations = {
     confirmDelete: "Tem certeza que deseja excluir?",
     studentCardClasses: "Vencimento:",
     month: "mês",
+    editPayment: "Editar pagamento",
+    payDialogTitle: "Confirmar pagamento",
+    payDialogEditTitle: "Editar pagamento",
+    payDialogDescription: "Informe quando e como esta cobrança foi paga.",
+    payDialogDate: "Data do pagamento",
+    payDialogConfirm: "Confirmar pagamento",
+    payDialogSave: "Salvar alterações",
+    payDialogSaving: "Salvando...",
+    paymentRecorded: "Pagamento registrado.",
+    paymentUpdated: "Pagamento atualizado.",
   },
 };
 
