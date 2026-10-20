@@ -231,19 +231,19 @@ async function fetchPayments(teacherId: string, todayStr: string, reminderEndStr
 async function fetchContracts(teacherId: string, todayStr: string): Promise<DailyPriorityItem[]> {
   // Reuses canonical expiration semantics (active packages only, fixed-term end date).
   const alerts = await checkPackageExpirationAlerts(teacherId);
-  return alerts.flatMap((alert: any) => {
+  return alerts.flatMap((alert) => {
     const days = daysBetween(todayStr, alert.endDate);
     const reason = contractReason(days);
     if (!reason) return [];
     return [{
-      id: `contract:${alert.studentPackageId || alert.studentId}`,
+      id: `contract:${alert.studentId}:${alert.packageId}`,
       category: "contract" as const,
       urgency: reason === "contract_ended" ? "critical" as const : "upcoming" as const,
       reason,
       title: alert.studentName,
       params: { endDate: alert.endDate, daysRemaining: days, packageName: alert.packageName || "" },
       date: alert.endDate,
-      ref: { studentId: alert.studentId, studentPackageId: alert.studentPackageId },
+      ref: { studentId: alert.studentId, studentPackageId: undefined },
       action: { route: "/finance", params: { studentId: alert.studentId, action: "renew" } },
     }];
   });
