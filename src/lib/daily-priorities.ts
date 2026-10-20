@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { formatLocalDateStr } from "@/lib/time-off-engine";
-import { checkPackageExpirationAlerts } from "@/lib/finance-engine";
+import { calculateLastDueDate } from "@/lib/finance-engine";
+import { billingModelFromAgreement } from "@/lib/billing-domain";
 
 /**
  * Unified, categorized Today priorities data layer (Phase 1).
@@ -228,23 +229,44 @@ async function fetchPayments(teacherId: string, todayStr: string, reminderEndStr
   return items;
 }
 
+/** Same end-date semantics as checkPackageExpirationAlerts; null = open-ended/unknown. */
+export function contractEndDate(sp: any): string | null {
+  if (sp.ended_at) return String(sp.ended_at).slice(0, 10);
+  if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type !== "fixed") return null;
+  if (sp.last_due_date) return sp.last_due_date;
+  if (sp.first_due_date && sp.installment_count) return calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day);
+  return null;
+}
+
+/** Strict variant: query errors throw so the category is reported as failed, never as empty. */
 async function fetchContracts(teacherId: string, todayStr: string): Promise<DailyPriorityItem[]> {
-  // Reuses canonical expiration semantics (active packages only, fixed-term end date).
-  const alerts = await checkPackageExpirationAlerts(teacherId);
-  return alerts.flatMap((alert) => {
-    const days = daysBetween(todayStr, alert.endDate);
+  const { data, error } = await supabase
+    .from("student_packages")
+    .select("*, student:students(full_name, status), package:packages(name)")
+    .eq("teacher_id", teacherId)
+    .eq("status", "active");
+  if (error) throw error;
+  return buildContractItems((data || []) as any[], todayStr);
+}
+
+export function buildContractItems(rows: any[], todayStr: string): DailyPriorityItem[] {
+  return rows.flatMap((sp): DailyPriorityItem[] => {
+    if (sp.student?.status === "Paused" || sp.student?.status === "Inactive") return [];
+    const endDate = contractEndDate(sp);
+    if (!endDate) return [];
+    const days = daysBetween(todayStr, endDate);
     const reason = contractReason(days);
     if (!reason) return [];
     return [{
-      id: `contract:${alert.studentId}:${alert.packageId}`,
-      category: "contract" as const,
-      urgency: reason === "contract_ended" ? "critical" as const : "upcoming" as const,
+      id: `contract:${sp.id}`,
+      category: "contract",
+      urgency: reason === "contract_ended" ? "critical" : "upcoming",
       reason,
-      title: alert.studentName,
-      params: { endDate: alert.endDate, daysRemaining: days, packageName: alert.packageName || "" },
-      date: alert.endDate,
-      ref: { studentId: alert.studentId, studentPackageId: undefined },
-      action: { route: "/finance", params: { studentId: alert.studentId, action: "renew" } },
+      title: sp.student?.full_name || "",
+      params: { endDate, daysRemaining: days, packageName: sp.snapshot_package_name || sp.package?.name || "" },
+      date: endDate,
+      ref: { studentId: sp.student_id, studentPackageId: sp.id },
+      action: { route: "/finance", params: { studentId: sp.student_id, action: "renew" } },
     }];
   });
 }
