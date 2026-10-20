@@ -71,10 +71,10 @@ describe("monthly cash flow", () => {
       { targetName: "Ana", status: "pending" as const, dueDate: "2026-11-01" },
     ];
     expect(sortReceivables(list).map((inv) => `${inv.targetName} ${inv.dueDate}`)).toEqual([
+      "Álvaro 2026-10-10",
       "ana 2026-09-05",
       "Ana 2026-10-15",
       "Ana 2026-11-01",
-      "Álvaro 2026-10-10",
       "bruno 2026-10-20",
     ]);
     expect(sortReceivables(filterReceivables(list, { search: "", status: "all", month: null }))).toHaveLength(5);
