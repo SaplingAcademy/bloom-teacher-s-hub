@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Replace Finance's long period dropdown with one reusable year/month popover, year-scoped full-year option, and targeted checks only; preserve financial calculations and all other Finance UI.
+
 - [x] Refine Today: moved the existing summary row above daily priorities, removed the invalid legacy group_id projection from the canonical Calendar read, scoped individual/class non-cancelled lessons to the local date in start-time order, enabled remount refresh with stable invalidation, and styled only the monthly revenue card using forest tokens. All 7 targeted checks passed; preview build OK; no database or financial calculation changes.
 - [ ] Verify Today cards and agenda with saved teacher data; blocked by unavailable authenticated session (opening / redirects to /auth).
 
