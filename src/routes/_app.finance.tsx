@@ -431,6 +431,7 @@ function FinancePage() {
   const [renewalStudentName, setRenewalStudentName] = useState("");
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<{ invoice: RealInvoice; mode: "pay" | "edit" } | null>(null);
   const [drawerStudentId, setDrawerStudentId] = useState("");
   const [drawerStudentName, setDrawerStudentName] = useState("");
 
@@ -591,15 +592,17 @@ function FinancePage() {
 
   const invalidateFinanceData = useInvalidateFinanceData(user?.id);
 
-  // Helper Change invoice payment status
-  const handleStatusChange = async (invoiceId: string, newStatus: "paid" | "pending" | "overdue") => {
+  // Helper Change invoice payment status.
+  // "paid" never writes directly: it opens the confirmation dialog so the teacher
+  // chooses the real payment date/method (recordInvoicePayment), never a silent today.
+  const handleStatusChange = async (invoice: RealInvoice, newStatus: "paid" | "pending" | "overdue") => {
     if (!user) return;
+    if (newStatus === "paid") {
+      setPaymentDialog({ invoice, mode: "pay" });
+      return;
+    }
     try {
-      if (newStatus === "paid") {
-        await markInvoiceAsPaid(invoiceId, user.id, "Pix");
-      } else {
-        await updateInvoiceStatus(invoiceId, user.id, newStatus === "overdue" ? "pending" : "pending");
-      }
+      await updateInvoiceStatus(invoice.id, user.id, "pending");
       invalidateFinanceData();
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, tr("auditUi.couldNotUpdateStatus")));
