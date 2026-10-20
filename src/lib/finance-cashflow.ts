@@ -48,12 +48,13 @@ export type ReceivableStatusFilter = "all" | "pending" | "paid" | "overdue";
 
 export function filterReceivables<T extends Pick<RealInvoice, "targetName" | "status" | "dueDate">>(
   invoices: T[],
-  { search, status, month }: { search: string; status: ReceivableStatusFilter; month: string | null },
+  { search, status, month, year }: { search: string; status: ReceivableStatusFilter; month: string | null; year?: string | null },
 ): T[] {
   const q = search.trim().toLocaleLowerCase();
   return invoices.filter((inv) =>
     (!q || inv.targetName.toLocaleLowerCase().includes(q)) &&
     (status === "all" || inv.status === status) &&
-    (!month || (inv.dueDate || "").slice(0, 7) === month),
+    (!month || (inv.dueDate || "").slice(0, 7) === month) &&
+    (!year || (inv.dueDate || "").slice(0, 4) === year),
   );
 }

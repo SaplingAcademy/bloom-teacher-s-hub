@@ -45,6 +45,7 @@ import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFor
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
+import { PeriodPicker } from "@/components/bloom/PeriodPicker";
 import { filterReceivables, receivedMonthOf, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
@@ -148,6 +149,10 @@ export const Route = createFileRoute("/_app/finance")({
     meta: [
       { title: "Finance · Bloom" },
       { name: "description", content: "Track your income, packages and expenses automatically." },
+      { property: "og:title", content: "Finance · Bloom" },
+      { property: "og:description", content: "Track your income, packages and expenses automatically." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: FinancePage,
@@ -664,16 +669,12 @@ function FinancePage() {
 
   // Main ledger list: current month + any unpaid past charges. Future charges stay in the
   // database and keep feeding KPIs/projections, but only appear when their month arrives.
-  // "current" keeps the existing ledger visibility; a chosen month shows every charge due that month.
+  // "current" keeps the existing ledger visibility; explicit periods show charges due in that month/year.
+  const ledgerYear = ledgerMonth.length === 4 ? ledgerMonth : null;
   const ledgerInvoices = filterReceivables(
     ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
-    { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" ? null : ledgerMonth },
+    { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
   );
-  const ledgerMonthOptions = [...new Set(invoices.map((inv) => (inv.dueDate || "").slice(0, 7)).filter(Boolean))].sort().reverse();
-  const formatMonthKey = (key: string) => {
-    const [y, m] = key.split("-").map(Number);
-    return new Date(y, m - 1, 1).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US", { month: "long", year: "numeric" });
-  };
   const formatDay = (value?: string | null) => {
     if (!value) return "";
     const [y, m, d] = value.slice(0, 10).split("-");
@@ -846,15 +847,12 @@ function FinancePage() {
                   <SelectItem value="overdue" className="text-xs">{lang === "pt" ? "Atrasados" : "Overdue"}</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={ledgerMonth} onValueChange={setLedgerMonth}>
-                <SelectTrigger className="h-9 rounded-xl text-xs sm:w-52"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current" className="text-xs">{lang === "pt" ? "Mês atual e em aberto" : "Current month & open"}</SelectItem>
-                  {ledgerMonthOptions.map((m) => (
-                    <SelectItem key={m} value={m} className="text-xs capitalize">{formatMonthKey(m)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PeriodPicker
+                value={ledgerMonth}
+                onChange={setLedgerMonth}
+                lang={lang}
+                currentOptionLabel={tr("financePeriod.currentAndOpen")}
+              />
             </div>
 
             <ul className="mt-4 divide-y divide-border/60">

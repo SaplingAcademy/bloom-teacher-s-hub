@@ -1,6 +1,14 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "financePeriod": {
+      "period": "Período",
+      "months": "Meses",
+      "previousYear": "Ano anterior",
+      "nextYear": "Próximo ano",
+      "fullYear": "Ano inteiro",
+      "currentAndOpen": "Mês atual e em aberto"
+    },
     "manualLesson": {
       "students": "Aluno(s)", "searchStudents": "Buscar e selecionar alunos", "noResults": "Nenhum aluno encontrado.",
       "requiredStudents": "Selecione pelo menos um aluno.", "startTime": "Horário inicial", "endTime": "Horário final",
@@ -1084,6 +1092,14 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "financePeriod": {
+      "period": "Period",
+      "months": "Months",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "fullYear": "Full year",
+      "currentAndOpen": "Current month & open"
+    },
     "manualLesson": {
       "students": "Student(s)", "searchStudents": "Search and select students", "noResults": "No students found.",
       "requiredStudents": "Select at least one student.", "startTime": "Start time", "endTime": "End time",
