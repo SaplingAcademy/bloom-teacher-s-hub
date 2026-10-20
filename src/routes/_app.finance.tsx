@@ -46,7 +46,7 @@ import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawe
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
 import { PeriodPicker } from "@/components/bloom/PeriodPicker";
-import { filterReceivables, receivedMonthOf, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
+import { filterReceivables, receivedMonthOf, sortReceivables, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
