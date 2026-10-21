@@ -8,6 +8,10 @@ export const Route = createFileRoute("/_app/lessons")({
     meta: [
       { title: "Lessons · Bloom" },
       { name: "description", content: "Plan, structure and deliver your lessons with AI help." },
+      { property: "og:title", content: "Lessons · Bloom" },
+      { property: "og:description", content: "Plan, structure and deliver your lessons with AI help." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LessonsPage,

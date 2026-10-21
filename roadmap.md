@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Align Today current/previous revenue and trend with Finance through calculateReceivedCentsForMonth and shared invoiceReceiptFields; teacher-scoped paid-invoice read runs inside the existing dashboard cache without synchronization writes. 29 focused tests passed, including Finance mapping equivalence; 15 revenue tests also passed in America/Sao_Paulo; preview build OK. Records and other metrics unchanged.
+- [ ] Verify matching Today/Finance amounts against saved teacher data; blocked by no available authenticated session (both / and /finance redirect to /auth; browser showed no runtime errors).
+
 - [x] Fix confirmed Today priority integration bugs only: existing teacher-task fields, independently loaded proposal/stale Leads without guessed trial associations, nested PT/EN reasons and six persistent chips with truthful zero/error states. Six focused tests and six isolated browser checks passed; build OK; attendance, database and other workflows unchanged.
 - [ ] Verify corrected priorities against saved teacher data; blocked by unavailable authenticated session.
 

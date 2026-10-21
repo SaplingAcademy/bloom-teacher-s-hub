@@ -8,6 +8,10 @@ export const Route = createFileRoute("/_app/marketplace")({
     meta: [
       { title: "Marketplace · Bloom" },
       { name: "description", content: "Buy and sell high-quality teaching resources." },
+      { property: "og:title", content: "Marketplace · Bloom" },
+      { property: "og:description", content: "Buy and sell high-quality teaching resources." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   beforeLoad: () => {

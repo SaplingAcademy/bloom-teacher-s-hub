@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { fetchTeacherReceivedInvoices } from "@/lib/finance-engine";
+import { calculateReceivedCentsForMonth, monthKeyOf } from "@/lib/finance-cashflow";
 import { formatDateString } from "@/lib/calendar-sync";
 import type { CalendarEvent, CEFRLevel, CourseFocus, StudentType, TimelineStatus } from "@/lib/calendar-sync";
 
@@ -90,7 +92,7 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
   const todayStr = formatDateString(now);
   const { start, nextStart, prevStart } = monthBounds(now);
 
-  const [eventsRes, studentsRes, leadsRes, paymentsRes] = await Promise.all([
+  const [eventsRes, studentsRes, leadsRes, receiptsRes] = await Promise.all([
     supabase
       .from("calendar_events")
       // Same canonical occurrence rows as Calendar; no legacy group_id projection.
@@ -109,17 +111,16 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
       .select("id, created_at")
       .eq("teacher_id", teacherId)
       .gte("created_at", prevStart.toISOString()),
-    supabase
-      .from("payments")
-      .select("amount_cents, received_at")
-      .eq("teacher_id", teacherId)
-      .gte("received_at", prevStart.toISOString()),
+    // Uses the existing teacher-scoped dashboard cache/invalidation, not Finance's syncing query.
+    fetchTeacherReceivedInvoices(teacherId)
+      .then(data => ({ data, error: null }))
+      .catch((error: unknown) => ({ data: [], error })),
   ]);
 
   if (eventsRes.error) throw eventsRes.error;
   if (studentsRes.error) console.error("[dashboard-metrics] students:", studentsRes.error.message);
   if (leadsRes.error) console.error("[dashboard-metrics] leads:", leadsRes.error.message);
-  if (paymentsRes.error) console.error("[dashboard-metrics] payments:", paymentsRes.error.message);
+  if (receiptsRes.error) console.error("[dashboard-metrics] received invoices:", receiptsRes.error);
 
   const todayEvents = (eventsRes.data || [])
     .map(mapEvent);
@@ -149,14 +150,9 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
   const prevLeads = leads.filter((l: any) => inRange(l.created_at, prevStart, start)).length;
   const newLeadsTrend = countTrend(newLeads, prevLeads);
 
-  const payments = paymentsRes.data || [];
-  const hasRevenueSource = !paymentsRes.error;
-  const sumIn = (from: Date, to: Date) =>
-    payments
-      .filter((p: any) => inRange(p.received_at, from, to))
-      .reduce((sum: number, p: any) => sum + (Number(p.amount_cents) || 0), 0);
-  const monthRevenueCents = sumIn(start, nextStart);
-  const prevRevenueCents = sumIn(prevStart, start);
+  const hasRevenueSource = !receiptsRes.error;
+  const monthRevenueCents = calculateReceivedCentsForMonth(receiptsRes.data, monthKeyOf(formatDateString(start)) ?? "");
+  const prevRevenueCents = calculateReceivedCentsForMonth(receiptsRes.data, monthKeyOf(formatDateString(prevStart)) ?? "");
   const monthRevenueTrend = pctTrend(monthRevenueCents, prevRevenueCents);
 
   return {

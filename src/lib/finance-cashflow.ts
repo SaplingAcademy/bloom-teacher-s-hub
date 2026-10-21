@@ -1,5 +1,20 @@
 import type { RealInvoice, Expense } from "@/lib/finance-engine";
 
+export type ReceivedRevenueInvoice = Pick<RealInvoice, "id" | "status" | "amountCents" | "receivedAt" | "paidAt">;
+
+/** Keep Finance's existing payment selection and paid_at fallback inputs identical across reads. */
+export function invoiceReceiptFields(invoice: {
+  amount_cents: number | null;
+  paid_at?: string | null;
+  payments?: { received_at?: string | null }[] | null;
+}): Pick<RealInvoice, "amountCents" | "receivedAt" | "paidAt"> {
+  return {
+    amountCents: invoice.amount_cents || 0,
+    paidAt: invoice.paid_at,
+    receivedAt: invoice.payments?.[0]?.received_at ?? null,
+  };
+}
+
 /** Local YYYY-MM of a date or timestamp. */
 export function monthKeyOf(value?: string | null): string | null {
   if (!value) return null;
@@ -13,6 +28,18 @@ export function monthKeyOf(value?: string | null): string | null {
 export function receivedMonthOf(inv: Pick<RealInvoice, "status" | "receivedAt" | "paidAt">): string | null {
   if (inv.status !== "paid") return null;
   return monthKeyOf(inv.receivedAt ?? inv.paidAt);
+}
+
+/** Canonical received revenue: each paid invoice's amount once in its actual received month. */
+export function calculateReceivedCentsForMonth(invoices: ReceivedRevenueInvoice[], monthKey: string): number {
+  const counted = new Set<string>();
+  let total = 0;
+  for (const invoice of invoices) {
+    if (counted.has(invoice.id) || receivedMonthOf(invoice) !== monthKey) continue;
+    counted.add(invoice.id);
+    total += invoice.amountCents;
+  }
+  return total;
 }
 
 export function lastMonthKeys(count: number, now = new Date()): string[] {

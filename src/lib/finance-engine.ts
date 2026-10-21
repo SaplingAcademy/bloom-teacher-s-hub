@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { invoiceReceiptFields, type ReceivedRevenueInvoice } from "@/lib/finance-cashflow";
 import {
   BillingDurationType,
   BillingModel,
@@ -663,13 +664,11 @@ export async function syncTeacherReceivablesDetailed(
         classId: null,
         invoiceNumber: inv.invoice_number || `INV-${inv.id.substring(0, 6)}`,
         description: inv.description || "",
-        amountCents: inv.amount_cents || 0,
+        ...invoiceReceiptFields(inv),
         amountFormatted: formatCentsToBRL(inv.amount_cents || 0),
         currency: inv.currency || "BRL",
         status: computedStatus,
         dueDate: inv.due_date,
-        paidAt: inv.paid_at,
-        receivedAt: inv.payments?.[0]?.received_at ?? null,
         billingPeriod,
         billingMode,
         snapshotPackageName,
@@ -903,6 +902,26 @@ export async function createAgreementReceivables(teacherId: string, sp: any): Pr
 }
 
 /**
+ * Read only the canonical paid-invoice receipt fields. No receivable generation,
+ * status updates, contract enrichment or raw payment aggregation on Today loads.
+ * Preserve Finance's unfiltered nested payment selection (including its first-row semantics).
+ */
+export async function fetchTeacherReceivedInvoices(teacherId: string): Promise<ReceivedRevenueInvoice[]> {
+  if (!teacherId) return [];
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, status, amount_cents, paid_at, payments(id, amount_cents, received_at, method)")
+    .eq("teacher_id", teacherId)
+    .eq("status", "paid");
+  if (error) throw new FinanceSyncError("Não foi possível carregar os recebíveis.", error);
+  return (data || []).map((invoice) => ({
+    id: invoice.id,
+    status: invoice.status,
+    ...invoiceReceiptFields(invoice),
+  }));
+}
+
+/**
  * Fetch and format all invoices for a teacher, augmenting with derived installment progress
  */
 export async function fetchTeacherInvoices(teacherId: string): Promise<RealInvoice[]> {
@@ -1011,13 +1030,11 @@ export async function fetchTeacherInvoices(teacherId: string): Promise<RealInvoi
         classId: null,
         invoiceNumber: inv.invoice_number || `INV-${inv.id.substring(0, 6)}`,
         description: inv.description || "",
-        amountCents: inv.amount_cents || 0,
+        ...invoiceReceiptFields(inv),
         amountFormatted: formatCentsToBRL(inv.amount_cents || 0),
         currency: inv.currency || "BRL",
         status: computedStatus,
         dueDate: inv.due_date,
-        paidAt: inv.paid_at,
-        receivedAt: inv.payments?.[0]?.received_at ?? null,
         billingPeriod,
         billingMode,
         snapshotPackageName,
