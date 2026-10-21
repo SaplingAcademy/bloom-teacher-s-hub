@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Align Today current/previous monthly revenue and trend with Finance's canonical paid-invoice calculation; reuse shared read-only data without synchronization side effects; preserve Finance behavior and all records; run only focused revenue checks.
+
 - [x] Fix confirmed Today priority integration bugs only: existing teacher-task fields, independently loaded proposal/stale Leads without guessed trial associations, nested PT/EN reasons and six persistent chips with truthful zero/error states. Six focused tests and six isolated browser checks passed; build OK; attendance, database and other workflows unchanged.
 - [ ] Verify corrected priorities against saved teacher data; blocked by unavailable authenticated session.
 
