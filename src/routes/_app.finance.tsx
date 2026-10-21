@@ -46,7 +46,7 @@ import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawe
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
 import { PeriodPicker } from "@/components/bloom/PeriodPicker";
-import { filterReceivables, receivedMonthOf, sortReceivables, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
+import { calculateReceivedCentsForMonth, filterReceivables, sortReceivables, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
@@ -693,9 +693,7 @@ function FinancePage() {
     if (Number.isNaN(d.getTime())) return paidAt.slice(0, 7);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   };
-  const totalReceivedCents = invoices
-    .filter((inv) => receivedMonthOf(inv) === currentMonthKey)
-    .reduce((sum, inv) => sum + inv.amountCents, 0);
+  const totalReceivedCents = calculateReceivedCentsForMonth(invoices, currentMonthKey);
 
   const totalExpectedCents = invoices
     .filter((inv) => (inv.dueDate || "").slice(0, 7) === currentMonthKey)
