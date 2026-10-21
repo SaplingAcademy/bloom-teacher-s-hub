@@ -151,8 +151,8 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
   const newLeadsTrend = countTrend(newLeads, prevLeads);
 
   const hasRevenueSource = !receiptsRes.error;
-  const monthRevenueCents = calculateReceivedCentsForMonth(receiptsRes.data, monthKeyOf(start) ?? "");
-  const prevRevenueCents = calculateReceivedCentsForMonth(receiptsRes.data, monthKeyOf(prevStart) ?? "");
+  const monthRevenueCents = calculateReceivedCentsForMonth(receiptsRes.data, monthKeyOf(formatDateString(start)) ?? "");
+  const prevRevenueCents = calculateReceivedCentsForMonth(receiptsRes.data, monthKeyOf(formatDateString(prevStart)) ?? "");
   const monthRevenueTrend = pctTrend(monthRevenueCents, prevRevenueCents);
 
   return {
