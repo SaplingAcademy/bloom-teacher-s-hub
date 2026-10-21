@@ -15,9 +15,10 @@
 - Normalize package billing through `src/lib/billing-domain.ts`; new records use `lesson_duration_minutes` and `contract_duration_months`, while old fields are read-only legacy fallbacks.
 - Never infer commercial choices for new packages or agreements; lesson minutes, fixed contract months, and installment count must come from the teacher.
 - PeriodPicker reuses month/year/current ledger filters; financial calculations stay independent.
+- Finance/Today share `calculateReceivedCentsForMonth` and `invoiceReceiptFields`; Today uses read-only `fetchTeacherReceivedInvoices` in its dashboard cache, never the Finance sync query, to avoid generating charges.
 
 ## Attendance priorities
-- Custom Calendar mutations use owner/type-scoped writes in custom-calendar-events.ts, never lesson rescheduling or lesson-plan APIs; this isolates personal bookings from academic history. Their successful mutations invalidate teacher-scoped Growth data; capacity continues to read the same calendar_events intervals.
+- Custom events use owner/type-scoped `custom-calendar-events.ts` writes, never lesson APIs; success invalidates teacher-scoped Growth; capacity reads the same calendar_events intervals, preserving academic history.
 - Calendar header/grid reuse one selector and both forms: grid captures date/time, header clears context; exclude event descendants to preserve details and drag-click guards.
 - Today count/agenda share a teacher/date-scoped calendar_events read, ordered by start_time; always refetch on remount and keep invalidation callbacks stable to avoid loops.
 - Lesson slot prefills are derived in scheduling-context.ts using the existing form duration; this keeps date/time context separate from persistence and recurring scheduling rules.
@@ -36,7 +37,7 @@
 - UI text goes through `t()`; inline pt/en ternaries are forbidden and onboarding/package/class strings live in `src/lib/i18n-ui.ts` — adding a language means adding one dictionary, not editing components. Language precedence: `profiles.locale` > manual device choice > browser locale (`detectLanguage`).
 
 ## Manual lesson scheduling
-- Manual multi-student scheduling inserts individual occurrences in one batch, then upserts one plan per returned event ID; no classes or recurring schedules are created, preserving per-student academic identity.
+- Manual multi-student scheduling batch-inserts individual occurrences, then upserts plans per event ID; no classes/recurring schedules, preserving academic identity.
 - Retain saved occurrence IDs if plan persistence fails and retry only those plans, never reinsert events; failed writes must not become local calendar success.
 - One-time lesson tags use the canonical calendar occurrence's `lesson_tags` text array, following Bloom's existing entity-tag representation; built-in values are stable and translated only for display, and custom labels remain teacher-entered.
 - Optional lesson-tag SQL stays in docs/migrations for manual application; untagged scheduling omits the column.
