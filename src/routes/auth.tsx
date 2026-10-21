@@ -22,6 +22,16 @@ const authSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({
+    meta: [
+      { title: "Sign in · Bloom" },
+      { name: "description", content: "Access your Bloom account to manage your language teaching business." },
+      { property: "og:title", content: "Sign in · Bloom" },
+      { property: "og:description", content: "Access your Bloom account to manage your language teaching business." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   validateSearch: (search) => authSearchSchema.parse(search),
   component: AuthPage,
 });

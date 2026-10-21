@@ -63,6 +63,16 @@ import {
 } from "@/lib/i18n";
 
 export const Route = createFileRoute("/onboarding")({
+  head: () => ({
+    meta: [
+      { title: "Workspace setup · Bloom" },
+      { name: "description", content: "Set up your Bloom teaching workspace, availability and packages." },
+      { property: "og:title", content: "Workspace setup · Bloom" },
+      { property: "og:description", content: "Set up your Bloom teaching workspace, availability and packages." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: OnboardingPage,
 });
 

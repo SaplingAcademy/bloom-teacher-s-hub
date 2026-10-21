@@ -50,6 +50,10 @@ export const Route = createFileRoute("/_app/resources")({
     meta: [
       { title: "Resources · Bloom" },
       { name: "description", content: "Bloom's administrative and pedagogical business toolkit." },
+      { property: "og:title", content: "Resources · Bloom" },
+      { property: "og:description", content: "Bloom's administrative and pedagogical business toolkit." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ResourcesPage,

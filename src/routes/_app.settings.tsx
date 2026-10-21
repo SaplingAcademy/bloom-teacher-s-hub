@@ -45,6 +45,10 @@ export const Route = createFileRoute("/_app/settings")({
     meta: [
       { title: "Settings · Bloom" },
       { name: "description", content: "Manage your Bloom workspace and internal automation preferences." },
+      { property: "og:title", content: "Settings · Bloom" },
+      { property: "og:description", content: "Manage your Bloom workspace and internal automation preferences." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SettingsPage,

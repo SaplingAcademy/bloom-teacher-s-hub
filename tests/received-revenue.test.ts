@@ -30,7 +30,7 @@ const { store, client } = vi.hoisted(() => {
 vi.mock("@/lib/supabase", () => ({ supabase: client }));
 
 import { calculateReceivedCentsForMonth, invoiceReceiptFields, receivedMonthOf, type ReceivedRevenueInvoice } from "@/lib/finance-cashflow";
-import { fetchTeacherReceivedInvoices } from "@/lib/finance-engine";
+import { fetchTeacherReceivedInvoices, syncTeacherReceivablesDetailed } from "@/lib/finance-engine";
 import { fetchDashboardMetrics } from "@/lib/dashboard-metrics";
 
 const invoice = (id: string, extras: Record<string, unknown> = {}) => ({
@@ -91,6 +91,24 @@ describe("canonical monthly received revenue", () => {
 });
 
 describe("Today's read-only canonical invoice source and trend", () => {
+  it("maps the same existing paid invoices as Finance without changing its validated total", async () => {
+    store.rows = [
+      invoice("current", { amount_cents: 543820, due_date: "2026-08-01", payments: [
+        { received_at: "2026-10-10", amount_cents: 543820 },
+        { received_at: "2026-09-10", amount_cents: 233940 },
+      ] }),
+      invoice("previous", { amount_cents: 250000, due_date: "2026-09-01", paid_at: "2026-09-10", payments: [] }),
+    ];
+    const finance = await syncTeacherReceivablesDetailed("teacher");
+    const today = await fetchTeacherReceivedInvoices("teacher");
+    for (const month of ["2026-09", "2026-10"]) {
+      const originalFinanceTotal = finance.invoices.filter(row => receivedMonthOf(row) === month).reduce((sum, row) => sum + row.amountCents, 0);
+      expect(calculateReceivedCentsForMonth(finance.invoices, month)).toBe(originalFinanceTotal);
+      expect(calculateReceivedCentsForMonth(today, month)).toBe(originalFinanceTotal);
+    }
+    expect(calculateReceivedCentsForMonth(finance.invoices, "2026-10")).toBe(543820);
+    expect(calculateReceivedCentsForMonth(today, "2026-09")).toBe(250000);
+  });
   it("reads only teacher-owned paid invoices, without Finance synchronization or standalone payments reads", async () => {
     store.rows = [invoice("ours"), invoice("other", { teacher_id: "other-teacher" }), invoice("pending", { status: "pending" }), invoice("cancelled", { status: "cancelled" })];
     const rows = await fetchTeacherReceivedInvoices("teacher");

@@ -8,6 +8,10 @@ export const Route = createFileRoute("/_app/messages")({
     meta: [
       { title: "Messages · Bloom" },
       { name: "description", content: "Async student communication and announcements." },
+      { property: "og:title", content: "Messages · Bloom" },
+      { property: "og:description", content: "Async student communication and announcements." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MessagesPage,
