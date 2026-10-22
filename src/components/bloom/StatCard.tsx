@@ -36,7 +36,7 @@ export function StatCard({
   const shell = cn(
     "flex flex-col gap-3 rounded-2xl border p-5 shadow-[var(--shadow-sm)] text-left w-full",
     forest ? "border-sidebar-border bg-sidebar text-sidebar-accent-foreground" : "border-border bg-card",
-    onClick && "cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+    onClick && "group cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
   );
   const content = (
     <>
@@ -61,9 +61,9 @@ export function StatCard({
         )}
       </div>
       <div>
-        <p className={cn("font-display text-2xl font-bold", forest ? "text-sidebar-accent-foreground" : "text-card-foreground")}>{value}</p>
-        <p className={cn("text-sm", forest ? "text-sidebar-foreground" : "text-muted-foreground")}>{label}</p>
-        {hint && <p className={cn("mt-1 text-xs", forest ? "text-sidebar-foreground" : "text-muted-foreground/80")}>{hint}</p>}
+        <p className={cn("font-display text-2xl font-bold", forest ? cn("text-sidebar-accent-foreground", onClick && "group-hover:text-foreground") : "text-card-foreground")}>{value}</p>
+        <p className={cn("text-sm", forest ? cn("text-sidebar-foreground", onClick && "group-hover:text-muted-foreground") : "text-muted-foreground")}>{label}</p>
+        {hint && <p className={cn("mt-1 text-xs", forest ? cn("text-sidebar-foreground/80", onClick && "group-hover:text-muted-foreground") : "text-muted-foreground/80")}>{hint}</p>}
       </div>
     </>
   );
