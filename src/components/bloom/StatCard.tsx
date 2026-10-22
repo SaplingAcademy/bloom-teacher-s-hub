@@ -65,6 +65,15 @@ export function StatCard({
         <p className={cn("text-sm", forest ? "text-sidebar-foreground" : "text-muted-foreground")}>{label}</p>
         {hint && <p className={cn("mt-1 text-xs", forest ? "text-sidebar-foreground" : "text-muted-foreground/80")}>{hint}</p>}
       </div>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={shell}>
+        {content}
+      </button>
+    );
+  }
+  return <div className={shell}>{content}</div>;
 }
