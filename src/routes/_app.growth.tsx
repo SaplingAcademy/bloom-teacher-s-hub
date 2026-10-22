@@ -1613,6 +1613,9 @@ function GrowthPage() {
                   <Progress
                     value={ringProgress}
                     aria-label={tr("growthRevenue.monthlyGoal")}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={ringProgress}
                     aria-valuetext={tr("growthRevenue.progress").replace("{percent}", String(metrics.progressPct))}
                     className="bg-sidebar-accent-foreground/15 [&>div]:bg-sidebar-accent-foreground"
                   />
