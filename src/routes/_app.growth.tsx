@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatCard } from "@/components/bloom/StatCard";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface SafeNumberInputProps {
   id?: string;
@@ -184,17 +185,11 @@ const translations = {
     sat: "Saturday",
     full: "Full",
     available: "available",
-    potentialTitle: "Revenue Potential",
-    potentialSubtitle: "If all available slots were filled at your current average rate.",
-    currentRev: "Current Revenue",
-    maxRev: "Maximum Potential",
-    potentialGrowth: "Potential Growth",
     month: "month",
     opportunitiesTitle: "Growth Opportunities",
     opportunitiesSubtitle: "AI-generated recommendations to expand your teaching business.",
     funnelTitle: "Sales Funnel & Conversions",
     funnelEmpty: "Funnel numbers will appear here once they are calculated from your real pipeline.",
-    potentialUnavailable: "Maximum potential is not calculated yet.",
     opportunitiesEmpty: "Opportunities will be generated from your business data.",
     funnelSubtitle: "Track prospects from inquiries to active students.",
     metricsTitle: "Growth Performance Metrics",
@@ -231,17 +226,11 @@ const translations = {
     sat: "Sábado",
     full: "Esgotado",
     available: "disponíveis",
-    potentialTitle: "Potencial de Receita",
-    potentialSubtitle: "Se todos os horários fossem preenchidos com o seu ticket médio atual.",
-    currentRev: "Receita Atual",
-    maxRev: "Potencial Máximo",
-    potentialGrowth: "Crescimento Potencial",
     month: "mês",
     opportunitiesTitle: "Oportunidades de Crescimento",
     opportunitiesSubtitle: "Recomendações automáticas baseadas em inteligência para expandir.",
     funnelTitle: "Funil de Vendas & Conversões",
     funnelEmpty: "Os números do funil aparecerão aqui quando forem calculados a partir do seu pipeline real.",
-    potentialUnavailable: "O potencial máximo ainda não é calculado.",
     opportunitiesEmpty: "As oportunidades serão geradas a partir dos dados do seu negócio.",
     funnelSubtitle: "Acompanhe interessados desde o contato até a matrícula ativa.",
     metricsTitle: "Métricas de Crescimento",
@@ -560,6 +549,8 @@ function GrowthPage() {
   const circumference = 2 * Math.PI * radius;
   const ringProgress = Math.min(100, metrics.progressPct);
   const strokeDashoffset = circumference - (ringProgress / 100) * circumference;
+  const revenueCardReady = Boolean(growthQuery.data) && !loadingGrowth;
+  const hasRevenueGoal = monthlyGoal !== null && Number.isFinite(monthlyGoal) && monthlyGoal > 0;
 
   return (
     <div className="space-y-6">
@@ -1583,35 +1574,70 @@ function GrowthPage() {
       {/* REVENUE POTENTIAL & AI INSIGHTS OPPORTUNITIES */}
       <div className="grid gap-5 lg:grid-cols-[1fr_1.5fr] items-stretch">
         {/* REVENUE POTENTIAL CARD */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] flex flex-col justify-between h-full">
+        <div className="rounded-2xl border border-border bg-sidebar text-sidebar-accent-foreground p-6 shadow-[var(--shadow-sm)] flex flex-col justify-between h-full">
           <div>
             <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
-              <h3 className="font-display text-lg font-bold text-foreground">{t.potentialTitle}</h3>
+              <Zap className="h-5 w-5 text-sidebar-primary" />
+              <h3 className="font-display text-lg font-bold">{tr("growthRevenue.title")}</h3>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              {t.potentialSubtitle}
-            </p>
           </div>
 
           <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-xs font-semibold text-muted-foreground">{t.currentRev}</span>
-              <span className="font-display font-bold text-foreground">{formatBRL(mrrData.totalMRR)}</span>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
+              <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.projectedRevenue")}</span>
+              <span className="font-display font-bold">{revenueCardReady ? formatBRL(mrrData.totalMRR) : NO_DATA}</span>
             </div>
 
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-xs font-semibold text-muted-foreground">{t.maxRev}</span>
-              <span className="font-display font-extrabold text-foreground">—</span>
-            </div>
+            {revenueCardReady && hasRevenueGoal ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
+                  <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.monthlyGoal")}</span>
+                  <span className="font-display font-extrabold">{formatBRL(monthlyGoal ?? 0)}</span>
+                </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs font-bold text-primary">{t.potentialGrowth}</span>
-              <Badge className="bg-primary text-primary-foreground font-display font-extrabold text-sm py-0.5">
-                —
-              </Badge>
-            </div>
-            <p className="text-[11px] text-muted-foreground">{t.potentialUnavailable}</p>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1">
+                  {metrics.goalReached ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold">
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      {tr("growthRevenue.achieved")}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-xs font-bold">{tr("growthRevenue.remaining")}</span>
+                      <span className="font-display font-extrabold text-sm">{formatBRL(metrics.remaining)}</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <Progress
+                    value={ringProgress}
+                    aria-label={tr("growthRevenue.monthlyGoal")}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={ringProgress}
+                    aria-valuetext={tr("growthRevenue.progress").replace("{percent}", String(metrics.progressPct))}
+                    className="bg-sidebar-accent-foreground/15 [&>div]:bg-sidebar-accent-foreground"
+                  />
+                  <p className="text-[11px] text-sidebar-foreground leading-relaxed">
+                    {tr("growthRevenue.progress").replace("{percent}", String(metrics.progressPct))}
+                  </p>
+                </div>
+              </>
+            ) : revenueCardReady ? (
+              <div className="space-y-2">
+                <p className="text-xs text-sidebar-foreground leading-relaxed">{tr("growthRevenue.noGoal")}</p>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleOpenEditGoal}
+                  className="h-auto min-h-9 whitespace-normal px-0 text-sidebar-accent-foreground focus-visible:ring-sidebar-accent-foreground"
+                >
+                  <PlusCircle className="h-4 w-4 shrink-0" />
+                  {tr("auditUi.setGoal")}
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
 
