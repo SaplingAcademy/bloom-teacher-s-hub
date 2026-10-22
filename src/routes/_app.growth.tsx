@@ -865,7 +865,7 @@ function GrowthPage() {
               </span>
             </div>
 
-            <div className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="mt-2 text-xs font-bold text-accent">
               {realTeachWeeklyH > 0
                 ? `${fmtH(realFreeWeeklyH)}h ${t.capacityFreeHours}`
                 : t.capacityNoSchedule}
