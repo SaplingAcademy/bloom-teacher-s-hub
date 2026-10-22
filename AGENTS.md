@@ -15,6 +15,7 @@
 - Normalize package billing through `src/lib/billing-domain.ts`; new records use `lesson_duration_minutes` and `contract_duration_months`, while old fields are read-only legacy fallbacks.
 - Never infer commercial choices for new packages or agreements; lesson minutes, fixed contract months, and installment count must come from the teacher.
 - PeriodPicker reuses month/year/current ledger filters; financial calculations stay independent.
+- The Finance student combobox consumes useStudentsQuery and filters RealInvoice.studentId through filterReceivables; the existing teacher-scoped cache and invoice relation prevent duplicate student sources and name-based financial matching.
 - Finance/Today share `calculateReceivedCentsForMonth` and `invoiceReceiptFields`; Today uses read-only `fetchTeacherReceivedInvoices` in its dashboard cache, never the Finance sync query, to avoid generating charges.
 
 ## Attendance priorities
