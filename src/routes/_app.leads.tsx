@@ -432,17 +432,6 @@ function LeadsPage() {
         }
       />
 
-      {/* Attention Queue Widget */}
-      {teacherId && (
-        <AttentionQueueWidget
-          teacherId={teacherId}
-          onNavigateToLead={(leadId) => {
-            const l = leads.find((item) => item.id === leadId);
-            if (l) setSelectedLead(l);
-          }}
-        />
-      )}
-
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border">
         <div className="relative w-full sm:w-80">
