@@ -46,10 +46,12 @@ import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawe
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
 import { PeriodPicker } from "@/components/bloom/PeriodPicker";
+import { ReceivablesStudentCombobox } from "@/components/bloom/ReceivablesStudentCombobox";
 import { calculateReceivedCentsForMonth, filterReceivables, sortReceivables, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinanceInvoicesQuery, useTeacherExpensesQuery, useInvalidateFinanceData } from "@/hooks/use-finance-query";
 import { usePackagesQuery } from "@/hooks/use-packages-query";
+import { useStudentsQuery } from "@/hooks/use-students-query";
 import { getFriendlyErrorMessage, getPartialSuccessMessage } from "@/lib/error-handler";
 import { isInvoiceVisibleInLedger, normalizeBillingModel } from "@/lib/billing-domain";
 import { Badge } from "@/components/ui/badge";
@@ -397,11 +399,12 @@ function FinancePage() {
   const { lang, t: tr } = useLanguage();
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<"Ledger" | "Packages" | "Expenses">("Ledger");
-  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [ledgerStudentId, setLedgerStudentId] = useState<string | null>(null);
   const [ledgerStatus, setLedgerStatus] = useState<ReceivableStatusFilter>("all");
   const [ledgerMonth, setLedgerMonth] = useState<string>("current");
 
   // TanStack Query Cache
+  const { students, isLoading: isLoadingStudents, error: studentsError } = useStudentsQuery(user?.id, lang);
   const { packages: queryPackages, refetch: refetchPackages } = usePackagesQuery(user?.id);
   const { expenses, setExpensesCache, refetch: refetchExpenses } = useTeacherExpensesQuery(user?.id);
   const { invoices, syncIssues, isLoading: isLoadingInvoices, error: invoicesError, setInvoicesCache, refetch: refetchInvoices } = useFinanceInvoicesQuery(user?.id);
@@ -674,7 +677,7 @@ function FinancePage() {
   const ledgerInvoices = sortReceivables(
     filterReceivables(
       ledgerMonth === "current" ? invoices.filter((inv) => isInvoiceVisibleInLedger(inv)) : invoices,
-      { search: ledgerSearch, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
+      { search: "", studentId: ledgerStudentId, status: ledgerStatus, month: ledgerMonth === "current" || ledgerYear ? null : ledgerMonth, year: ledgerYear },
     ),
   );
   const formatDay = (value?: string | null) => {
@@ -831,12 +834,14 @@ function FinancePage() {
             )}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                value={ledgerSearch}
-                onChange={(e) => setLedgerSearch(e.target.value)}
-                placeholder={lang === "pt" ? "Buscar aluno" : "Search student"}
-                aria-label={lang === "pt" ? "Buscar aluno" : "Search student"}
-                className="h-9 rounded-xl text-xs sm:max-w-xs"
+              <ReceivablesStudentCombobox
+                key={user?.id}
+                students={students}
+                value={ledgerStudentId}
+                onChange={setLedgerStudentId}
+                isLoading={isLoadingStudents}
+                error={studentsError}
+                t={tr}
               />
               <Select value={ledgerStatus} onValueChange={(v) => setLedgerStatus(v as ReceivableStatusFilter)}>
                 <SelectTrigger className="h-9 rounded-xl text-xs sm:w-40"><SelectValue /></SelectTrigger>
