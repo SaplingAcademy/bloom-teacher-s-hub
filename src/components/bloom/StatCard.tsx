@@ -19,6 +19,7 @@ type StatCardProps = {
   trend?: { value: string; positive?: boolean };
   hint?: string;
   appearance?: "light" | "forest";
+  onClick?: () => void;
 };
 
 export function StatCard({
@@ -29,10 +30,16 @@ export function StatCard({
   trend,
   hint,
   appearance = "light",
+  onClick,
 }: StatCardProps) {
   const forest = appearance === "forest";
-  return (
-    <div className={cn("flex flex-col gap-3 rounded-2xl border p-5 shadow-[var(--shadow-sm)]", forest ? "border-sidebar-border bg-sidebar text-sidebar-accent-foreground" : "border-border bg-card")}>
+  const shell = cn(
+    "flex flex-col gap-3 rounded-2xl border p-5 shadow-[var(--shadow-sm)] text-left w-full",
+    forest ? "border-sidebar-border bg-sidebar text-sidebar-accent-foreground" : "border-border bg-card",
+    onClick && "cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+  );
+  const content = (
+    <>
       <div className="flex items-center justify-between">
         <span className={cn("grid h-10 w-10 place-items-center rounded-xl", forest ? "bg-sidebar-accent text-sidebar-accent-foreground" : toneMap[tone])}>
           <Icon className="h-5 w-5" />
@@ -58,6 +65,15 @@ export function StatCard({
         <p className={cn("text-sm", forest ? "text-sidebar-foreground" : "text-muted-foreground")}>{label}</p>
         {hint && <p className={cn("mt-1 text-xs", forest ? "text-sidebar-foreground" : "text-muted-foreground/80")}>{hint}</p>}
       </div>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={shell}>
+        {content}
+      </button>
+    );
+  }
+  return <div className={shell}>{content}</div>;
 }
