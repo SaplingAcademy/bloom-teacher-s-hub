@@ -287,9 +287,11 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
         </div>
       )}
 
+      {/* Two visual areas: white header + filters above, soft terracotta list area below */}
+      <div className="mt-4 rounded-2xl border border-accent/15 bg-accent-soft/50 p-4 sm:p-5">
       {/* Per-category failure notice (never shown as zero priorities) */}
       {failed.length > 0 && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3.5 py-2.5 text-amber-900">
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3.5 py-2.5 text-amber-900">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-px text-amber-600" />
           <p className="text-xs font-medium leading-relaxed">
             {t("today.categoryLoadError").replace(
@@ -302,7 +304,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
 
       {/* Loading */}
       {loading && (
-        <div className="mt-5 space-y-2.5">
+        <div className="space-y-2.5">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-12 rounded-xl bg-stone-100/80 animate-pulse" />
           ))}
@@ -311,7 +313,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
 
       {/* Empty state */}
       {isEmpty && (
-        <div className="mt-5 p-5 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-center gap-3.5 text-emerald-900 animate-in fade-in duration-300">
+        <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-center gap-3.5 text-emerald-900 animate-in fade-in duration-300">
           <div className="h-10 w-10 rounded-xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0 shadow-inner">
             <CheckCircle2 className="h-5 w-5 text-emerald-700" />
           </div>
@@ -328,7 +330,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
 
       {/* Priority list: grouped by urgency in "Todas", flat sorted list per category */}
       {!loading && visibleItems.length > 0 && filter === "all" && (
-        <div className="mt-4 space-y-4">
+        <div className="space-y-4">
           {URGENCY_SECTIONS.map((section) => {
             const sectionItems = grouped.get(section.key) || [];
             if (sectionItems.length === 0) return null;
@@ -344,13 +346,14 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
         </div>
       )}
       {!loading && visibleItems.length > 0 && filter !== "all" && (
-        <ul className="mt-4 divide-y divide-stone-100">{visibleItems.map(renderRow)}</ul>
+        <ul className="divide-y divide-stone-100">{visibleItems.map(renderRow)}</ul>
       )}
       {!loading && visibleItems.length === 0 && !isEmpty && filter !== "all" && (
-        <p className="mt-5 text-xs font-medium text-stone-500 text-center py-4">
+        <p className="text-xs font-medium text-stone-500 text-center py-2">
           {t("today.noCategoryItems")}
         </p>
       )}
+      </div>
     </div>
   );
 }
