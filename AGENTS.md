@@ -43,3 +43,4 @@
 - One-time lesson tags use the canonical calendar occurrence's `lesson_tags` text array, following Bloom's existing entity-tag representation; built-in values are stable and translated only for display, and custom labels remain teacher-entered.
 - Optional lesson-tag SQL stays in docs/migrations for manual application; untagged scheduling omits the column.
 - Contract data access goes through `src/lib/student-contracts.ts` (types in `src/types/contracts.ts`), using the session client under RLS with files in the private `contracts` bucket at `teacher_id/contract_id/filename` and signed URLs — keeps contracts separate from billing packages and prevents orphaned files.
+- Growth opportunities are computed only in the pure `src/lib/growth-opportunities.ts` from normalized Growth data (contracted revenue, capacity engine, recurring slots, canonical received history); each family fails closed and passes a materiality gate — keeps formulas testable and out of React.
