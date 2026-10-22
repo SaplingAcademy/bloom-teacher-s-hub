@@ -60,7 +60,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AttentionQueueWidget } from "@/components/bloom/AttentionQueueWidget";
 import {
   Lead,
   normalizeLeadStage,
