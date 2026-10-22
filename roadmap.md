@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Replace Finance ledger student search with an editable student combobox using the existing teacher-scoped student query and invoice student IDs; preserve status/period filters and run only focused checks.
+
 - [x] Align Today current/previous revenue and trend with Finance through calculateReceivedCentsForMonth and shared invoiceReceiptFields; teacher-scoped paid-invoice read runs inside the existing dashboard cache without synchronization writes. 29 focused tests passed, including Finance mapping equivalence; 15 revenue tests also passed in America/Sao_Paulo; preview build OK. Records and other metrics unchanged.
 - [ ] Verify matching Today/Finance amounts against saved teacher data; blocked by no available authenticated session (both / and /finance redirect to /auth; browser showed no runtime errors).
 
