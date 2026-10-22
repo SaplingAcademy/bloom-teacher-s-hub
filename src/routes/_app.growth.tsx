@@ -1,7 +1,7 @@
 import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,6 +21,8 @@ import {
   EffectiveHourlyResult,
 } from "@/lib/growth-engine";
 import { calculateRealCapacity, RealCapacityResult } from "@/lib/capacity-engine";
+import { fetchTeacherReceivedInvoices } from "@/lib/finance-engine";
+import { buildGrowthOpportunities, receivedHistoryCents, type GrowthOpportunity } from "@/lib/growth-opportunities";
 import {
   fetchGrowthMetrics,
   EMPTY_GROWTH_METRICS,
@@ -267,6 +269,8 @@ function GrowthPage() {
     activeStudentCount: 0,
     payingStudentCount: 0,
     hasBillingData: false,
+    studentRevenue: {},
+    classRevenue: {},
   });
   const [capacityData, setCapacityData] = useState<RealCapacityResult>({
     hasWorkingHours: false,
@@ -285,6 +289,8 @@ function GrowthPage() {
     billableHoursPerMonth: 0,
     weeklyTeachingMinutes: 0,
     hasEnoughData: false,
+    slots: [],
+    mrr: null,
   });
   const [realExpenses, setRealExpenses] = useState<number>(0);
   const [isManualExpenses, setIsManualExpenses] = useState<boolean>(true);
@@ -335,9 +341,29 @@ function GrowthPage() {
         fetchEffectiveHourlyRate(user.id),
         fetchGrowthMetrics(user.id),
       ]);
-      return { goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes };
+      // Canonical received revenue history; a failure only disables history-based insights.
+      const receivedHistory = await fetchTeacherReceivedInvoices(user.id)
+        .then((inv) => receivedHistoryCents(inv))
+        .catch(() => [] as number[]);
+      return { goalRes, mrrRes, capacityRes, expRes, hourlyRes, metricsRes, receivedHistory };
     },
   });
+
+  const opportunities = useMemo<GrowthOpportunity[]>(() => {
+    const d = growthQuery.data;
+    if (!d || !d.capacityRes.hasWorkingHours) return [];
+    return buildGrowthOpportunities({
+      goal: d.goalRes?.targetValue ?? null,
+      mrr: d.mrrRes.totalMRR,
+      hasBillingData: d.mrrRes.hasBillingData,
+      weeklyCapacityMinutes: d.capacityRes.availableWeeklyMinutes,
+      weeklyOccupiedMinutes: d.hourlyRes.weeklyTeachingMinutes,
+      slots: d.hourlyRes.slots,
+      studentRevenue: d.hourlyRes.mrr?.studentRevenue ?? d.mrrRes.studentRevenue,
+      classRevenue: d.hourlyRes.mrr?.classRevenue ?? d.mrrRes.classRevenue,
+      receivedHistoryCents: d.receivedHistory,
+    });
+  }, [growthQuery.data]);
 
   const loadGrowthData = useCallback(async () => {
     if (!user) return;
@@ -1599,9 +1625,17 @@ function GrowthPage() {
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t.opportunitiesSubtitle}</p>
 
-          <div className="mt-5 flex-1 grid place-items-center rounded-xl border border-dashed border-border/70 bg-secondary/30 p-6 text-center">
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">{t.opportunitiesEmpty}</p>
-          </div>
+          {opportunities.length > 0 ? (
+            <ul className="mt-5 flex-1 space-y-3">
+              {opportunities.map((op) => (
+                <OpportunityCard key={op.family} op={op} lang={lang} tr={tr} formatWeekday={formatWeekday} />
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-5 flex-1 grid place-items-center rounded-xl border border-dashed border-border/70 bg-secondary/30 p-6 text-center">
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">{t.opportunitiesEmpty}</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1739,5 +1773,43 @@ function GrowthPage() {
         />
       )}
     </div>
+  );
+}
+
+function fill(text: string, values: Record<string, string | number>): string {
+  return text.replace(/\{(\w+)\}/g, (m, k) => (k in values ? String(values[k]) : m));
+}
+
+function OpportunityCard({ op, lang, tr, formatWeekday }: {
+  op: GrowthOpportunity;
+  lang: string;
+  tr: (key: string) => string;
+  formatWeekday: (day: string | undefined | null, short?: boolean) => string;
+}) {
+  const k = (s: string) => tr(`growthOpportunities.${s}`);
+  const hours = (n: number) => n.toLocaleString(lang === "en" ? "en-US" : "pt-BR", { maximumFractionDigits: 1 });
+  let body = "";
+  let action = "";
+  if (op.family === "pricing") {
+    body = fill(k(`body_pricing_${op.tone}`), { occ: op.occupancyPct, goal: formatBRL(op.goal), perHour: formatBRL(op.increasePerHour), pct: op.increasePct });
+    action = k("action_pricing");
+  } else if (op.family === "capacity") {
+    body = fill(k(`body_capacity_${op.mode}`), { occ: op.occupancyPct, free: hours(op.freeWeeklyHours), hours: hours(op.hoursNeeded), potential: formatBRL(op.potentialRevenue), goal: formatBRL(op.goal) });
+    action = k("action_capacity");
+  } else if (op.family === "goal") {
+    body = fill(k(`body_goal_${op.trigger}`), { progress: op.progressPct, goal: formatBRL(op.goal), occ: op.occupancyPct });
+    action = fill(k("action_goal"), { suggested: formatBRL(op.suggestedGoal) });
+  } else {
+    const labels = op.slots.map((s) => fill(k("slot"), { day: formatWeekday(s.weekday), time: s.startTime }));
+    const list = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} ${k("and")} ${labels[labels.length - 1]}` : labels[0];
+    body = fill(k("body_efficiency"), { count: op.slots.length, pct: op.avgBelowPct, ref: formatBRL(op.referencePerHour), slots: list });
+    action = k(op.hasGroupSlot ? "action_efficiency_group" : "action_efficiency_individual");
+  }
+  return (
+    <li className="rounded-xl border border-border/70 bg-secondary/30 p-4">
+      <p className="font-display text-sm font-bold text-foreground">{k(`title_${op.family}`)}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{body}</p>
+      <p className="mt-2 text-xs font-medium text-foreground leading-relaxed">{action}</p>
+    </li>
   );
 }

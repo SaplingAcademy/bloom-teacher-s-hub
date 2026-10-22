@@ -13,6 +13,19 @@ export interface MRRResult {
   /** Active students represented in totalMRR (individual payers + active members of billed classes). */
   payingStudentCount: number;
   hasBillingData: boolean;
+  /** Recurring monthly revenue (BRL) attributed to each paying individual student. */
+  studentRevenue: Record<string, number>;
+  /** Recurring monthly revenue (BRL) attributed to each billed class (all members summed once). */
+  classRevenue: Record<string, number>;
+}
+
+/** One recurring weekly teaching block; group classes appear once regardless of member count. */
+export interface RecurringSlot {
+  ownerType: "student" | "class";
+  ownerId: string;
+  weekday: string;
+  startTime: string;
+  minutes: number;
 }
 
 export interface GrowthMetrics {
@@ -147,11 +160,15 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
     activeStudentCount: 0,
     payingStudentCount: 0,
     hasBillingData: false,
+    studentRevenue: {},
+    classRevenue: {},
   };
 
   if (!teacherId) return empty;
 
   try {
+    const studentRevenue: Record<string, number> = {};
+    const classRevenue: Record<string, number> = {};
     // 1. Fetch teacher's package catalog
     const { data: packagesData } = await supabase
       .from("packages")
@@ -233,6 +250,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
       }
 
       if (contribution > 0) {
+        studentRevenue[String(student.id)] = contribution;
         totalMRR += contribution;
         contributingStudentRevenues.push(contribution);
         payingStudentCount += 1;
@@ -260,6 +278,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
         }
 
         if (classContribution > 0) {
+          classRevenue[String(cls.id)] = classContribution;
           totalMRR += classContribution;
           payingStudentCount += activeMembers.length;
           hasBillingData = true;
@@ -279,6 +298,7 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
 
         if (perMemberContrib > 0) {
           const classTotal = perMemberContrib * activeMembers.length;
+          classRevenue[String(cls.id)] = classTotal;
           totalMRR += classTotal;
           hasBillingData = true;
           activeMembers.forEach(() => contributingStudentRevenues.push(perMemberContrib));
@@ -293,6 +313,8 @@ export async function fetchCurrentMRR(teacherId: string): Promise<MRRResult> {
       activeStudentCount: activeStudents.length,
       payingStudentCount,
       hasBillingData,
+      studentRevenue,
+      classRevenue,
     };
   } catch (err) {
     console.warn("[growth-engine] fetchCurrentMRR error:", err);
@@ -352,6 +374,10 @@ export interface EffectiveHourlyResult {
   /** Real recurring teaching minutes per week from active student/class schedules. */
   weeklyTeachingMinutes: number;
   hasEnoughData: boolean;
+  /** Recurring weekly teaching blocks with a known duration (classes counted once). */
+  slots: RecurringSlot[];
+  /** MRR breakdown used for the hourly rate, for per-slot revenue allocation. */
+  mrr: MRRResult | null;
 }
 
 /**
@@ -388,6 +414,8 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     billableHoursPerMonth: 0,
     weeklyTeachingMinutes: 0,
     hasEnoughData: false,
+    slots: [],
+    mrr: null,
   };
 
   if (!teacherId) return empty;
@@ -460,8 +488,13 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
     };
 
     let weeklyMinutes = 0;
-    studentSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch, studentPkgOf.get(String(sch.student_id))); });
-    classSchedules.forEach((sch) => { weeklyMinutes += minutesOf(sch, classPkg.get(String(sch.class_id))); });
+    const slots: RecurringSlot[] = [];
+    const pushSlot = (ownerType: RecurringSlot["ownerType"], ownerId: string, sch: any, minutes: number) => {
+      weeklyMinutes += minutes;
+      if (minutes > 0) slots.push({ ownerType, ownerId, weekday: String(sch.weekday || ""), startTime: String(sch.start_time || "").slice(0, 5), minutes });
+    };
+    studentSchedules.forEach((sch) => pushSlot("student", String(sch.student_id), sch, minutesOf(sch, studentPkgOf.get(String(sch.student_id)))));
+    classSchedules.forEach((sch) => pushSlot("class", String(sch.class_id), sch, minutesOf(sch, classPkg.get(String(sch.class_id)))));
 
     const billableHoursPerMonth = weeklyMinutes > 0
       ? Math.round(((weeklyMinutes / 60) * WEEKS_PER_MONTH) * 10) / 10
@@ -473,6 +506,8 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
         activeStudentCount: mrrRes.activeStudentCount,
         billableHoursPerMonth,
         weeklyTeachingMinutes: weeklyMinutes,
+        slots,
+        mrr: mrrRes,
       };
     }
 
@@ -485,6 +520,8 @@ export async function fetchEffectiveHourlyRate(teacherId: string): Promise<Effec
       billableHoursPerMonth,
       weeklyTeachingMinutes: weeklyMinutes,
       hasEnoughData: true,
+      slots,
+      mrr: mrrRes,
     };
   } catch (err) {
     console.warn("[growth-engine] fetchEffectiveHourlyRate error:", err);
