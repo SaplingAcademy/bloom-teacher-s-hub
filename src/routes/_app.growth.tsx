@@ -21,6 +21,7 @@ import {
   EffectiveHourlyResult,
 } from "@/lib/growth-engine";
 import { calculateRealCapacity, RealCapacityResult } from "@/lib/capacity-engine";
+import { calculateRevenuePotential, weeklyFreeTeachingHours } from "@/lib/growth-revenue-potential";
 import { fetchTeacherReceivedInvoices } from "@/lib/finance-engine";
 import { buildGrowthOpportunities, receivedHistoryCents, type GrowthOpportunity } from "@/lib/growth-opportunities";
 import {
@@ -68,7 +69,6 @@ import {
 } from "@/components/ui/dialog";
 import { StatCard } from "@/components/bloom/StatCard";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 
 interface SafeNumberInputProps {
   id?: string;
@@ -549,8 +549,18 @@ function GrowthPage() {
   const circumference = 2 * Math.PI * radius;
   const ringProgress = Math.min(100, metrics.progressPct);
   const strokeDashoffset = circumference - (ringProgress / 100) * circumference;
-  const revenueCardReady = Boolean(growthQuery.data) && !loadingGrowth;
-  const hasRevenueGoal = monthlyGoal !== null && Number.isFinite(monthlyGoal) && monthlyGoal > 0;
+  const revenueCardData = !growthQuery.isLoading && !growthQuery.isError ? growthQuery.data : undefined;
+  const revenuePotential = revenueCardData ? calculateRevenuePotential({
+    mrr: revenueCardData.mrrRes,
+    hourly: revenueCardData.hourlyRes,
+    capacity: revenueCardData.capacityRes,
+  }) : null;
+  const revenueCardFreeHours = revenueCardData ? weeklyFreeTeachingHours(revenueCardData.capacityRes) : null;
+  const revenueCardMRR = revenueCardData?.mrrRes;
+  const hasRevenueCardMRR = revenueCardMRR?.hasBillingData && Number.isFinite(revenueCardMRR.totalMRR) && revenueCardMRR.totalMRR > 0;
+  const revenueCardMoney = (value: number) => new Intl.NumberFormat(lang === "pt" ? "pt-BR" : "en-US", {
+    style: "currency", currency: "BRL", minimumFractionDigits: 2,
+  }).format(value);
 
   return (
     <div className="space-y-6">
@@ -1585,59 +1595,38 @@ function GrowthPage() {
           <div className="mt-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
               <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.projectedRevenue")}</span>
-              <span className="font-display font-bold">{revenueCardReady ? formatBRL(mrrData.totalMRR) : NO_DATA}</span>
+              <span className="font-display font-bold">{hasRevenueCardMRR && revenueCardMRR ? revenueCardMoney(revenueCardMRR.totalMRR) : NO_DATA}</span>
             </div>
 
-            {revenueCardReady && hasRevenueGoal ? (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
-                  <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.monthlyGoal")}</span>
-                  <span className="font-display font-extrabold">{formatBRL(monthlyGoal ?? 0)}</span>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1">
-                  {metrics.goalReached ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      {tr("growthRevenue.achieved")}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-xs font-bold">{tr("growthRevenue.remaining")}</span>
-                      <span className="font-display font-extrabold text-sm">{formatBRL(metrics.remaining)}</span>
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  <Progress
-                    value={ringProgress}
-                    aria-label={tr("growthRevenue.monthlyGoal")}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={ringProgress}
-                    aria-valuetext={tr("growthRevenue.progress").replace("{percent}", String(metrics.progressPct))}
-                    className="bg-sidebar-accent-foreground/15 [&>div]:bg-sidebar-accent-foreground"
-                  />
-                  <p className="text-[11px] text-sidebar-foreground leading-relaxed">
-                    {tr("growthRevenue.progress").replace("{percent}", String(metrics.progressPct))}
-                  </p>
-                </div>
-              </>
-            ) : revenueCardReady ? (
-              <div className="space-y-2">
-                <p className="text-xs text-sidebar-foreground leading-relaxed">{tr("growthRevenue.noGoal")}</p>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={handleOpenEditGoal}
-                  className="h-auto min-h-9 whitespace-normal px-0 text-sidebar-accent-foreground focus-visible:ring-sidebar-accent-foreground"
-                >
-                  <PlusCircle className="h-4 w-4 shrink-0" />
-                  {tr("auditUi.setGoal")}
-                </Button>
+            <div className="border-b border-sidebar-accent-foreground/15 pb-2 space-y-1">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.freeHours")}</span>
+                <span className="font-display font-bold">{revenueCardFreeHours !== null ? tr("growthRevenue.weeklyHours").replace("{hours}", fmtH(revenueCardFreeHours)) : NO_DATA}</span>
               </div>
-            ) : null}
+              <p className="text-[11px] text-sidebar-foreground">{tr("growthRevenue.capacityPeriod")}</p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
+              <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.revenuePerHour")}</span>
+              <span className="font-display font-bold">{revenuePotential ? tr("growthRevenue.hourlyAmount").replace("{amount}", revenueCardMoney(revenuePotential.effectiveRevenuePerHour)) : NO_DATA}</span>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <p className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.estimatedPotential")}</p>
+              <p className="font-display text-2xl font-extrabold break-words">
+                {revenuePotential ? tr("growthRevenue.monthlyAmount").replace("{amount}", revenueCardMoney(revenuePotential.estimatedRevenuePotential)) : NO_DATA}
+              </p>
+              {revenuePotential && revenuePotential.weeklyFreeHours > 0 ? (
+                <p className="text-xs text-sidebar-foreground">{tr("growthRevenue.additionalPotential").replace("{amount}", revenueCardMoney(revenuePotential.additionalMonthlyPotential))}</p>
+              ) : null}
+              <p className="text-xs text-sidebar-foreground leading-relaxed">
+                {revenuePotential
+                  ? revenuePotential.weeklyFreeHours === 0
+                    ? tr("growthRevenue.fullyOccupied")
+                    : tr("growthRevenue.estimate").replace("{amount}", revenueCardMoney(revenuePotential.estimatedRevenuePotential))
+                  : tr("growthRevenue.insufficientData")}
+              </p>
+            </div>
           </div>
         </div>
 
