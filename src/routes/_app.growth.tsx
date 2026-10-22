@@ -6,7 +6,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { getCalendarEvents } from "@/lib/calendar-sync";
 import { getTeacherAvailability, WorkingAvailability } from "@/lib/teacher-availability";
 import {
   fetchMonthlyGoal,
@@ -192,6 +191,9 @@ const translations = {
     opportunitiesTitle: "Growth Opportunities",
     opportunitiesSubtitle: "AI-generated recommendations to expand your teaching business.",
     funnelTitle: "Sales Funnel & Conversions",
+    funnelEmpty: "Funnel numbers will appear here once they are calculated from your real pipeline.",
+    potentialUnavailable: "Maximum potential is not calculated yet.",
+    opportunitiesEmpty: "Opportunities will be generated from your business data.",
     funnelSubtitle: "Track prospects from inquiries to active students.",
     metricsTitle: "Growth Performance Metrics",
     metricNewStudents: "New Students This Month",
@@ -200,11 +202,6 @@ const translations = {
     metricAvgPackage: "Avg Revenue per Student",
     metricAvgRevenue: "Received per Student (month)",
     metricGrowthRate: "Monthly Growth Rate",
-    opportunity1: "Tuesday still has 3 available lesson slots.",
-    opportunity2: "Two student contracts are expiring this month.",
-    opportunity3: "Four new leads haven't received a reply yet.",
-    opportunity4: "Friday evenings currently have your highest availability.",
-    opportunity5: "Business English is currently your highest revenue course.",
   },
   pt: {
     langToggle: "EN",
@@ -241,6 +238,9 @@ const translations = {
     opportunitiesTitle: "Oportunidades de Crescimento",
     opportunitiesSubtitle: "Recomendações automáticas baseadas em inteligência para expandir.",
     funnelTitle: "Funil de Vendas & Conversões",
+    funnelEmpty: "Os números do funil aparecerão aqui quando forem calculados a partir do seu pipeline real.",
+    potentialUnavailable: "O potencial máximo ainda não é calculado.",
+    opportunitiesEmpty: "As oportunidades serão geradas a partir dos dados do seu negócio.",
     funnelSubtitle: "Acompanhe interessados desde o contato até a matrícula ativa.",
     metricsTitle: "Métricas de Crescimento",
     metricNewStudents: "Novos Alunos Este Mês",
@@ -249,11 +249,6 @@ const translations = {
     metricAvgPackage: "Receita Média por Aluno",
     metricAvgRevenue: "Recebido por Aluno (mês)",
     metricGrowthRate: "Taxa de Crescimento Mensal",
-    opportunity1: "Terça-feira ainda tem 3 horários livres para aulas.",
-    opportunity2: "Dois contratos de alunos expiram este mês.",
-    opportunity3: "Quatro novos leads ainda não receberam resposta.",
-    opportunity4: "Sexta à noite é o período com maior disponibilidade.",
-    opportunity5: "Business English é o seu curso com maior faturamento atualmente.",
   },
 };
 
@@ -304,18 +299,6 @@ function GrowthPage() {
   };
 
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
-  const [occupiedCount, setOccupiedCount] = useState(32);
-  const [totalCapacity, setTotalCapacity] = useState(40);
-  const [weekdayAvailabilities, setWeekdayAvailabilities] = useState<Record<string, number>>({
-    Monday: 0,
-    Tuesday: 2,
-    Wednesday: 1,
-    Thursday: 3,
-    Friday: 0,
-    Saturday: 2,
-    Sunday: 0,
-  });
-
   // Simulator Input States (Data-driven defaults)
   // Simulator-only state. Seeded from the official goal (business_goals); 0 = goal not defined yet.
   const [incomeGoal, setIncomeGoal] = useState(0);
@@ -446,75 +429,6 @@ function GrowthPage() {
     if (cancelled) return;
     setAvailability(availList);
 
-    // Calculate total capacity
-    let totalSlots = 0;
-    const daySlotCapacities: Record<string, number> = {};
-    availList.forEach((dayAvail) => {
-      if (dayAvail.enabled) {
-        const [startH, startM] = dayAvail.startTime.split(":").map(Number);
-        const [endH, endM] = dayAvail.endTime.split(":").map(Number);
-        const hours = endH - startH + (endM - startM) / 60;
-        const slots = Math.max(0, Math.floor(hours));
-        totalSlots += slots;
-        daySlotCapacities[dayAvail.day] = slots;
-      } else {
-        daySlotCapacities[dayAvail.day] = 0;
-      }
-    });
-    setTotalCapacity(totalSlots);
-
-    // Get current week's events
-    const allEvents = getCalendarEvents();
-
-    // Find current week's dates (Mon - Sun)
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, etc.
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)); // align to Monday
-
-    const weekDates: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const dayVal = String(d.getDate()).padStart(2, "0");
-      weekDates.push(`${y}-${m}-${dayVal}`);
-    }
-
-    const thisWeekEvents = allEvents.filter(
-      (evt) => weekDates.includes(evt.date) && evt.status !== "Closed",
-    );
-
-    const occupiedByDay: Record<string, number> = {
-      Monday: 0,
-      Tuesday: 0,
-      Wednesday: 0,
-      Thursday: 0,
-      Friday: 0,
-      Saturday: 0,
-      Sunday: 0,
-    };
-
-    thisWeekEvents.forEach((evt) => {
-      const dateObj = new Date(evt.date + "T00:00:00");
-      const dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-      if (dayName in occupiedByDay) {
-        occupiedByDay[dayName]++;
-      }
-    });
-
-    let occupiedSlotsTotal = 0;
-    const weekdayAvails: Record<string, number> = {};
-    availList.forEach((dayAvail) => {
-      const cap = daySlotCapacities[dayAvail.day] || 0;
-      const occupied = occupiedByDay[dayAvail.day] || 0;
-      occupiedSlotsTotal += occupied;
-      weekdayAvails[dayAvail.day] = Math.max(0, cap - occupied);
-    });
-
-    setOccupiedCount(occupiedSlotsTotal);
-    setWeekdayAvailabilities(weekdayAvails);
 
     // Load saved pricing goal if exists
     const savedGoal = localStorage.getItem("bloom.pricing.goal");
@@ -1662,15 +1576,16 @@ function GrowthPage() {
 
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
               <span className="text-xs font-semibold text-muted-foreground">{t.maxRev}</span>
-              <span className="font-display font-extrabold text-foreground">{formatBRL(Math.max(mrrData.totalMRR, 11250))}</span>
+              <span className="font-display font-extrabold text-foreground">—</span>
             </div>
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-xs font-bold text-primary">{t.potentialGrowth}</span>
               <Badge className="bg-primary text-primary-foreground font-display font-extrabold text-sm py-0.5">
-                +{formatBRL(Math.max(0, 11250 - mrrData.totalMRR))}/{t.month}
+                —
               </Badge>
             </div>
+            <p className="text-[11px] text-muted-foreground">{t.potentialUnavailable}</p>
           </div>
         </div>
 
@@ -1684,21 +1599,9 @@ function GrowthPage() {
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t.opportunitiesSubtitle}</p>
 
-          <ul className="mt-5 space-y-3">
-            {[t.opportunity1, t.opportunity2, t.opportunity3, t.opportunity4, t.opportunity5].map(
-              (opp, idx) => (
-                <li
-                  key={idx}
-                  className="flex items-start gap-3 rounded-xl bg-secondary/40 p-3 border border-border/60 hover:bg-secondary/70 transition-colors"
-                >
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary font-bold text-xs">
-                    {idx + 1}
-                  </span>
-                  <span className="text-xs font-medium text-foreground leading-relaxed">{opp}</span>
-                </li>
-              ),
-            )}
-          </ul>
+          <div className="mt-5 flex-1 grid place-items-center rounded-xl border border-dashed border-border/70 bg-secondary/30 p-6 text-center">
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">{t.opportunitiesEmpty}</p>
+          </div>
         </div>
       </div>
 
@@ -1706,74 +1609,70 @@ function GrowthPage() {
       <section className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
         <h3 className="font-display text-lg font-bold text-foreground">{t.funnelTitle}</h3>
         <p className="text-xs text-muted-foreground mt-1">{t.funnelSubtitle}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t.funnelEmpty}</p>
 
         {/* Funnel Layout */}
         <div className="mt-6 flex flex-col items-center justify-center gap-4 max-w-xl mx-auto">
           {/* Stage 1 */}
           <div className="w-full flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl p-3.5 relative">
             <div className="flex items-center gap-2">
-              <Badge className="bg-primary hover:bg-primary">5</Badge>
+              <Badge className="bg-primary hover:bg-primary">—</Badge>
               <span className="text-sm font-bold text-foreground">
                 {tr("auditUi.leads")}
               </span>
             </div>
-            <span className="text-xs text-muted-foreground font-semibold">100%</span>
+            <span className="text-xs text-muted-foreground font-semibold"></span>
           </div>
 
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
-            <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              80% {tr("auditUi.conv")}
+            <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]"> {tr("auditUi.conv")}: —
             </span>
           </div>
 
           {/* Stage 2 */}
           <div className="w-5/6 flex items-center justify-between bg-primary/15 border border-primary/25 rounded-xl p-3.5">
             <div className="flex items-center gap-2">
-              <Badge className="bg-primary hover:bg-primary">4</Badge>
+              <Badge className="bg-primary hover:bg-primary">—</Badge>
               <span className="text-sm font-bold text-foreground">
                 {tr("auditUi.contacted")}
               </span>
             </div>
-            <span className="text-xs text-muted-foreground font-semibold">80%</span>
+            <span className="text-xs text-muted-foreground font-semibold"></span>
           </div>
 
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
-            <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              50% {tr("auditUi.conv")}
+            <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]"> {tr("auditUi.conv")}: —
             </span>
           </div>
 
           {/* Stage 3 */}
           <div className="w-4/6 flex items-center justify-between bg-primary/20 border border-primary/30 rounded-xl p-3.5">
             <div className="flex items-center gap-2">
-              <Badge className="bg-primary hover:bg-primary">2</Badge>
+              <Badge className="bg-primary hover:bg-primary">—</Badge>
               <span className="text-sm font-bold text-foreground">
                 {tr("auditUi.trial")}
               </span>
             </div>
-            <span className="text-xs text-muted-foreground font-semibold">40%</span>
+            <span className="text-xs text-muted-foreground font-semibold"></span>
           </div>
 
           <div className="flex flex-col items-center gap-1 -my-2 text-primary font-bold text-xs">
             <span>↓</span>
-            <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]">
-              100% {tr("auditUi.conv")}
+            <span className="bg-secondary/85 px-2 py-0.5 rounded border border-border/50 text-[10px]"> {tr("auditUi.conv")}: —
             </span>
           </div>
 
           {/* Stage 4 */}
           <div className="w-3/6 flex items-center justify-between bg-gradient-primary rounded-xl p-3.5 text-primary-foreground shadow-sm">
             <div className="flex items-center gap-2">
-              <Badge className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold">
-                28
-              </Badge>
+              <Badge className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold">—</Badge>
               <span className="text-sm font-bold">
                 {tr("auditUi.activeStudents")}
               </span>
             </div>
-            <span className="text-xs font-bold">40%</span>
+            <span className="text-xs font-bold"></span>
           </div>
         </div>
       </section>

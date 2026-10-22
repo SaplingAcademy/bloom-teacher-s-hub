@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { calculateReceivedCentsForMonth, invoiceReceiptFields, receivedMonthOf } from "@/lib/finance-cashflow";
 
 /**
  * Real growth metrics for the authenticated teacher.
@@ -55,7 +56,7 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
   const now = new Date();
   const { start, nextStart, prevStart } = monthBounds(now);
 
-  const [studentsRes, packagesRes, paymentsRes] = await Promise.all([
+  const [studentsRes, packagesRes, invoicesRes] = await Promise.all([
     supabase
       .from("students")
       .select("id, status, created_at")
@@ -64,20 +65,26 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
       .from("student_packages")
       .select("*")
       .eq("teacher_id", teacherId),
+    // Canonical received revenue: paid invoices (same selection as Finance/Today).
     supabase
-      .from("payments")
-      .select("amount_cents, received_at, invoice:invoices(student_id)")
+      .from("invoices")
+      .select("id, status, student_id, amount_cents, paid_at, payments(id, amount_cents, received_at, method)")
       .eq("teacher_id", teacherId)
-      .gte("received_at", prevStart.toISOString()),
+      .eq("status", "paid"),
   ]);
 
   if (studentsRes.error) console.warn("[growth-metrics] students:", studentsRes.error.message);
   if (packagesRes.error) console.warn("[growth-metrics] student_packages:", packagesRes.error.message);
-  if (paymentsRes.error) console.warn("[growth-metrics] payments:", paymentsRes.error.message);
+  if (invoicesRes.error) console.warn("[growth-metrics] invoices:", invoicesRes.error.message);
 
   const students = studentsRes.data || [];
   const studentPackages = packagesRes.data || [];
-  const payments = paymentsRes.data || [];
+  const paidInvoices = (invoicesRes.data || []).map((inv: any) => ({
+    id: inv.id as string,
+    status: inv.status,
+    studentId: (inv.student_id as string | null) ?? null,
+    ...invoiceReceiptFields(inv),
+  }));
 
   // --- 1. New students this month (vs. previous month) ---
   const newThisMonth = students.filter((s: any) => within(s.created_at, start, nextStart)).length;
@@ -129,25 +136,21 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
   };
 
   // --- 5 & 6. Revenue based metrics ---
-  const revenueOf = (from: Date, to: Date) =>
-    payments
-      .filter((p: any) => within(p.received_at, from, to))
-      .reduce((sum: number, p: any) => sum + (Number(p.amount_cents) || 0), 0) / 100;
-
-  const payingStudentsOf = (from: Date, to: Date) => {
+  const prevKey = `${prevStart.getFullYear()}-${String(prevStart.getMonth() + 1).padStart(2, "0")}`;
+  const curKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
+  const revenueOf = (key: string) => calculateReceivedCentsForMonth(paidInvoices, key) / 100;
+  const payingStudentsOf = (key: string) => {
     const ids = new Set<string>();
-    payments.forEach((p: any) => {
-      if (!within(p.received_at, from, to)) return;
-      const invoice = Array.isArray(p.invoice) ? p.invoice[0] : p.invoice;
-      if (invoice?.student_id) ids.add(invoice.student_id);
+    paidInvoices.forEach((inv) => {
+      if (inv.studentId && receivedMonthOf(inv) === key) ids.add(inv.studentId);
     });
     return ids.size;
   };
 
-  const revenueCurrent = revenueOf(start, nextStart);
-  const revenuePrev = revenueOf(prevStart, start);
-  const payingCurrent = payingStudentsOf(start, nextStart);
-  const payingPrev = payingStudentsOf(prevStart, start);
+  const revenueCurrent = revenueOf(curKey);
+  const revenuePrev = revenueOf(prevKey);
+  const payingCurrent = payingStudentsOf(curKey);
+  const payingPrev = payingStudentsOf(prevKey);
 
   const avgCurrent = payingCurrent > 0 ? revenueCurrent / payingCurrent : null;
   const avgPrev = payingPrev > 0 ? revenuePrev / payingPrev : null;
