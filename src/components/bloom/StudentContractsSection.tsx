@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, Eye, FileSignature, FileText, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
+import { Download, Eye, FileSignature, FileText, HelpCircle, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -249,6 +250,19 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
           <label className="sm:col-span-2 flex items-center gap-3 text-sm">
             <Switch checked={form.remindersEnabled} onCheckedChange={(v) => set("remindersEnabled", v)} />
             {t("contracts.reminders")}
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" aria-label={t("contracts.remindersHelpTitle")} className="inline-flex shrink-0">
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-72 text-left">
+                  <p className="font-semibold">{t("contracts.remindersHelpTitle")}</p>
+                  <p className="font-normal">{t("contracts.remindersHelp")}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </label>
         </div>
 
