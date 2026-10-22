@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Correct only Growth Revenue Potential card to estimate current MRR plus actual free-capacity potential at existing occupied-hour efficiency (4.33 weeks/month); retain forest styling, add PT/EN neutral/full-capacity states, remove only this card's goal summary, and run focused checks only.
+
 - [x] Update only Growth Revenue Potential card: forest styling, existing projected revenue and saved goal, remaining/achieved state, capped progress and existing no-goal flow; PT/EN. Four targeted metric tests and isolated desktop/mobile card checks passed; formulas, opportunities and database unchanged. No manual build or broad checks.
 - [ ] Verify updated Growth revenue card against saved teacher data; blocked by unavailable authenticated account access (Growth redirects to /auth). Card states were verified in isolation only.
 
