@@ -289,6 +289,8 @@ function GrowthPage() {
     billableHoursPerMonth: 0,
     weeklyTeachingMinutes: 0,
     hasEnoughData: false,
+    slots: [],
+    mrr: null,
   });
   const [realExpenses, setRealExpenses] = useState<number>(0);
   const [isManualExpenses, setIsManualExpenses] = useState<boolean>(true);
