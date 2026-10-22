@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Update only Growth Revenue Potential card: forest styling, existing projected revenue and saved goal, remaining/achieved state, capped progress and no-goal guidance; PT/EN and focused presentation checks only, no database or revenue formula changes.
+- [x] Update only Growth Revenue Potential card: forest styling, existing projected revenue and saved goal, remaining/achieved state, capped progress and existing no-goal flow; PT/EN. Four targeted metric tests and isolated desktop/mobile card checks passed; formulas, opportunities and database unchanged. No manual build or broad checks.
+- [ ] Verify updated Growth revenue card against saved teacher data; blocked by unavailable authenticated account access (Growth redirects to /auth). Card states were verified in isolation only.
 
 - [x] Replace Finance ledger student search with an editable student combobox using useStudentsQuery and invoice student IDs; includes inactive students, preserves status/period filters, and supports clearing and keyboard navigation. All 11 focused cashflow tests and isolated PT/EN desktop/mobile checks passed; preview build OK, no financial writes changed.
 - [ ] Verify the student combobox against saved teacher data in Finance; blocked by unavailable authenticated session (/finance redirects to /auth). Isolated checks use the real component and filter with synthetic rows, not production data.
