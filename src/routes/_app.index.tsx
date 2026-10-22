@@ -865,6 +865,7 @@ function TodayPage() {
               ? t.nextAt.replace("{time}", todayEvents[0].startTime)
               : undefined
           }
+          onClick={() => navigate({ to: "/calendar" })}
         />
         <StatCard
           label={t.activeStudents}
@@ -872,6 +873,7 @@ function TodayPage() {
           icon={Users}
           tone="lilac"
           trend={metrics.activeStudentsTrend ?? undefined}
+          onClick={() => navigate({ to: "/students" })}
         />
         <StatCard
           label={t.newLeads}
@@ -879,6 +881,7 @@ function TodayPage() {
           icon={UserPlus}
           tone="accent"
           trend={metrics.newLeadsTrend ?? undefined}
+          onClick={() => navigate({ to: "/leads" })}
         />
         <StatCard
           label={t.thisMonth}
@@ -891,6 +894,7 @@ function TodayPage() {
           tone="warning"
           appearance="forest"
           trend={metrics.monthRevenueTrend ?? undefined}
+          onClick={() => navigate({ to: "/finance" })}
         />
       </div>
 
