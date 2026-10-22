@@ -1,9 +1,9 @@
 # Roadmap
 
-- [ ] Correct only Growth Revenue Potential card to estimate current MRR plus actual free-capacity potential at existing occupied-hour efficiency (4.33 weeks/month); retain forest styling, add PT/EN neutral/full-capacity states, remove only this card's goal summary, and run focused checks only.
+- [x] Correct only Growth Revenue Potential card: current MRR plus actual bookable capacity at canonical occupied-hour efficiency, using 4.33 weeks/month. Retained forest styling, added PT/EN neutral/no-free-slot states and explicit next-seven-day capacity period, removed only the card's goal summary; 12 focused formula/guard/class/exception tests and isolated desktop/mobile card checks passed. No database, shared engines, goals or other module changes; no manual builds or broad checks.
 
 - [x] Update only Growth Revenue Potential card: forest styling, existing projected revenue and saved goal, remaining/achieved state, capped progress and existing no-goal flow; PT/EN. Four targeted metric tests and isolated desktop/mobile card checks passed; formulas, opportunities and database unchanged. No manual build or broad checks.
-- [ ] Verify updated Growth revenue card against saved teacher data; blocked by unavailable authenticated account access (Growth redirects to /auth). Card states were verified in isolation only.
+- [ ] Verify corrected Growth revenue potential against saved teacher data; blocked by unavailable authenticated account access (Growth redirects to /auth). Potential, full-capacity, missing-data and failed-read states were verified in isolation only.
 
 - [x] Replace Finance ledger student search with an editable student combobox using useStudentsQuery and invoice student IDs; includes inactive students, preserves status/period filters, and supports clearing and keyboard navigation. All 11 focused cashflow tests and isolated PT/EN desktop/mobile checks passed; preview build OK, no financial writes changed.
 - [ ] Verify the student combobox against saved teacher data in Finance; blocked by unavailable authenticated session (/finance redirects to /auth). Isolated checks use the real component and filter with synthetic rows, not production data.
