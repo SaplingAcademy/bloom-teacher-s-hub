@@ -31,7 +31,7 @@ describe("growth opportunities", () => {
 
   it("low occupancy + far from goal + enough capacity → capacity opportunity reaching goal", () => {
     // 20h/week occupied, 5000/month → ~57.7/h; gap 1500 → ~6h needed; 20h free
-    const r = buildGrowthOpportunities(base({ goal: 6500 / 0.65 * 0.65 + 0, mrr: 4000, weeklyOccupiedMinutes: 20 * 60 }));
+    const r = buildGrowthOpportunities(base({ goal: 6500, mrr: 4000, weeklyOccupiedMinutes: 20 * 60 }));
     const c = r.find((x) => x.family === "capacity") as any;
     expect(c.mode).toBe("reachGoal");
     expect(c.hoursNeeded).toBeLessThanOrEqual(c.freeWeeklyHours);
@@ -48,10 +48,13 @@ describe("growth opportunities", () => {
   });
 
   it("near goal + low occupancy → conservative goal, generic capacity suppressed", () => {
-    const r = buildGrowthOpportunities(base({ goal: 10000, mrr: 9000, weeklyOccupiedMinutes: 20 * 60 }));
+    const r = buildGrowthOpportunities(base({ goal: 9500, mrr: 9000, weeklyOccupiedMinutes: 20 * 60 }));
     const g = r.find((x) => x.family === "goal") as any;
     expect(g.trigger).toBe("capacity");
-    expect(g.suggestedGoal).toBe(10000 > 9900 ? 10000 : 9900); // 9900 rounded to 100 = 9900 → not above goal
+    expect(g.suggestedGoal).toBe(9900);
+    expect(fam(r)).not.toContain("capacity");
+    // suggestion not above the current goal → no weak recommendation
+    expect(fam(buildGrowthOpportunities(base({ goal: 10000, mrr: 9000, weeklyOccupiedMinutes: 20 * 60 })))).not.toContain("goal");
   });
 
   it("near goal + low occupancy with goal below 10% uplift → suggests ~10% above revenue", () => {
