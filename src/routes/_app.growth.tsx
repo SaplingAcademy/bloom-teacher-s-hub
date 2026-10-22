@@ -304,18 +304,6 @@ function GrowthPage() {
   };
 
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
-  const [occupiedCount, setOccupiedCount] = useState(32);
-  const [totalCapacity, setTotalCapacity] = useState(40);
-  const [weekdayAvailabilities, setWeekdayAvailabilities] = useState<Record<string, number>>({
-    Monday: 0,
-    Tuesday: 2,
-    Wednesday: 1,
-    Thursday: 3,
-    Friday: 0,
-    Saturday: 2,
-    Sunday: 0,
-  });
-
   // Simulator Input States (Data-driven defaults)
   // Simulator-only state. Seeded from the official goal (business_goals); 0 = goal not defined yet.
   const [incomeGoal, setIncomeGoal] = useState(0);
