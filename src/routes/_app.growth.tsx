@@ -1585,6 +1585,7 @@ function GrowthPage() {
                 —
               </Badge>
             </div>
+            <p className="text-[11px] text-muted-foreground">{t.potentialUnavailable}</p>
           </div>
         </div>
 
