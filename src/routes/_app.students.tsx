@@ -123,6 +123,7 @@ import {
 } from "@/lib/calendar-sync";
 import { StudentLessonPlanTable } from "@/components/bloom/StudentLessonPlanTable";
 import { StudentClassLessonsHistory } from "@/components/bloom/StudentClassLessonsHistory";
+import { StudentContractsSection } from "@/components/bloom/StudentContractsSection";
 import {
   StudentLesson,
   fetchStudentLessons,
@@ -2045,7 +2046,7 @@ function StudentsPage() {
 
           {/* HUB TABS */}
           <div className="flex gap-2 border-b border-border pb-1 overflow-x-auto">
-            {["Overview", "Lessons", "Finance", "Settings"].map((tab) => (
+            {["Overview", "Lessons", "Finance", "Contracts", "Settings"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setHubTab(tab)}
@@ -2058,6 +2059,7 @@ function StudentsPage() {
                 {tab === "Overview" && t.tabOverview}
                 {tab === "Lessons" && t.tabLessons}
                 {tab === "Finance" && t.tabFinance}
+                {tab === "Contracts" && tr("contracts.tab")}
                 {tab === "Settings" && t.tabSettings}
               </button>
             ))}
@@ -2400,6 +2402,8 @@ function StudentsPage() {
               </div>
             </div>
           )}
+
+          {hubTab === "Contracts" && <StudentContractsSection studentId={selectedStudent.id} />}
 
           {hubTab === "Settings" && (
             <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] max-w-2xl space-y-5">
