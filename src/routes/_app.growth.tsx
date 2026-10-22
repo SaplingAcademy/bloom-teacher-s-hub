@@ -269,6 +269,8 @@ function GrowthPage() {
     activeStudentCount: 0,
     payingStudentCount: 0,
     hasBillingData: false,
+    studentRevenue: {},
+    classRevenue: {},
   });
   const [capacityData, setCapacityData] = useState<RealCapacityResult>({
     hasWorkingHours: false,
