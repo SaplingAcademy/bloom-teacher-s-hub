@@ -87,12 +87,13 @@ export function sortReceivables<T extends Pick<RealInvoice, "targetName" | "dueD
 
 export type ReceivableStatusFilter = "all" | "pending" | "paid" | "overdue";
 
-export function filterReceivables<T extends Pick<RealInvoice, "targetName" | "status" | "dueDate">>(
+export function filterReceivables<T extends Pick<RealInvoice, "targetName" | "status" | "dueDate"> & { studentId?: string | null }>(
   invoices: T[],
-  { search, status, month, year }: { search: string; status: ReceivableStatusFilter; month: string | null; year?: string | null },
+  { search, studentId, status, month, year }: { search: string; studentId?: string | null; status: ReceivableStatusFilter; month: string | null; year?: string | null },
 ): T[] {
   const q = search.trim().toLocaleLowerCase();
   return invoices.filter((inv) =>
+    (!studentId || inv.studentId === studentId) &&
     (!q || inv.targetName.toLocaleLowerCase().includes(q)) &&
     (status === "all" || inv.status === status) &&
     (!month || (inv.dueDate || "").slice(0, 7) === month) &&

@@ -28,6 +28,45 @@ describe("monthly cash flow", () => {
     expect(filterReceivables(list, { search: "", status: "overdue", month: null })[0].targetName).toBe("Ana");
     expect(filterReceivables(list, { search: "", status: "all", month: "2026-10" })[0].targetName).toBe("Bruno");
   });
+  it("selects by student ID, not identical names or invoice display labels", () => {
+    const list = [
+      { studentId: "student-a", targetName: "Ana", status: "pending" as const, dueDate: "2026-10-10" },
+      { studentId: "student-b", targetName: "Ana", status: "pending" as const, dueDate: "2026-10-10" },
+      { studentId: "student-a", targetName: "Turma de conversação", status: "paid" as const, dueDate: "2026-10-20" },
+      { studentId: null, targetName: "Ana", status: "pending" as const, dueDate: "2026-10-10" },
+    ];
+    expect(filterReceivables(list, { search: "", studentId: "student-a", status: "all", month: null }))
+      .toEqual([list[0], list[2]]);
+  });
+  it("combines the selected student ID with status and month", () => {
+    const list = [
+      { studentId: "inactive-student", targetName: "Ana", status: "overdue" as const, dueDate: "2026-10-10" },
+      { studentId: "inactive-student", targetName: "Ana", status: "paid" as const, dueDate: "2026-10-20" },
+      { studentId: "inactive-student", targetName: "Ana", status: "overdue" as const, dueDate: "2026-09-10" },
+      { studentId: "other-student", targetName: "Ana", status: "overdue" as const, dueDate: "2026-10-10" },
+    ];
+    expect(filterReceivables(list, { search: "", studentId: "inactive-student", status: "overdue", month: "2026-10" }))
+      .toEqual([list[0]]);
+  });
+  it("combines the selected student ID with the full-year filter", () => {
+    const list = [
+      { studentId: "student-a", targetName: "Ana", status: "paid" as const, dueDate: "2026-01-10" },
+      { studentId: "student-a", targetName: "Ana", status: "paid" as const, dueDate: "2025-12-10" },
+      { studentId: "student-b", targetName: "Ana", status: "paid" as const, dueDate: "2026-01-10" },
+    ];
+    expect(filterReceivables(list, { search: "", studentId: "student-a", status: "all", month: null, year: "2026" }))
+      .toEqual([list[0]]);
+  });
+  it("clears student selection without clearing status or period", () => {
+    const list = [
+      { studentId: "student-a", targetName: "Ana", status: "pending" as const, dueDate: "2026-10-10" },
+      { studentId: "student-b", targetName: "Bruno", status: "pending" as const, dueDate: "2026-10-10" },
+      { studentId: "student-b", targetName: "Bruno", status: "paid" as const, dueDate: "2026-10-10" },
+      { studentId: "student-b", targetName: "Bruno", status: "pending" as const, dueDate: "2026-09-10" },
+    ];
+    expect(filterReceivables(list, { search: "", studentId: null, status: "pending", month: "2026-10" }))
+      .toEqual([list[0], list[1]]);
+  });
   it("full year includes January through December of 2026, but no other year or undated charge", () => {
     const list = [
       { targetName: "Previous", status: "pending" as const, dueDate: "2025-12-31" },
