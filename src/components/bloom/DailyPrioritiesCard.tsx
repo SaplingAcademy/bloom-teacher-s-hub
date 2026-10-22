@@ -204,8 +204,10 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
 
   return (
     <div className="rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all">
+      {/* Tinted header + filters area (identity section) */}
+      <div className="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 rounded-t-2xl bg-accent-soft/50 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-accent/15">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="font-outfit text-xl font-extrabold text-[#163020]">
@@ -286,9 +288,10 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           })}
         </div>
       )}
+      </div>
 
-      {/* Two visual areas: white header + filters above, soft terracotta list area below */}
-      <div className="mt-4 rounded-2xl border border-accent/15 bg-accent-soft/50 p-4 sm:p-5">
+      {/* White list area below the tinted header */}
+      <div className="mt-4 space-y-4">
       {/* Per-category failure notice (never shown as zero priorities) */}
       {failed.length > 0 && (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3.5 py-2.5 text-amber-900">
