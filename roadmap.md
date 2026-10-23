@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Translate only Calendar lesson details in PT/EN and expose existing event-scoped class attendance with active members, canonical statuses and cancelled-lesson safeguards; focused checks only, no database changes.
+
 - [x] Correct only Growth Revenue Potential card: current MRR plus actual bookable capacity at canonical occupied-hour efficiency, using 4.33 weeks/month. Retained forest styling, added PT/EN neutral/no-free-slot states and explicit next-seven-day capacity period, removed only the card's goal summary; 12 focused formula/guard/class/exception tests and isolated desktop/mobile card checks passed. No database, shared engines, goals or other module changes; no manual builds or broad checks.
 
 - [x] Update only Growth Revenue Potential card: forest styling, existing projected revenue and saved goal, remaining/achieved state, capped progress and existing no-goal flow; PT/EN. Four targeted metric tests and isolated desktop/mobile card checks passed; formulas, opportunities and database unchanged. No manual build or broad checks.
