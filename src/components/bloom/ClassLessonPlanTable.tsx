@@ -124,6 +124,20 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
     load();
   }, [load]);
 
+  // Reopening attendance reads Calendar changes on the same occurrence, even
+  // when this class table stayed mounted. Existing writes remain unchanged.
+  const attendanceEventId = attendancePlan?.event_id;
+  useEffect(() => {
+    if (!attendanceEventId || !teacherId) return;
+    let active = true;
+    void fetchAttendanceForEvents([attendanceEventId], teacherId).then((records) => {
+      if (active) setAttendance((current) => ({ ...current, [attendanceEventId]: records[attendanceEventId] || [] }));
+    }).catch(() => {
+      if (active) toast.error(isPt ? "Erro ao carregar presença." : "Failed to load attendance.");
+    });
+    return () => { active = false; };
+  }, [attendanceEventId, teacherId, isPt]);
+
   useEffect(() => {
     if (!requestedEventId || plans.length === 0) return;
     const targetPlan = plans.find((plan) => plan.event_id === requestedEventId);
