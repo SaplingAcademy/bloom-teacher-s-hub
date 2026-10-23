@@ -1281,8 +1281,10 @@ function StudentsPage() {
   const queryClient = useQueryClient();
   const teacherId = user?.id;
 
+  // Raw rows live under a child key so ["students", teacherId] always holds the normalized
+  // StudentQueryItem[] from useStudentsQuery; prefix invalidation of ["students", teacherId] still refreshes this.
   const studentsQuery = useQuery({
-    queryKey: ["students", teacherId],
+    queryKey: ["students", teacherId, "raw-rows"],
     enabled: Boolean(teacherId),
     queryFn: async () => {
       // Attempt 1: full relations. Fallbacks only run when the relation is missing.

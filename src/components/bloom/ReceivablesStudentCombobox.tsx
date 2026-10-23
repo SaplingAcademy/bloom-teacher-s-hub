@@ -13,7 +13,7 @@ type Props = {
   t: (key: string) => string;
 };
 
-const searchName = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+const searchName = (name: string | null | undefined) => (name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
 
 export function ReceivablesStudentCombobox({ students, value, onChange, isLoading, error, t }: Props) {
   const [open, setOpen] = useState(false);
