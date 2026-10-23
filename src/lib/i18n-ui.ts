@@ -95,6 +95,10 @@ export const uiTranslations = {
       "remove": "Remover opção",
       "saveError": "Não foi possível salvar suas opções. Tente novamente."
     },
+    "privacy": {
+      "hideValues": "Ocultar valores",
+      "showValues": "Mostrar valores"
+    },
     "globalUi": {
       "openNavigation": "Abrir navegação",
       "selectLanguage": "Selecionar idioma",
@@ -1211,6 +1215,10 @@ export const uiTranslations = {
       "add": "Add",
       "remove": "Remove option",
       "saveError": "Could not save your options. Please try again."
+    },
+    "privacy": {
+      "hideValues": "Hide values",
+      "showValues": "Show values"
     },
     "globalUi": {
       "openNavigation": "Open navigation",

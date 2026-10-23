@@ -61,6 +61,8 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
+import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
+import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { PanelCard } from "@/components/bloom/PanelCard";
 import {
   Dialog,
@@ -821,9 +823,12 @@ function TodayPage() {
         title={greetingTitle}
         description={t.subtitle}
         actions={
+          <>
+          <FinancialPrivacyToggle className="h-9 w-9" />
           <button className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-warm px-4 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-sm)] transition-transform hover:-translate-y-0.5 cursor-pointer">
             <CalendarClock className="h-4 w-4" /> {t.planDay}
           </button>
+          </>
         }
       />
 
@@ -888,7 +893,7 @@ function TodayPage() {
           value={
             metricsLoading || !metrics.hasRevenueSource
               ? "—"
-              : formatCentsToBRL(metrics.monthRevenueCents)
+              : money(formatCentsToBRL(metrics.monthRevenueCents))
           }
           icon={Wallet}
           tone="warning"
