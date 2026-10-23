@@ -30,6 +30,7 @@ import {
 import { LessonNotesModal } from "./LessonNotesModal";
 import { GenerateClassLessonPlanModal } from "./GenerateClassLessonPlanModal";
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
+import { useLanguage } from "@/hooks/use-language";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 import { lessonSequenceMap, rescheduledOriginal, formatOriginalDate, sortLessonsChronologically } from "@/lib/lesson-order";
 import { ClassWithDetails } from "@/lib/class-sync";
@@ -60,6 +61,7 @@ const STATUS_LABELS: Record<AttendanceStatus, { pt: string; en: string; cls: str
 };
 
 export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }: Props) {
+  const { t } = useLanguage();
   const [plans, setPlans] = useState<LessonPlan[]>([]);
   const homeworkStatus = useHomeworkStatus(teacherId, plans.map((plan) => plan.event_id), (statuses) => {
     setPlans((current) => current.map((plan) => plan.event_id in statuses
@@ -133,10 +135,10 @@ export function ClassLessonPlanTable({ cls, teacherId, isPt, requestedEventId }:
     void fetchAttendanceForEvents([attendanceEventId], teacherId).then((records) => {
       if (active) setAttendance((current) => ({ ...current, [attendanceEventId]: records[attendanceEventId] || [] }));
     }).catch(() => {
-      if (active) toast.error(isPt ? "Erro ao carregar presença." : "Failed to load attendance.");
+      if (active) toast.error(t("calendarUi.classAttendanceLoadError"));
     });
     return () => { active = false; };
-  }, [attendanceEventId, teacherId, isPt]);
+  }, [attendanceEventId, teacherId, t]);
 
   useEffect(() => {
     if (!requestedEventId || plans.length === 0) return;

@@ -1797,7 +1797,7 @@ function CalendarPage() {
                 teacherId={user?.id}
                 classId={selectedEvent.classId}
                 eventId={selectedEvent.id}
-                cancelled={selectedEvent.status === "Cancelled"}
+                cancelled={["Cancelled"].includes(selectedEvent.status)}
               />}
 
               {/* Lesson Plan linking */}
