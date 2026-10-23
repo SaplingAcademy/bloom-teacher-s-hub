@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Translate only Calendar lesson details in PT/EN and expose existing event-scoped class attendance with active members, canonical statuses and cancelled-lesson safeguards; focused checks only, no database changes.
+- [x] Translate only Calendar lesson details in PT/EN and expose existing event-scoped class attendance with active members, canonical statuses and cancelled-lesson safeguards; 8 focused persistence/guard tests and isolated full-panel PT/EN/individual/class/mobile checks passed. Reopening class Lesson Plan rereads the same attendance. No database changes, manual build or broad checks.
+- [ ] Verify Calendar ↔ Lesson Plan attendance against real teacher data; blocked by unavailable authenticated access (Calendar redirects to /auth). Isolated UI checks and shared-helper readback tests passed; no real attendance records were changed.
 
 - [x] Correct only Growth Revenue Potential card: current MRR plus actual bookable capacity at canonical occupied-hour efficiency, using 4.33 weeks/month. Retained forest styling, added PT/EN neutral/no-free-slot states and explicit next-seven-day capacity period, removed only the card's goal summary; 12 focused formula/guard/class/exception tests and isolated desktop/mobile card checks passed. No database, shared engines, goals or other module changes; no manual builds or broad checks.
 

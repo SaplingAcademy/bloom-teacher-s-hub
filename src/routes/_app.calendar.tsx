@@ -1755,7 +1755,7 @@ function CalendarPage() {
 
               {Boolean(selectedEvent.lessonTags?.length) && <div className="flex flex-wrap gap-1.5">
                 {selectedEvent.lessonTags?.map(tag => <Badge key={tag} variant="secondary" className="max-w-full break-words">
-                  {LESSON_QUICK_TAGS.some(value => value === tag) ? t(`manualLesson.tag_${tag}`) : tag}
+                  {tag === "exam" ? t("calendarUi.examTag") : LESSON_QUICK_TAGS.some(value => value === tag) ? t(`manualLesson.tag_${tag}`) : tag}
                 </Badge>)}
               </div>}
 

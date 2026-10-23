@@ -283,6 +283,7 @@ export const uiTranslations = {
     },
     "calendarUi": {
       "detailsTitle": "Detalhes da aula",
+      "examTag": "Prova",
       "timelineHeading": "Etapas da aula",
       "needsPrep": "Precisa preparar",
       "markReady": "Marcar como pronta",
@@ -1430,6 +1431,7 @@ export const uiTranslations = {
     },
     "calendarUi": {
       "detailsTitle": "Class Details",
+      "examTag": "Exam",
       "timelineHeading": "Classroom Timeline Transition",
       "needsPrep": "Needs Prep",
       "markReady": "Mark Ready",
