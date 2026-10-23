@@ -45,6 +45,8 @@ import { PackageFormModal, PackageFormData } from "@/components/bloom/PackageFor
 import { StudentFinancialDrawer } from "@/components/bloom/StudentFinancialDrawer";
 import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmationDialog";
 import { MonthlyCashFlowChart } from "@/components/bloom/MonthlyCashFlowChart";
+import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
+import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { PeriodPicker } from "@/components/bloom/PeriodPicker";
 import { ReceivablesStudentCombobox } from "@/components/bloom/ReceivablesStudentCombobox";
 import { calculateReceivedCentsForMonth, filterReceivables, sortReceivables, type ReceivableStatusFilter } from "@/lib/finance-cashflow";
@@ -711,7 +713,7 @@ function FinancePage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={<FinancialPrivacyToggle />} />
 
       {/* TABS CONTROLLER */}
       <div className="flex gap-2 border-b border-border pb-1 overflow-x-auto">
@@ -745,19 +747,19 @@ function FinancePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard
               label={t.kpiReceived}
-              value={formatCentsToBRL(totalReceivedCents)}
+              value={money(formatCentsToBRL(totalReceivedCents))}
               icon={CheckCircle2}
               tone="primary"
             />
             <StatCard
               label={t.kpiExpected}
-              value={formatCentsToBRL(totalExpectedCents)}
+              value={money(formatCentsToBRL(totalExpectedCents))}
               icon={TrendingUp}
               tone="lilac"
             />
             <StatCard
               label={t.kpiNetProfit}
-              value={formatCentsToBRL(netProfitCents)}
+              value={money(formatCentsToBRL(netProfitCents))}
               icon={Wallet}
               tone={netProfitCents >= 0 ? "primary" : "warning"}
             />
@@ -915,7 +917,7 @@ function FinancePage() {
                         <p className="text-xs text-muted-foreground mt-1 font-medium flex items-center gap-1.5 flex-wrap">
                           <span>{t.studentCardClasses} <strong className="text-foreground font-bold">{formatDay(inv.dueDate)}</strong></span>
                           <span>•</span>
-                          <span>{t.kpiExpected}: <strong className="text-foreground font-bold">{inv.amountFormatted}</strong></span>
+                          <span>{t.kpiExpected}: <strong className="text-foreground font-bold">{money(inv.amountFormatted)}</strong></span>
                           {inv.isInstallment && inv.currentInstallmentLabel && (
                             <>
                               <span>•</span>
@@ -1239,7 +1241,7 @@ function FinancePage() {
                       </div>
                     </div>
                     <p className="text-xl font-extrabold text-primary mt-2">
-                      {formatReaisToBRL(pkg.price)}
+                      {money(formatReaisToBRL(pkg.price))}
                       <span className="text-xs text-muted-foreground font-medium">
                         {" "}
                         / {(pkg.frequency as string) === "total" || (pkg.frequency as string) === "Valor total do curso" ? (tr("auditUi.totalValue")) : pkg.frequency === "Monthly" ? t.month : t.billingCycle}
@@ -1462,7 +1464,7 @@ function FinancePage() {
                     {tr("auditUi.totalExpenses")}
                   </span>
                   <span className="font-display text-2xl font-extrabold text-foreground">
-                    {formatCentsToBRL(totalExpensesCents)}
+                    {money(formatCentsToBRL(totalExpensesCents))}
                   </span>
                 </div>
               </div>
@@ -1512,7 +1514,7 @@ function FinancePage() {
 
                         <div className="flex items-center gap-3">
                           <span className="font-display font-bold text-sm text-destructive">
-                            -R$ {exp.amount}
+                            {money(`-R$ ${exp.amount}`)}
                           </span>
                           <button
                             onClick={() => handleDeleteExpense(exp.id)}

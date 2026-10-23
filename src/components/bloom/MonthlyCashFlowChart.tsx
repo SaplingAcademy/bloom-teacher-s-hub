@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { buildMonthlyCashFlow } from "@/lib/finance-cashflow";
+import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { formatCentsToBRL, type Expense, type RealInvoice } from "@/lib/finance-engine";
 
 export function MonthlyCashFlowChart({ invoices, expenses, lang }: { invoices: RealInvoice[]; expenses: Expense[]; lang: string }) {
   const pt = lang === "pt";
+  const { money, financialValuesHidden } = useFinancialPrivacy();
   const [months, setMonths] = useState<6 | 12>(6);
   const locale = pt ? "pt-BR" : "en-US";
   const data = buildMonthlyCashFlow(invoices, expenses, months).map((r) => {
@@ -44,11 +46,11 @@ export function MonthlyCashFlowChart({ invoices, expenses, lang }: { invoices: R
           <CartesianGrid vertical={false} />
           <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} width={56}
-            tickFormatter={(v: number) => v.toLocaleString(locale, { notation: "compact" })} />
+            tickFormatter={(v: number) => financialValuesHidden ? "•••" : v.toLocaleString(locale, { notation: "compact" })} />
           <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => (
             <span className="flex w-full justify-between gap-3">
               <span className="text-muted-foreground">{config[name as string]?.label}</span>
-              <span className="font-semibold text-foreground">{formatCentsToBRL(Math.round(Number(value) * 100))}</span>
+              <span className="font-semibold text-foreground">{money(formatCentsToBRL(Math.round(Number(value) * 100)))}</span>
             </span>
           )} />} />
           <ChartLegend content={<ChartLegendContent />} />

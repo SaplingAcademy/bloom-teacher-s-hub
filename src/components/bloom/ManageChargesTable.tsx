@@ -1,3 +1,4 @@
+import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
@@ -62,6 +63,7 @@ export function ManageChargesTable({
   onChanged: () => void;
 }) {
   const pt = lang === "pt";
+  const { money } = useFinancialPrivacy();
   const [groups, setGroups] = useState<ManagedChargeGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -157,7 +159,7 @@ export function ManageChargesTable({
                     <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-center">
                       <span className="font-bold text-foreground sm:col-span-2">{chargeLabel(c, lang)}</span>
                       <span className="text-muted-foreground">{pt ? "Venc." : "Due"} {formatChargeDate(c.dueDate, lang)}</span>
-                      <span className="font-semibold text-foreground">{formatCentsToBRL(c.amountCents)}</span>
+                      <span className="font-semibold text-foreground">{money(formatCentsToBRL(c.amountCents))}</span>
                       <StatusBadge status={c.status} dueDate={c.dueDate} lang={lang} />
                       <span className="text-muted-foreground">{c.paymentDate ? `${pt ? "Pago em" : "Paid"} ${formatChargeDate(c.paymentDate, lang)}` : "—"}</span>
                     </div>

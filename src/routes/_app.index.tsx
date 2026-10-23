@@ -362,6 +362,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
 
 function TodayPage() {
   const { user, profile } = useAuth();
+  const { money } = useFinancialPrivacy();
   const navigate = useNavigate();
   const { lang, formatStatus, t: tr } = useLanguage();
   const [manualTasks, setManualTasks] = useState<Task[]>([]);
