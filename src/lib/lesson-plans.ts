@@ -524,17 +524,21 @@ export async function setEventStatus(teacherId: string, eventId: string, status:
 }
 
 export async function fetchAttendanceForEvents(
-  eventIds: string[]
+  eventIds: string[],
+  teacherId?: string
 ): Promise<Record<string, AttendanceRecordRow[]>> {
   const map: Record<string, AttendanceRecordRow[]> = {};
   if (!eventIds || eventIds.length === 0) return map;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("attendance_records")
     .select("*, students(full_name)")
     .in("event_id", eventIds);
+  if (teacherId) query = query.eq("teacher_id", teacherId);
+  const { data, error } = await query;
 
   if (error) {
+    if (teacherId) throw error;
     console.warn("[lesson-plans] attendance fetch error:", error.message);
     return map;
   }

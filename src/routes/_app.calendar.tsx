@@ -90,6 +90,7 @@ import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDia
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
 import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status";
 import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
+import { CalendarClassAttendanceSection } from "@/components/bloom/CalendarClassAttendanceSection";
 import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
 import { useQueryClient } from "@tanstack/react-query";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
@@ -1663,15 +1664,15 @@ function CalendarPage() {
         onOpenChange={(open) => !open && setSelectedEvent(null)}
       >
         {selectedEvent && selectedEvent.eventType !== "custom" && (
-          <DialogContent className="max-w-xl rounded-2xl p-6 overflow-y-auto max-h-[85vh]">
+          <DialogContent closeLabel={t("calendarUi.closePanel")} className="max-w-xl rounded-2xl p-6 overflow-y-auto max-h-[85vh]">
             <DialogHeader className="border-b border-border/60 pb-3">
               <DialogTitle className="font-display text-lg font-bold text-foreground flex items-center justify-between">
-                <span>{currentTranslation.detailsTitle}</span>
+                <span>{t("calendarUi.detailsTitle")}</span>
                 <Badge
                   variant="outline"
                   className={`text-xs py-0.5 border-current ${getStatusStyles(selectedEvent.status)}`}
                 >
-                  {formatStatus(selectedEvent.status)}
+                  {t(`calendarUi.timelineStatus.${selectedEvent.status}`)}
                 </Badge>
               </DialogTitle>
             </DialogHeader>
@@ -1754,7 +1755,7 @@ function CalendarPage() {
 
               {Boolean(selectedEvent.lessonTags?.length) && <div className="flex flex-wrap gap-1.5">
                 {selectedEvent.lessonTags?.map(tag => <Badge key={tag} variant="secondary" className="max-w-full break-words">
-                  {LESSON_QUICK_TAGS.some(value => value === tag) ? t(`manualLesson.tag_${tag}`) : tag}
+                  {tag === "exam" ? t("calendarUi.examTag") : LESSON_QUICK_TAGS.some(value => value === tag) ? t(`manualLesson.tag_${tag}`) : tag}
                 </Badge>)}
               </div>}
 
@@ -1766,14 +1767,14 @@ function CalendarPage() {
                 </h5>
                 <div className="flex items-center gap-3">
                   <Select value={attStatus} onValueChange={(val: any) => setAttStatus(val)}>
-                    <SelectTrigger className="h-9 w-36 rounded-lg text-xs bg-card">
+                    <SelectTrigger className="h-9 w-36 rounded-lg text-xs bg-card" aria-label={t("calendarUi.attendance")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Present">{formatStatus("Present")}</SelectItem>
-                      <SelectItem value="Absent">{formatStatus("Absent")}</SelectItem>
-                      <SelectItem value="Late">{formatStatus("Late")}</SelectItem>
-                      <SelectItem value="Excused">{formatStatus("Excused")}</SelectItem>
+                      <SelectItem value="Present">{t("calendarUi.attendance_present")}</SelectItem>
+                      <SelectItem value="Absent">{t("calendarUi.attendance_absent")}</SelectItem>
+                      <SelectItem value="Late">{t("calendarUi.attendance_late")}</SelectItem>
+                      <SelectItem value="Excused">{t("calendarUi.attendance_excused")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <button
@@ -1784,12 +1785,20 @@ function CalendarPage() {
                   </button>
                   {selectedEvent.attendanceRecorded && (
                     <Badge className="bg-success text-success-foreground text-[10px] font-bold">
-                      {t("calendarUi.saved")}: {formatStatus(selectedEvent.attendanceStatus)}
+                      {t("calendarUi.saved")}: {selectedEvent.attendanceStatus ? t(`calendarUi.attendance_${selectedEvent.attendanceStatus.toLowerCase()}`) : ""}
                     </Badge>
                   )}
                 </div>
               </div>
               )}
+
+              {selectedEvent.classId && <CalendarClassAttendanceSection
+                key={selectedEvent.id}
+                teacherId={user?.id}
+                classId={selectedEvent.classId}
+                eventId={selectedEvent.id}
+                cancelled={["Cancelled"].includes(selectedEvent.status)}
+              />}
 
               {/* Lesson Plan linking */}
               <div className="space-y-2 border-b border-border/60 pb-4">
@@ -1869,7 +1878,7 @@ function CalendarPage() {
               <div className="space-y-2 border-b border-border/60 pb-4">
                 <h5 className="font-bold text-xs uppercase text-foreground">{t("calendarUi.classNotes")}</h5>
                 <Textarea
-                  placeholder={t("calendarUi.notesPlaceholder")}
+                  placeholder={t(selectedEvent.classId ? "calendarUi.classNotesPlaceholder" : "calendarUi.notesPlaceholder")}
                   value={notesText}
                   onChange={(e) => setNotesText(e.target.value)}
                   className="rounded-xl text-xs min-h-[70px]"
@@ -1885,42 +1894,42 @@ function CalendarPage() {
               {/* Timeline status transition buttons */}
               <div className="space-y-2">
                 <h5 className="font-bold text-xs uppercase text-foreground">
-                  Classroom Timeline Transition
+                  {t("calendarUi.timelineHeading")}
                 </h5>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     onClick={() => updateEventStatus(selectedEvent.id, "Needs Preparation")}
                     className="inline-flex h-8 items-center gap-1 rounded-lg border border-warning/30 bg-warning/5 px-2.5 text-xs font-bold text-warning-foreground hover:bg-warning/10 cursor-pointer"
                   >
-                    Needs Prep
+                    {t("calendarUi.needsPrep")}
                   </button>
                   <button
                     onClick={() => updateEventStatus(selectedEvent.id, "Lesson Ready")}
                     className="inline-flex h-8 items-center gap-1 rounded-lg border border-success/30 bg-success/5 px-2.5 text-xs font-bold text-success hover:bg-success/10 cursor-pointer"
                   >
-                    Mark Ready
+                    {t("calendarUi.markReady")}
                   </button>
                   <button
                     onClick={() => {
                       if (selectedEvent.locationLink)
                         window.open(selectedEvent.locationLink, "_blank");
-                      else alert("No meeting link set!");
+                      else alert(t("calendarUi.noMeetingLink"));
                     }}
                     className="inline-flex h-8 items-center gap-1 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-bold text-primary hover:bg-primary/10 cursor-pointer"
                   >
-                    Start Class <ExternalLink className="h-3 w-3" />
+                    {t("calendarUi.startClass")} <ExternalLink className="h-3 w-3" />
                   </button>
                   <button
                     onClick={() => updateEventStatus(selectedEvent.id, "Completed")}
                     className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/95 cursor-pointer"
                   >
-                    Complete Class
+                    {t("calendarUi.completeClass")}
                   </button>
                   <button
                     onClick={() => updateEventStatus(selectedEvent.id, "Closed")}
                     className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-card px-2.5 text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer"
                   >
-                    Close & Archive
+                    {t("calendarUi.closeArchive")}
                   </button>
                 </div>
               </div>
@@ -1929,21 +1938,21 @@ function CalendarPage() {
               <div className="flex justify-between items-center pt-4 border-t border-border/80">
                 <Link
                   to="/students"
-                  search={{ studentId: selectedEvent.studentId || selectedEvent.groupId }}
+                  search={selectedEvent.classId ? { classId: selectedEvent.classId } : { studentId: selectedEvent.studentId || selectedEvent.groupId }}
                   className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-card px-3.5 text-xs font-bold text-foreground transition-all hover:bg-secondary"
                 >
-                  Open Student Profile
+                  {t(selectedEvent.classId ? "calendarUi.openClassProfile" : "calendarUi.openStudentProfile")}
                 </Link>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleCancelClass(selectedEvent.id)}
                     className="inline-flex h-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 text-xs font-bold text-destructive hover:bg-destructive/10 cursor-pointer"
                   >
-                    Cancel Class
+                    {t("calendarUi.cancelClass")}
                   </button>
                   <DialogClose asChild>
                     <button className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-card px-4 text-xs font-bold text-foreground transition-all hover:bg-secondary cursor-pointer">
-                      Close Panel
+                      {t("calendarUi.closePanel")}
                     </button>
                   </DialogClose>
                 </div>
