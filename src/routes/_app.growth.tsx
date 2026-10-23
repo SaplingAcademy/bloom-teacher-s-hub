@@ -12,7 +12,7 @@ import {
   saveMonthlyGoal,
   fetchCurrentMRR,
   computeGrowthMetrics,
-  formatBRL,
+  formatBRL as rawFormatBRL,
   parseBRL,
   MRRResult,
   fetchTeacherExpenses,
@@ -50,6 +50,8 @@ import {
   ExternalLink,
   Info,
 } from "lucide-react";
+import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
+import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -244,6 +246,8 @@ const translations = {
 };
 
 function GrowthPage() {
+  const { money } = useFinancialPrivacy();
+  const formatBRL = (v: number) => money(rawFormatBRL(v));
   const { lang, t: tr, formatWeekday } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -558,14 +562,14 @@ function GrowthPage() {
   const revenueCardFreeHours = revenueCardData ? weeklyFreeTeachingHours(revenueCardData.capacityRes) : null;
   const revenueCardMRR = revenueCardData?.mrrRes;
   const hasRevenueCardMRR = revenueCardMRR?.hasBillingData && Number.isFinite(revenueCardMRR.totalMRR) && revenueCardMRR.totalMRR > 0;
-  const revenueCardMoney = (value: number) => new Intl.NumberFormat(lang === "pt" ? "pt-BR" : "en-US", {
+  const revenueCardMoney = (value: number) => money(new Intl.NumberFormat(lang === "pt" ? "pt-BR" : "en-US", {
     style: "currency", currency: "BRL", minimumFractionDigits: 2,
-  }).format(value);
+  }).format(value));
 
   return (
     <div className="space-y-6">
       {/* HEADER SECTION */}
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={<FinancialPrivacyToggle />} />
 
       {/* Meta Mensal & Capacidade Grid */}
       <div className="grid gap-5 lg:grid-cols-2">
@@ -1801,6 +1805,8 @@ function OpportunityCard({ op, lang, tr, formatWeekday }: {
   tr: (key: string) => string;
   formatWeekday: (day: string | undefined | null, short?: boolean) => string;
 }) {
+  const { money } = useFinancialPrivacy();
+  const formatBRL = (v: number) => money(rawFormatBRL(v));
   const k = (s: string) => tr(`growthOpportunities.${s}`);
   const hours = (n: number) => n.toLocaleString(lang === "en" ? "en-US" : "pt-BR", { maximumFractionDigits: 1 });
   let body = "";

@@ -397,6 +397,7 @@ const formatMethodDisplay = (methodStr?: string, lang: "en" | "pt" = "pt"): stri
 };
 
 function FinancePage() {
+  const { money } = useFinancialPrivacy();
   const { user } = useAuth();
   const { lang, t: tr } = useLanguage();
   const t = translations[lang];
