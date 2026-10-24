@@ -745,7 +745,7 @@ export function OnboardingPage() {
       )}
 
       {/* Main Form Container */}
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 sm:py-10 flex flex-col justify-between">
+      <main className={`flex-1 max-w-xl w-full mx-auto px-4 flex flex-col ${isWelcomeStep && !isSuccessView ? "py-4 sm:py-5 justify-center" : "py-6 sm:py-10 justify-between"}`}>
         {isSuccessView ? (
           <div className="space-y-8 text-center max-w-lg mx-auto py-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 shadow-inner">
@@ -1018,12 +1018,12 @@ export function OnboardingPage() {
 function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean }) {
   const { t } = useLanguage();
   return (
-    <div className="space-y-8 text-center max-w-lg mx-auto py-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="space-y-4 text-center max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="h-16 w-16 mx-auto rounded-3xl bg-[#163020] flex items-center justify-center text-[#F4EBE1] font-outfit font-black text-2xl shadow-md">
         B
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-stone-900 tracking-tight">
           {t("onboardingUi.welcomeToBloom")}
         </h1>
@@ -1035,7 +1035,7 @@ function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean })
         </p>
       </div>
 
-      <div className="rounded-2xl border border-stone-200/80 bg-white/80 p-5 space-y-3 shadow-sm text-left">
+      <div className="rounded-2xl border border-stone-200/80 bg-white/80 px-5 py-4 space-y-2 shadow-sm text-left">
         <p className="text-base text-stone-900 font-bold font-outfit leading-relaxed">
           {t("onboardingUi.itWillBeQuick")}
         </p>
@@ -1044,7 +1044,7 @@ function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean })
         </p>
       </div>
 
-      <div className="space-y-4 pt-2">
+      <div className="space-y-3">
         <p className="text-xs text-stone-500 font-semibold">
           {t("onboardingUi.donTWorryYouCan")}
         </p>
