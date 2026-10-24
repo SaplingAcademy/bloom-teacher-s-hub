@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { resolveCalendarColor, toStoredColorKey } from "./calendar-colors";
+import { resolveCalendarColor, toStoredColorKey } from "../src/lib/calendar-colors";
 test("precedence", () => {
   expect(resolveCalendarColor({})).toBeNull();
   expect(resolveCalendarColor({ isCustom: true })).toBeNull();

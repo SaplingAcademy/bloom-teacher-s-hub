@@ -1,7 +1,7 @@
 import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -94,7 +94,8 @@ import { homeworkStatusValue, type HomeworkStatus } from "@/lib/homework-status"
 import { CustomCalendarEventDialog } from "@/components/bloom/CustomCalendarEventDialog";
 import { CalendarClassAttendanceSection } from "@/components/bloom/CalendarClassAttendanceSection";
 import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib/custom-calendar-events";
-import { useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { calendarEventsQueryKey, calendarEventsRootKey, calendarEventsWindow } from "@/lib/calendar-events-window";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
 import { LessonStudentsSelect, LessonTagsSelect } from "@/components/bloom/LessonSchedulingSelections";
 import { lessonDuration, saveManualLessons, manualLessonErrorKey, ManualLessonPlanError, LESSON_QUICK_TAGS, type ManualLessonInput, type SavedManualEvent } from "@/lib/manual-lesson-scheduling";
@@ -263,8 +264,6 @@ function CalendarPage() {
   const rescheduleConfirmation = useRescheduleConfirmation();
 
   // Supabase Data State & Error Resilience
-  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const [isEventsError, setIsEventsError] = useState(false);
   const [studentsList, setStudentsList] = useState<Array<{ id: string; full_name: string; level?: string; language_studied?: string; type?: string }>>([]);
   const [studentColorMap, setStudentColorMap] = useState<Record<string, string>>({});
   const [classColorMap, setClassColorMap] = useState<Record<string, string>>({});
@@ -352,17 +351,20 @@ function CalendarPage() {
     loadTimeOffData();
   }, [loadTimeOffData]);
 
-  // Fetch events from Supabase
-  const fetchEvents = useCallback(async () => {
-    if (!user?.id) return;
-    setIsLoadingEvents(true);
-    setIsEventsError(false);
-
-    try {
+  // Events: cached per teacher + visible date window (prev month start → next month end).
+  const eventsWindow = useMemo(() => calendarEventsWindow(currentDate), [currentDate]);
+  const eventsQuery = useQuery({
+    queryKey: calendarEventsQueryKey(user?.id, eventsWindow.start, eventsWindow.end),
+    enabled: Boolean(user?.id),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<CalendarEvent[]> => {
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
-        .eq("teacher_id", user.id)
+        .eq("teacher_id", user!.id)
+        .gte("date", eventsWindow.start)
+        .lte("date", eventsWindow.end)
         .order("date", { ascending: true });
 
       if (error) {
@@ -373,15 +375,10 @@ function CalendarPage() {
           details: error?.details,
           hint: error?.hint,
         });
-        toast.error(reportUserError(error, i18nT("errors.loadAgenda", lang)));
-        setIsEventsError(true);
-        setEvents([]);
-        setIsLoadingEvents(false);
-        return;
+        throw error;
       }
 
-      if (data) {
-        const mapped: CalendarEvent[] = data.map((d: any) => ({
+      return (data || []).map((d: any) => ({
           id: d.id,
           eventType: d.event_type,
           title: d.title || undefined,
@@ -412,16 +409,25 @@ function CalendarPage() {
           isRecurring: d.is_recurring || false,
           recurrenceSeriesId: d.recurrence_series_id || undefined,
         }));
-        setEvents(mapped);
-      }
-    } catch (err: any) {
-      console.error("[Calendar] Failed to fetch events:", err);
-      setIsEventsError(true);
-      setEvents([]);
-    } finally {
-      setIsLoadingEvents(false);
-    }
-  }, [user, lang]);
+    },
+  });
+  const isLoadingEvents = eventsQuery.isLoading;
+  const isEventsError = eventsQuery.isError && !eventsQuery.data;
+
+  useEffect(() => {
+    if (eventsQuery.data) setEvents(eventsQuery.data);
+  }, [eventsQuery.data]);
+
+  useEffect(() => {
+    if (eventsQuery.error) toast.error(reportUserError(eventsQuery.error, i18nT("errors.loadAgenda", lang)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventsQuery.error]);
+
+  // Calendar mutations refresh only this teacher's calendar-events windows (active one refetches now).
+  const fetchEvents = useCallback(async () => {
+    if (!user?.id) return;
+    await queryClient.invalidateQueries({ queryKey: calendarEventsRootKey(user.id) });
+  }, [user, queryClient]);
 
   useEffect(() => {
     if (!requestedEventId || events.length === 0) return;
@@ -581,10 +587,9 @@ function CalendarPage() {
 
   // Initial load
   useEffect(() => {
-    fetchEvents();
     fetchStudents();
     loadWorkingAvailability();
-  }, [fetchEvents, fetchStudents, loadWorkingAvailability]);
+  }, [fetchStudents, loadWorkingAvailability]);
 
   const weekDrag = useWeekLessonDrag(async (eventId, position) => {
     const event = events.find((item) => item.id === eventId);
@@ -965,6 +970,7 @@ function CalendarPage() {
     setSavingColor(false);
     if (error) { toast.error(reportUserError(error, t("calendarUi.colorSaveError"))); return; }
     setEvents((prev) => prev.map((evt) => evt.id === selectedEvent.id ? { ...evt, colorKey } : evt));
+    void fetchEvents();
     setSelectedEvent({ ...selectedEvent, colorKey });
   };
 
