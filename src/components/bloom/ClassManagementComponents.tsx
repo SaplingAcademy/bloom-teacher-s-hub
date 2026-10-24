@@ -222,6 +222,7 @@ export function ClassFormModal({
             duration: s.duration || 60,
             deliveryMode: s.delivery_mode || "Online",
             locationLink: s.location_link || "",
+            colorKey: s.color_key ?? null,
           }))
         );
       } else {

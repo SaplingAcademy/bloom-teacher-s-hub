@@ -36,6 +36,7 @@ export async function persistClassSchedules(teacherId: string, classId: string, 
       duration: slot.duration,
       delivery_mode: slot.deliveryMode,
       location_link: slot.locationLink || "",
+      ...(slot.colorKey !== undefined ? { color_key: slot.colorKey && slot.colorKey !== "default" ? slot.colorKey : null } : {}),
     };
     if (slot.id && existingIds.has(slot.id)) {
       const { error } = await supabase.from("class_schedules").update(payload)

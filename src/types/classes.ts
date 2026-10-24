@@ -48,6 +48,7 @@ export interface ClassSchedule {
   duration: number; // 60
   delivery_mode: "Online" | "In person";
   location_link?: string | null;
+  color_key?: string | null;
   created_at?: string;
 }
 

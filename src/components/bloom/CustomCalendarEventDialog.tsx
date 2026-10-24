@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { customEventErrorKey, deleteCustomEvent, saveCustomEvent, type CustomEventInput } from "@/lib/custom-calendar-events";
+import { CalendarColorPicker } from "@/components/bloom/CalendarColorPicker";
 import type { CalendarEvent } from "@/lib/calendar-sync";
 
 export function CustomCalendarEventDialog({ event, date, startTime = "", endTime = "", onClose, onSaved }: {
@@ -23,9 +24,9 @@ export function CustomCalendarEventDialog({ event, date, startTime = "", endTime
   const [form, setForm] = useState<CustomEventInput>({
     title: event?.title || "", category: event?.category || "", date: event?.date || date,
     startTime: event?.startTime.slice(0, 5) || startTime, endTime: event?.endTime.slice(0, 5) || endTime,
-    locationLink: event?.locationLink || "", notes: event?.notes || "",
+    locationLink: event?.locationLink || "", notes: event?.notes || "", colorKey: event?.colorKey ?? null,
   });
-  const field = (key: keyof CustomEventInput, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const field = (key: Exclude<keyof CustomEventInput, "colorKey">, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const finish = async (remove: boolean) => {
     if (!user?.id || busy) return;
     setBusy(true); setError("");
@@ -39,7 +40,7 @@ export function CustomCalendarEventDialog({ event, date, startTime = "", endTime
       setConfirmDelete(false);
     } finally { setBusy(false); }
   };
-  const textField = (key: keyof CustomEventInput, label: string, type = "text") => <div className="space-y-2"><Label htmlFor={`custom-${key}`}>{t(`customCalendar.${label}`)}</Label><Input id={`custom-${key}`} type={type} value={form[key]} onChange={(e) => field(key, e.target.value)} readOnly={!editing} disabled={busy} /></div>;
+  const textField = (key: Exclude<keyof CustomEventInput, "colorKey">, label: string, type = "text") => <div className="space-y-2"><Label htmlFor={`custom-${key}`}>{t(`customCalendar.${label}`)}</Label><Input id={`custom-${key}`} type={type} value={form[key]} onChange={(e) => field(key, e.target.value)} readOnly={!editing} disabled={busy} /></div>;
   return <>
     <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
@@ -54,6 +55,7 @@ export function CustomCalendarEventDialog({ event, date, startTime = "", endTime
           <div className="grid grid-cols-2 gap-4">{textField("startTime", "start", "time")}{textField("endTime", "end", "time")}</div>
           {textField("locationLink", "location")}
           <div className="space-y-2"><Label htmlFor="custom-notes">{t("customCalendar.notes")}</Label><Textarea id="custom-notes" value={form.notes} onChange={(e) => field("notes", e.target.value)} readOnly={!editing} disabled={busy} /></div>
+          <CalendarColorPicker value={form.colorKey} disabled={!editing || busy} onChange={(colorKey) => setForm((current) => ({ ...current, colorKey }))} />
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
             {event ? <Button type="button" variant="ghost" disabled={busy} onClick={() => setConfirmDelete(true)} className="text-destructive"><Trash2 className="h-4 w-4" />{t("customCalendar.delete")}</Button> : <span />}

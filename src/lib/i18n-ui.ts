@@ -282,6 +282,8 @@ export const uiTranslations = {
       "removeAnyway": "Remover mesmo assim"
     },
     "calendarUi": {
+      "calendarColor": "Cor no calendário", "colorDefault": "Padrão", "colorOccurrenceHint": "Altera somente esta aula.", "colorSaveError": "Não foi possível salvar a cor.",
+      "color_moss": "Verde", "color_terracotta": "Terracota", "color_olive": "Azul", "color_lilac": "Roxo", "color_amber": "Amarelo", "color_rose": "Rosa", "color_sage": "Turquesa", "color_gray": "Cinza",
       "detailsTitle": "Detalhes da aula",
       "examTag": "Prova",
       "timelineHeading": "Etapas da aula",
@@ -1430,6 +1432,8 @@ export const uiTranslations = {
       "removeAnyway": "Remove anyway"
     },
     "calendarUi": {
+      "calendarColor": "Calendar color", "colorDefault": "Default", "colorOccurrenceHint": "Changes this lesson only.", "colorSaveError": "Could not save the color.",
+      "color_moss": "Green", "color_terracotta": "Terracotta", "color_olive": "Blue", "color_lilac": "Purple", "color_amber": "Yellow", "color_rose": "Pink", "color_sage": "Turquoise", "color_gray": "Gray",
       "detailsTitle": "Class Details",
       "examTag": "Exam",
       "timelineHeading": "Classroom Timeline Transition",

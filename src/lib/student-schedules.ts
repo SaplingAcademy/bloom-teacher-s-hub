@@ -16,6 +16,7 @@ export interface StudentScheduleRow {
   meeting_url: string | null;
   delivery_mode: string | null;
   duration_minutes: number | null;
+  color_key?: string | null;
   created_at?: string;
 }
 
@@ -26,6 +27,8 @@ export interface ScheduleFormInput {
   duration: number;
   deliveryMode: DeliveryMode;
   locationLink: string;
+  /** undefined = untouched on save; null = inherit (Default). */
+  colorKey?: string | null;
 }
 
 export type MeetingUrlResult = { ok: true; value: string | null } | { ok: false; value: null };
@@ -82,6 +85,7 @@ export function rowToFormInput(row: StudentScheduleRow): ScheduleFormInput & { e
     duration: rowDurationMinutes(row) ?? 60,
     deliveryMode: row.delivery_mode === "In person" ? "In person" : "Online",
     locationLink: row.meeting_url || "",
+    colorKey: row.color_key ?? null,
   };
 }
 
@@ -92,6 +96,7 @@ export interface ScheduleRowPayload {
   duration_minutes: number;
   delivery_mode: DeliveryMode;
   meeting_url: string | null;
+  color_key?: string | null;
 }
 
 export class InvalidMeetingUrlError extends Error {
@@ -114,6 +119,7 @@ export function formInputToPayload(input: ScheduleFormInput, index: number): Sch
     duration_minutes: duration,
     delivery_mode: input.deliveryMode === "In person" ? "In person" : "Online",
     meeting_url: url.value,
+    ...(input.colorKey !== undefined ? { color_key: input.colorKey && input.colorKey !== "default" ? input.colorKey : null } : {}),
   };
 }
 
