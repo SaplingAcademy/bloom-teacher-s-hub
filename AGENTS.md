@@ -38,6 +38,7 @@
 - Teacher profile lives only in `public.profiles` (name, avatar, locale, timezone); the frontend only reads/updates it and never creates the row or infers the name — single source of truth, created by the database on signup.
 - UI text goes through `t()`; inline pt/en ternaries are forbidden and onboarding/package/class strings live in `src/lib/i18n-ui.ts` — adding a language means adding one dictionary, not editing components. Language precedence: `profiles.locale` > manual device choice > browser locale (`detectLanguage`).
 - Schedule-step progressive disclosure uses component-local choice state only; persisted availability and existing time-change handlers remain authoritative, so presentation never resets saved hours or changes scheduling rules.
+- Onboarding blocking validators call the shared presentation-only error reporter after marking errors; focus/scroll resolves the first visible invalid field within the active step or skip form after render, never treating optional warnings as new validation gates.
 
 ## Manual lesson scheduling
 - Manual multi-student scheduling batch-inserts individual occurrences, then upserts plans per event ID; no classes/recurring schedules, preserving academic identity.
