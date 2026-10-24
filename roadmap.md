@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Add shared onboarding blocked-validation feedback: reveal/focus the first existing required-field error below the sticky header, retain inline messages, and show compact PT/EN feedback on every blocked attempt; preserve validation, optional fields, questions and saving, with focused checks only.
+- [x] Add shared onboarding blocked-validation feedback: reveal/focus the first existing required-field error and its question below the sticky header, retain inline messages, and show compact PT/EN feedback on every blocked attempt. All existing blocking name gates share the reporter; optional warnings and saving remain unchanged. 15 focused tests and isolated PT/EN real-page checks passed at 754×543, including repeat attempts, summary return and skip form; no manual build or broad checks.
+- [ ] Verify onboarding feedback with a real signed-in teacher; blocked by unavailable authenticated session (live /onboarding redirects to /auth). Isolated real-page checks passed with synthetic draft data and no persistence writes.
 
 - [x] Translate only Calendar lesson details in PT/EN and expose existing event-scoped class attendance with active members, canonical statuses and cancelled-lesson safeguards; 8 focused persistence/guard tests and isolated full-panel PT/EN/individual/class/mobile checks passed. Reopening class Lesson Plan rereads the same attendance. No database changes, manual build or broad checks.
 - [ ] Verify Calendar ↔ Lesson Plan attendance against real teacher data; blocked by unavailable authenticated access (Calendar redirects to /auth). Isolated UI checks and shared-helper readback tests passed; no real attendance records were changed.
