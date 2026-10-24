@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Add shared onboarding blocked-validation feedback: reveal/focus the first existing required-field error below the sticky header, retain inline messages, and show compact PT/EN feedback on every blocked attempt; preserve validation, optional fields, questions and saving, with focused checks only.
+
 - [x] Translate only Calendar lesson details in PT/EN and expose existing event-scoped class attendance with active members, canonical statuses and cancelled-lesson safeguards; 8 focused persistence/guard tests and isolated full-panel PT/EN/individual/class/mobile checks passed. Reopening class Lesson Plan rereads the same attendance. No database changes, manual build or broad checks.
 - [ ] Verify Calendar ↔ Lesson Plan attendance against real teacher data; blocked by unavailable authenticated access (Calendar redirects to /auth). Isolated UI checks and shared-helper readback tests passed; no real attendance records were changed.
 
