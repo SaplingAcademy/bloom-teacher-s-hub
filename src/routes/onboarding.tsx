@@ -1028,16 +1028,19 @@ function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean })
           {t("onboardingUi.welcomeToBloom")}
         </h1>
         <p className="text-base text-stone-700 font-medium leading-relaxed">
+          {t("onboardingUi.itsAPleasureYouJoined")}
+        </p>
+        <p className="text-base text-stone-700 font-medium leading-relaxed">
           {t("onboardingUi.beforeStartingWeDLove")}
         </p>
       </div>
 
       <div className="rounded-2xl border border-stone-200/80 bg-white/80 p-5 space-y-3 shadow-sm text-left">
-        <p className="text-sm text-stone-600 leading-relaxed font-medium">
-          {t("onboardingUi.theseQuickQuestionsWillHelp")}
+        <p className="text-base text-stone-900 font-bold font-outfit leading-relaxed">
+          {t("onboardingUi.itWillBeQuick")}
         </p>
         <p className="text-sm text-stone-600 leading-relaxed font-medium pt-2 border-t border-stone-100">
-          {t("onboardingUi.theMoreWeKnowAbout")}
+          {t("onboardingUi.nextStepsSimpleQuestions")}
         </p>
       </div>
 
