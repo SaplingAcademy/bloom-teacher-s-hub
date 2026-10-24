@@ -156,6 +156,7 @@ export interface ScheduleInput {
 }
 
 import { ColorSelector } from "@/components/bloom/ColorSelector";
+import { CalendarColorPicker } from "@/components/bloom/CalendarColorPicker";
 import {
   findInvalidMeetingUrl,
   persistStudentSchedules,
@@ -3512,6 +3513,14 @@ function StudentsPage() {
                             className="h-10 rounded-xl border-border bg-white"
                           />
                         </div>
+                        <CalendarColorPicker
+                          value={sch.colorKey}
+                          onChange={(colorKey) => {
+                            const updated = [...formSchedulesList];
+                            updated[idx] = { ...updated[idx], colorKey };
+                            setFormSchedulesList(updated);
+                          }}
+                        />
                       </div>
                     ))}
                   </div>
