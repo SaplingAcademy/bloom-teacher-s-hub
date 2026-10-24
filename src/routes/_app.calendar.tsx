@@ -955,6 +955,19 @@ function CalendarPage() {
     alert(t("auditUi.notesSaved"));
   };
 
+  // Occurrence-only override: writes calendar_events.color_key for this id; never touches the recurrence.
+  const saveOccurrenceColor = async (key: string | null) => {
+    if (!selectedEvent || !user?.id || savingColor) return;
+    const colorKey = toStoredColorKey(key);
+    setSavingColor(true);
+    const { error } = await supabase.from("calendar_events").update({ color_key: colorKey })
+      .eq("teacher_id", user.id).eq("id", selectedEvent.id).select("id").single();
+    setSavingColor(false);
+    if (error) { toast.error(reportUserError(error, t("calendarUi.colorSaveError"))); return; }
+    setEvents((prev) => prev.map((evt) => evt.id === selectedEvent.id ? { ...evt, colorKey } : evt));
+    setSelectedEvent({ ...selectedEvent, colorKey });
+  };
+
   const handleSaveHomework = () => {
     if (!selectedEvent) return;
     const updated = events.map((evt) => {
