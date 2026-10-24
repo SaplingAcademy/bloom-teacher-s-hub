@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import {
   convertOnboardingToWorkingAvailability,
@@ -1345,6 +1346,7 @@ function Step3YourSchedule({
   isPt: boolean;
 }) {
   const { lang, t } = useLanguage();
+  const [hasChosenAvailability, setHasChosenAvailability] = useState(false);
   const toggleDay = (day: string) => {
     let next: string[];
     if (data.workingDays.includes(day)) {
@@ -1379,127 +1381,154 @@ function Step3YourSchedule({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
-      <div className="space-y-2">
-        <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-bold font-display text-foreground">
           {t("onboardingUi.step3YourSchedule")}
-        </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {t("onboardingUi.selectYourWorkingDays")}
         </h2>
-        <p className="text-sm text-stone-500">
-          {t("onboardingUi.checkTheDaysYouUsually")}
-        </p>
       </div>
 
       {/* Days Selection — Uniform 7-column grid */}
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-        {DEFAULT_DAYS.map((day) => {
-          const selected = data.workingDays.includes(day);
-          return (
-            <button
-              key={day}
-              type="button"
-              onClick={() => toggleDay(day)}
-              title={formatWeekdayName(day, lang, false)}
-              className={`flex flex-col items-center justify-center h-13 sm:h-14 rounded-2xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                selected
-                  ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm scale-[1.02]"
-                  : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50"
-              }`}
-            >
-              <span>{formatWeekdayName(day, lang, true)}</span>
-            </button>
-          );
-        })}
-      </div>
+      <section
+        aria-labelledby="onboarding-working-days"
+        className={`space-y-4 rounded-lg border p-4 sm:p-5 transition-colors ${hasChosenAvailability ? "border-border/70 bg-card/40" : "border-primary/20 bg-primary-soft/30"}`}
+      >
+        <div className="space-y-1.5">
+          <h3 id="onboarding-working-days" className="text-lg sm:text-xl font-bold font-display text-foreground">
+            {t("onboardingUi.selectYourWorkingDays")}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {t("onboardingUi.checkTheDaysYouUsually")}
+          </p>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          {DEFAULT_DAYS.map((day) => {
+            const selected = data.workingDays.includes(day);
+            return (
+              <Button
+                key={day}
+                type="button"
+                variant="outline"
+                onClick={() => toggleDay(day)}
+                aria-pressed={selected}
+                aria-label={formatWeekdayName(day, lang, false)}
+                title={formatWeekdayName(day, lang, false)}
+                className={`h-12 sm:h-14 min-w-0 px-0 rounded-xl text-xs sm:text-sm font-bold ${
+                  selected
+                    ? "bg-sidebar text-sidebar-foreground border-sidebar hover:bg-sidebar/90 hover:text-sidebar-foreground"
+                    : "bg-card text-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {formatWeekdayName(day, lang, true)}
+              </Button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Same availability question */}
       {data.workingDays.length > 0 && (
-        <div className="space-y-6 pt-6 border-t border-stone-200/70">
-          <div className="space-y-2">
-            <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
+        <section aria-labelledby="onboarding-same-hours" className="space-y-4 px-1 pb-6 border-b border-border/70">
+          <div className="space-y-1.5">
+            <h3 id="onboarding-same-hours" className="text-lg font-bold font-display text-foreground">
               {t("onboardingUi.doYouUsuallyHaveThe")}
             </h3>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => updateData("sameAvailabilityAllDays", true)}
-                className={`flex-1 py-3 px-4 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
-                  data.sameAvailabilityAllDays
-                    ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
-                    : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
-                }`}
-              >
-                {t("onboardingUi.yes")}
-              </button>
-              <button
-                type="button"
-                onClick={() => updateData("sameAvailabilityAllDays", false)}
-                className={`flex-1 py-3 px-4 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
-                  !data.sameAvailabilityAllDays
-                    ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
-                    : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
-                }`}
-              >
-                {t("onboardingUi.no")}
-              </button>
-            </div>
+            <p className="text-sm text-muted-foreground">{t("onboardingUi.sameAvailabilityHelp")}</p>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setHasChosenAvailability(true);
+                updateData("sameAvailabilityAllDays", true);
+              }}
+              aria-pressed={hasChosenAvailability && data.sameAvailabilityAllDays}
+              aria-controls="onboarding-hours"
+              className={`h-auto min-h-12 px-3 py-3 rounded-xl whitespace-normal text-sm font-bold ${
+                hasChosenAvailability && data.sameAvailabilityAllDays
+                  ? "bg-sidebar text-sidebar-foreground border-sidebar hover:bg-sidebar/90 hover:text-sidebar-foreground"
+                  : "bg-card text-foreground border-border hover:bg-muted"
+              }`}
+            >
+              {t("onboardingUi.sameAvailabilityYes")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setHasChosenAvailability(true);
+                updateData("sameAvailabilityAllDays", false);
+              }}
+              aria-pressed={hasChosenAvailability && !data.sameAvailabilityAllDays}
+              aria-controls="onboarding-hours"
+              className={`h-auto min-h-12 px-3 py-3 rounded-xl whitespace-normal text-sm font-bold ${
+                hasChosenAvailability && !data.sameAvailabilityAllDays
+                  ? "bg-sidebar text-sidebar-foreground border-sidebar hover:bg-sidebar/90 hover:text-sidebar-foreground"
+                  : "bg-card text-foreground border-border hover:bg-muted"
+              }`}
+            >
+              {t("onboardingUi.sameAvailabilityNo")}
+            </Button>
+          </div>
+        </section>
+      )}
 
+      {data.workingDays.length > 0 && hasChosenAvailability && (
+        <section id="onboarding-hours" aria-labelledby="onboarding-hours-title" className="space-y-4 rounded-lg border border-primary/20 bg-primary-soft/20 p-4 sm:p-5">
+          <h3 id="onboarding-hours-title" className="text-lg font-bold font-display text-foreground">
+            {t(data.sameAvailabilityAllDays ? "onboardingUi.standardTimeForAllDays" : "onboardingUi.configureEachDaySeparately")}
+          </h3>
           {/* Unified availability editor */}
           {data.sameAvailabilityAllDays ? (
-            <div className="p-4 bg-white rounded-2xl border border-stone-200 space-y-2">
-              <span className="text-xs font-bold text-stone-500 uppercase">
-                {t("onboardingUi.standardTimeForAllDays")}
-              </span>
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="min-w-0 space-y-1.5 text-sm font-medium text-muted-foreground">
+                  <span>{t("onboardingUi.scheduleStartTime")}</span>
                 <input
                   type="time"
                   value={data.unifiedAvailability.startTime}
                   onChange={(e) => handleUnifiedChange("startTime", e.target.value)}
-                  className="h-11 px-3 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  className="block h-11 w-full min-w-0 px-2.5 rounded-xl border border-input bg-card font-bold text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
-                <span className="text-sm font-bold text-stone-400">→</span>
+                </label>
+                <label className="min-w-0 space-y-1.5 text-sm font-medium text-muted-foreground">
+                  <span>{t("onboardingUi.scheduleEndTime")}</span>
                 <input
                   type="time"
                   value={data.unifiedAvailability.endTime}
                   onChange={(e) => handleUnifiedChange("endTime", e.target.value)}
-                  className="h-11 px-3 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  className="block h-11 w-full min-w-0 px-2.5 rounded-xl border border-input bg-card font-bold text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+                </label>
               </div>
-            </div>
           ) : (
             /* Custom availability editor per selected day */
             <div className="space-y-3">
-              <span className="text-xs font-bold text-stone-500 uppercase">
-                {t("onboardingUi.configureEachDaySeparately")}
-              </span>
               {data.workingDays.map((day) => {
                 const avail = data.customAvailability[day] || { startTime: "09:00", endTime: "18:00" };
                 return (
                   <div
                     key={day}
-                    className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-stone-200"
+                    className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-2.5 py-3 border-b border-border/70 last:border-b-0 last:pb-0"
                   >
-                    <span className="text-sm font-bold text-stone-800">
+                    <span className="text-sm font-bold text-foreground">
                       {formatWeekdayName(day, lang, false)}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <input
                         type="time"
                         value={avail.startTime}
                         onChange={(e) => handleCustomDayChange(day, "startTime", e.target.value)}
-                        className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                        aria-label={`${formatWeekdayName(day, lang, false)}: ${t("onboardingUi.scheduleStartTime")}`}
+                        className="h-10 w-full min-w-0 px-2.5 rounded-xl border border-input bg-card font-bold text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                       />
-                      <span className="text-xs font-bold text-stone-400">–</span>
                       <input
                         type="time"
                         value={avail.endTime}
                         onChange={(e) => handleCustomDayChange(day, "endTime", e.target.value)}
-                        className="h-10 px-2.5 rounded-xl border border-stone-300 bg-stone-50 font-bold text-stone-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                        aria-label={`${formatWeekdayName(day, lang, false)}: ${t("onboardingUi.scheduleEndTime")}`}
+                        className="h-10 w-full min-w-0 px-2.5 rounded-xl border border-input bg-card font-bold text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                       />
                     </div>
                   </div>
@@ -1507,7 +1536,7 @@ function Step3YourSchedule({
               })}
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {/* ---- Optional section: recurring pauses (rest_blocks) ---- */}
