@@ -1,4 +1,5 @@
 import { fmt } from "@/lib/i18n";
+import { focusFirstOnboardingError } from "@/lib/onboarding-validation-feedback";
 import { getUserItem, setUserItem, removeUserItem } from "@/lib/user-storage";
 import {
   resolveInitialPreferredName,
@@ -279,6 +280,29 @@ export function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccessView, setIsSuccessView] = useState(false);
 
+  const headerRef = useRef<HTMLElement>(null);
+  const stepContentRef = useRef<HTMLDivElement>(null);
+  const skipNameFormRef = useRef<HTMLFormElement>(null);
+  const pendingValidationRef = useRef(false);
+  const [validationAttempt, setValidationAttempt] = useState(0);
+
+  const reportValidationError = () => {
+    pendingValidationRef.current = true;
+    setValidationAttempt((attempt) => attempt + 1);
+  };
+
+  useEffect(() => {
+    if (!pendingValidationRef.current) return;
+    // Wait for inline errors (or the existing return to step 1) to render first.
+    const frame = window.requestAnimationFrame(() => {
+      pendingValidationRef.current = false;
+      const container = skipNameFormRef.current ?? stepContentRef.current;
+      focusFirstOnboardingError(container, skipNameFormRef.current ? null : headerRef.current);
+      toast.error(t("onboardingUi.reviewHighlightedField"), { duration: 5000 });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [validationAttempt, t]);
+
   const isPt = lang === "pt";
 
   // Redirect to login if user session is invalid
@@ -428,6 +452,7 @@ export function OnboardingPage() {
   const handleNext = () => {
     if (currentStep === 1 && !toProfileFullName(data.preferredName)) {
       setNameError(true);
+      reportValidationError();
       return;
     }
     if (currentStep === 5 && data.knowsHourlyRate === false) {
@@ -463,6 +488,7 @@ export function OnboardingPage() {
     const name = toProfileFullName(data.preferredName);
     if (!name) {
       setNameError(true);
+      reportValidationError();
       return;
     }
     const userId = user?.id || session?.user?.id;
@@ -492,6 +518,7 @@ export function OnboardingPage() {
     if (!toProfileFullName(data.preferredName)) {
       setNameError(true);
       setCurrentStep(1);
+      reportValidationError();
       return;
     }
     setIsSubmitting(true);
@@ -697,7 +724,7 @@ export function OnboardingPage() {
     <div className="relative min-h-screen w-full bg-[#FAF7F2] font-figtree text-slate-900 flex flex-col select-none">
       {/* Top Header / Progress Bar */}
       {!isSuccessView && (
-        <header className="sticky top-0 z-30 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-stone-200/70 px-4 sm:px-8 py-4">
+        <header ref={headerRef} className="sticky top-0 z-30 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-stone-200/70 px-4 sm:px-8 py-4">
           <div className="max-w-xl mx-auto flex items-center justify-between">
             {/* Logo & Step indicator */}
             <div className="flex items-center gap-3">
@@ -771,7 +798,7 @@ export function OnboardingPage() {
           </div>
         ) : (
           <>
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div ref={stepContentRef} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
               {currentStep === 0 && (
                 <Step0Welcome
                   onStart={() => {
@@ -940,6 +967,7 @@ export function OnboardingPage() {
       {showSkipNameModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <form
+            ref={skipNameFormRef}
             onSubmit={(e) => { e.preventDefault(); handleFinishSkip(); }}
             className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-center"
           >
@@ -955,9 +983,11 @@ export function OnboardingPage() {
               value={data.preferredName ?? ""}
               onChange={(e) => { updateData("preferredName", e.target.value); setNameError(false); }}
               placeholder={t("onboardingUi.eGDeBora")}
-              className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+              aria-invalid={nameError}
+              aria-describedby={nameError ? "skip-name-error" : undefined}
+              className={`w-full h-12 rounded-xl border bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 ${nameError ? "border-destructive ring-2 ring-destructive focus:ring-destructive" : "border-stone-300 focus:ring-emerald-700"}`}
             />
-            {nameError && <p role="alert" className="text-sm text-red-600">{t("onboardingUi.nameRequired")}</p>}
+            {nameError && <p id="skip-name-error" role="alert" className="text-sm text-destructive">{t("onboardingUi.nameRequired")}</p>}
             <button
               type="submit"
               disabled={savingSkipName}
@@ -1100,7 +1130,7 @@ function Step1AboutYou({
       </div>
 
       {/* Preferred name (saved to profiles.full_name) */}
-      <div className="space-y-2">
+      <div data-onboarding-error-region className="space-y-2">
         <label
           htmlFor="onboarding-preferred-name"
           className="block text-lg sm:text-xl font-extrabold font-outfit text-stone-900"
@@ -1116,9 +1146,10 @@ function Step1AboutYou({
           onChange={(e) => { updateData("preferredName", e.target.value); setNameError(false); }}
           placeholder={t("onboardingUi.eGDeBora")}
           aria-invalid={nameError}
-          className="w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+          aria-describedby={nameError ? "onboarding-name-error" : undefined}
+          className={`w-full h-12 rounded-xl border bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 ${nameError ? "border-destructive ring-2 ring-destructive focus:ring-destructive" : "border-stone-300 focus:ring-emerald-700"}`}
         />
-        {nameError && <p role="alert" className="text-sm text-red-600">{t("onboardingUi.nameRequired")}</p>}
+        {nameError && <p id="onboarding-name-error" role="alert" className="text-sm text-destructive">{t("onboardingUi.nameRequired")}</p>}
       </div>
 
       <div className="space-y-2">
