@@ -1,7 +1,7 @@
 import { reportUserError, toUserMessage } from "@/lib/user-error";
 import { t as i18nT } from "@/lib/i18n";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -587,10 +587,9 @@ function CalendarPage() {
 
   // Initial load
   useEffect(() => {
-    fetchEvents();
     fetchStudents();
     loadWorkingAvailability();
-  }, [fetchEvents, fetchStudents, loadWorkingAvailability]);
+  }, [fetchStudents, loadWorkingAvailability]);
 
   const weekDrag = useWeekLessonDrag(async (eventId, position) => {
     const event = events.find((item) => item.id === eventId);
@@ -971,6 +970,7 @@ function CalendarPage() {
     setSavingColor(false);
     if (error) { toast.error(reportUserError(error, t("calendarUi.colorSaveError"))); return; }
     setEvents((prev) => prev.map((evt) => evt.id === selectedEvent.id ? { ...evt, colorKey } : evt));
+    void fetchEvents();
     setSelectedEvent({ ...selectedEvent, colorKey });
   };
 
