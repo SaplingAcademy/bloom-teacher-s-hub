@@ -54,6 +54,7 @@ export async function fetchTeacherClasses(teacherId: string): Promise<ClassWithD
         duration: s.duration || 60,
         delivery_mode: s.delivery_mode || "Online",
         location_link: s.location_link || "",
+        color_key: s.color_key ?? null,
       }));
 
       return {

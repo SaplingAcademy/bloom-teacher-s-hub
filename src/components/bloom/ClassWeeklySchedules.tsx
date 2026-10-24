@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarColorPicker } from "@/components/bloom/CalendarColorPicker";
 import { resizeClassSchedules, WEEKLY_LESSON_COUNTS, type ClassScheduleInput } from "@/lib/class-schedules";
 
 export function ClassWeeklySchedules({ slots, onChange, disabled }: {
@@ -44,6 +45,7 @@ export function ClassWeeklySchedules({ slots, onChange, disabled }: {
             onChange={(event) => patch(index, { duration: Number(event.target.value) })} className="h-9 min-w-0 px-2 text-xs" />
         </div>
       </div>
+      <CalendarColorPicker value={slot.colorKey} disabled={disabled} onChange={(colorKey) => patch(index, { colorKey })} />
     </div>)}
   </div>;
 }

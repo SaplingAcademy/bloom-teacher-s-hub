@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-export interface CustomEventInput { title: string; category: string; date: string; startTime: string; endTime: string; locationLink: string; notes: string; }
+export interface CustomEventInput { title: string; category: string; date: string; startTime: string; endTime: string; locationLink: string; notes: string; colorKey?: string | null; }
 export function customEventDefaults(date: string, startTime = "", duration?: number) {
   const end = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3, 5)) + (duration ?? 0);
   const endTime = startTime && duration && duration > 0 && end < 1440
@@ -18,7 +18,7 @@ export function customEventInterval(date: string, startTime: string, endTime: st
 }
 export function customEventPayload(input: CustomEventInput) {
   if (!input.title.trim()) throw new CustomEventValidationError("requiredTitle");
-  return { ...customEventInterval(input.date, input.startTime, input.endTime), title: input.title.trim(), category: input.category, location_link: input.locationLink.trim() || null, notes: input.notes.trim() || null };
+  return { ...customEventInterval(input.date, input.startTime, input.endTime), title: input.title.trim(), category: input.category, location_link: input.locationLink.trim() || null, notes: input.notes.trim() || null, color_key: input.colorKey && input.colorKey !== "default" ? input.colorKey : null };
 }
 // Owner/type-scoped writes never enter lesson-plan or academic rescheduling paths.
 export async function saveCustomEvent(teacherId: string, input: CustomEventInput, eventId?: string) {

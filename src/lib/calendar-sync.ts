@@ -49,6 +49,9 @@ export interface CalendarEvent {
   classId?: string; // Links to Class ID
   scheduleId?: string; // Links to Student Schedule ID
   groupId?: string; // Links to Group Student ID
+  classScheduleId?: string;
+  /** Occurrence-only override; null = inherit. */
+  colorKey?: string | null;
   studentName: string;
   level: CEFRLevel;
   focus: CourseFocus;
