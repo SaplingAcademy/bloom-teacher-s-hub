@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Move Today lessons into an immediate card-anchored popover using existing daily metrics; keep count/other cards/priorities unchanged, retain existing Calendar occurrence navigation, remove only the lower agenda block, and check PT/EN keyboard/dismissal/narrow-screen behavior without new queries or broad checks.
+- [x] Move Today lessons into an immediate card-anchored popover consuming existing metrics.todayEvents, with unchanged count/other cards/priorities, Calendar eventId navigation and removal of only the lower agenda block. Six existing daily-metric tests passed with Vitest; isolated real-component PT/EN checks passed for chronology, anchor/no layout or scroll shift, Enter/Space/Tab, Escape/outside dismissal, zero/loading/error states, footer and 754×543/390×844/320×568 viewport fit. No new query, data changes, manual build or broad suite.
+- [ ] Verify Today popover → specific occurrence details with real authenticated lessons; blocked by unavailable authenticated session (live / redirects to /auth). Isolated checks passed occurrence IDs through callbacks only, not a saved Calendar readback.
 
 - [x] Correct only the Students welcome description in PT/EN without asserting packages exist; preserve title and presentation.
 - [x] Inspect the first-student CTA and save path with zero packages: advisory prompt retains Continue without a package, package ID starts empty and saves as null, due-date validation/agreement writes require a selected package, and new-student success updates the list. No package-related blocker found; only PT/EN welcome copy changed, with no data creation, workflow changes, manual build or broad checks.
