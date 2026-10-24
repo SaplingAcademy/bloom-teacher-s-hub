@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Move Today lessons into an immediate card-anchored popover using existing daily metrics; keep count/other cards/priorities unchanged, retain existing Calendar occurrence navigation, remove only the lower agenda block, and check PT/EN keyboard/dismissal/narrow-screen behavior without new queries or broad checks.
+
 - [x] Correct only the Students welcome description in PT/EN without asserting packages exist; preserve title and presentation.
 - [x] Inspect the first-student CTA and save path with zero packages: advisory prompt retains Continue without a package, package ID starts empty and saves as null, due-date validation/agreement writes require a selected package, and new-student success updates the list. No package-related blocker found; only PT/EN welcome copy changed, with no data creation, workflow changes, manual build or broad checks.
 - [ ] Confirm first-student registration end-to-end for a real newly onboarded teacher with zero students/packages; blocked by unavailable authenticated session (live /students redirects to /auth). No account, student or package was created for testing.
