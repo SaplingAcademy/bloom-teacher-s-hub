@@ -81,7 +81,9 @@ import { NonWorkingDaysModal } from "@/components/bloom/NonWorkingDaysModal";
 import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailabilityModal";
 import { fetchTeacherWorkingAvailability, WEEKDAYS_MAP } from "@/lib/availability-engine";
 import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictDialog";
-import { resolveEventColorMeta } from "@/lib/brand-colors";
+import { resolveEventColorMeta, type BrandColorMeta } from "@/lib/brand-colors";
+import { resolveCalendarColor, toStoredColorKey } from "@/lib/calendar-colors";
+import { CalendarColorPicker } from "@/components/bloom/CalendarColorPicker";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialog";
 import { useWeekLessonDrag } from "@/hooks/use-week-lesson-drag";
@@ -266,6 +268,20 @@ function CalendarPage() {
   const [studentsList, setStudentsList] = useState<Array<{ id: string; full_name: string; level?: string; language_studied?: string; type?: string }>>([]);
   const [studentColorMap, setStudentColorMap] = useState<Record<string, string>>({});
   const [classColorMap, setClassColorMap] = useState<Record<string, string>>({});
+  const [studentScheduleColorMap, setStudentScheduleColorMap] = useState<Record<string, string>>({});
+  const [classScheduleColorMap, setClassScheduleColorMap] = useState<Record<string, string>>({});
+  const [savingColor, setSavingColor] = useState(false);
+  // Precedence: occurrence → recurring slot → existing parent rule → native fallback (null = custom lilac).
+  const eventColor = (evt: CalendarEvent): BrandColorMeta | null => {
+    const isCustom = evt.eventType === "custom";
+    const scheduleColorKey = evt.classScheduleId ? classScheduleColorMap[evt.classScheduleId] : evt.scheduleId ? studentScheduleColorMap[evt.scheduleId] : undefined;
+    const override = resolveCalendarColor({ eventColorKey: evt.colorKey, scheduleColorKey, isCustom });
+    if (override || isCustom) return override;
+    return resolveEventColorMeta(
+      evt.studentId ? studentColorMap[evt.studentId] : undefined,
+      evt.groupId ? classColorMap[evt.groupId] : undefined
+    );
+  };
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
   // Filters State
@@ -375,6 +391,8 @@ function CalendarPage() {
           studentId: d.student_id,
           classId: d.class_id,
           scheduleId: d.schedule_id,
+          classScheduleId: d.class_schedule_id || undefined,
+          colorKey: d.color_key ?? null,
           studentName: d.event_type === "custom" ? d.title : d.student_name || "Aula",
           level: (d.level as CEFRLevel) || "A1",
           focus: (d.focus as CourseFocus) || "General English",
@@ -539,6 +557,16 @@ function CalendarPage() {
         });
         setClassColorMap(clsMap);
       }
+
+      // Recurring-slot colors (null = inherit; only customized slots enter the maps)
+      const studentIds = (data || []).map((s: any) => s.id);
+      const [{ data: stSch }, { data: clSch }] = await Promise.all([
+        studentIds.length ? supabase.from("student_schedules").select("id, color_key").in("student_id", studentIds).not("color_key", "is", null) : Promise.resolve({ data: [] as any[] }),
+        supabase.from("class_schedules").select("id, color_key").eq("teacher_id", user.id).not("color_key", "is", null),
+      ]);
+      const toMap = (rows: any[] | null) => Object.fromEntries((rows || []).filter((r) => r.color_key).map((r) => [r.id, r.color_key]));
+      setStudentScheduleColorMap(toMap(stSch as any[]));
+      setClassScheduleColorMap(toMap(clSch as any[]));
     } catch (e) {
       console.warn("[Calendar] Error fetching students for selector:", e);
     }
@@ -1380,10 +1408,7 @@ function CalendarPage() {
                           )}
                           {cellEvents.map((evt) => {
                             const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
-                            const colorMeta = resolveEventColorMeta(
-                              evt.studentId ? studentColorMap[evt.studentId] : undefined,
-                              evt.groupId ? classColorMap[evt.groupId] : undefined
-                            );
+                            const colorMeta = eventColor(evt);
                             return (
                               <div
                                 key={evt.id}
@@ -1397,7 +1422,7 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? "bg-lilac-soft text-foreground border-lilac/40 border-dashed" : colorMeta.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
@@ -1472,10 +1497,7 @@ function CalendarPage() {
                         </span>
                       ) : (
                         cellEvents.map((evt) => {
-                          const colorMeta = resolveEventColorMeta(
-                            evt.studentId ? studentColorMap[evt.studentId] : undefined,
-                            evt.groupId ? classColorMap[evt.groupId] : undefined
-                          );
+                          const colorMeta = eventColor(evt);
                           return (
                             <div
                               key={evt.id}
@@ -1486,8 +1508,8 @@ function CalendarPage() {
                                 setSelectedEvent(evt);
                                 setNotesText(evt.notes || "");
                               }}
-                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? "bg-lilac-soft border-lilac/40 border-dashed touch-none select-none cursor-grab" : colorMeta.cardTintClass} ${
-                                evt.eventType === "custom" ? "" : colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
+                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? `${colorMeta ? `${colorMeta.cardTintClass} border-l-4 ${colorMeta.borderClass}` : "bg-lilac-soft border-lilac/40"} border-dashed touch-none select-none cursor-grab` : colorMeta?.cardTintClass} ${
+                                evt.eventType === "custom" ? "" : colorMeta && colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
                               }`}
                             >
                               <div className="space-y-1">
@@ -1570,10 +1592,7 @@ function CalendarPage() {
                         </span>
                         <div className="min-w-0 space-y-0.5 flex-1 flex flex-col justify-end">
                           {cellEvents.slice(0, 3).map((e) => {
-                            const colorMeta = resolveEventColorMeta(
-                              e.studentId ? studentColorMap[e.studentId] : undefined,
-                              e.groupId ? classColorMap[e.groupId] : undefined
-                            );
+                            const colorMeta = eventColor(e);
                             return (
                               <div
                                 key={e.id}
@@ -1582,7 +1601,7 @@ function CalendarPage() {
                                   setSelectedEvent(e);
                                   setNotesText(e.notes || "");
                                 }}
-                                className={`text-[9px] font-bold truncate rounded px-1 py-0.5 cursor-pointer border ${e.eventType === "custom" ? "bg-lilac-soft border-lilac/40 border-dashed text-foreground" : colorMeta.calendarEventClass}`}
+                                className={`text-[9px] font-bold truncate rounded px-1 py-0.5 cursor-pointer border ${e.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass}`}
                               >
                                 {fmtTime(e.startTime)} {e.studentName}
                               </div>
@@ -1758,6 +1777,11 @@ function CalendarPage() {
                   {tag === "exam" ? t("calendarUi.examTag") : LESSON_QUICK_TAGS.some(value => value === tag) ? t(`manualLesson.tag_${tag}`) : tag}
                 </Badge>)}
               </div>}
+
+              <div className="space-y-1 border-b border-border/60 pb-4">
+                <CalendarColorPicker value={selectedEvent.colorKey} disabled={savingColor} onChange={(key) => void saveOccurrenceColor(key)} />
+                <p className="text-[11px] text-muted-foreground">{t("calendarUi.colorOccurrenceHint")}</p>
+              </div>
 
               {/* Attendance Track */}
               {!selectedEvent.classId && selectedEvent.studentId && (
