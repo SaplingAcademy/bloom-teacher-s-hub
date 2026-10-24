@@ -985,7 +985,7 @@ export function OnboardingPage() {
               placeholder={t("onboardingUi.eGDeBora")}
               aria-invalid={nameError}
               aria-describedby={nameError ? "skip-name-error" : undefined}
-              className={`w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 ${nameError ? "border-destructive ring-2 ring-destructive" : ""}`}
+              className={`w-full h-12 rounded-xl border bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 ${nameError ? "border-destructive ring-2 ring-destructive focus:ring-destructive" : "border-stone-300 focus:ring-emerald-700"}`}
             />
             {nameError && <p id="skip-name-error" role="alert" className="text-sm text-destructive">{t("onboardingUi.nameRequired")}</p>}
             <button
@@ -1130,7 +1130,7 @@ function Step1AboutYou({
       </div>
 
       {/* Preferred name (saved to profiles.full_name) */}
-      <div className="space-y-2">
+      <div data-onboarding-error-region className="space-y-2">
         <label
           htmlFor="onboarding-preferred-name"
           className="block text-lg sm:text-xl font-extrabold font-outfit text-stone-900"
@@ -1147,7 +1147,7 @@ function Step1AboutYou({
           placeholder={t("onboardingUi.eGDeBora")}
           aria-invalid={nameError}
           aria-describedby={nameError ? "onboarding-name-error" : undefined}
-          className={`w-full h-12 rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 ${nameError ? "border-destructive ring-2 ring-destructive" : ""}`}
+          className={`w-full h-12 rounded-xl border bg-white px-4 text-base text-stone-900 focus:outline-none focus:ring-2 ${nameError ? "border-destructive ring-2 ring-destructive focus:ring-destructive" : "border-stone-300 focus:ring-emerald-700"}`}
         />
         {nameError && <p id="onboarding-name-error" role="alert" className="text-sm text-destructive">{t("onboardingUi.nameRequired")}</p>}
       </div>

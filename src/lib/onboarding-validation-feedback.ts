@@ -22,7 +22,8 @@ export function focusFirstOnboardingError(
 
   // Measure the actual sticky header/progress, including wrapping on small screens.
   const headerBottom = Math.max(0, header?.getBoundingClientRect().bottom ?? 0);
-  const top = Math.max(0, window.scrollY + invalid.getBoundingClientRect().top - headerBottom - 16);
+  const scrollTarget = invalid.closest<HTMLElement>('[data-onboarding-error-region]') ?? invalid;
+  const top = Math.max(0, window.scrollY + scrollTarget.getBoundingClientRect().top - headerBottom - 16);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.scrollTo({ top, behavior: reducedMotion ? 'instant' : 'smooth' });
   return true;
