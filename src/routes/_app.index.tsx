@@ -61,9 +61,9 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
+import { TodayLessonsCard } from "@/components/bloom/TodayLessonsCard";
 import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
-import { PanelCard } from "@/components/bloom/PanelCard";
 import {
   Dialog,
   DialogContent,
@@ -861,17 +861,22 @@ function TodayPage() {
 
       {/* STATS CARDS */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
+        <TodayLessonsCard
+          events={todayEvents}
+          loading={metricsLoading}
+          error={Boolean(metricsError)}
           label={t.classesToday}
-          value={metricsLoading || metricsError ? "—" : String(todayEvents.length)}
-          icon={CalendarClock}
-          tone="primary"
+          title={tr("today.classesPopoverTitle")}
           hint={
             !metricsError && todayEvents.length > 0
               ? t.nextAt.replace("{time}", todayEvents[0].startTime)
               : undefined
           }
-          onClick={() => navigate({ to: "/calendar" })}
+          emptyLabel={tr("today.noClassesToday")}
+          errorLabel={tr("errors.loadAgenda")}
+          calendarLabel={tr("today.openCalendar")}
+          onOpenLesson={(eventId) => navigate({ to: "/calendar", search: { eventId } })}
+          onOpenCalendar={() => navigate({ to: "/calendar", search: {} })}
         />
         <StatCard
           label={t.activeStudents}
@@ -909,58 +914,6 @@ function TodayPage() {
 
       {/* SINGLE URGENT SECTION */}
       {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
-
-      {/* TODAY'S SCHEDULE (real calendar_events) */}
-      <div className="grid gap-5">
-        <PanelCard
-          title={t.scheduleTitle}
-          description={
-            todayEvents.length === 1
-              ? t.classesCount.replace("{count}", "1")
-              : t.classesCountPlural.replace("{count}", String(todayEvents.length))
-          }
-          icon={<CalendarClock className="h-4 w-4" />}
-          action={{ label: t.openCalendar, to: "/calendar" }}
-          contentClassName="p-0"
-        >
-          <ul className="divide-y divide-border/70">
-            {metricsError ? (
-              <li role="alert" className="p-5 text-center text-sm text-destructive">{tr("errors.loadAgenda")}</li>
-            ) : metricsLoading ? (
-              <li className="p-5 text-center text-xs text-muted-foreground">…</li>
-            ) : todayEvents.length === 0 ? (
-              <li className="p-5 text-center text-xs text-muted-foreground">
-                {t.noClassesToday}
-              </li>
-            ) : (
-              todayEvents.map((c) => (
-                <li key={c.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <div className="flex w-14 shrink-0 flex-col">
-                    <span className="font-display text-sm font-bold text-foreground">
-                      {c.startTime}
-                    </span>
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock className="h-3 w-3" /> {c.duration}m
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {c.studentName}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {c.level} · {c.focus} ({formatStatus(c.status)})
-                    </p>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
-                    {c.deliveryMode === "Online" && <Video className="h-3 w-3" />}
-                    {formatStatus(c.deliveryMode)}
-                  </span>
-                </li>
-              ))
-            )}
-          </ul>
-        </PanelCard>
-      </div>
 
       {/* ADD/EDIT TASK MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
