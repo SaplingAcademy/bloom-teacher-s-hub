@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Correct only the Students welcome description in PT/EN without asserting packages exist; preserve title and presentation.
+- [x] Inspect the first-student CTA and save path with zero packages: advisory prompt retains Continue without a package, package ID starts empty and saves as null, due-date validation/agreement writes require a selected package, and new-student success updates the list. No package-related blocker found; only PT/EN welcome copy changed, with no data creation, workflow changes, manual build or broad checks.
+- [ ] Confirm first-student registration end-to-end for a real newly onboarded teacher with zero students/packages; blocked by unavailable authenticated session (live /students redirects to /auth). No account, student or package was created for testing.
+
 - [x] Add shared onboarding blocked-validation feedback: reveal/focus the first existing required-field error and its question below the sticky header, retain inline messages, and show compact PT/EN feedback on every blocked attempt. All existing blocking name gates share the reporter; optional warnings and saving remain unchanged. 15 focused tests and isolated PT/EN real-page checks passed at 754×543, including repeat attempts, summary return and skip form; no manual build or broad checks.
 - [ ] Verify onboarding feedback with a real signed-in teacher; blocked by unavailable authenticated session (live /onboarding redirects to /auth). Isolated real-page checks passed with synthetic draft data and no persistence writes.
 

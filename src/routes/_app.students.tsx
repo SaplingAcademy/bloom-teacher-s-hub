@@ -3597,9 +3597,7 @@ function StudentsPage() {
               {tr("auditUi.welcomeToYourStudentsHub")}
             </DialogTitle>
             <p className="text-sm text-stone-600 leading-relaxed font-medium">
-              {lang === "pt"
-                ? "Sua plataforma já está configurada com suas preferências, pacotes e metas. Agora é hora de adicionar seus alunos!"
-                : "Your platform is pre-configured with your preferences, packages, and goals. Now it's time to add your students!"}
+              {tr("auditUi.studentsHubInitialSetupReady")}
             </p>
           </div>
 
