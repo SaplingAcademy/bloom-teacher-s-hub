@@ -17,6 +17,7 @@
 - PeriodPicker reuses month/year/current ledger filters; financial calculations stay independent.
 - The Finance student combobox consumes useStudentsQuery and filters RealInvoice.studentId through filterReceivables; the existing teacher-scoped cache and invoice relation prevent duplicate student sources and name-based financial matching.
 - Finance/Today share `calculateReceivedCentsForMonth` and `invoiceReceiptFields`; Today uses read-only `fetchTeacherReceivedInvoices` in its dashboard cache, never the Finance sync query, to avoid generating charges.
+- Today's lessons popover consumes the same `metrics.todayEvents` as the count and passes occurrence IDs to Calendar's existing `eventId` search handling; it performs no reads on open, keeping presentation separate from canonical daily discovery.
 
 ## Attendance priorities
 - Custom events use owner/type-scoped `custom-calendar-events.ts` writes, never lesson APIs; success invalidates teacher-scoped Growth; capacity reads the same calendar_events intervals, preserving academic history.
