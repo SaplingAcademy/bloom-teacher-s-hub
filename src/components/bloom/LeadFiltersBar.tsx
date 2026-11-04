@@ -34,7 +34,7 @@ interface Props {
   onRetryTasks: () => Promise<void> | void;
 }
 
-export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, hasSearch, onClearSearch }: Props) {
+export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, hasSearch, onClearSearch, tasksError, onRetryTasks }: Props) {
   const { t, lang } = useLanguage();
   const { catalogOptions } = useCatalogOptions();
   const { languages, formatLanguageLabel } = useTeacherLanguages();
