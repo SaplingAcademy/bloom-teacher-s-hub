@@ -33,6 +33,16 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
+import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
+import { useCatalogOptions } from "@/hooks/use-catalog-options";
+import { resolveCatalogLabel } from "@/lib/catalog-options";
+import {
+  buildNewLeadInsert,
+  emptyLeadProfileDraft,
+  leadPedagogyParts,
+  validateLeadProfileDraft,
+  type LeadProfileDraft,
+} from "@/lib/lead-profile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -119,17 +129,8 @@ function LeadsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Form inputs
-  const [newLeadForm, setNewLeadForm] = useState({
-    full_name: "",
-    email: "",
-    phone: "",
-    source: "whatsapp",
-    language_studied: "English",
-    level: "A1",
-    focus: "General English",
-    modality: "Online",
-    notes: "",
-  });
+  const [newLeadForm, setNewLeadForm] = useState<LeadProfileDraft>(emptyLeadProfileDraft);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const [trialForm, setTrialForm] = useState({
     date: "",
@@ -157,6 +158,12 @@ function LeadsPage() {
   });
 
   const teacherId = user?.id;
+  const { catalogOptions } = useCatalogOptions();
+  const pedagogyLabel = (lead: Lead) =>
+    leadPedagogyParts(lead, {
+      language: (v) => formatLanguageLabel(v, lang),
+      catalog: (cat, v) => (catalogOptions ? resolveCatalogLabel(catalogOptions, cat, v) : v),
+    }).join(" • ");
 
   const loadData = async () => {
     if (!teacherId) return;
@@ -208,25 +215,19 @@ function LeadsPage() {
   // 1. Handle New Lead Creation (Rule A)
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teacherId || !newLeadForm.full_name.trim()) return;
+    if (!teacherId) return;
+    const issue = validateLeadProfileDraft(newLeadForm);
+    if (issue) {
+      setCreateError(t(`leadPanel.${issue}`));
+      return;
+    }
+    setCreateError(null);
 
     setSubmitting(true);
     try {
       const { data: insertedLead, error } = await supabase
         .from("leads")
-        .insert({
-          teacher_id: teacherId,
-          full_name: newLeadForm.full_name.trim(),
-          email: newLeadForm.email.trim() || null,
-          phone: newLeadForm.phone.trim() || null,
-          source: newLeadForm.source,
-          language_studied: newLeadForm.language_studied,
-          level: newLeadForm.level,
-          focus: newLeadForm.focus,
-          modality: newLeadForm.modality,
-          notes: newLeadForm.notes.trim() || null,
-          stage: "Novo contato",
-        })
+        .insert(buildNewLeadInsert(teacherId, newLeadForm) as any)
         .select("*")
         .single();
 
@@ -241,17 +242,7 @@ function LeadsPage() {
       toast.success(t("leads.toastCreateSuccess"));
 
       setIsCreateOpen(false);
-      setNewLeadForm({
-        full_name: "",
-        email: "",
-        phone: "",
-        source: "whatsapp",
-        language_studied: "English",
-        level: "A1",
-        focus: "General English",
-        modality: "Online",
-        notes: "",
-      });
+      setNewLeadForm(emptyLeadProfileDraft());
       loadData();
     } catch (err: any) {
       console.error("[Leads] Create error:", err);
@@ -539,9 +530,11 @@ function LeadsPage() {
                             </div>
                           )}
                           <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                            <Badge variant="outline" className="text-[10px] bg-muted/50 border-none">
-                              {lead.language_studied || "Inglês"} • {lead.level || "A1"}
-                            </Badge>
+                            {pedagogyLabel(lead) && (
+                              <Badge variant="outline" className="text-[10px] bg-muted/50 border-none">
+                                {pedagogyLabel(lead)}
+                              </Badge>
+                            )}
                             {lead.source && (
                               <Badge variant="outline" className="text-[10px] capitalize bg-muted/40">
                                 {lead.source}
@@ -601,7 +594,7 @@ function LeadsPage() {
                       </Badge>
                     </td>
                     <td className="p-3.5 text-xs">
-                      {lead.language_studied || "Inglês"} ({lead.level || "A1"})
+                      {pedagogyLabel(lead) || "-"}
                     </td>
                     <td className="p-3.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       {lead.potential_value ? formatReaisToBRL(lead.potential_value) : "-"}
@@ -622,7 +615,7 @@ function LeadsPage() {
 
       {/* Modal: Create New Lead */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" /> {t("leads.createNewLeadTitle")}
@@ -633,92 +626,8 @@ function LeadsPage() {
           </DialogHeader>
 
           <form onSubmit={handleCreateLead} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="full_name">{t("leads.fullNameLabel")} *</Label>
-              <Input
-                id="full_name"
-                required
-                placeholder={t("leadsUi.namePlaceholder")}
-                value={newLeadForm.full_name}
-                onChange={(e) => setNewLeadForm({ ...newLeadForm, full_name: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">{t("leads.phoneLabel")}</Label>
-                <Input
-                  id="phone"
-                  placeholder="(11) 99999-9999"
-                  value={newLeadForm.phone}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, phone: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email">{t("leads.emailLabel")}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="mariana@email.com"
-                  value={newLeadForm.email}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("leads.sourceLabel")}</Label>
-                <Select
-                  value={newLeadForm.source}
-                  onValueChange={(val) => setNewLeadForm({ ...newLeadForm, source: val })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="website">{t("leadsUi.websiteForm")}</SelectItem>
-                    <SelectItem value="referral">{t("leadsUi.referral")}</SelectItem>
-                    <SelectItem value="other">{t("leadsUi.other")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>{t("leadsUi.languageOfInterest")}</Label>
-                <Select
-                  value={newLeadForm.language_studied}
-                  onValueChange={(val) => setNewLeadForm({ ...newLeadForm, language_studied: val })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {hasConfiguredLanguages ? (
-                      teacherLanguages.map((langItem) => (
-                        <SelectItem key={langItem} value={langItem}>
-                          {formatLanguageLabel(langItem, lang)}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value={newLeadForm.language_studied || "English"}>
-                        {formatLanguageLabel(newLeadForm.language_studied || "English", lang)}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="notes">{t("leadsUi.initialNotes")}</Label>
-              <Textarea
-                id="notes"
-                placeholder={t("leadsUi.notesPlaceholder")}
-                rows={2}
-                value={newLeadForm.notes}
-                onChange={(e) => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
-              />
-            </div>
+            <LeadProfileFields draft={newLeadForm} onChange={setNewLeadForm} packages={packages} showLostReason={false} />
+            {createError && <p role="alert" className="text-sm text-destructive">{createError}</p>}
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>

@@ -88,3 +88,56 @@ export function buildLeadProfilePatch(lead: Lead, draft: LeadProfileDraft): Reco
   if (nextValue !== (prevValue === null ? null : Number(prevValue))) patch.potential_value = nextValue;
   return patch;
 }
+
+/** Empty draft for new leads: no pedagogical value is preselected. */
+export function emptyLeadProfileDraft(): LeadProfileDraft {
+  return {
+    full_name: "", phone: "", email: "", language_studied: "", level: "", focus: "", modality: "",
+    source: "whatsapp", campaign: "", tags: "", preferred_schedule: "", package_id: "",
+    potential_value: "", notes: "", lost_reason: "",
+  };
+}
+
+/** Insert payload for a new lead; blank fields become NULL. */
+export function buildNewLeadInsert(teacherId: string, draft: LeadProfileDraft): Record<string, unknown> {
+  const text = (v: string) => (v.trim() === "" ? null : v.trim());
+  const rawValue = draft.potential_value.trim().replace(",", ".");
+  const tags = parseLeadTags(draft.tags);
+  return {
+    teacher_id: teacherId,
+    full_name: draft.full_name.trim(),
+    email: text(draft.email),
+    phone: text(draft.phone),
+    source: text(draft.source),
+    campaign: text(draft.campaign),
+    tags: tags.length ? tags : null,
+    language_studied: text(draft.language_studied),
+    level: text(draft.level),
+    focus: text(draft.focus),
+    modality: text(draft.modality),
+    preferred_schedule: text(draft.preferred_schedule),
+    package_id: text(draft.package_id),
+    potential_value: rawValue === "" ? null : Number(rawValue),
+    notes: text(draft.notes),
+    stage: "Novo contato",
+  };
+}
+
+/** Display parts for lead cards: resolved labels only, missing fields omitted, unknown values kept. */
+export function leadPedagogyParts(
+  lead: Pick<Lead, "language_studied" | "level" | "focus" | "modality">,
+  resolve: {
+    language: (v: string) => string;
+    catalog: (category: "levels" | "focuses" | "modalities", v: string) => string | null;
+  },
+): string[] {
+  const parts: string[] = [];
+  const add = (v: string | undefined | null, fn: (v: string) => string | null) => {
+    if (v && v.trim()) parts.push(fn(v) || v);
+  };
+  add(lead.language_studied, resolve.language);
+  add(lead.level, (v) => resolve.catalog("levels", v));
+  add(lead.focus, (v) => resolve.catalog("focuses", v));
+  add(lead.modality, (v) => resolve.catalog("modalities", v));
+  return parts;
+}
