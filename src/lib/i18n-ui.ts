@@ -441,6 +441,17 @@ export const uiTranslations = {
       "tasksErrorBanner": "Não foi possível consultar as tarefas. O resultado do filtro pode estar incompleto.",
       "tasksRetry": "Tentar novamente"
     },
+    "leadTasks": {
+      "new": "Nova tarefa", "title": "Título", "description": "Descrição (opcional)", "dueDate": "Vencimento",
+      "create": "Criar tarefa", "saving": "Salvando...", "cancel": "Cancelar",
+      "titleRequired": "Informe o título da tarefa.", "dueRequired": "Informe a data de vencimento.", "dueInvalid": "Data de vencimento inválida.",
+      "createError": "Não foi possível criar a tarefa. Seus dados foram mantidos.",
+      "complete": "Concluir", "completing": "Concluindo...", "completeError": "Não foi possível concluir a tarefa.",
+      "loading": "Carregando tarefas...", "loadError": "Não foi possível consultar as tarefas deste lead.", "retry": "Tentar novamente",
+      "overdue": "Atrasadas", "pending": "Pendentes", "completed": "Concluídas",
+      "overdueEmpty": "Nenhuma tarefa atrasada.", "pendingEmpty": "Nenhuma tarefa pendente.", "completedEmpty": "Nenhuma tarefa concluída.",
+      "due": "Vence", "noDue": "Sem vencimento", "automatic": "Automática"
+    },
     "leadPanel": {
       "profile": "Perfil",
       "tasks": "Tarefas",
@@ -1706,6 +1717,17 @@ export const uiTranslations = {
       "tasksError": "Could not load the tasks.",
       "tasksErrorBanner": "Could not load the tasks. The filter result may be incomplete.",
       "tasksRetry": "Try again"
+    },
+    "leadTasks": {
+      "new": "New task", "title": "Title", "description": "Description (optional)", "dueDate": "Due date",
+      "create": "Create task", "saving": "Saving...", "cancel": "Cancel",
+      "titleRequired": "Enter the task title.", "dueRequired": "Enter the due date.", "dueInvalid": "Invalid due date.",
+      "createError": "Couldn't create the task. Your input was kept.",
+      "complete": "Complete", "completing": "Completing...", "completeError": "Couldn't complete the task.",
+      "loading": "Loading tasks...", "loadError": "Couldn't load this lead's tasks.", "retry": "Try again",
+      "overdue": "Overdue", "pending": "Pending", "completed": "Completed",
+      "overdueEmpty": "No overdue tasks.", "pendingEmpty": "No pending tasks.", "completedEmpty": "No completed tasks.",
+      "due": "Due", "noDue": "No due date", "automatic": "Automatic"
     },
     "leadPanel": {
       "profile": "Profile",
