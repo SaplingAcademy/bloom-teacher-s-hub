@@ -932,6 +932,8 @@ function StudentsPage() {
           email: studentData.email,
           level: studentData.level,
           language_studied: studentData.language_studied,
+          focus: studentData.focus,
+          modality: studentData.modality,
           type: studentData.type,
           status: studentData.status,
           schedule: studentData.schedule,
