@@ -9,6 +9,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { sortCatalogOptions, type CatalogCategory } from "@/lib/catalog-options";
+import { LEAD_ACTIVITY_TYPES } from "@/lib/lead-tasks";
 import { countActiveLeadFilters, EMPTY_LEAD_FILTERS, isTaskFilterUnavailable, pendingContactAge, type LeadFilters } from "@/lib/lead-filters";
 import type { Lead } from "@/lib/automation-engine";
 
@@ -59,7 +60,7 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
   );
   const catalogItems = (cat: CatalogCategory) =>
     catalogOptions ? sortCatalogOptions(catalogOptions[cat] as any[]).map((o: any) => ({ value: o.id, label: o.label })) : [];
-  const taskResultsUnavailable = isTaskFilterUnavailable(tasksError, filters.tasks);
+  const taskResultsUnavailable = isTaskFilterUnavailable(tasksError, filters.tasks, filters.activityType);
   const [retryingTasks, setRetryingTasks] = useState(false);
   const handleRetryTasks = async () => {
     if (retryingTasks) return;
@@ -166,6 +167,7 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
               )}
             </>
           ))}
+          {field("f-activity", F("activityType"), pick("f-activity", "activityType", LEAD_ACTIVITY_TYPES.map((v) => ({ value: v, label: t(`leadTasks.types.${v}`) }))))}
           {field("f-from", F("createdFrom"), (
             <Input id="f-from" type="date" className="h-9 text-sm" value={filters.createdFrom} onChange={(e) => set("createdFrom", e.target.value)} />
           ))}
