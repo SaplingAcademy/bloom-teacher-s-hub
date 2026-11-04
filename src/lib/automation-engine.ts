@@ -230,6 +230,75 @@ export async function recordAutomationEvent(
   }
 }
 
+/** Event IDs of a given rule type for this lead (teacher-scoped). Throws on read failure. */
+async function fetchRuleEventIds(teacherId: string, leadId: string, eventType: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("automation_events")
+    .select("id")
+    .eq("teacher_id", teacherId)
+    .eq("source_id", leadId)
+    .eq("event_type", eventType);
+  if (error) throw new Error(error.message);
+  return new Set((data || []).map((r: any) => r.id));
+}
+
+/** Applies planned automatic tasks; always links the real current event ID on insert. */
+async function syncAutoTasks(
+  lead: Lead,
+  eventType: string,
+  currentEventId: string,
+  specs: AutoTaskSpec[],
+  updatePending: boolean,
+): Promise<string[]> {
+  const ruleIds = await fetchRuleEventIds(lead.teacher_id, lead.id, eventType);
+  ruleIds.add(currentEventId);
+  const { data: rows, error } = await supabase
+    .from("tasks")
+    .select("id, status, automation_event_id, activity_type")
+    .eq("teacher_id", lead.teacher_id)
+    .eq("lead_id", lead.id)
+    .not("automation_event_id", "is", null);
+  if (error) throw new Error(error.message);
+  const ids: string[] = [];
+  for (const action of planAutoTasks((rows || []) as AutoTaskRow[], ruleIds, specs, updatePending)) {
+    if (action.kind === "skip") { ids.push(action.taskId); continue; }
+    if (action.kind === "update") {
+      const { error: upErr } = await supabase
+        .from("tasks")
+        .update({ description: action.spec.description, due_date: action.spec.due_date, updated_at: new Date().toISOString() })
+        .eq("id", action.taskId)
+        .eq("teacher_id", lead.teacher_id)
+        .neq("status", "completed");
+      if (upErr) throw new Error(upErr.message);
+      ids.push(action.taskId);
+      continue;
+    }
+    const { data: created, error: insErr } = await supabase
+      .from("tasks")
+      .insert({
+        teacher_id: lead.teacher_id,
+        lead_id: lead.id,
+        status: "pending",
+        automation_event_id: currentEventId,
+        ...action.spec,
+      })
+      .select("id")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+    if (created) ids.push(created.id);
+  }
+  return ids;
+}
+
+/** Records the event first (processing) so tasks can carry its real ID. */
+async function beginAutomationEvent(
+  teacherId: string, eventType: string, leadId: string, key: string, payload: Record<string, any>,
+): Promise<string> {
+  const id = await recordAutomationEvent(teacherId, eventType, "leads", leadId, key, payload, "processing");
+  if (!id) throw new Error("automation_event_unavailable");
+  return id;
+}
+
 /**
  * RULE A — NEW LEAD
  * Triggered on creation of a new lead.
