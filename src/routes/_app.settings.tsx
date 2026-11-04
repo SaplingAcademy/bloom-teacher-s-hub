@@ -6,6 +6,7 @@ import { useTeacherLanguages, CANONICAL_LANGUAGES } from "@/hooks/use-teacher-la
 import { toast } from "sonner";
 import { useSaveFeedback } from "@/hooks/use-save-feedback";
 import { SaveButtonLabel, SaveErrorMessage } from "@/components/bloom/SaveFeedback";
+import { TeachingOptionsSettings } from "@/components/bloom/TeachingOptionsSettings";
 import {
   Settings,
   Clock,
@@ -20,6 +21,7 @@ import {
   Check,
   AlertCircle,
   Workflow,
+  BookOpen,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelCard } from "@/components/bloom/PanelCard";
@@ -109,12 +111,15 @@ function SettingsPage() {
       />
 
       <Tabs defaultValue="automations" className="space-y-6">
-        <TabsList className="bg-card border border-border p-1 rounded-xl">
+        <TabsList className="bg-card border border-border p-1 rounded-xl h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="automations" className="gap-2 text-xs font-semibold">
             <Workflow className="w-4 h-4 text-primary" /> {t("settings.tabAutomations")}
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-2 text-xs font-semibold">
             <User className="w-4 h-4" /> {t("settings.tabProfilePreferences")}
+          </TabsTrigger>
+          <TabsTrigger value="teaching" className="gap-2 text-xs font-semibold">
+            <BookOpen className="w-4 h-4" /> {t("teachingOptions.title")}
           </TabsTrigger>
         </TabsList>
 
@@ -257,6 +262,10 @@ function SettingsPage() {
               )}
             </PanelCard>
           </form>
+        </TabsContent>
+
+        <TabsContent value="teaching">
+          <TeachingOptionsSettings />
         </TabsContent>
 
         {/* PROFILE TAB / TEACHING LANGUAGES MANAGER & PLATFORM LANGUAGE */}
