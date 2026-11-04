@@ -11,6 +11,10 @@
 
 <!-- LOVABLE:END -->
 
+## Pedagogical catalog
+- Keep catalog normalization/resolution pure in `catalog-options.ts`; separate historical display from active-ID selection to avoid rewriting history.
+- `useCatalogOptions` reads only authenticated teacher settings via the session client; reuse its exported cache key for future saves, and never replace read/validation errors with defaults.
+
 ## Financial model
 - Normalize package billing through `src/lib/billing-domain.ts`; new records use `lesson_duration_minutes` and `contract_duration_months`, while old fields are read-only legacy fallbacks.
 - Never infer commercial choices for new packages or agreements; lesson minutes, fixed contract months, and installment count must come from the teacher.

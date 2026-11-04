@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Create only reusable pedagogical catalog helper and authenticated teacher-scoped read hook; preserve IDs, inactive/legacy/unknown values and empty selections. No screens, migrations, data writes or unrelated settings changes.
+- [x] Run only tests/catalog-options.test.ts with Vitest: 33 passing cases covering defaults, NULL, validation/order, rename/deactivation, historical aliases, literal unknowns and active-ID selections. No manual build/typecheck/audit/broad suite; hook live read is not exercised because no screen consumes it in this infrastructure-only stage.
+
 - [x] Move Today lessons into an immediate card-anchored popover consuming existing metrics.todayEvents, with unchanged count/other cards/priorities, Calendar eventId navigation and removal of only the lower agenda block. Six existing daily-metric tests passed with Vitest; isolated real-component PT/EN checks passed for chronology, anchor/no layout or scroll shift, Enter/Space/Tab, Escape/outside dismissal, zero/loading/error states, footer and 754×543/390×844/320×568 viewport fit. No new query, data changes, manual build or broad suite.
 - [ ] Verify Today popover → specific occurrence details with real authenticated lessons; blocked by unavailable authenticated session (live / redirects to /auth). Isolated checks passed occurrence IDs through callbacks only, not a saved Calendar readback.
 
