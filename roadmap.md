@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Add only the Teaching options section to existing Settings with stable-ID editing, ordering, activation and modality nature in PT/EN; preserve languages, other screens and historical data.
+- [x] Save the complete normalized catalog only to the freshly verified authenticated teacher's existing settings row, updating only catalog_options and the exported teacher-scoped cache; missing rows fail explicitly without partial settings creation.
+- [x] Run only catalog-options, catalog-editor and catalog-settings focused tests: 53 passed. Isolated real-editor checks passed additions/renames/order/activity/nature, blocked blank names, failed-save draft retention and PT/EN mobile fit, with no runtime errors. No manual build, typecheck, migrations, audit or broad suite; automatic preview build OK.
+- [ ] Verify Teaching options save/reopen with real authenticated teacher settings; blocked by unavailable external app session (live /settings redirects to /auth). Isolated editor save callback and mocked session-client persistence tests do not establish live RLS or actual database readback.
+
 - [x] Create only reusable pedagogical catalog helper and authenticated teacher-scoped read hook; preserve IDs, inactive/legacy/unknown values and empty selections. No screens, migrations, data writes or unrelated settings changes.
 - [x] Run only tests/catalog-options.test.ts with Vitest: 33 passing cases covering defaults, NULL, validation/order, rename/deactivation, historical aliases, literal unknowns and active-ID selections. No manual build/typecheck/audit/broad suite; hook live read is not exercised because no screen consumes it in this infrastructure-only stage.
 

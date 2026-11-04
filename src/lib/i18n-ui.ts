@@ -1,6 +1,21 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "teachingOptions": {
+      "title": "Opções de ensino", "levels": "Níveis", "focuses": "Focos / objetivos", "modalities": "Modalidades",
+      "name": "Nome", "add": "Adicionar opção", "newName": "Nome da nova opção", "cancel": "Cancelar", "empty": "Nenhuma opção neste grupo.",
+      "active": "Ativa", "inactive": "Inativa", "nature": "Natureza", "chooseNature": "Selecionar natureza",
+      "online": "Online", "in_person": "Presencial", "hybrid": "Híbrida",
+      "moveUp": "Mover para cima", "moveDown": "Mover para baixo", "save": "Salvar opções",
+      "saved": "Opções de ensino salvas.", "loading": "Carregando opções de ensino…", "retry": "Tentar novamente",
+      "loadError": "Não foi possível carregar suas opções de ensino. Tente novamente.",
+      "invalidCatalog": "A configuração de opções de ensino é inválida. Nenhum valor foi substituído.",
+      "saveError": "Não foi possível salvar suas opções de ensino. Suas alterações continuam aqui para tentar novamente.",
+      "requiredName": "Informe um nome para cada opção.", "requiredNature": "Selecione a natureza da modalidade.",
+      "duplicateId": "Há opções com a mesma identificação. Não foi possível salvar.",
+      "authentication": "Entre novamente na sua conta para salvar as opções de ensino.",
+      "missingSettings": "As configurações da sua conta não foram encontradas. Nenhuma alteração foi salva."
+    },
     "growthRevenue": {
       "title": "Potencial de Receita",
       "projectedRevenue": "Receita prevista atual",
@@ -1159,6 +1174,21 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "teachingOptions": {
+      "title": "Teaching options", "levels": "Levels", "focuses": "Focuses / objectives", "modalities": "Modalities",
+      "name": "Name", "add": "Add option", "newName": "New option name", "cancel": "Cancel", "empty": "No options in this group.",
+      "active": "Active", "inactive": "Inactive", "nature": "Nature", "chooseNature": "Select nature",
+      "online": "Online", "in_person": "In person", "hybrid": "Hybrid",
+      "moveUp": "Move up", "moveDown": "Move down", "save": "Save options",
+      "saved": "Teaching options saved.", "loading": "Loading teaching options…", "retry": "Try again",
+      "loadError": "Could not load your teaching options. Try again.",
+      "invalidCatalog": "The teaching options configuration is invalid. No values were replaced.",
+      "saveError": "Could not save your teaching options. Your changes are still here so you can try again.",
+      "requiredName": "Enter a name for every option.", "requiredNature": "Select the modality nature.",
+      "duplicateId": "Some options have the same identifier. Could not save.",
+      "authentication": "Sign in to your account again to save teaching options.",
+      "missingSettings": "Your account settings were not found. No changes were saved."
+    },
     "growthRevenue": {
       "title": "Revenue Potential",
       "projectedRevenue": "Current projected revenue",
