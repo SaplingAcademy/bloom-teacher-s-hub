@@ -224,6 +224,34 @@ export function getActiveCatalogOptions<K extends CatalogCategory>(catalog: Cata
   return catalog[category].filter((option) => option.active) as CatalogOptions[K];
 }
 
+export interface CatalogSelectOption {
+  id: string;
+  label: string;
+  /** True when the current stored value is archived, removed or unrecognized. */
+  isHistorical: boolean;
+}
+
+/**
+ * Options for a record form selector: active choices in configured order, plus the
+ * record's current value when it is no longer an active choice, so editing never
+ * hides or silently rewrites historical data. Display-only; never persists.
+ */
+export function getCatalogSelectOptions(
+  catalog: CatalogOptions,
+  category: CatalogCategory,
+  currentValue: string | null | undefined,
+): CatalogSelectOption[] {
+  const active = getActiveCatalogOptions(catalog, category).map((option) => ({
+    id: option.id,
+    label: option.label,
+    isHistorical: false,
+  }));
+  if (currentValue == null || currentValue.trim() === "") return active;
+  if (active.some((option) => option.id === currentValue)) return active;
+  const resolved = resolveCatalogValue(catalog, category, currentValue);
+  return [...active, { id: currentValue, label: resolved?.label ?? currentValue, isHistorical: true }];
+}
+
 /** For NEW selections only: accept an active exact ID, not labels or historical aliases. */
 export function toCatalogSelectionId(
   catalog: CatalogOptions,

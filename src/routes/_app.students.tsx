@@ -7,6 +7,13 @@ import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
+import { useCatalogOptions } from "@/hooks/use-catalog-options";
+import {
+  getActiveCatalogOptions,
+  resolveCatalogLabel,
+  type CatalogCategory,
+} from "@/lib/catalog-options";
+import { CatalogOptionSelect } from "@/components/bloom/CatalogOptionSelect";
 import {
   saveStudentEnrollmentAgreement,
   updateStudentAgreementSchedule,
@@ -172,8 +179,10 @@ interface Student {
   name: string;
   whatsapp: string;
   email?: string;
-  level: CEFRLevel;
+  level: string;
   focus: string;
+  languageStudied?: string;
+  modality?: string | null;
   type: StudentType;
   status: StudentStatus;
   schedule: string; // e.g. "Tue • 7:00 PM"
@@ -270,8 +279,13 @@ const translations = {
     fieldName: "Full Name or Group Title",
     fieldPhone: "Phone",
     fieldEmail: "Email (Optional)",
-    fieldLevel: "CEFR Level",
-    fieldFocus: "Language Studied",
+    fieldLevel: "Level",
+    fieldFocus: "Focus / Goal",
+    fieldModality: "Modality",
+    noneOption: "None",
+    selectLevel: "Select the level",
+    selectFocus: "Select the focus",
+    selectModality: "Select the modality",
     fieldType: "Student Type",
     fieldStatus: "Initial Status",
     fieldSchedule: "Weekly Schedule",
@@ -342,8 +356,13 @@ const translations = {
     fieldName: "Nome Completo ou Nome do Grupo",
     fieldPhone: "Telefone",
     fieldEmail: "E-mail (Opcional)",
-    fieldLevel: "Nível CEFR",
-    fieldFocus: "Idioma Estudado",
+    fieldLevel: "Nível",
+    fieldFocus: "Foco / Objetivo",
+    fieldModality: "Modalidade",
+    noneOption: "Nenhum",
+    selectLevel: "Selecione o nível",
+    selectFocus: "Selecione o foco",
+    selectModality: "Selecione a modalidade",
     fieldType: "Tipo de Aluno",
     fieldStatus: "Status Inicial",
     fieldSchedule: "Horário Semanal",
@@ -575,6 +594,7 @@ function StudentsPage() {
     loading: languagesLoading,
     formatLanguageLabel,
   } = useTeacherLanguages();
+  const { catalogOptions } = useCatalogOptions();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -666,8 +686,10 @@ function StudentsPage() {
   const [formName, setFormName] = useState("");
   const [formWhatsApp, setFormWhatsApp] = useState("");
   const [formEmail, setFormEmail] = useState("");
-  const [formLevel, setFormLevel] = useState<CEFRLevel>("B1");
-  const [formFocus, setFormFocus] = useState<string>("English");
+  const [formLevel, setFormLevel] = useState<string>("");
+  const [formFocus, setFormFocus] = useState<string>("");
+  const [formLanguage, setFormLanguage] = useState<string>("");
+  const [formModality, setFormModality] = useState<string>("");
   const [formType, setFormType] = useState<StudentType>("Private");
   const [formStatus, setFormStatus] = useState<StudentStatus>("Active");
   const [formSchedule, setFormSchedule] = useState("");
@@ -753,8 +775,8 @@ function StudentsPage() {
   const [editName, setEditName] = useState("");
   const [editWhatsApp, setEditWhatsApp] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editLevel, setEditLevel] = useState<CEFRLevel>("B2");
-  const [editFocus, setEditFocus] = useState<string>("English");
+  const [editLevel, setEditLevel] = useState<string>("");
+  const [editFocus, setEditFocus] = useState<string>("");
   const [editType, setEditType] = useState<StudentType>("Private");
   const [editStatus, setEditStatus] = useState<StudentStatus>("Active");
   const [editPackageId, setEditPackageId] = useState("");
@@ -910,6 +932,8 @@ function StudentsPage() {
           email: studentData.email,
           level: studentData.level,
           language_studied: studentData.language_studied,
+          focus: studentData.focus,
+          modality: studentData.modality,
           type: studentData.type,
           status: studentData.status,
           schedule: studentData.schedule,
@@ -943,6 +967,8 @@ function StudentsPage() {
           email: studentData.email,
           level: studentData.level,
           language_studied: studentData.language_studied,
+          focus: studentData.focus,
+          modality: studentData.modality,
           type: studentData.type,
           status: studentData.status,
           schedule: studentData.schedule,
@@ -1099,7 +1125,7 @@ function StudentsPage() {
         studentData.teacher_id,
         studentData.full_name,
         studentData.level as CEFRLevel,
-        studentData.language_studied as CourseFocus,
+        studentData.focus as CourseFocus,
         studentData.type as StudentType,
         savedSchedules,
         8
@@ -1142,13 +1168,17 @@ function StudentsPage() {
       ? "Linked Group" 
       : editSchedulesList.map(s => `${s.weekday.substring(0, 3)} • ${s.startTime}`).join(", ");
 
+    // Pedagogical fields are not edited here: preserve the stored values exactly.
+    const settingsStudent = students.find((s) => s.id === selectedStudentId);
     const studentData = {
       teacher_id: user.id,
       full_name: editName,
       phone: editWhatsApp || null,
       email: editEmail.trim() || null,
-      level: editLevel || "A1",
-      language_studied: editFocus || "English",
+      level: settingsStudent?.level || null,
+      language_studied: settingsStudent?.languageStudied || null,
+      focus: settingsStudent?.focus || null,
+      modality: settingsStudent?.modality ?? null,
       type: editType || "Private",
       status: editStatus || "Active",
       schedule: scheduleString,
@@ -1195,7 +1225,7 @@ function StudentsPage() {
             updatedEvents = syncStudentScheduleWithEvents(
               selectedStudentId,
               editName,
-              editLevel,
+              editLevel as CEFRLevel,
               editFocus as any,
               editType,
               scheduleDetailsObj,
@@ -1219,8 +1249,10 @@ function StudentsPage() {
                 name: data.full_name,
                 whatsapp: data.phone || "",
                 email: data.email || "",
-                level: (data.level as CEFRLevel) || "A1",
-                focus: data.language_studied || "English",
+                level: data.level || "",
+                focus: data.focus || "",
+                languageStudied: data.language_studied || "",
+                modality: data.modality ?? null,
                 type: editType,
                 status: editStatus,
                 schedule: scheduleString,
@@ -1409,8 +1441,10 @@ function StudentsPage() {
         name: d.full_name,
         whatsapp: d.phone || "",
         email: d.email || "",
-        level: (d.level as CEFRLevel) || "A1",
-        focus: d.language_studied || "English",
+        level: d.level || "",
+        focus: d.focus || "",
+        languageStudied: d.language_studied || "",
+        modality: d.modality ?? null,
         type: (d.type as StudentType) || "Private",
         status: (d.status as StudentStatus) || "Active",
         schedule: scheduleSummary,
@@ -1513,8 +1547,10 @@ function StudentsPage() {
     setFormName("");
     setFormWhatsApp("");
     setFormEmail("");
-    setFormLevel("B2");
-    setFormFocus(teacherLanguages.length === 1 ? teacherLanguages[0] : "");
+    setFormLevel("");
+    setFormFocus("");
+    setFormModality("");
+    setFormLanguage(teacherLanguages.length === 1 ? teacherLanguages[0] : "");
     setFormType("Private");
     setFormStatus("Active");
     setFormSchedule("");
@@ -1551,8 +1587,10 @@ function StudentsPage() {
     setFormName(student.name);
     setFormWhatsApp(student.whatsapp);
     setFormEmail(student.email || "");
-    setFormLevel(student.level || "B1");
-    setFormFocus(student.focus || "English");
+    setFormLevel(student.level || "");
+    setFormFocus(student.focus || "");
+    setFormLanguage(student.languageStudied || "");
+    setFormModality(student.modality || "");
     setFormType(student.type || "Private");
     setFormStatus(student.status || "Active");
     setFormGroupSize(student.groupSize || 3);
@@ -1646,8 +1684,10 @@ function StudentsPage() {
         formName !== (student.name || "") ||
         formWhatsApp !== (student.whatsapp || "") ||
         formEmail !== (student.email || "") ||
-        formLevel !== (student.level || "B1") ||
-        formFocus !== (student.focus || "English") ||
+        formLevel !== (student.level || "") ||
+        formFocus !== (student.focus || "") ||
+        formLanguage !== (student.languageStudied || "") ||
+        formModality !== (student.modality || "") ||
         formType !== (student.type || "Private") ||
         formStatus !== (student.status || "Active") ||
         formGroupSize !== (student.groupSize || 3) ||
@@ -1661,8 +1701,10 @@ function StudentsPage() {
         formName !== "" ||
         formWhatsApp !== "" ||
         formEmail !== "" ||
-        formLevel !== "B2" ||
-        formFocus !== "English" ||
+        formLevel !== "" ||
+        formFocus !== "" ||
+        formModality !== "" ||
+        formLanguage !== (teacherLanguages.length === 1 ? teacherLanguages[0] : "") ||
         formType !== "Private" ||
         formStatus !== "Active" ||
         formNotes !== "" ||
@@ -1732,8 +1774,10 @@ function StudentsPage() {
       full_name: formName,
       phone: formWhatsApp || null,
       email: formEmail.trim() || null,
-      level: formLevel || "A1",
-      language_studied: formFocus || "English",
+      level: formLevel || null,
+      language_studied: formLanguage || null,
+      focus: formFocus || null,
+      modality: formModality || null,
       type: formType || "Private",
       status: formStatus || "Active",
       schedule: scheduleString,
@@ -1782,7 +1826,7 @@ function StudentsPage() {
             updatedEvents = syncStudentScheduleWithEvents(
               targetStudentId,
               formName,
-              formLevel,
+              formLevel as CEFRLevel,
               formFocus as any,
               formType,
               scheduleDetailsObj,
@@ -1800,8 +1844,10 @@ function StudentsPage() {
         name: data.full_name,
         whatsapp: data.phone || "",
         email: data.email || "",
-        level: (data.level as CEFRLevel) || "A1",
-        focus: data.language_studied || "English",
+        level: data.level || "",
+        focus: data.focus || "",
+        languageStudied: data.language_studied || "",
+        modality: data.modality ?? null,
         type: formType,
         status: formStatus,
         schedule: scheduleString,
@@ -1838,8 +1884,8 @@ function StudentsPage() {
           setEditName(data.full_name);
           setEditWhatsApp(data.phone || "");
           setEditEmail(data.email || "");
-          setEditLevel((data.level as CEFRLevel) || "A1");
-          setEditFocus(data.language_studied || "English");
+          setEditLevel(data.level || "");
+          setEditFocus(data.focus || "");
           setEditNotes(data.notes || "");
           setEditClassFrequency(formSchedulesList.length);
           setEditSchedulesList(formSchedulesList);
@@ -1900,9 +1946,10 @@ function StudentsPage() {
       const matchSearch =
         (s.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (s.focus || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.languageStudied || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchLevel = selectedLevel === "ALL" || s.level === selectedLevel;
-      const matchFocus = selectedFocus === "ALL" || s.focus === selectedFocus;
+      const matchFocus = selectedFocus === "ALL" || s.languageStudied === selectedFocus;
       const matchStatus = selectedStatus === "ALL" || s.status === selectedStatus;
       return matchSearch && matchLevel && matchFocus && matchStatus;
     })
@@ -1927,6 +1974,32 @@ function StudentsPage() {
   });
 
   const t = translations[lang];
+
+  // Display-only label resolution: historical/archived values keep their stored ID.
+  const catalogLabel = (category: CatalogCategory, value: string | null | undefined): string => {
+    if (!value) return "";
+    if (!catalogOptions) return value;
+    return resolveCatalogLabel(catalogOptions, category, value) ?? value;
+  };
+
+  // Level filter: active catalog levels plus any historical level still in use.
+  const levelFilterOptions = (() => {
+    const seen = new Set<string>();
+    const options: { id: string; label: string }[] = [];
+    if (catalogOptions) {
+      for (const option of getActiveCatalogOptions(catalogOptions, "levels")) {
+        seen.add(option.id);
+        options.push({ id: option.id, label: option.label });
+      }
+    }
+    for (const s of students) {
+      if (s.level && !seen.has(s.level)) {
+        seen.add(s.level);
+        options.push({ id: s.level, label: catalogLabel("levels", s.level) });
+      }
+    }
+    return options;
+  })();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2000,7 +2073,18 @@ function StudentsPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground font-medium">
-                  {selectedStudent.focus} • {t.fieldLevel} {selectedStudent.level}
+                  {[
+                    selectedStudent.languageStudied
+                      ? formatLanguageLabel(selectedStudent.languageStudied, lang)
+                      : "",
+                    selectedStudent.level
+                      ? `${t.fieldLevel} ${catalogLabel("levels", selectedStudent.level)}`
+                      : "",
+                    catalogLabel("focuses", selectedStudent.focus),
+                    catalogLabel("modalities", selectedStudent.modality),
+                  ]
+                    .filter(Boolean)
+                    .join(" • ") || "\u00A0"}
                 </p>
               </div>
             </div>
@@ -2561,12 +2645,11 @@ function StudentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">{t.filterLevel}</SelectItem>
-                <SelectItem value="A1">A1</SelectItem>
-                <SelectItem value="A2">A2</SelectItem>
-                <SelectItem value="B1">B1</SelectItem>
-                <SelectItem value="B2">B2</SelectItem>
-                <SelectItem value="C1">C1</SelectItem>
-                <SelectItem value="C2">C2</SelectItem>
+                {levelFilterOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -2728,8 +2811,9 @@ function StudentsPage() {
                       </div>
 
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
-                        <span className="font-bold text-foreground/80">{student.level}</span> •{" "}
-                        {student.focus}
+                        <span className="font-bold text-foreground/80">{catalogLabel("levels", student.level)}</span>
+                        {student.languageStudied ? ` • ${formatLanguageLabel(student.languageStudied, lang)}` : ""}
+                        {student.focus ? ` • ${catalogLabel("focuses", student.focus)}` : ""}
                       </p>
 
                       {student.status?.toLowerCase() === "inactive" && (student.inactivationDate || student.inactivationReason) && (
@@ -2845,25 +2929,22 @@ function StudentsPage() {
                     <Label htmlFor="std-level" className="text-xs font-semibold text-foreground select-none">
                       {t.fieldLevel}
                     </Label>
-                    <Select value={formLevel} onValueChange={(val) => setFormLevel(val as CEFRLevel)}>
-                      <SelectTrigger id="std-level" className="h-11 rounded-xl border-border bg-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A1">A1</SelectItem>
-                        <SelectItem value="A2">A2</SelectItem>
-                        <SelectItem value="B1">B1</SelectItem>
-                        <SelectItem value="B2">B2</SelectItem>
-                        <SelectItem value="C1">C1</SelectItem>
-                        <SelectItem value="C2">C2</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <CatalogOptionSelect
+                      id="std-level"
+                      catalog={catalogOptions}
+                      category="levels"
+                      value={formLevel}
+                      onChange={setFormLevel}
+                      placeholder={t.selectLevel}
+                      noneLabel={t.noneOption}
+                      className="h-11 rounded-xl border-border bg-white"
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="std-focus" className="text-xs font-semibold text-foreground select-none">
                       {tr("auditUi.languageStudied")}
                     </Label>
-                    <Select value={formFocus} onValueChange={(val) => setFormFocus(val)}>
+                    <Select value={formLanguage} onValueChange={(val) => setFormLanguage(val)}>
                       <SelectTrigger id="std-focus" className="h-11 rounded-xl border-border bg-white">
                         <SelectValue
                           placeholder={
@@ -2880,9 +2961,9 @@ function StudentsPage() {
                               {formatLanguageLabel(langItem, lang)}
                             </SelectItem>
                           ))
-                        ) : formFocus ? (
-                          <SelectItem value={formFocus}>
-                            {formatLanguageLabel(formFocus, lang)}
+                        ) : formLanguage ? (
+                          <SelectItem value={formLanguage}>
+                            {formatLanguageLabel(formLanguage, lang)}
                           </SelectItem>
                         ) : null}
                       </SelectContent>
@@ -2901,6 +2982,36 @@ function StudentsPage() {
                         </button>
                       </p>
                     )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="std-focus-goal" className="text-xs font-semibold text-foreground select-none">
+                      {t.fieldFocus}
+                    </Label>
+                    <CatalogOptionSelect
+                      id="std-focus-goal"
+                      catalog={catalogOptions}
+                      category="focuses"
+                      value={formFocus}
+                      onChange={setFormFocus}
+                      placeholder={t.selectFocus}
+                      noneLabel={t.noneOption}
+                      className="h-11 rounded-xl border-border bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="std-modality" className="text-xs font-semibold text-foreground select-none">
+                      {t.fieldModality}
+                    </Label>
+                    <CatalogOptionSelect
+                      id="std-modality"
+                      catalog={catalogOptions}
+                      category="modalities"
+                      value={formModality}
+                      onChange={setFormModality}
+                      placeholder={t.selectModality}
+                      noneLabel={t.noneOption}
+                      className="h-11 rounded-xl border-border bg-white"
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="std-type" className="text-xs font-semibold text-foreground select-none">
