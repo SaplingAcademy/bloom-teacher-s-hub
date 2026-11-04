@@ -59,6 +59,28 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
   );
   const catalogItems = (cat: CatalogCategory) =>
     catalogOptions ? sortCatalogOptions(catalogOptions[cat] as any[]).map((o: any) => ({ value: o.id, label: o.label })) : [];
+  const taskResultsUnavailable = isTaskFilterUnavailable(tasksError, filters.tasks);
+  const [retryingTasks, setRetryingTasks] = useState(false);
+  const handleRetryTasks = async () => {
+    if (retryingTasks) return;
+    setRetryingTasks(true);
+    try {
+      await onRetryTasks();
+    } finally {
+      setRetryingTasks(false);
+    }
+  };
+  const retryTasksButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive"
+      onClick={handleRetryTasks}
+      disabled={retryingTasks}
+    >
+      <RefreshCw className={`w-3 h-3 ${retryingTasks ? "animate-spin" : ""}`} /> {F("tasksRetry")}
+    </Button>
+  );
   const field = (id: string, label: string, control: React.ReactNode) => (
     <div className="space-y-1 min-w-0">
       <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
