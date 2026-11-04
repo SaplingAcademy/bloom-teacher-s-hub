@@ -965,6 +965,8 @@ function StudentsPage() {
           email: studentData.email,
           level: studentData.level,
           language_studied: studentData.language_studied,
+          focus: studentData.focus,
+          modality: studentData.modality,
           type: studentData.type,
           status: studentData.status,
           schedule: studentData.schedule,
@@ -1121,7 +1123,7 @@ function StudentsPage() {
         studentData.teacher_id,
         studentData.full_name,
         studentData.level as CEFRLevel,
-        studentData.language_studied as CourseFocus,
+        studentData.focus as CourseFocus,
         studentData.type as StudentType,
         savedSchedules,
         8
@@ -1164,13 +1166,17 @@ function StudentsPage() {
       ? "Linked Group" 
       : editSchedulesList.map(s => `${s.weekday.substring(0, 3)} • ${s.startTime}`).join(", ");
 
+    // Pedagogical fields are not edited here: preserve the stored values exactly.
+    const settingsStudent = students.find((s) => s.id === selectedStudentId);
     const studentData = {
       teacher_id: user.id,
       full_name: editName,
       phone: editWhatsApp || null,
       email: editEmail.trim() || null,
-      level: editLevel || "A1",
-      language_studied: editFocus || "English",
+      level: settingsStudent?.level || null,
+      language_studied: settingsStudent?.languageStudied || null,
+      focus: settingsStudent?.focus || null,
+      modality: settingsStudent?.modality ?? null,
       type: editType || "Private",
       status: editStatus || "Active",
       schedule: scheduleString,
@@ -1217,7 +1223,7 @@ function StudentsPage() {
             updatedEvents = syncStudentScheduleWithEvents(
               selectedStudentId,
               editName,
-              editLevel,
+              editLevel as CEFRLevel,
               editFocus as any,
               editType,
               scheduleDetailsObj,
@@ -1241,8 +1247,10 @@ function StudentsPage() {
                 name: data.full_name,
                 whatsapp: data.phone || "",
                 email: data.email || "",
-                level: (data.level as CEFRLevel) || "A1",
-                focus: data.language_studied || "English",
+                level: data.level || "",
+                focus: data.focus || "",
+                languageStudied: data.language_studied || "",
+                modality: data.modality ?? null,
                 type: editType,
                 status: editStatus,
                 schedule: scheduleString,
@@ -1431,8 +1439,10 @@ function StudentsPage() {
         name: d.full_name,
         whatsapp: d.phone || "",
         email: d.email || "",
-        level: (d.level as CEFRLevel) || "A1",
-        focus: d.language_studied || "English",
+        level: d.level || "",
+        focus: d.focus || "",
+        languageStudied: d.language_studied || "",
+        modality: d.modality ?? null,
         type: (d.type as StudentType) || "Private",
         status: (d.status as StudentStatus) || "Active",
         schedule: scheduleSummary,
@@ -1762,8 +1772,10 @@ function StudentsPage() {
       full_name: formName,
       phone: formWhatsApp || null,
       email: formEmail.trim() || null,
-      level: formLevel || "A1",
-      language_studied: formFocus || "English",
+      level: formLevel || null,
+      language_studied: formLanguage || null,
+      focus: formFocus || null,
+      modality: formModality || null,
       type: formType || "Private",
       status: formStatus || "Active",
       schedule: scheduleString,
@@ -1812,7 +1824,7 @@ function StudentsPage() {
             updatedEvents = syncStudentScheduleWithEvents(
               targetStudentId,
               formName,
-              formLevel,
+              formLevel as CEFRLevel,
               formFocus as any,
               formType,
               scheduleDetailsObj,
@@ -1830,8 +1842,10 @@ function StudentsPage() {
         name: data.full_name,
         whatsapp: data.phone || "",
         email: data.email || "",
-        level: (data.level as CEFRLevel) || "A1",
-        focus: data.language_studied || "English",
+        level: data.level || "",
+        focus: data.focus || "",
+        languageStudied: data.language_studied || "",
+        modality: data.modality ?? null,
         type: formType,
         status: formStatus,
         schedule: scheduleString,
@@ -1868,8 +1882,8 @@ function StudentsPage() {
           setEditName(data.full_name);
           setEditWhatsApp(data.phone || "");
           setEditEmail(data.email || "");
-          setEditLevel((data.level as CEFRLevel) || "A1");
-          setEditFocus(data.language_studied || "English");
+          setEditLevel(data.level || "");
+          setEditFocus(data.focus || "");
           setEditNotes(data.notes || "");
           setEditClassFrequency(formSchedulesList.length);
           setEditSchedulesList(formSchedulesList);
