@@ -71,6 +71,10 @@ export function resolveProposalCycle(
   const maxN = Math.max(...numbered.map((e) => e.n));
   const latest = numbered.filter((e) => e.n === maxN);
   const reuse = latest.some((e) => e.status !== "completed" || pendingTaskEventIds.has(e.id));
-  if (reuse && maxN > 0) return { key: `${prefix}${maxN}`, cycle: maxN, isNew: false };
+  if (reuse) {
+    // Legacy events keep their original key so their pending follow-up is updated, not duplicated.
+    const target = latest.find((e) => e.status !== "completed" || pendingTaskEventIds.has(e.id))!;
+    return { key: maxN > 0 ? `${prefix}${maxN}` : target.idempotency_key, cycle: maxN, isNew: false };
+  }
   return { key: `${prefix}${maxN + 1}`, cycle: maxN + 1, isNew: true };
 }
