@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
+import { LeadTasksPanel } from "@/components/bloom/LeadTasksPanel";
 import { useLanguage } from "@/hooks/use-language";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
@@ -28,6 +29,8 @@ interface Props {
   onScheduleTrial: (lead: Lead) => void;
   onRecordProposal: (lead: Lead) => void;
   onConvert: (lead: Lead) => void;
+  teacherId?: string;
+  onTasksChanged?: () => void;
 }
 
 const SOURCE_KEYS: Record<string, string> = {
@@ -58,6 +61,8 @@ function LeadDetailBody({
   onScheduleTrial,
   onRecordProposal,
   onConvert,
+  teacherId,
+  onTasksChanged,
 }: Props & { lead: Lead }) {
   const { t, lang, formatStatus } = useLanguage();
   const { catalogOptions } = useCatalogOptions();
@@ -222,7 +227,10 @@ function LeadDetailBody({
               ))
             )}
           </TabsContent>
-          {["tasks", "files", "proposals"].map((k) => (
+          <TabsContent value="tasks" className="pt-3">
+            <LeadTasksPanel teacherId={teacherId} leadId={lead.id} onTasksChanged={onTasksChanged} />
+          </TabsContent>
+          {["files", "proposals"].map((k) => (
             <TabsContent key={k} value={k} className="pt-3">
               <p className="text-sm text-muted-foreground border border-dashed border-border rounded-lg p-4 text-center">
                 {L("comingSoon")}
