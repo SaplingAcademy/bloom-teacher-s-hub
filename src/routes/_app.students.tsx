@@ -7,6 +7,13 @@ import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
+import { useCatalogOptions } from "@/hooks/use-catalog-options";
+import {
+  getActiveCatalogOptions,
+  resolveCatalogLabel,
+  type CatalogCategory,
+} from "@/lib/catalog-options";
+import { CatalogOptionSelect } from "@/components/bloom/CatalogOptionSelect";
 import {
   saveStudentEnrollmentAgreement,
   updateStudentAgreementSchedule,
@@ -172,8 +179,10 @@ interface Student {
   name: string;
   whatsapp: string;
   email?: string;
-  level: CEFRLevel;
+  level: string;
   focus: string;
+  languageStudied?: string;
+  modality?: string | null;
   type: StudentType;
   status: StudentStatus;
   schedule: string; // e.g. "Tue • 7:00 PM"
@@ -270,8 +279,13 @@ const translations = {
     fieldName: "Full Name or Group Title",
     fieldPhone: "Phone",
     fieldEmail: "Email (Optional)",
-    fieldLevel: "CEFR Level",
-    fieldFocus: "Language Studied",
+    fieldLevel: "Level",
+    fieldFocus: "Focus / Goal",
+    fieldModality: "Modality",
+    noneOption: "None",
+    selectLevel: "Select the level",
+    selectFocus: "Select the focus",
+    selectModality: "Select the modality",
     fieldType: "Student Type",
     fieldStatus: "Initial Status",
     fieldSchedule: "Weekly Schedule",
@@ -342,8 +356,13 @@ const translations = {
     fieldName: "Nome Completo ou Nome do Grupo",
     fieldPhone: "Telefone",
     fieldEmail: "E-mail (Opcional)",
-    fieldLevel: "Nível CEFR",
-    fieldFocus: "Idioma Estudado",
+    fieldLevel: "Nível",
+    fieldFocus: "Foco / Objetivo",
+    fieldModality: "Modalidade",
+    noneOption: "Nenhum",
+    selectLevel: "Selecione o nível",
+    selectFocus: "Selecione o foco",
+    selectModality: "Selecione a modalidade",
     fieldType: "Tipo de Aluno",
     fieldStatus: "Status Inicial",
     fieldSchedule: "Horário Semanal",
@@ -575,6 +594,7 @@ function StudentsPage() {
     loading: languagesLoading,
     formatLanguageLabel,
   } = useTeacherLanguages();
+  const { catalogOptions } = useCatalogOptions();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -666,8 +686,10 @@ function StudentsPage() {
   const [formName, setFormName] = useState("");
   const [formWhatsApp, setFormWhatsApp] = useState("");
   const [formEmail, setFormEmail] = useState("");
-  const [formLevel, setFormLevel] = useState<CEFRLevel>("B1");
-  const [formFocus, setFormFocus] = useState<string>("English");
+  const [formLevel, setFormLevel] = useState<string>("");
+  const [formFocus, setFormFocus] = useState<string>("");
+  const [formLanguage, setFormLanguage] = useState<string>("");
+  const [formModality, setFormModality] = useState<string>("");
   const [formType, setFormType] = useState<StudentType>("Private");
   const [formStatus, setFormStatus] = useState<StudentStatus>("Active");
   const [formSchedule, setFormSchedule] = useState("");
@@ -753,8 +775,8 @@ function StudentsPage() {
   const [editName, setEditName] = useState("");
   const [editWhatsApp, setEditWhatsApp] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editLevel, setEditLevel] = useState<CEFRLevel>("B2");
-  const [editFocus, setEditFocus] = useState<string>("English");
+  const [editLevel, setEditLevel] = useState<string>("");
+  const [editFocus, setEditFocus] = useState<string>("");
   const [editType, setEditType] = useState<StudentType>("Private");
   const [editStatus, setEditStatus] = useState<StudentStatus>("Active");
   const [editPackageId, setEditPackageId] = useState("");
@@ -1513,8 +1535,10 @@ function StudentsPage() {
     setFormName("");
     setFormWhatsApp("");
     setFormEmail("");
-    setFormLevel("B2");
-    setFormFocus(teacherLanguages.length === 1 ? teacherLanguages[0] : "");
+    setFormLevel("");
+    setFormFocus("");
+    setFormModality("");
+    setFormLanguage(teacherLanguages.length === 1 ? teacherLanguages[0] : "");
     setFormType("Private");
     setFormStatus("Active");
     setFormSchedule("");
@@ -1551,8 +1575,10 @@ function StudentsPage() {
     setFormName(student.name);
     setFormWhatsApp(student.whatsapp);
     setFormEmail(student.email || "");
-    setFormLevel(student.level || "B1");
-    setFormFocus(student.focus || "English");
+    setFormLevel(student.level || "");
+    setFormFocus(student.focus || "");
+    setFormLanguage(student.languageStudied || "");
+    setFormModality(student.modality || "");
     setFormType(student.type || "Private");
     setFormStatus(student.status || "Active");
     setFormGroupSize(student.groupSize || 3);
@@ -1646,8 +1672,10 @@ function StudentsPage() {
         formName !== (student.name || "") ||
         formWhatsApp !== (student.whatsapp || "") ||
         formEmail !== (student.email || "") ||
-        formLevel !== (student.level || "B1") ||
-        formFocus !== (student.focus || "English") ||
+        formLevel !== (student.level || "") ||
+        formFocus !== (student.focus || "") ||
+        formLanguage !== (student.languageStudied || "") ||
+        formModality !== (student.modality || "") ||
         formType !== (student.type || "Private") ||
         formStatus !== (student.status || "Active") ||
         formGroupSize !== (student.groupSize || 3) ||
@@ -1661,8 +1689,10 @@ function StudentsPage() {
         formName !== "" ||
         formWhatsApp !== "" ||
         formEmail !== "" ||
-        formLevel !== "B2" ||
-        formFocus !== "English" ||
+        formLevel !== "" ||
+        formFocus !== "" ||
+        formModality !== "" ||
+        formLanguage !== (teacherLanguages.length === 1 ? teacherLanguages[0] : "") ||
         formType !== "Private" ||
         formStatus !== "Active" ||
         formNotes !== "" ||
