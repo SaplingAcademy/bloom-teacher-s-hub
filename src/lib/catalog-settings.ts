@@ -44,7 +44,7 @@ export async function changeCatalogOptionLifecycle(
   const { data: settings, error: readError } = await supabase.from("settings").select("catalog_options").eq("teacher_id", expectedTeacherId).maybeSingle();
   if (readError) throw readError;
   if (!settings) throw new CatalogSettingsError("missing_settings");
-  const current = normalizeCatalogOptions(settings.catalog_options);
+  const current = prepareCatalogForSave(normalizeCatalogOptions(settings.catalog_options));
   if (JSON.stringify(current) !== JSON.stringify(prepareCatalogForSave(expectedCatalog))) throw new CatalogSettingsError("changed");
   const option = current[category].find((entry) => entry.id === id);
   if (!option) throw new CatalogSettingsError("changed");
