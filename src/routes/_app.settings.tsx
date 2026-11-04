@@ -307,6 +307,18 @@ function SettingsPage() {
   );
 }
 
+function revealTeachingOptionsSave() {
+  window.setTimeout(() => {
+    const button = document.getElementById("teaching-options-save");
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const margin = 24;
+    if (rect.top >= margin && rect.bottom <= window.innerHeight - margin) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    button.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+  }, 80);
+}
+
 function PlatformLanguageManager() {
   const { lang, setLang, t } = useLanguage();
 
