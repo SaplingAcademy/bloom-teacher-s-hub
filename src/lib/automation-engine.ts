@@ -194,7 +194,7 @@ export async function recordAutomationEvent(
   sourceId: string,
   idempotencyKey: string,
   payload: Record<string, any>,
-  status: "completed" | "failed" = "completed",
+  status: "processing" | "completed" | "failed" = "completed",
   errorMessage?: string
 ): Promise<string | null> {
   try {
@@ -229,6 +229,8 @@ export async function recordAutomationEvent(
     return null;
   }
 }
+
+import { planAutoTasks, type AutoTaskRow, type AutoTaskSpec } from "@/lib/automation-task-plan";
 
 /** Event IDs of a given rule type for this lead (teacher-scoped). Throws on read failure. */
 async function fetchRuleEventIds(teacherId: string, leadId: string, eventType: string): Promise<Set<string>> {
@@ -339,42 +341,35 @@ export async function processNewLeadAutomation(
         .eq("id", lead.id);
     }
 
-    // 3. Create follow-up task if auto task creation enabled
+    // 3. Create follow-up task if auto task creation enabled (linked to the real event)
     if (settings.auto_task_creation_enabled) {
       const delayDays = settings.lead_followup_delay_days || 1;
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + delayDays);
-
       const taskTitle = `Entrar em contato com ${lead.full_name}`;
-      const taskDesc = `Primeiro contato agendado via automação Bloom. Origem: ${lead.source || "não informada"}.`;
 
-      // Check if task already exists for this lead
-      const { data: existingTask } = await supabase
+      // Legacy tasks created before event linkage (no automation_event_id) still count, never rewritten.
+      const { data: legacy, error: legacyErr } = await supabase
         .from("tasks")
         .select("id")
+        .eq("teacher_id", lead.teacher_id)
         .eq("lead_id", lead.id)
+        .is("automation_event_id", null)
         .eq("title", taskTitle)
-        .maybeSingle();
+        .limit(1);
+      if (legacyErr) throw new Error(legacyErr.message);
 
-      if (!existingTask) {
-        const { data: newTask, error: taskErr } = await supabase
-          .from("tasks")
-          .insert({
-            teacher_id: lead.teacher_id,
-            lead_id: lead.id,
-            title: taskTitle,
-            description: taskDesc,
-            status: "pending",
-            due_date: dueDate.toISOString(),
-          })
-          .select("id")
-          .single();
-
-        if (!taskErr && newTask) {
-          createdTaskId = newTask.id;
-        }
+      if (legacy && legacy.length > 0) {
+        createdTaskId = legacy[0].id;
       } else {
-        createdTaskId = existingTask.id;
+        const eventId = await beginAutomationEvent(lead.teacher_id, "lead.created", lead.id, idempotencyKey, { lead_name: lead.full_name });
+        const ids = await syncAutoTasks(lead, "lead.created", eventId, [{
+          activity_type: "follow_up",
+          title: taskTitle,
+          description: `Primeiro contato agendado via automação Bloom. Origem: ${lead.source || "não informada"}.`,
+          due_date: dueDate.toISOString(),
+        }], false);
+        createdTaskId = ids[0] ?? null;
       }
     }
 
@@ -580,33 +575,27 @@ export async function processTrialLessonScheduledAutomation(
       })
       .eq("id", lead.id);
 
-    // Create confirmation task and follow-up task
+    // Confirmation + follow-up tasks: one of each per lead trial; reschedule updates pending ones.
     if (settings.auto_task_creation_enabled) {
-      const confirmTaskTitle = `Confirmar aula experimental com ${lead.full_name}`;
-      const followupTaskTitle = `Dar feedback da aula experimental com ${lead.full_name}`;
-
-      // Insert confirmation task (due 1 day before trial)
       const confirmDueDate = new Date(`${trialDate}T09:00:00`);
       confirmDueDate.setDate(confirmDueDate.getDate() - 1);
-
-      await supabase.from("tasks").insert([
+      const evId = await beginAutomationEvent(lead.teacher_id, "lead.trial_scheduled", lead.id, idempotencyKey, {
+        trial_date: trialDate, trial_time: startTime, calendar_event_id: eventIdToUse,
+      });
+      await syncAutoTasks(lead, "lead.trial_scheduled", evId, [
         {
-          teacher_id: lead.teacher_id,
-          lead_id: lead.id,
-          title: confirmTaskTitle,
+          activity_type: "whatsapp",
+          title: `Confirmar aula experimental com ${lead.full_name}`,
           description: `Enviar mensagem de confirmação para a aula agendada em ${trialDate} às ${startTime}.`,
-          status: "pending",
           due_date: confirmDueDate.toISOString(),
         },
         {
-          teacher_id: lead.teacher_id,
-          lead_id: lead.id,
-          title: followupTaskTitle,
+          activity_type: "follow_up",
+          title: `Dar feedback da aula experimental com ${lead.full_name}`,
           description: `Verificar se a aula experimental ocorreu e enviar proposta.`,
-          status: "pending",
           due_date: new Date(`${trialDate}T18:00:00`).toISOString(),
         },
-      ]);
+      ], true);
     }
 
     const eventId = await recordAutomationEvent(
@@ -684,15 +673,15 @@ export async function processProposalRecordedAutomation(
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + delayDays);
 
-      const taskTitle = `Acompanhar proposta com ${lead.full_name}`;
-      await supabase.from("tasks").insert({
-        teacher_id: lead.teacher_id,
-        lead_id: lead.id,
-        title: taskTitle,
-        description: `Verificar resposta referente à proposta enviada de R$ ${finalValue.toFixed(2)}.`,
-        status: "pending",
-        due_date: dueDate.toISOString(),
+      const evId = await beginAutomationEvent(lead.teacher_id, "lead.proposal_recorded", lead.id, idempotencyKey, {
+        package_id: packageId, potential_value: finalValue,
       });
+      await syncAutoTasks(lead, "lead.proposal_recorded", evId, [{
+        activity_type: "follow_up",
+        title: `Acompanhar proposta com ${lead.full_name}`,
+        description: `Verificar resposta referente à proposta enviada de R$ ${finalValue.toFixed(2)}.`,
+        due_date: dueDate.toISOString(),
+      }], true);
     }
 
     const eventId = await recordAutomationEvent(
