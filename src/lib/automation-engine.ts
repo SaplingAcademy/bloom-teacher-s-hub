@@ -59,6 +59,11 @@ export interface Lead {
   last_interaction_at?: string;
   trial_scheduled_at?: string;
   trial_calendar_event_id?: string;
+  contacted_at?: string | null;
+  campaign?: string | null;
+  tags?: string[] | null;
+  lost_reason?: string | null;
+  converted_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

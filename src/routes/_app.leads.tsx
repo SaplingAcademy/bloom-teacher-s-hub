@@ -32,6 +32,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -277,6 +278,27 @@ function LeadsPage() {
       console.error("[Leads] Interaction catch:", err);
       toast.error(t("leads.toastInteractionError"));
     }
+  };
+
+  // Profile edit: owner-scoped update of only the changed columns, then read-back.
+  const handleSaveLeadProfile = async (lead: Lead, patch: Record<string, unknown>): Promise<boolean> => {
+    if (!teacherId) return false;
+    const { data, error } = await supabase
+      .from("leads")
+      .update(patch)
+      .eq("id", lead.id)
+      .eq("teacher_id", teacherId)
+      .select("*")
+      .maybeSingle();
+    if (error || !data) {
+      console.error("Failed to save lead profile:", error);
+      return false;
+    }
+    const saved = { ...(data as Lead), stage: normalizeLeadStage((data as Lead).stage) };
+    setLeads((prev) => prev.map((l) => (l.id === saved.id ? saved : l)));
+    setSelectedLead((prev) => (prev && prev.id === saved.id ? saved : prev));
+    toast.success(t("leadPanel.saved"));
+    return true;
   };
 
   // 3. Handle Schedule Trial Lesson (Rule C)
@@ -567,7 +589,7 @@ function LeadsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredLeads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="hover:bg-muted/30 transition-colors cursor-pointer">
                     <td className="p-3.5 font-medium text-card-foreground">{lead.full_name}</td>
                     <td className="p-3.5 text-xs text-muted-foreground">
                       <div>{lead.phone || "-"}</div>
@@ -710,132 +732,24 @@ function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Drawer / Modal: Lead Details & Automation Actions */}
-      {selectedLead && (
-        <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <div className="flex items-center justify-between">
-                <DialogTitle className="text-xl font-bold">{selectedLead.full_name}</DialogTitle>
-                <Badge variant="outline" className="text-xs px-2.5 py-0.5">
-                  {formatStatus(selectedLead.stage)}
-                </Badge>
-              </div>
-              <DialogDescription>
-                Criado em {selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleDateString("pt-BR") : "recentemente"}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6 pt-2">
-              {/* Quick Info Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-muted/40 p-3.5 rounded-lg border border-border text-xs">
-                <div>
-                  <span className="text-muted-foreground block">{t("leads.phoneLabel")}</span>
-                  <span className="font-medium text-card-foreground">{selectedLead.phone || "Não informado"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">{t("leads.emailLabel")}</span>
-                  <span className="font-medium text-card-foreground truncate block">{selectedLead.email || "Não informado"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">{t("leadsUi.languageAndLevel")}</span>
-                  <span className="font-medium text-card-foreground">{selectedLead.language_studied || "Inglês"} ({selectedLead.level || "A1"})</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">{t("leads.potentialValueLabel")}</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    {selectedLead.potential_value ? formatReaisToBRL(selectedLead.potential_value) : "Pendente"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">{t("leadsUi.source")}</span>
-                  <span className="font-medium text-card-foreground capitalize">{selectedLead.source || "Manual"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">{t("leadsUi.modality")}</span>
-                  <span className="font-medium text-card-foreground">{selectedLead.modality || "Online"}</span>
-                </div>
-              </div>
-
-              {/* Action Buttons Bar */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("leadsUi.automationActions")}</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 text-xs justify-start gap-2"
-                    onClick={() => handleRegisterInteraction(selectedLead)}
-                  >
-                    <MessageSquare className="w-4 h-4 text-amber-500" /> {t("leadsUi.registerInteraction")}
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 text-xs justify-start gap-2"
-                    onClick={() => {
-                      setTrialForm({ date: new Date().toISOString().split("T")[0], time: "14:00", duration: 60 });
-                      setIsTrialOpen(true);
-                    }}
-                  >
-                    <Calendar className="w-4 h-4 text-purple-500" /> {t("leadsUi.scheduleTrial")}
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 text-xs justify-start gap-2"
-                    onClick={() => {
-                      setProposalForm({ package_id: selectedLead.package_id || "", potential_value: selectedLead.potential_value?.toString() || "" });
-                      setIsProposalOpen(true);
-                    }}
-                  >
-                    <FileText className="w-4 h-4 text-blue-500" /> {t("leads.recordProposal")}
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="default"
-                    className="h-9 text-xs justify-start gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => openConvertModal(selectedLead)}
-                  >
-                    <UserCheck className="w-4 h-4" /> {t("leads.convertToStudent")}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Bloom Activity History */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Workflow className="w-3.5 h-3.5 text-primary" /> {t("leadsUi.automationHistory")}
-                </h4>
-
-                {activities.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic bg-muted/20 p-3 rounded-lg border border-dashed border-border">
-                    {t("leadsUi.noAutomation")}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {activities.map((act) => (
-                      <div key={act.id} className="p-3 rounded-lg bg-card border border-border text-xs space-y-1">
-                        <div className="flex items-center justify-between font-medium text-card-foreground">
-                          <span className="text-primary flex items-center gap-1">
-                            <Workflow className="w-3 h-3" /> {act.description}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(act.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Side panel: Lead details & profile editing */}
+      <LeadDetailSheet
+        lead={selectedLead}
+        packages={packages}
+        activities={activities}
+        onClose={() => setSelectedLead(null)}
+        onSaveProfile={handleSaveLeadProfile}
+        onRegisterInteraction={handleRegisterInteraction}
+        onScheduleTrial={() => {
+          setTrialForm({ date: new Date().toISOString().split("T")[0], time: "14:00", duration: 60 });
+          setIsTrialOpen(true);
+        }}
+        onRecordProposal={(lead) => {
+          setProposalForm({ package_id: lead.package_id || "", potential_value: lead.potential_value?.toString() || "" });
+          setIsProposalOpen(true);
+        }}
+        onConvert={openConvertModal}
+      />
 
       {/* Modal: Schedule Trial Lesson */}
       <Dialog open={isTrialOpen} onOpenChange={setIsTrialOpen}>
