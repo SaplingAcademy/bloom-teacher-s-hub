@@ -227,15 +227,8 @@ function LeadsPage() {
         .eq("teacher_id", teacherId);
       setPackages(pkgsData || []);
 
-      // 3. Pending lead tasks (teacher-scoped) for task filters
-      const { data: tasksData, error: tasksErr } = await supabase
-        .from("tasks")
-        .select("lead_id, status, due_date")
-        .eq("teacher_id", teacherId)
-        .eq("status", "pending")
-        .not("lead_id", "is", null);
-      if (tasksErr) console.error("Error fetching lead tasks:", tasksErr);
-      setLeadTasks(tasksData || []);
+      // 3. Pending lead tasks for task filters
+      await loadLeadTasks();
     } catch (err) {
       console.error("Failed loading leads page data:", err);
     } finally {
@@ -557,6 +550,8 @@ function LeadsPage() {
           resultCount={filteredLeads.length}
           hasSearch={searchQuery.trim() !== ""}
           onClearSearch={() => setSearchQuery("")}
+          tasksError={tasksError}
+          onRetryTasks={loadLeadTasks}
         />
       </div>
 
