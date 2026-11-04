@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SlidersHorizontal, X, Clock } from "lucide-react";
+import { SlidersHorizontal, X, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,14 +139,22 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
           {field("f-focus", F("focus"), pick("f-focus", "focus", catalogItems("focuses")))}
           {field("f-modality", F("modality"), pick("f-modality", "modality", catalogItems("modalities")))}
           {field("f-tasks", F("tasks"), (
-            <Select value={filters.tasks} onValueChange={(v) => set("tasks", v as LeadFilters["tasks"])}>
-              <SelectTrigger id="f-tasks" className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{F("all")}</SelectItem>
-                <SelectItem value="pending">{F("tasksPending")}</SelectItem>
-                <SelectItem value="overdue">{F("tasksOverdue")}</SelectItem>
-              </SelectContent>
-            </Select>
+            <>
+              <Select value={filters.tasks} onValueChange={(v) => set("tasks", v as LeadFilters["tasks"])}>
+                <SelectTrigger id="f-tasks" className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{F("all")}</SelectItem>
+                  <SelectItem value="pending">{F("tasksPending")}</SelectItem>
+                  <SelectItem value="overdue">{F("tasksOverdue")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {tasksError && (
+                <div className="flex items-center gap-1 flex-wrap" role="alert">
+                  <p className="text-[11px] text-destructive m-0">{F("tasksError")}</p>
+                  {retryTasksButton}
+                </div>
+              )}
+            </>
           ))}
           {field("f-from", F("createdFrom"), (
             <Input id="f-from" type="date" className="h-9 text-sm" value={filters.createdFrom} onChange={(e) => set("createdFrom", e.target.value)} />
