@@ -22,7 +22,7 @@ interface Props {
   leadId?: string;
   leadName?: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (interaction: LeadInteraction) => void;
 }
 
 export function LeadInteractionDialog({ open, teacherId, leadId, leadName, onClose, onSaved }: Props) {
