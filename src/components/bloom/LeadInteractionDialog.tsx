@@ -48,8 +48,8 @@ export function LeadInteractionDialog({ open, teacherId, leadId, leadName, onClo
     setSaving(true);
     setError(null);
     try {
-      await createLeadInteraction(teacherId, leadId, draft);
-      onSaved();
+      const saved = await createLeadInteraction(teacherId, leadId, draft);
+      onSaved(saved);
       onClose();
     } catch (err) {
       console.error("[Leads] Interaction save error:", err);
