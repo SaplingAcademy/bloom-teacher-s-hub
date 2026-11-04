@@ -5,6 +5,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { advanceLeadStageAfterInteraction, shouldAdvanceStageOnInteraction, type LeadInteraction } from "@/lib/lead-interactions";
 import {
   UserPlus,
   Search,
@@ -308,11 +309,21 @@ function LeadsPage() {
     if (lead) setInteractionLead(lead);
   };
 
-  const handleInteractionSaved = async () => {
+  const handleInteractionSaved = async (interaction: LeadInteraction) => {
     const target = interactionLead;
-    toast.success(t("leadInteractions.saved"));
     setHistoryRefreshKey((k) => k + 1);
-    if (!target || !teacherId) return;
+    if (!target || !teacherId) { toast.success(t("leadInteractions.saved")); return; }
+    if (shouldAdvanceStageOnInteraction(target.stage, interaction.type)) {
+      try {
+        await advanceLeadStageAfterInteraction(teacherId, target.id);
+        toast.success(t("leadInteractions.saved"));
+      } catch (err) {
+        console.error("[Leads] Stage advance after interaction failed:", err);
+        toast.warning(t("leadInteractions.stageError"));
+      }
+    } else {
+      toast.success(t("leadInteractions.saved"));
+    }
     const { data, error } = await supabase
       .from("leads").select("*").eq("id", target.id).eq("teacher_id", teacherId).maybeSingle();
     if (error || !data) { loadData(); return; }

@@ -63,6 +63,30 @@ export function isEffectiveContact(type: string): boolean {
   return type !== "note";
 }
 
+export const STAGE_NEW = "Novo contato";
+export const STAGE_IN_CONVERSATION = "Em conversa";
+
+/** Only an effective contact moves a lead out of exactly "Novo contato". */
+export function shouldAdvanceStageOnInteraction(currentStage: string | null | undefined, type: string): boolean {
+  return currentStage === STAGE_NEW && isEffectiveContact(type);
+}
+
+/**
+ * Owner-scoped compare-and-set: changes the stage only while it is still "Novo contato".
+ * Returns true if a row was updated, false if the stage had already changed. Throws on failure.
+ */
+export async function advanceLeadStageAfterInteraction(teacherId: string, leadId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("leads")
+    .update({ stage: STAGE_IN_CONVERSATION, updated_at: new Date().toISOString() })
+    .eq("id", leadId)
+    .eq("teacher_id", teacherId)
+    .eq("stage", STAGE_NEW)
+    .select("id");
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
 const INTERACTION_COLUMNS = "id, lead_id, type, description, occurred_at, created_at";
 
 export async function fetchLeadInteractions(teacherId: string, leadId: string): Promise<LeadInteraction[]> {

@@ -455,7 +455,7 @@ export const uiTranslations = {
     },
     "leadInteractions": {
       "title": "Registrar interação", "type": "Tipo", "occurredAt": "Data e horário", "description": "Descrição",
-      "save": "Salvar interação", "saving": "Salvando...", "cancel": "Cancelar", "saved": "Interação registrada.",
+      "save": "Salvar interação", "saving": "Salvando...", "cancel": "Cancelar", "saved": "Interação registrada.", "stageError": "Interação registrada, mas não foi possível mover o lead para \"Em conversa\". Altere o estágio manualmente.",
       "typeRequired": "Selecione o tipo.", "dateRequired": "Informe a data e o horário.", "dateInvalid": "Data inválida.",
       "dateFuture": "A data da interação não pode estar no futuro.", "descriptionRequired": "Descreva o que aconteceu.",
       "saveError": "Não foi possível salvar a interação. Seus dados foram mantidos.",
@@ -1745,7 +1745,7 @@ export const uiTranslations = {
     },
     "leadInteractions": {
       "title": "Record interaction", "type": "Type", "occurredAt": "Date and time", "description": "Description",
-      "save": "Save interaction", "saving": "Saving...", "cancel": "Cancel", "saved": "Interaction recorded.",
+      "save": "Save interaction", "saving": "Saving...", "cancel": "Cancel", "saved": "Interaction recorded.", "stageError": "Interaction recorded, but the lead couldn't be moved to \"In conversation\". Change the stage manually.",
       "typeRequired": "Select the type.", "dateRequired": "Enter the date and time.", "dateInvalid": "Invalid date.",
       "dateFuture": "The interaction date can't be in the future.", "descriptionRequired": "Describe what happened.",
       "saveError": "Couldn't save the interaction. Your input was kept.",
