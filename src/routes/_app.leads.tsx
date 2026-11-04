@@ -34,8 +34,16 @@ import {
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
+import { LeadFiltersBar, PendingContactBadge } from "@/components/bloom/LeadFiltersBar";
+import {
+  applyLeadFilters,
+  EMPTY_LEAD_FILTERS,
+  findDuplicateLeads,
+  summarizeLeadTasks,
+  type LeadFilters,
+} from "@/lib/lead-filters";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
-import { resolveCatalogLabel } from "@/lib/catalog-options";
+import { resolveCatalogLabel, resolveCatalogValue } from "@/lib/catalog-options";
 import {
   buildNewLeadInsert,
   emptyLeadProfileDraft,
@@ -117,6 +125,10 @@ function LeadsPage() {
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<LeadFilters>(EMPTY_LEAD_FILTERS);
+  const [leadTasks, setLeadTasks] = useState<{ lead_id: string | null; status: string | null; due_date: string | null }[]>([]);
+  const [duplicates, setDuplicates] = useState<Lead[]>([]);
+  const [duplicateAckKey, setDuplicateAckKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activities, setActivities] = useState<AutomationActivity[]>([]);
@@ -192,6 +204,16 @@ function LeadsPage() {
         .select("*")
         .eq("teacher_id", teacherId);
       setPackages(pkgsData || []);
+
+      // 3. Pending lead tasks (teacher-scoped) for task filters
+      const { data: tasksData, error: tasksErr } = await supabase
+        .from("tasks")
+        .select("lead_id, status, due_date")
+        .eq("teacher_id", teacherId)
+        .eq("status", "pending")
+        .not("lead_id", "is", null);
+      if (tasksErr) console.error("Error fetching lead tasks:", tasksErr);
+      setLeadTasks(tasksData || []);
     } catch (err) {
       console.error("Failed loading leads page data:", err);
     } finally {
@@ -223,6 +245,27 @@ function LeadsPage() {
     }
     setCreateError(null);
 
+    // Duplicate check: same teacher only; never modifies existing records.
+    const dupKey = `${newLeadForm.phone}|${newLeadForm.email}`;
+    if (duplicateAckKey !== dupKey && (newLeadForm.phone.trim() || newLeadForm.email.trim())) {
+      const { data: existing, error: dupErr } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("teacher_id", teacherId);
+      if (dupErr) {
+        setCreateError(t("leadFilters.dupCheckError"));
+        return;
+      }
+      const found = findDuplicateLeads(teacherId, (existing || []) as Lead[], newLeadForm);
+      if (found.length > 0) {
+        setDuplicates(found.map((l) => ({ ...l, stage: normalizeLeadStage(l.stage) })));
+        setDuplicateAckKey(dupKey);
+        return;
+      }
+    }
+    setDuplicates([]);
+    setDuplicateAckKey(null);
+
     setSubmitting(true);
     try {
       const { data: insertedLead, error } = await supabase
@@ -243,6 +286,8 @@ function LeadsPage() {
 
       setIsCreateOpen(false);
       setNewLeadForm(emptyLeadProfileDraft());
+      setDuplicates([]);
+      setDuplicateAckKey(null);
       loadData();
     } catch (err: any) {
       console.error("[Leads] Create error:", err);
@@ -420,11 +465,14 @@ function LeadsPage() {
   };
 
   // Filter leads
-  const filteredLeads = leads.filter((l) =>
-    l.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.phone?.includes(searchQuery)
-  );
+  const now = new Date();
+  const taskSummary = summarizeLeadTasks(leadTasks, now);
+  const filteredLeads = applyLeadFilters(leads, filters, {
+    search: searchQuery,
+    now,
+    tasks: taskSummary,
+    catalogId: (cat, v) => (catalogOptions ? resolveCatalogValue(catalogOptions, cat, v)?.id ?? v : v),
+  });
 
   return (
     <div className="space-y-6 pb-12">
@@ -476,6 +524,18 @@ function LeadsPage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      <div className="bg-card p-4 rounded-xl border border-border">
+        <LeadFiltersBar
+          filters={filters}
+          onChange={setFilters}
+          stages={KANBAN_STAGES}
+          leads={leads}
+          resultCount={filteredLeads.length}
+          hasSearch={searchQuery.trim() !== ""}
+          onClearSearch={() => setSearchQuery("")}
+        />
       </div>
 
       {/* Main Content Area */}
@@ -530,6 +590,7 @@ function LeadsPage() {
                             </div>
                           )}
                           <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                            <PendingContactBadge lead={lead} now={now} />
                             {pedagogyLabel(lead) && (
                               <Badge variant="outline" className="text-[10px] bg-muted/50 border-none">
                                 {pedagogyLabel(lead)}
@@ -583,7 +644,10 @@ function LeadsPage() {
               <tbody className="divide-y divide-border">
                 {filteredLeads.map((lead) => (
                   <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="hover:bg-muted/30 transition-colors cursor-pointer">
-                    <td className="p-3.5 font-medium text-card-foreground">{lead.full_name}</td>
+                    <td className="p-3.5 font-medium text-card-foreground">
+                      <div>{lead.full_name}</div>
+                      <div className="mt-1"><PendingContactBadge lead={lead} now={now} /></div>
+                    </td>
                     <td className="p-3.5 text-xs text-muted-foreground">
                       <div>{lead.phone || "-"}</div>
                       <div>{lead.email || "-"}</div>
@@ -628,13 +692,34 @@ function LeadsPage() {
           <form onSubmit={handleCreateLead} className="space-y-4 pt-2">
             <LeadProfileFields draft={newLeadForm} onChange={setNewLeadForm} packages={packages} showLostReason={false} />
             {createError && <p role="alert" className="text-sm text-destructive">{createError}</p>}
+            {duplicates.length > 0 && (
+              <div role="alert" className="rounded-lg border border-accent/40 bg-accent/10 p-3 space-y-2">
+                <p className="text-sm font-semibold">{t("leadFilters.dupTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("leadFilters.dupBody")}</p>
+                <ul className="space-y-1.5">
+                  {duplicates.map((d) => (
+                    <li key={d.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="min-w-0 truncate">
+                        <span className="font-medium">{d.full_name}</span>
+                        {" · "}{[d.phone, d.email].filter(Boolean).join(" · ")}
+                        {" · "}{formatStatus(d.stage)}
+                      </span>
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs shrink-0"
+                        onClick={() => { setIsCreateOpen(false); setSelectedLead(d); }}>
+                        {t("leadFilters.dupOpen")}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                 {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? t("leadsUi.creating") : t("leads.saveLeadBtn")}
+                {submitting ? t("leadsUi.creating") : duplicates.length > 0 ? t("leadFilters.dupContinue") : t("leads.saveLeadBtn")}
               </Button>
             </DialogFooter>
           </form>
