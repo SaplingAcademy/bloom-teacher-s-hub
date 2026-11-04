@@ -113,6 +113,16 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
         </span>
       </div>
 
+      {taskResultsUnavailable && (
+        <div
+          className="flex items-center justify-between gap-2 border border-destructive/30 bg-destructive/5 text-destructive rounded-lg px-3 py-2"
+          role="alert"
+        >
+          <p className="text-xs m-0">{F("tasksErrorBanner")}</p>
+          {retryTasksButton}
+        </div>
+      )}
+
       {open && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border-t border-border pt-3">
           {field("f-stage", F("stage"), pick("f-stage", "stage", stages.map((s) => ({ value: s.id, label: t(s.labelKey) }))))}
