@@ -9,7 +9,7 @@ import type { CatalogCategory } from "@/lib/catalog-options";
 import { TeachingOptionsEditor } from "@/components/bloom/TeachingOptionsEditor";
 import { Button } from "@/components/ui/button";
 
-export function TeachingOptionsSettings() {
+export function TeachingOptionsSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {}) {
   const { user, session, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { catalogOptions, error, isLoading, refetch } = useCatalogOptions();
@@ -35,7 +35,7 @@ export function TeachingOptionsSettings() {
   if (authLoading || !user || session?.user.id !== user.id || !catalogOptions) return <p role="alert" className="text-sm text-destructive">{t("teachingOptions.authentication")}</p>;
   const teacherId = user.id;
 
-  return <TeachingOptionsEditor key={teacherId} initialCatalog={catalogOptions} onSave={(catalog) => {
+  return <TeachingOptionsEditor key={teacherId} initialCatalog={catalogOptions} onDirtyChange={onDirtyChange} onSave={(catalog) => {
     if (authLoading || session?.user.id !== teacherId) return Promise.reject(new CatalogSettingsError("authentication"));
     return mutation.mutateAsync({ teacherId, catalog });
   }} onLifecycle={(catalog, category, id, action) => {

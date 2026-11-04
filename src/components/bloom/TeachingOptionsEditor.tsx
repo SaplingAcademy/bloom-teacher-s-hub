@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Check, Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,8 @@ function NaturePicker({ id, value, disabled, invalid, onChange }: { id: string; 
   );
 }
 
-export function TeachingOptionsEditor({ initialCatalog, onSave, onLifecycle }: {
+export function TeachingOptionsEditor({ initialCatalog, onSave, onLifecycle, onDirtyChange }: {
+  onDirtyChange?: (dirty: boolean) => void;
   initialCatalog: CatalogOptions;
   onSave: (catalog: CatalogOptions) => Promise<CatalogOptions>;
   onLifecycle: (catalog: CatalogOptions, category: CatalogCategory, id: string, action: "remove" | "restore") => Promise<CatalogLifecycleResult>;
@@ -63,6 +64,8 @@ export function TeachingOptionsEditor({ initialCatalog, onSave, onLifecycle }: {
   const [lifecycleError, setLifecycleError] = useState<string | null>(null);
   const busy = saving || lifecycleBusy;
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.current);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
   function requestRemoval(category: CatalogCategory, id: string, label: string) {
     setError(null);

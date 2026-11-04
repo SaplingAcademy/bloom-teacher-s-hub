@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { UnsavedChangesDialog } from "@/components/bloom/UnsavedChangesDialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { useTeacherLanguages, CANONICAL_LANGUAGES } from "@/hooks/use-teacher-languages";
@@ -62,6 +63,14 @@ function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const automationSave = useSaveFeedback();
+  const [tab, setTab] = useState("automations");
+  const [teachingDirty, setTeachingDirty] = useState(false);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const blocker = useBlocker({ shouldBlockFn: () => teachingDirty, enableBeforeUnload: () => teachingDirty, withResolver: true });
+  const changeTab = (next: string) => {
+    if (tab === "teaching" && next !== "teaching" && teachingDirty) setPendingTab(next);
+    else setTab(next);
+  };
 
   const [automationSettings, setAutomationSettings] = useState<AutomationSettings>({
     teacher_id: user?.id || "",
@@ -110,7 +119,7 @@ function SettingsPage() {
         description={t("settings.subtitle")}
       />
 
-      <Tabs defaultValue="automations" className="space-y-6">
+      <Tabs value={tab} onValueChange={changeTab} className="space-y-6">
         <TabsList className="bg-card border border-border p-1 rounded-xl h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="automations" className="gap-2 text-xs font-semibold">
             <Workflow className="w-4 h-4 text-primary" /> {t("settings.tabAutomations")}
@@ -265,7 +274,7 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="teaching">
-          <TeachingOptionsSettings />
+          <TeachingOptionsSettings onDirtyChange={setTeachingDirty} />
         </TabsContent>
 
         {/* PROFILE TAB / TEACHING LANGUAGES MANAGER & PLATFORM LANGUAGE */}
@@ -281,6 +290,15 @@ function SettingsPage() {
           </PanelCard>
         </TabsContent>
       </Tabs>
+      <UnsavedChangesDialog
+        open={pendingTab !== null || blocker.status === "blocked"}
+        onKeepEditing={() => { setPendingTab(null); if (blocker.status === "blocked") blocker.reset(); }}
+        onLeave={() => {
+          setTeachingDirty(false);
+          if (blocker.status === "blocked") blocker.proceed();
+          if (pendingTab) { setTab(pendingTab); setPendingTab(null); }
+        }}
+      />
     </div>
   );
 }
