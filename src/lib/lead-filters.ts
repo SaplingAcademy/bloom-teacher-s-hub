@@ -1,4 +1,5 @@
 import type { Lead } from "@/lib/automation-engine";
+import { resolveLeadActivityType } from "@/lib/lead-tasks";
 
 export type ContactFilter = "all" | "pending" | "done";
 export type TaskFilter = "all" | "pending" | "overdue";
@@ -18,11 +19,13 @@ export interface LeadFilters {
   valueMin: string;
   valueMax: string;
   tasks: TaskFilter;
+  /** "" = any; otherwise a stable activity type (NULL tasks count as "general"). */
+  activityType: string;
 }
 
 export const EMPTY_LEAD_FILTERS: LeadFilters = {
   stage: "", contact: "all", source: "", campaign: "", tag: "", language: "", level: "", focus: "",
-  modality: "", createdFrom: "", createdTo: "", valueMin: "", valueMax: "", tasks: "all",
+  modality: "", createdFrom: "", createdTo: "", valueMin: "", valueMax: "", tasks: "all", activityType: "",
 };
 
 export function countActiveLeadFilters(f: LeadFilters): number {
@@ -34,6 +37,8 @@ export function countActiveLeadFilters(f: LeadFilters): number {
 export interface LeadTaskSummary {
   pending: number;
   overdue: number;
+  /** Per activity type counts over all linked tasks (any status). */
+  byType: Record<string, { total: number; pending: number; overdue: number }>;
 }
 
 /**
@@ -41,21 +46,28 @@ export interface LeadTaskSummary {
  * failed to load while a pending/overdue task filter is active. An empty
  * result in that situation is an unknown, not a valid conclusion.
  */
-export function isTaskFilterUnavailable(tasksError: boolean, tasksFilter: TaskFilter): boolean {
-  return tasksError && tasksFilter !== "all";
+export function isTaskFilterUnavailable(tasksError: boolean, tasksFilter: TaskFilter, activityType = ""): boolean {
+  return tasksError && (tasksFilter !== "all" || activityType !== "");
 }
 
-/** Per-lead pending/overdue counts from pending tasks of the teacher. */
+/** Per-lead pending/overdue counts (pending tasks only) plus per-activity-type counts over all linked tasks. */
 export function summarizeLeadTasks(
-  tasks: { lead_id?: string | null; status?: string | null; due_date?: string | null }[],
+  tasks: { lead_id?: string | null; status?: string | null; due_date?: string | null; activity_type?: string | null }[],
   now: Date,
 ): Map<string, LeadTaskSummary> {
   const map = new Map<string, LeadTaskSummary>();
   for (const task of tasks) {
-    if (!task.lead_id || task.status !== "pending") continue;
-    const entry = map.get(task.lead_id) ?? { pending: 0, overdue: 0 };
-    entry.pending += 1;
-    if (task.due_date && new Date(task.due_date).getTime() < now.getTime()) entry.overdue += 1;
+    if (!task.lead_id) continue;
+    const entry = map.get(task.lead_id) ?? { pending: 0, overdue: 0, byType: {} };
+    const type = resolveLeadActivityType(task.activity_type);
+    const bucket = (entry.byType[type] ??= { total: 0, pending: 0, overdue: 0 });
+    bucket.total += 1;
+    if (task.status === "pending") {
+      const overdue = !!task.due_date && new Date(task.due_date).getTime() < now.getTime();
+      entry.pending += 1;
+      bucket.pending += 1;
+      if (overdue) { entry.overdue += 1; bucket.overdue += 1; }
+    }
     map.set(task.lead_id, entry);
   }
   return map;
@@ -140,10 +152,14 @@ export function applyLeadFilters(leads: Lead[], f: LeadFilters, ctx: LeadFilterC
       if (min !== null && v < min) return false;
       if (max !== null && v > max) return false;
     }
-    if (f.tasks !== "all") {
+    if (f.tasks !== "all" || f.activityType) {
       const s = ctx.tasks.get(l.id);
-      if (f.tasks === "pending" && !(s && s.pending > 0)) return false;
-      if (f.tasks === "overdue" && !(s && s.overdue > 0)) return false;
+      // With a type selected, pending/overdue apply to tasks of that type; "all" means any linked task of it.
+      const scope = f.activityType ? s?.byType[f.activityType] : s;
+      if (!scope) return false;
+      if (f.tasks === "pending" && !(scope.pending > 0)) return false;
+      if (f.tasks === "overdue" && !(scope.overdue > 0)) return false;
+      if (f.tasks === "all" && f.activityType && !((scope as { total: number }).total > 0)) return false;
     }
     return true;
   });

@@ -126,7 +126,7 @@ function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<LeadFilters>(EMPTY_LEAD_FILTERS);
-  const [leadTasks, setLeadTasks] = useState<{ lead_id: string | null; status: string | null; due_date: string | null }[]>([]);
+  const [leadTasks, setLeadTasks] = useState<{ lead_id: string | null; status: string | null; due_date: string | null; activity_type: string | null }[]>([]);
   const [tasksError, setTasksError] = useState(false);
   const [duplicates, setDuplicates] = useState<Lead[]>([]);
   const [duplicateAckKey, setDuplicateAckKey] = useState<string | null>(null);
@@ -184,9 +184,8 @@ function LeadsPage() {
     if (!teacherId) return;
     const { data: tasksData, error: tasksErr } = await supabase
       .from("tasks")
-      .select("lead_id, status, due_date")
+      .select("lead_id, status, due_date, activity_type")
       .eq("teacher_id", teacherId)
-      .eq("status", "pending")
       .not("lead_id", "is", null);
     if (tasksErr) {
       console.error("Error fetching lead tasks:", tasksErr);

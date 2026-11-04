@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlarmClock, CircleCheck, Clock, Plus, Workflow } from "lucide-react";
+import { AlarmClock, CircleCheck, ClipboardList, Clock, Mail, MessageCircle, Phone, Plus, Repeat, Users, Workflow, type LucideIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/use-language";
 import {
   completeLeadTask,
+  DEFAULT_LEAD_ACTIVITY_TYPE,
+  LEAD_ACTIVITY_TYPES,
+  resolveLeadActivityType,
+  type LeadActivityType,
   createLeadTask,
   fetchLeadTasks,
   groupLeadTasks,
@@ -23,7 +28,11 @@ interface Props {
   onTasksChanged?: () => void;
 }
 
-const EMPTY: LeadTaskDraft = { title: "", description: "", due: "" };
+const EMPTY: LeadTaskDraft = { title: "", description: "", due: "", activityType: DEFAULT_LEAD_ACTIVITY_TYPE };
+
+const ACTIVITY_ICONS: Record<LeadActivityType, LucideIcon> = {
+  whatsapp: MessageCircle, call: Phone, email: Mail, meeting: Users, follow_up: Repeat, general: ClipboardList,
+};
 
 export function LeadTasksPanel({ teacherId, leadId, onTasksChanged }: Props) {
   const { t, lang } = useLanguage();
@@ -114,6 +123,15 @@ export function LeadTasksPanel({ teacherId, leadId, onTasksChanged }: Props) {
           <span className={kind === "completed" ? "text-sm font-medium line-through text-muted-foreground" : "text-sm font-medium"}>
             {task.title}
           </span>
+          {(() => {
+            const type = resolveLeadActivityType(task.activity_type);
+            const TypeIcon = ACTIVITY_ICONS[type];
+            return (
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <TypeIcon className="w-3 h-3" aria-hidden /> {L(`types.${type}`)}
+              </span>
+            );
+          })()}
           {task.automation_event_id && (
             <Badge variant="secondary" className="gap-1 text-[10px]">
               <Workflow className="w-3 h-3" /> {L("automatic")}
@@ -153,6 +171,22 @@ export function LeadTasksPanel({ teacherId, leadId, onTasksChanged }: Props) {
           <div className="space-y-1">
             <Label htmlFor="lead-task-title">{L("title")}</Label>
             <Input id="lead-task-title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="lead-task-type">{L("activityType")}</Label>
+            <Select value={draft.activityType} onValueChange={(v) => setDraft({ ...draft, activityType: v as LeadActivityType })}>
+              <SelectTrigger id="lead-task-type"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {LEAD_ACTIVITY_TYPES.map((type) => {
+                  const Icon = ACTIVITY_ICONS[type];
+                  return (
+                    <SelectItem key={type} value={type}>
+                      <span className="inline-flex items-center gap-2"><Icon className="w-3.5 h-3.5" aria-hidden /> {L(`types.${type}`)}</span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label htmlFor="lead-task-desc">{L("description")}</Label>

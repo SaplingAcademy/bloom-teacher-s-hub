@@ -14,10 +14,21 @@ export interface LeadTask {
   due_date: string | null;
   created_at: string | null;
   automation_event_id: string | null;
+  activity_type: string | null;
 }
 
 export const LEAD_TASK_COLUMNS =
-  "id, lead_id, title, description, status, due_date, created_at, automation_event_id";
+  "id, lead_id, title, description, status, due_date, created_at, automation_event_id, activity_type";
+
+/** Stable values accepted by the `tasks.activity_type` check constraint. */
+export const LEAD_ACTIVITY_TYPES = ["whatsapp", "call", "email", "meeting", "follow_up", "general"] as const;
+export type LeadActivityType = (typeof LEAD_ACTIVITY_TYPES)[number];
+export const DEFAULT_LEAD_ACTIVITY_TYPE: LeadActivityType = "general";
+
+/** Display-only resolution: NULL/unknown stored values are presented as general tasks (data is never rewritten). */
+export function resolveLeadActivityType(value: string | null | undefined): LeadActivityType {
+  return (LEAD_ACTIVITY_TYPES as readonly string[]).includes(value ?? "") ? (value as LeadActivityType) : "general";
+}
 
 export interface LeadTaskGroups {
   overdue: LeadTask[];
@@ -48,6 +59,7 @@ export interface LeadTaskDraft {
   description: string;
   /** Value from a datetime-local input (device local time). */
   due: string;
+  activityType: LeadActivityType;
 }
 
 export type LeadTaskIssue = "titleRequired" | "dueRequired" | "dueInvalid";
@@ -68,6 +80,7 @@ export function buildLeadTaskInsert(teacherId: string, leadId: string, draft: Le
     description: description ? description : null,
     status: "pending",
     due_date: new Date(draft.due).toISOString(),
+    activity_type: draft.activityType,
   };
 }
 

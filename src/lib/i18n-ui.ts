@@ -439,7 +439,7 @@ export const uiTranslations = {
       "dupCheckError": "Não foi possível verificar duplicidades. Tente novamente.",
       "tasksError": "Não foi possível consultar as tarefas.",
       "tasksErrorBanner": "Não foi possível consultar as tarefas. O resultado do filtro pode estar incompleto.",
-      "tasksRetry": "Tentar novamente"
+      "tasksRetry": "Tentar novamente", "activityType": "Tipo de atividade"
     },
     "leadTasks": {
       "new": "Nova tarefa", "title": "Título", "description": "Descrição (opcional)", "dueDate": "Vencimento",
@@ -450,7 +450,8 @@ export const uiTranslations = {
       "loading": "Carregando tarefas...", "loadError": "Não foi possível consultar as tarefas deste lead.", "retry": "Tentar novamente",
       "overdue": "Atrasadas", "pending": "Pendentes", "completed": "Concluídas",
       "overdueEmpty": "Nenhuma tarefa atrasada.", "pendingEmpty": "Nenhuma tarefa pendente.", "completedEmpty": "Nenhuma tarefa concluída.",
-      "due": "Vence", "noDue": "Sem vencimento", "automatic": "Automática"
+      "due": "Vence", "noDue": "Sem vencimento", "automatic": "Automática", "activityType": "Tipo de atividade",
+      "types": { "whatsapp": "WhatsApp", "call": "Ligação", "email": "E-mail", "meeting": "Reunião", "follow_up": "Follow-up", "general": "Tarefa geral" }
     },
     "leadPanel": {
       "profile": "Perfil",
@@ -1716,7 +1717,7 @@ export const uiTranslations = {
       "dupCheckError": "Could not check for duplicates. Please try again.",
       "tasksError": "Could not load the tasks.",
       "tasksErrorBanner": "Could not load the tasks. The filter result may be incomplete.",
-      "tasksRetry": "Try again"
+      "tasksRetry": "Try again", "activityType": "Activity type"
     },
     "leadTasks": {
       "new": "New task", "title": "Title", "description": "Description (optional)", "dueDate": "Due date",
@@ -1727,7 +1728,8 @@ export const uiTranslations = {
       "loading": "Loading tasks...", "loadError": "Couldn't load this lead's tasks.", "retry": "Try again",
       "overdue": "Overdue", "pending": "Pending", "completed": "Completed",
       "overdueEmpty": "No overdue tasks.", "pendingEmpty": "No pending tasks.", "completedEmpty": "No completed tasks.",
-      "due": "Due", "noDue": "No due date", "automatic": "Automatic"
+      "due": "Due", "noDue": "No due date", "automatic": "Automatic", "activityType": "Activity type",
+      "types": { "whatsapp": "WhatsApp", "call": "Call", "email": "Email", "meeting": "Meeting", "follow_up": "Follow-up", "general": "General task" }
     },
     "leadPanel": {
       "profile": "Profile",
