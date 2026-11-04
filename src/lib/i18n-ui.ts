@@ -14,7 +14,14 @@ export const uiTranslations = {
       "requiredName": "Informe um nome para cada opção.", "requiredNature": "Selecione a natureza da modalidade.",
       "duplicateId": "Há opções com a mesma identificação. Não foi possível salvar.",
       "authentication": "Entre novamente na sua conta para salvar as opções de ensino.",
-      "missingSettings": "As configurações da sua conta não foram encontradas. Nenhuma alteração foi salva."
+      "missingSettings": "As configurações da sua conta não foram encontradas. Nenhuma alteração foi salva.",
+      "remove": "Excluir opção", "removeTitle": "Excluir esta opção?",
+      "removeDescription": "Se nunca foi utilizada, a opção será excluída definitivamente. Se já foi utilizada, será arquivada, preservando o histórico, e poderá ser recuperada.",
+      "confirmRemove": "Confirmar exclusão", "removing": "Verificando e excluindo…", "removed": "Opção excluída definitivamente.", "archived": "Opção arquivada. O histórico foi preservado.",
+      "archivedTitle": "Opções desativadas / arquivadas", "restore": "Recuperar opção", "restored": "Opção recuperada.",
+      "removeError": "Não foi possível verificar o uso ou salvar a exclusão. Nenhuma exclusão foi confirmada. Tente novamente.",
+      "restoreError": "Não foi possível recuperar a opção. Tente novamente.", "saveFirst": "Salve suas alterações antes de excluir ou recuperar opções.",
+      "changed": "Suas opções foram alteradas em outra janela. Atualize a página antes de continuar."
     },
     "growthRevenue": {
       "title": "Potencial de Receita",
@@ -1187,7 +1194,14 @@ export const uiTranslations = {
       "requiredName": "Enter a name for every option.", "requiredNature": "Select the modality nature.",
       "duplicateId": "Some options have the same identifier. Could not save.",
       "authentication": "Sign in to your account again to save teaching options.",
-      "missingSettings": "Your account settings were not found. No changes were saved."
+      "missingSettings": "Your account settings were not found. No changes were saved.",
+      "remove": "Delete option", "removeTitle": "Delete this option?",
+      "removeDescription": "If never used, this option will be permanently deleted. If previously used, it will be archived with its history preserved and can be restored.",
+      "confirmRemove": "Confirm deletion", "removing": "Checking and deleting…", "removed": "Option permanently deleted.", "archived": "Option archived. History was preserved.",
+      "archivedTitle": "Inactive / archived options", "restore": "Restore option", "restored": "Option restored.",
+      "removeError": "Could not verify usage or save the deletion. No deletion was confirmed. Try again.",
+      "restoreError": "Could not restore the option. Try again.", "saveFirst": "Save your changes before deleting or restoring options.",
+      "changed": "Your options changed in another window. Refresh the page before continuing."
     },
     "growthRevenue": {
       "title": "Revenue Potential",
