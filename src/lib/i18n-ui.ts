@@ -453,6 +453,18 @@ export const uiTranslations = {
       "due": "Vence", "noDue": "Sem vencimento", "automatic": "Automática", "activityType": "Tipo de atividade",
       "types": { "whatsapp": "WhatsApp", "call": "Ligação", "email": "E-mail", "meeting": "Reunião", "follow_up": "Follow-up", "general": "Tarefa geral" }
     },
+    "leadInteractions": {
+      "title": "Registrar interação", "type": "Tipo", "occurredAt": "Data e horário", "description": "Descrição",
+      "save": "Salvar interação", "saving": "Salvando...", "cancel": "Cancelar", "saved": "Interação registrada.",
+      "typeRequired": "Selecione o tipo.", "dateRequired": "Informe a data e o horário.", "dateInvalid": "Data inválida.",
+      "dateFuture": "A data da interação não pode estar no futuro.", "descriptionRequired": "Descreva o que aconteceu.",
+      "saveError": "Não foi possível salvar a interação. Seus dados foram mantidos.",
+      "noteHint": "Anotações internas ficam no histórico, mas não contam como contato com o lead.",
+      "new": "Nova interação", "loading": "Carregando histórico...", "empty": "Nenhum registro no histórico ainda.",
+      "manualError": "Não foi possível consultar as interações registradas.", "autoError": "Não foi possível consultar os eventos automáticos.",
+      "retry": "Tentar novamente", "manual": "Manual", "automatic": "Automática",
+      "types": { "whatsapp": "WhatsApp", "call": "Ligação", "email": "E-mail", "meeting": "Reunião", "note": "Anotação interna", "other": "Outro" }
+    },
     "leadPanel": {
       "profile": "Perfil",
       "tasks": "Tarefas",
@@ -1730,6 +1742,18 @@ export const uiTranslations = {
       "overdueEmpty": "No overdue tasks.", "pendingEmpty": "No pending tasks.", "completedEmpty": "No completed tasks.",
       "due": "Due", "noDue": "No due date", "automatic": "Automatic", "activityType": "Activity type",
       "types": { "whatsapp": "WhatsApp", "call": "Call", "email": "Email", "meeting": "Meeting", "follow_up": "Follow-up", "general": "General task" }
+    },
+    "leadInteractions": {
+      "title": "Record interaction", "type": "Type", "occurredAt": "Date and time", "description": "Description",
+      "save": "Save interaction", "saving": "Saving...", "cancel": "Cancel", "saved": "Interaction recorded.",
+      "typeRequired": "Select the type.", "dateRequired": "Enter the date and time.", "dateInvalid": "Invalid date.",
+      "dateFuture": "The interaction date can't be in the future.", "descriptionRequired": "Describe what happened.",
+      "saveError": "Couldn't save the interaction. Your input was kept.",
+      "noteHint": "Internal notes stay in the history but don't count as contact with the lead.",
+      "new": "New interaction", "loading": "Loading history...", "empty": "No history entries yet.",
+      "manualError": "Couldn't load the recorded interactions.", "autoError": "Couldn't load the automatic events.",
+      "retry": "Try again", "manual": "Manual", "automatic": "Automatic",
+      "types": { "whatsapp": "WhatsApp", "call": "Call", "email": "Email", "meeting": "Meeting", "note": "Internal note", "other": "Other" }
     },
     "leadPanel": {
       "profile": "Profile",
