@@ -1,8 +1,9 @@
 # Roadmap
 
-- [ ] Add confirmed trash removal after the reorder arrows for every teaching-options group, persist removal immediately and show inactive options separately with ID-preserving recovery.
-- [ ] Check authenticated teacher historical usage before permanent removal; archive used options and fail closed on uncertain reads, preserving other settings and records without schema changes.
-- [ ] Run only focused catalog removal/recovery/usage/persistence tests and check the Settings flow; real authenticated readback depends on available session.
+- [x] Add confirmed trash removal after reorder arrows in all three teaching-options groups, immediate persistence, active-only main lists and separate ID-preserving recovery; require saving unfinished edits before removal/recovery.
+- [x] Check paginated, teacher-scoped historical level/focus/modality references (students, leads, calendar events, classes, lessons/resources where applicable), including aliases/legacy labels and inactive/archived records. Permanently remove only after successful unused checks; retain used IDs/metadata with active=false. Single-column compare-and-set preserves other settings and rejects conflicting catalogs/account switches; no tables, migrations, history writes or other screens changed.
+- [x] Run only the five focused catalog test files: 86 passed. Isolated real Settings editor/hook/mutations verified confirmation/cancel, unused deletion, used archive, cache refresh, reload, same-ID recovery and failed-write retention; PT/EN dialogs and 800px/390px fit passed without runtime errors. Automatic preview build OK; no manual build/typecheck or broad tests.
+- [ ] Verify removal/recovery with real authenticated teacher records; unavailable external app session means /settings redirects to /auth. Isolated mocked session/data reads do not verify production RLS/schema or actual database readback. Client history checks are not atomic with concurrent record creation; strict race-proof enforcement would require separately authorized database work.
 
 - [x] Add only the Teaching options section to existing Settings with stable-ID editing, ordering, activation and modality nature in PT/EN; preserve languages, other screens and historical data.
 - [x] Save the complete normalized catalog only to the freshly verified authenticated teacher's existing settings row, updating only catalog_options and the exported teacher-scoped cache; missing rows fail explicitly without partial settings creation.
