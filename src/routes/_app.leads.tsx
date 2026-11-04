@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
+import { LeadInteractionDialog } from "@/components/bloom/LeadInteractionDialog";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
 import { LeadFiltersBar, PendingContactBadge } from "@/components/bloom/LeadFiltersBar";
 import {
@@ -83,12 +84,9 @@ import {
   Lead,
   normalizeLeadStage,
   processNewLeadAutomation,
-  processLeadInteractionAutomation,
   processTrialLessonScheduledAutomation,
   processProposalRecordedAutomation,
   convertLeadToStudentAutomation,
-  fetchAutomationActivity,
-  AutomationActivity,
 } from "@/lib/automation-engine";
 
 export const Route = createFileRoute("/_app/leads")({
@@ -132,7 +130,8 @@ function LeadsPage() {
   const [duplicateAckKey, setDuplicateAckKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [activities, setActivities] = useState<AutomationActivity[]>([]);
+  const [interactionLead, setInteractionLead] = useState<Lead | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -239,14 +238,6 @@ function LeadsPage() {
     loadData();
   }, [teacherId]);
 
-  // Load automation activity when lead is selected
-  useEffect(() => {
-    if (selectedLead && teacherId) {
-      fetchAutomationActivity(teacherId, 30).then((acts) => {
-        setActivities(acts.filter((a) => a.target_id === selectedLead.id));
-      });
-    }
-  }, [selectedLead, teacherId]);
 
   // 1. Handle New Lead Creation (Rule A)
   const handleCreateLead = async (e: React.FormEvent) => {
@@ -311,23 +302,23 @@ function LeadsPage() {
     }
   };
 
-  // 2. Handle First Interaction (Rule B)
-  const handleRegisterInteraction = async (lead: Lead) => {
-    if (!lead) return;
-    try {
-      const res = await processLeadInteractionAutomation(lead);
-      if (res.success) {
-        toast.success(t("leads.toastInteractionSuccess"));
-        loadData();
-        setSelectedLead((prev) => (prev ? { ...prev, stage: "Em conversa" } : null));
-      } else {
-        console.error("[Leads] Interaction error:", res.error);
-        toast.error(t("leads.toastInteractionError"));
-      }
-    } catch (err: any) {
-      console.error("[Leads] Interaction catch:", err);
-      toast.error(t("leads.toastInteractionError"));
-    }
+  // Manual interaction: opens the form; DB triggers update contacted_at/last_interaction_at.
+  // No stage change, no tasks, no Rule B call.
+  const handleRegisterInteraction = (lead: Lead) => {
+    if (lead) setInteractionLead(lead);
+  };
+
+  const handleInteractionSaved = async () => {
+    const target = interactionLead;
+    toast.success(t("leadInteractions.saved"));
+    setHistoryRefreshKey((k) => k + 1);
+    if (!target || !teacherId) return;
+    const { data, error } = await supabase
+      .from("leads").select("*").eq("id", target.id).eq("teacher_id", teacherId).maybeSingle();
+    if (error || !data) { loadData(); return; }
+    const fresh = { ...data, stage: normalizeLeadStage(data.stage) } as Lead;
+    setLeads((prev) => prev.map((l) => (l.id === fresh.id ? fresh : l)));
+    setSelectedLead((prev) => (prev && prev.id === fresh.id ? fresh : prev));
   };
 
   // Profile edit: owner-scoped update of only the changed columns, then read-back.
@@ -746,7 +737,7 @@ function LeadsPage() {
       <LeadDetailSheet
         lead={selectedLead}
         packages={packages}
-        activities={activities}
+        historyRefreshKey={historyRefreshKey}
         onClose={() => setSelectedLead(null)}
         onSaveProfile={handleSaveLeadProfile}
         teacherId={teacherId}
@@ -761,6 +752,15 @@ function LeadsPage() {
           setIsProposalOpen(true);
         }}
         onConvert={openConvertModal}
+      />
+
+      <LeadInteractionDialog
+        open={!!interactionLead}
+        teacherId={teacherId}
+        leadId={interactionLead?.id}
+        leadName={interactionLead?.full_name}
+        onClose={() => setInteractionLead(null)}
+        onSaved={handleInteractionSaved}
       />
 
       {/* Modal: Schedule Trial Lesson */}

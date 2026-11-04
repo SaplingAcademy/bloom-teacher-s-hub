@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Calendar, FileText, MessageSquare, Pencil, UserCheck, Workflow, CircleCheck, CircleDashed } from "lucide-react";
+import { Calendar, FileText, MessageSquare, Pencil, UserCheck, CircleCheck, CircleDashed } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
 import { LeadTasksPanel } from "@/components/bloom/LeadTasksPanel";
+import { LeadHistoryPanel } from "@/components/bloom/LeadHistoryPanel";
 import { useLanguage } from "@/hooks/use-language";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
@@ -16,12 +17,11 @@ import {
   validateLeadProfileDraft,
   type LeadProfileDraft,
 } from "@/lib/lead-profile";
-import type { AutomationActivity, Lead } from "@/lib/automation-engine";
+import type { Lead } from "@/lib/automation-engine";
 
 interface Props {
   lead: Lead | null;
   packages: { id: string; name?: string }[];
-  activities: AutomationActivity[];
   onClose: () => void;
   /** Persists only the changed columns; resolves false on failure so the draft is kept. */
   onSaveProfile: (lead: Lead, patch: Record<string, unknown>) => Promise<boolean>;
@@ -31,6 +31,7 @@ interface Props {
   onConvert: (lead: Lead) => void;
   teacherId?: string;
   onTasksChanged?: () => void;
+  historyRefreshKey?: number;
 }
 
 const SOURCE_KEYS: Record<string, string> = {
@@ -55,7 +56,6 @@ export function LeadDetailSheet(props: Props) {
 function LeadDetailBody({
   lead,
   packages,
-  activities,
   onSaveProfile,
   onRegisterInteraction,
   onScheduleTrial,
@@ -63,6 +63,7 @@ function LeadDetailBody({
   onConvert,
   teacherId,
   onTasksChanged,
+  historyRefreshKey,
 }: Props & { lead: Lead }) {
   const { t, lang, formatStatus } = useLanguage();
   const { catalogOptions } = useCatalogOptions();
@@ -211,21 +212,8 @@ function LeadDetailBody({
             )}
           </TabsContent>
 
-          <TabsContent value="history" className="pt-3 space-y-3">
-            <p className="text-xs text-muted-foreground">{L("comingSoon")}</p>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Workflow className="w-3.5 h-3.5" /> {t("leadsUi.automationHistory")}
-            </h4>
-            {activities.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">{t("leadsUi.noAutomation")}</p>
-            ) : (
-              activities.map((act) => (
-                <div key={act.id} className="p-3 rounded-lg border border-border text-xs flex justify-between gap-2">
-                  <span>{act.description}</span>
-                  <span className="text-muted-foreground shrink-0">{fmtDate(act.created_at)}</span>
-                </div>
-              ))
-            )}
+          <TabsContent value="history" className="pt-3">
+            <LeadHistoryPanel teacherId={teacherId} leadId={lead.id} refreshKey={historyRefreshKey ?? 0} onAddInteraction={() => onRegisterInteraction(lead)} />
           </TabsContent>
           <TabsContent value="tasks" className="pt-3">
             <LeadTasksPanel teacherId={teacherId} leadId={lead.id} onTasksChanged={onTasksChanged} />
