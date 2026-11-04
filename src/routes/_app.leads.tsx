@@ -750,6 +750,8 @@ function LeadsPage() {
         activities={activities}
         onClose={() => setSelectedLead(null)}
         onSaveProfile={handleSaveLeadProfile}
+        teacherId={teacherId}
+        onTasksChanged={loadLeadTasks}
         onRegisterInteraction={handleRegisterInteraction}
         onScheduleTrial={() => {
           setTrialForm({ date: new Date().toISOString().split("T")[0], time: "14:00", duration: 60 });
