@@ -24,7 +24,10 @@ const from = (table: string) => {
       if (table === "leads") {
         if (leadError) return Promise.resolve({ data: null, error: { message: "leads unavailable" } }).then(resolve);
         const proposal = query.filters.some((f) => f.method === "in" && f.column === "stage");
-        return Promise.resolve({ data: [{ id: proposal ? "proposal" : "stale", full_name: "Contact", updated_at: "2026-10-01T10:00:00Z" }], error: null }).then(resolve);
+        return Promise.resolve({ data: [{ id: proposal ? "proposal" : "stale", teacher_id: "teacher", stage: proposal ? "Proposta enviada" : "Em conversa", full_name: "Contact", updated_at: "2026-10-20T10:00:00Z", created_at: "2026-10-01T10:00:00Z", last_interaction_at: "2026-10-01T10:00:00Z" }], error: null }).then(resolve);
+      }
+      if (table === "automation_settings") {
+        return Promise.resolve({ data: { id: "settings", teacher_id: "teacher", inactivity_period_days: 10, auto_task_creation_enabled: true, updated_at: "2026-10-01T10:00:00Z" }, error: null }).then(resolve);
       }
       // Fail an invalid event/lead selection rather than silently accepting it.
       if (table === "calendar_events" && query.columns.split(",").includes("lead_id")) {
@@ -33,7 +36,7 @@ const from = (table: string) => {
       return Promise.resolve({ data: [], error: null }).then(resolve);
     },
   };
-  for (const method of ["eq", "not", "in", "lte", "lt", "neq", "order", "gte", "ilike"]) {
+  for (const method of ["eq", "not", "in", "lte", "lt", "neq", "order", "gte", "ilike", "or", "range", "maybeSingle"]) {
     builder[method] = (column: string, value: unknown, operand?: unknown) => { query.filters.push({ method, column, value, ...(operand === undefined ? {} : { operand }) }); return builder; };
   }
   return builder;
@@ -85,7 +88,9 @@ describe("Today production task and independent lead discovery", () => {
     expect(leads.every((q) => q.filters.some((f) => f.method === "eq" && f.column === "teacher_id" && f.value === "teacher"))).toBe(true);
     expect(leads[0].filters).toContainEqual({ method: "in", column: "stage", value: ["Proposta enviada", "proposal"] });
     expect(leads[1].filters).toContainEqual({ method: "not", column: "stage", value: "in", operand: '("Convertido","won","Perdido","lost")' });
-    expect(leads[1].filters).toContainEqual({ method: "lt", column: "updated_at", value: new Date(2026, 9, 13).toISOString() });
+    const cutoff = new Date(now.getTime() - 10 * 86_400_000).toISOString();
+    expect(leads[1].filters).toContainEqual({ method: "or", column: `last_interaction_at.lte.${cutoff},and(last_interaction_at.is.null,created_at.lte.${cutoff})`, value: undefined });
+    expect(leads[1].columns).not.toContain("updated_at");
     expect(result.failed).toEqual([]);
     expect(result.items.some((i) => i.reason === "lead_trial_soon")).toBe(false);
     expect(queries.filter((q) => q.table === "calendar_events")).toHaveLength(1);

@@ -16,6 +16,7 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
     const matches = (row: any) => q.filters.every(([method, column, value]) => {
       if (method === "eq") return row[column] === value;
       if (method === "gt") return row[column] > value;
+      if (method === "in") return value.includes(row[column]);
       if (method === "not") return !["Convertido", "won", "Perdido", "lost"].includes(row[column]);
       return true;
     });
@@ -26,6 +27,8 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
       update(data: any) { kind = "update"; values = data; return builder; },
       eq(col: string, value: any) { q.filters.push(["eq", col, value]); return builder; },
       gt(col: string, value: any) { q.filters.push(["gt", col, value]); return builder; },
+      in(col: string, value: any) { q.filters.push(["in", col, value]); return builder; },
+      lte() { return builder; }, neq() { return builder; }, lt() { return builder; }, ilike() { return builder; }, gte() { return builder; },
       not(col: string) { q.filters.push(["not", col, null]); return builder; },
       or(value: string) { q.filters.push(["or", "", value]); return builder; },
       order() { return builder; }, range() { return builder; },
