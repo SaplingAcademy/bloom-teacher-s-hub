@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Correct Rule E contact-based inactivity and shared configured threshold in Today/attention; preserve closed leads, notes and history.
+- [ ] Connect Rule E to existing load flows with persisted activation/cycle identity, task/event linkage and fail-closed retries; no retroactive bulk tasks or changes to Rules A/C/D.
+- [ ] Run only focused inactivity/configuration/task/idempotency tests; report authenticated verification and closed-app scheduling limitations.
+
 - [x] Add confirmed trash removal after reorder arrows in all three teaching-options groups, immediate persistence, active-only main lists and separate ID-preserving recovery; require saving unfinished edits before removal/recovery.
 - [x] Check paginated, teacher-scoped historical level/focus/modality references (students, leads, calendar events, classes, lessons/resources where applicable), including aliases/legacy labels and inactive/archived records. Permanently remove only after successful unused checks; retain used IDs/metadata with active=false. Single-column compare-and-set preserves other settings and rejects conflicting catalogs/account switches; no tables, migrations, history writes or other screens changed.
 - [x] Run only the five focused catalog test files: 86 passed. Isolated real Settings editor/hook/mutations verified confirmation/cancel, unused deletion, used archive, cache refresh, reload, same-ID recovery and failed-write retention; PT/EN dialogs and 800px/390px fit passed without runtime errors. Automatic preview build OK; no manual build/typecheck or broad tests.
