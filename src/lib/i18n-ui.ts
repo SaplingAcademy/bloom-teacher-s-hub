@@ -20,7 +20,7 @@ export const uiTranslations = {
       "confirmRemove": "Confirmar exclusão", "removing": "Verificando e excluindo…", "removed": "Opção excluída definitivamente.", "archived": "Opção arquivada. O histórico foi preservado.",
       "archivedTitle": "Opções desativadas / arquivadas", "restore": "Recuperar opção", "restored": "Opção recuperada.",
       "removeError": "Não foi possível verificar o uso ou salvar a exclusão. Nenhuma exclusão foi confirmada. Tente novamente.",
-      "restoreError": "Não foi possível recuperar a opção. Tente novamente.", "saveFirst": "Salve suas alterações antes de excluir ou recuperar opções.",
+      "restoreError": "Não foi possível recuperar a opção. Tente novamente.", "saveFirst": "Salve suas alterações antes de excluir ou recuperar opções.", "unsavedTitle": "Alterações não salvas", "unsavedBody": "Você tem alterações não salvas. Deseja sair sem salvar?", "keepEditing": "Continuar editando", "leaveWithoutSaving": "Sair sem salvar",
       "changed": "Suas opções foram alteradas em outra janela. Atualize a página antes de continuar."
     },
     "growthRevenue": {
@@ -1200,7 +1200,7 @@ export const uiTranslations = {
       "confirmRemove": "Confirm deletion", "removing": "Checking and deleting…", "removed": "Option permanently deleted.", "archived": "Option archived. History was preserved.",
       "archivedTitle": "Inactive / archived options", "restore": "Restore option", "restored": "Option restored.",
       "removeError": "Could not verify usage or save the deletion. No deletion was confirmed. Try again.",
-      "restoreError": "Could not restore the option. Try again.", "saveFirst": "Save your changes before deleting or restoring options.",
+      "restoreError": "Could not restore the option. Try again.", "saveFirst": "Save your changes before deleting or restoring options.", "unsavedTitle": "Unsaved changes", "unsavedBody": "You have unsaved changes. Do you want to leave without saving?", "keepEditing": "Keep editing", "leaveWithoutSaving": "Leave without saving",
       "changed": "Your options changed in another window. Refresh the page before continuing."
     },
     "growthRevenue": {
