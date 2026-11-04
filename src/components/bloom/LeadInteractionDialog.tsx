@@ -12,6 +12,7 @@ import {
   emptyInteractionDraft,
   toDateTimeLocal,
   validateInteractionDraft,
+  type LeadInteraction,
   type LeadInteractionDraft,
   type LeadInteractionType,
 } from "@/lib/lead-interactions";

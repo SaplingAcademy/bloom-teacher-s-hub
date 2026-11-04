@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildInteractionInsert, isEffectiveContact, mergeLeadTimeline, validateInteractionDraft } from "@/lib/lead-interactions";
+import { buildInteractionInsert, isEffectiveContact, mergeLeadTimeline, shouldAdvanceStageOnInteraction, validateInteractionDraft } from "@/lib/lead-interactions";
 
 const now = new Date("2026-11-04T15:00:00");
 const draft = { type: "call" as const, occurredAt: "2026-11-01T10:30", description: "  Falou sobre horários " };
@@ -23,6 +23,19 @@ describe("lead interactions", () => {
   it("internal notes are not an effective contact", () => {
     expect(isEffectiveContact("note")).toBe(false);
     expect(isEffectiveContact("whatsapp")).toBe(true);
+  });
+  it("advances only 'Novo contato' to 'Em conversa' on an effective contact", () => {
+    for (const type of ["whatsapp", "call", "email", "meeting", "other"]) {
+      expect(shouldAdvanceStageOnInteraction("Novo contato", type)).toBe(true);
+    }
+  });
+  it("never advances on internal notes", () => {
+    expect(shouldAdvanceStageOnInteraction("Novo contato", "note")).toBe(false);
+  });
+  it("never changes any other stage", () => {
+    for (const stage of ["Em conversa", "Aula experimental agendada", "Proposta enviada", "Convertido", "Perdido", null]) {
+      expect(shouldAdvanceStageOnInteraction(stage, "call")).toBe(false);
+    }
   });
   it("merges manual and automatic entries newest first, keeping their origin", () => {
     const tl = mergeLeadTimeline(
