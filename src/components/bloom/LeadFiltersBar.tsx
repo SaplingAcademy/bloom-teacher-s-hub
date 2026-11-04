@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SlidersHorizontal, X, Clock } from "lucide-react";
+import { SlidersHorizontal, X, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { sortCatalogOptions, type CatalogCategory } from "@/lib/catalog-options";
-import { countActiveLeadFilters, EMPTY_LEAD_FILTERS, pendingContactAge, type LeadFilters } from "@/lib/lead-filters";
+import { countActiveLeadFilters, EMPTY_LEAD_FILTERS, isTaskFilterUnavailable, pendingContactAge, type LeadFilters } from "@/lib/lead-filters";
 import type { Lead } from "@/lib/automation-engine";
 
 const ALL = "__all__";
@@ -29,9 +29,12 @@ interface Props {
   resultCount: number;
   hasSearch: boolean;
   onClearSearch: () => void;
+  /** True when the pending-task read failed; task filters then show an explicit error instead of zero results. */
+  tasksError: boolean;
+  onRetryTasks: () => Promise<void> | void;
 }
 
-export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, hasSearch, onClearSearch }: Props) {
+export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, hasSearch, onClearSearch, tasksError, onRetryTasks }: Props) {
   const { t, lang } = useLanguage();
   const { catalogOptions } = useCatalogOptions();
   const { languages, formatLanguageLabel } = useTeacherLanguages();
@@ -56,6 +59,28 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
   );
   const catalogItems = (cat: CatalogCategory) =>
     catalogOptions ? sortCatalogOptions(catalogOptions[cat] as any[]).map((o: any) => ({ value: o.id, label: o.label })) : [];
+  const taskResultsUnavailable = isTaskFilterUnavailable(tasksError, filters.tasks);
+  const [retryingTasks, setRetryingTasks] = useState(false);
+  const handleRetryTasks = async () => {
+    if (retryingTasks) return;
+    setRetryingTasks(true);
+    try {
+      await onRetryTasks();
+    } finally {
+      setRetryingTasks(false);
+    }
+  };
+  const retryTasksButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive"
+      onClick={handleRetryTasks}
+      disabled={retryingTasks}
+    >
+      <RefreshCw className={`w-3 h-3 ${retryingTasks ? "animate-spin" : ""}`} /> {F("tasksRetry")}
+    </Button>
+  );
   const field = (id: string, label: string, control: React.ReactNode) => (
     <div className="space-y-1 min-w-0">
       <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
@@ -88,6 +113,16 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
         </span>
       </div>
 
+      {taskResultsUnavailable && (
+        <div
+          className="flex items-center justify-between gap-2 border border-destructive/30 bg-destructive/5 text-destructive rounded-lg px-3 py-2"
+          role="alert"
+        >
+          <p className="text-xs m-0">{F("tasksErrorBanner")}</p>
+          {retryTasksButton}
+        </div>
+      )}
+
       {open && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border-t border-border pt-3">
           {field("f-stage", F("stage"), pick("f-stage", "stage", stages.map((s) => ({ value: s.id, label: t(s.labelKey) }))))}
@@ -114,14 +149,22 @@ export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, 
           {field("f-focus", F("focus"), pick("f-focus", "focus", catalogItems("focuses")))}
           {field("f-modality", F("modality"), pick("f-modality", "modality", catalogItems("modalities")))}
           {field("f-tasks", F("tasks"), (
-            <Select value={filters.tasks} onValueChange={(v) => set("tasks", v as LeadFilters["tasks"])}>
-              <SelectTrigger id="f-tasks" className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{F("all")}</SelectItem>
-                <SelectItem value="pending">{F("tasksPending")}</SelectItem>
-                <SelectItem value="overdue">{F("tasksOverdue")}</SelectItem>
-              </SelectContent>
-            </Select>
+            <>
+              <Select value={filters.tasks} onValueChange={(v) => set("tasks", v as LeadFilters["tasks"])}>
+                <SelectTrigger id="f-tasks" className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{F("all")}</SelectItem>
+                  <SelectItem value="pending">{F("tasksPending")}</SelectItem>
+                  <SelectItem value="overdue">{F("tasksOverdue")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {tasksError && (
+                <div className="flex items-center gap-1 flex-wrap" role="alert">
+                  <p className="text-[11px] text-destructive m-0">{F("tasksError")}</p>
+                  {retryTasksButton}
+                </div>
+              )}
+            </>
           ))}
           {field("f-from", F("createdFrom"), (
             <Input id="f-from" type="date" className="h-9 text-sm" value={filters.createdFrom} onChange={(e) => set("createdFrom", e.target.value)} />

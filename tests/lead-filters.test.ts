@@ -4,6 +4,7 @@ import {
   EMPTY_LEAD_FILTERS,
   findDuplicateLeads,
   isContactPending,
+  isTaskFilterUnavailable,
   pendingContactAge,
   summarizeLeadTasks,
 } from "@/lib/lead-filters";
@@ -66,4 +67,18 @@ describe("duplicates", () => {
   it("email is case-insensitive", () => expect(findDuplicateLeads("t1", existing, { email: " ANA@mail.com " }).map((l) => l.id)).toEqual(["p"]));
   it("never returns another teacher's leads", () => expect(findDuplicateLeads("t2", existing, { email: "x@y.z" })).toEqual([]));
   it("empty contact data never flags duplicates", () => expect(findDuplicateLeads("t1", existing, { phone: "", email: "" })).toEqual([]));
+});
+
+describe("task filter unavailability", () => {
+  it("failed task load with an active task filter is not a valid empty result", () => {
+    expect(isTaskFilterUnavailable(true, "pending")).toBe(true);
+    expect(isTaskFilterUnavailable(true, "overdue")).toBe(true);
+  });
+  it("failed task load without a task filter does not block results", () => {
+    expect(isTaskFilterUnavailable(true, "all")).toBe(false);
+  });
+  it("no failure never blocks, even with an active task filter", () => {
+    expect(isTaskFilterUnavailable(false, "pending")).toBe(false);
+    expect(isTaskFilterUnavailable(false, "all")).toBe(false);
+  });
 });

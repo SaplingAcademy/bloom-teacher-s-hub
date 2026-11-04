@@ -436,7 +436,10 @@ export const uiTranslations = {
       "dupBody": "Já existe um lead com o mesmo telefone ou e-mail. Contatos semelhantes podem ser legítimos.",
       "dupOpen": "Abrir",
       "dupContinue": "Cadastrar mesmo assim",
-      "dupCheckError": "Não foi possível verificar duplicidades. Tente novamente."
+      "dupCheckError": "Não foi possível verificar duplicidades. Tente novamente.",
+      "tasksError": "Não foi possível consultar as tarefas.",
+      "tasksErrorBanner": "Não foi possível consultar as tarefas. O resultado do filtro pode estar incompleto.",
+      "tasksRetry": "Tentar novamente"
     },
     "leadPanel": {
       "profile": "Perfil",
@@ -1699,7 +1702,10 @@ export const uiTranslations = {
       "dupBody": "A lead with the same phone or email already exists. Similar contacts can be legitimate.",
       "dupOpen": "Open",
       "dupContinue": "Create anyway",
-      "dupCheckError": "Could not check for duplicates. Please try again."
+      "dupCheckError": "Could not check for duplicates. Please try again.",
+      "tasksError": "Could not load the tasks.",
+      "tasksErrorBanner": "Could not load the tasks. The filter result may be incomplete.",
+      "tasksRetry": "Try again"
     },
     "leadPanel": {
       "profile": "Profile",

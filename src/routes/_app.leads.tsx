@@ -127,6 +127,7 @@ function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<LeadFilters>(EMPTY_LEAD_FILTERS);
   const [leadTasks, setLeadTasks] = useState<{ lead_id: string | null; status: string | null; due_date: string | null }[]>([]);
+  const [tasksError, setTasksError] = useState(false);
   const [duplicates, setDuplicates] = useState<Lead[]>([]);
   const [duplicateAckKey, setDuplicateAckKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
@@ -177,6 +178,27 @@ function LeadsPage() {
       catalog: (cat, v) => (catalogOptions ? resolveCatalogLabel(catalogOptions, cat, v) : v),
     }).join(" • ");
 
+  // Pending lead tasks (teacher-scoped) for the task filters. Kept separate from
+  // loadData so a retry refetches only the tasks without touching filters or leads.
+  const loadLeadTasks = async () => {
+    if (!teacherId) return;
+    const { data: tasksData, error: tasksErr } = await supabase
+      .from("tasks")
+      .select("lead_id, status, due_date")
+      .eq("teacher_id", teacherId)
+      .eq("status", "pending")
+      .not("lead_id", "is", null);
+    if (tasksErr) {
+      console.error("Error fetching lead tasks:", tasksErr);
+      // Keep previously loaded tasks and flag the failure: an empty task-filter
+      // result is not a valid conclusion while the data is unavailable.
+      setTasksError(true);
+      return;
+    }
+    setLeadTasks(tasksData || []);
+    setTasksError(false);
+  };
+
   const loadData = async () => {
     if (!teacherId) return;
     setLoading(true);
@@ -205,15 +227,8 @@ function LeadsPage() {
         .eq("teacher_id", teacherId);
       setPackages(pkgsData || []);
 
-      // 3. Pending lead tasks (teacher-scoped) for task filters
-      const { data: tasksData, error: tasksErr } = await supabase
-        .from("tasks")
-        .select("lead_id, status, due_date")
-        .eq("teacher_id", teacherId)
-        .eq("status", "pending")
-        .not("lead_id", "is", null);
-      if (tasksErr) console.error("Error fetching lead tasks:", tasksErr);
-      setLeadTasks(tasksData || []);
+      // 3. Pending lead tasks for task filters
+      await loadLeadTasks();
     } catch (err) {
       console.error("Failed loading leads page data:", err);
     } finally {
@@ -535,6 +550,8 @@ function LeadsPage() {
           resultCount={filteredLeads.length}
           hasSearch={searchQuery.trim() !== ""}
           onClearSearch={() => setSearchQuery("")}
+          tasksError={tasksError}
+          onRetryTasks={loadLeadTasks}
         />
       </div>
 
