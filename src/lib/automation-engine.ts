@@ -910,7 +910,13 @@ export async function retryFailedAutomation(
 
     if (event.event_type === "lead.inactive") {
       const result = await processInactiveLeadCheck(event.teacher_id);
-      return result.error ? { success: false, error: result.error } : { success: true };
+      if (result.error) return { success: false, error: result.error };
+      const saved = await supabase.from("automation_events").select("status, error_message")
+        .eq("teacher_id", event.teacher_id).eq("id", eventId).single();
+      if (saved.error || saved.data?.status !== "completed") {
+        return { success: false, error: saved.error?.message || saved.data?.error_message || "Inactivity cycle could not be reprocessed" };
+      }
+      return { success: true };
     }
 
     // Update event status to retrying

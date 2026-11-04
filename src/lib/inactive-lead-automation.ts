@@ -64,7 +64,7 @@ async function claimCycle(lead: InactivityLead, key: string, days: number) {
   }).eq("teacher_id", lead.teacher_id).eq("id", existing.data.id)
     .eq("status", "failed").eq("updated_at", existing.data.updated_at).select("id").maybeSingle();
   if (retry.error) throw new Error(retry.error.message);
-  return retry.data?.id as string | undefined ?? null;
+  return (retry.data?.id as string | undefined) ?? null;
 }
 
 async function finishEvent(teacherId: string, eventId: string, status: "completed" | "failed", message?: string) {

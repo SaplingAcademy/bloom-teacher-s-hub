@@ -1,6 +1,11 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "leadInactivity": {
+      "title": "Lead inativo: {name}",
+      "reason": "Sem contato comercial há pelo menos {days} dias",
+      "action": "Retomar contato comercial"
+    },
     "teachingOptions": {
       "title": "Opções de ensino", "levels": "Níveis", "focuses": "Focos / objetivos", "modalities": "Modalidades",
       "name": "Nome", "add": "Adicionar opção", "newName": "Nome da nova opção", "cancel": "Cancelar", "empty": "Nenhuma opção neste grupo.",
@@ -1291,6 +1296,11 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "leadInactivity": {
+      "title": "Inactive lead: {name}",
+      "reason": "No commercial contact for at least {days} days",
+      "action": "Resume commercial contact"
+    },
     "teachingOptions": {
       "title": "Teaching options", "levels": "Levels", "focuses": "Focuses / objectives", "modalities": "Modalities",
       "name": "Name", "add": "Add option", "newName": "New option name", "cancel": "Cancel", "empty": "No options in this group.",

@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { formatDateString } from "@/lib/calendar-sync";
 import { fetchAttendancePriorityCandidates } from "@/lib/attendance-priorities";
 import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
+import { t } from "@/lib/i18n";
 
 export type AttentionCategory =
   | "overdue_followup"
@@ -210,11 +211,9 @@ export async function fetchAttentionQueue(teacherId: string, language: "pt" | "e
         items.push({
           id: `inactive-lead-${l.id}`,
           category: "inactive_lead",
-          title: `${language === "pt" ? "Lead inativo" : "Inactive lead"}: ${l.full_name}`,
-          reason: language === "pt"
-            ? `Sem contato comercial há pelo menos ${settings.inactivity_period_days} dias`
-            : `No commercial contact for at least ${settings.inactivity_period_days} days`,
-          recommendedAction: language === "pt" ? "Retomar contato comercial" : "Resume commercial contact",
+          title: t("leadInactivity.title", language).replace("{name}", l.full_name),
+          reason: t("leadInactivity.reason", language).replace("{days}", String(settings.inactivity_period_days)),
+          recommendedAction: t("leadInactivity.action", language),
           leadId: l.id,
           urgency: "medium",
           targetUrl: `/leads?leadId=${l.id}`,

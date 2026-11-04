@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = vi.hoisted(() => ({
   rows: {} as Record<string, any[]>,
@@ -79,6 +79,8 @@ import { fetchAttentionQueue } from "../src/lib/attention-queue";
 const now = new Date("2026-11-04T12:00:00Z");
 const lead = { id: "lead", teacher_id: "teacher", full_name: "Lead", stage: "Em conversa", created_at: "2026-10-01T12:00:00Z", last_interaction_at: "2026-10-25T12:00:00Z" };
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(now);
   db.rows = {
     automation_settings: [{ id: "settings", teacher_id: "teacher", inactivity_period_days: 10, auto_task_creation_enabled: true, updated_at: "2026-11-01T12:00:00Z" }],
     leads: [{ ...lead }], tasks: [], automation_events: [], automation_activity: [],
@@ -86,6 +88,7 @@ beforeEach(() => {
   db.writes = []; db.queries = []; db.fail = ""; db.failures = 0; db.user = "teacher";
   db.time = "2026-11-01T12:00:00Z"; db.nextId = 0;
 });
+afterEach(() => { vi.useRealTimers(); });
 
 describe("Rule E persistence and creation", () => {
   it("creates event first, linked follow_up task and lead history, and completes event", async () => {
@@ -184,6 +187,34 @@ describe("Rule E persistence and creation", () => {
     expect((await processInactiveLeadCheck("teacher", now)).error).toContain("failed tasks:read");
     expect(db.rows.tasks).toHaveLength(0);
     expect(db.rows.automation_events.filter((e) => e.event_type === "lead.inactive")).toHaveLength(0);
+  });
+  it("failure completing the event preserves task/activity and retry completes without duplicates", async () => {
+    db.fail = "automation_events:update"; db.failures = 1;
+    expect((await processInactiveLeadCheck("teacher", now)).error).toContain("failed automation_events:update");
+    const event = db.rows.automation_events.find((e) => e.event_type === "lead.inactive");
+    expect(event.status).toBe("failed");
+    expect(db.rows.tasks).toHaveLength(1);
+    expect(db.rows.automation_activity).toHaveLength(1);
+    await processInactiveLeadCheck("teacher", now);
+    expect(event.status).toBe("completed");
+    expect(db.rows.tasks).toHaveLength(1);
+    expect(db.rows.automation_activity).toHaveLength(1);
+  });
+  it("disabled then re-enabled settings do not backfill the missed period", async () => {
+    await processInactiveLeadCheck("teacher", now);
+    db.rows.automation_settings[0].auto_task_creation_enabled = false;
+    db.rows.leads.push({ ...lead, id: "missed", last_interaction_at: "2026-11-02T12:00:00Z" });
+    expect((await processInactiveLeadCheck("teacher", new Date("2026-11-12T12:00:00Z"))).processedCount).toBe(0);
+    db.rows.automation_settings[0].auto_task_creation_enabled = true;
+    db.rows.automation_settings[0].updated_at = "2026-11-13T12:00:00Z";
+    db.time = "2026-11-13T12:00:00Z";
+    expect((await processInactiveLeadCheck("teacher", new Date(db.time))).processedCount).toBe(0);
+    expect(db.rows.tasks.map((t) => t.lead_id)).toEqual(["lead"]);
+  });
+  it("event creation failure cannot insert an unlinked task", async () => {
+    db.fail = "automation_events:upsert"; db.failures = 1;
+    expect((await processInactiveLeadCheck("teacher", now)).error).toContain("failed automation_events:upsert");
+    expect(db.rows.tasks).toHaveLength(0);
   });
   it("load boundaries dedupe and throttle calls rather than checking on every render", async () => {
     const a = runInactiveLeadCheckOnLoad("teacher");
