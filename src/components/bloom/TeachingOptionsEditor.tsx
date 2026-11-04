@@ -239,7 +239,7 @@ export function TeachingOptionsEditor({ initialCatalog, onSave, onLifecycle, onD
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {saved && <p role="status" className="flex items-center gap-2 text-sm text-primary"><Check className="h-4 w-4" />{t("teachingOptions.saved")}</p>}
           {lifecycleMessage && <p role="status" className="flex items-center gap-2 text-sm text-primary"><Check className="h-4 w-4" />{lifecycleMessage}</p>}
-          <Button type="submit" disabled={busy || adding !== null}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{t(saving ? "saveFeedback.saving" : "teachingOptions.save")}</Button>
+          <Button id="teaching-options-save" type="submit" disabled={busy || adding !== null}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{t(saving ? "saveFeedback.saving" : "teachingOptions.save")}</Button>
         </div>
       </form>
       <AlertDialog open={pendingRemoval !== null} onOpenChange={(open) => { if (!open && !lifecycleBusy) setPendingRemoval(null); }}>

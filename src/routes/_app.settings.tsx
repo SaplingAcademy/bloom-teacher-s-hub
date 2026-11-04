@@ -292,7 +292,11 @@ function SettingsPage() {
       </Tabs>
       <UnsavedChangesDialog
         open={pendingTab !== null || blocker.status === "blocked"}
-        onKeepEditing={() => { setPendingTab(null); if (blocker.status === "blocked") blocker.reset(); }}
+        onKeepEditing={() => {
+          setPendingTab(null);
+          if (blocker.status === "blocked") blocker.reset();
+          revealTeachingOptionsSave();
+        }}
         onLeave={() => {
           setTeachingDirty(false);
           if (blocker.status === "blocked") blocker.proceed();
@@ -301,6 +305,18 @@ function SettingsPage() {
       />
     </div>
   );
+}
+
+function revealTeachingOptionsSave() {
+  window.setTimeout(() => {
+    const button = document.getElementById("teaching-options-save");
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const margin = 24;
+    if (rect.top >= margin && rect.bottom <= window.innerHeight - margin) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    button.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+  }, 80);
 }
 
 function PlatformLanguageManager() {
