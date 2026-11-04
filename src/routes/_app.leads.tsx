@@ -84,12 +84,9 @@ import {
   Lead,
   normalizeLeadStage,
   processNewLeadAutomation,
-  processLeadInteractionAutomation,
   processTrialLessonScheduledAutomation,
   processProposalRecordedAutomation,
   convertLeadToStudentAutomation,
-  fetchAutomationActivity,
-  AutomationActivity,
 } from "@/lib/automation-engine";
 
 export const Route = createFileRoute("/_app/leads")({
