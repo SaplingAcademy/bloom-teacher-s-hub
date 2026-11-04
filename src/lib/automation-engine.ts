@@ -230,7 +230,7 @@ export async function recordAutomationEvent(
   }
 }
 
-import { planAutoTasks, type AutoTaskRow, type AutoTaskSpec } from "@/lib/automation-task-plan";
+import { planAutoTasks, resolveProposalCycle, type AutoTaskRow, type AutoTaskSpec, type ProposalEventRow } from "@/lib/automation-task-plan";
 
 /** Event IDs of a given rule type for this lead (teacher-scoped). Throws on read failure. */
 async function fetchRuleEventIds(teacherId: string, leadId: string, eventType: string): Promise<Set<string>> {
@@ -251,8 +251,10 @@ async function syncAutoTasks(
   currentEventId: string,
   specs: AutoTaskSpec[],
   updatePending: boolean,
+  currentEventOnly = false,
 ): Promise<string[]> {
-  const ruleIds = await fetchRuleEventIds(lead.teacher_id, lead.id, eventType);
+  // currentEventOnly: tasks of earlier cycles (e.g. a previous proposal) never block a new cycle.
+  const ruleIds = currentEventOnly ? new Set<string>() : await fetchRuleEventIds(lead.teacher_id, lead.id, eventType);
   ruleIds.add(currentEventId);
   const { data: rows, error } = await supabase
     .from("tasks")
@@ -292,6 +294,25 @@ async function syncAutoTasks(
   return ids;
 }
 
+/** Standard initial check: reads the event for this idempotency key. Throws on read failure. */
+async function readAutomationEvent(teacherId: string, key: string): Promise<{ id: string; status: string; payload: any } | null> {
+  const { data, error } = await supabase
+    .from("automation_events")
+    .select("id, status, payload")
+    .eq("teacher_id", teacherId)
+    .eq("idempotency_key", key)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as any) ?? null;
+}
+
+/** Marks the event failed with its message so it never stays in processing and can be retried. */
+async function failAutomationEvent(teacherId: string, eventType: string, leadId: string, key: string, payload: Record<string, any>, err: any) {
+  const errMsg = err?.message || String(err);
+  await recordAutomationEvent(teacherId, eventType, "leads", leadId, key, { ...payload, error: errMsg }, "failed", errMsg);
+  return errMsg;
+}
+
 /** Records the event first (processing) so tasks can carry its real ID. */
 async function beginAutomationEvent(
   teacherId: string, eventType: string, leadId: string, key: string, payload: Record<string, any>,
@@ -320,12 +341,7 @@ export async function processNewLeadAutomation(
 
   try {
     // 1. Check idempotency: Has this event already been processed cleanly?
-    const { data: existing } = await supabase
-      .from("automation_events")
-      .select("id, status")
-      .eq("idempotency_key", idempotencyKey)
-      .maybeSingle();
-
+    const existing = await readAutomationEvent(lead.teacher_id, idempotencyKey);
     if (existing && existing.status === "completed") {
       return { success: true, eventId: existing.id };
     }
@@ -501,8 +517,20 @@ export async function processTrialLessonScheduledAutomation(
   const settings = await getOrCreateAutomationSettings(lead.teacher_id);
   const trialTimestamp = `${trialDate}T${startTime}`;
   const idempotencyKey = `trial-scheduled:${lead.id}:${trialTimestamp}`;
+  const basePayload = { trial_date: trialDate, trial_time: startTime };
 
   try {
+    // Standard initial check: completed + still the lead's current trial → nothing to do.
+    // Failed/processing events are reprocessed; task planning prevents duplicates.
+    const existing = await readAutomationEvent(lead.teacher_id, idempotencyKey);
+    if (
+      existing && existing.status === "completed" &&
+      lead.trial_calendar_event_id && existing.payload?.calendar_event_id === lead.trial_calendar_event_id &&
+      lead.trial_scheduled_at && new Date(lead.trial_scheduled_at).getTime() === new Date(`${trialDate}T${formatTimeHHMMSS(startTime)}`).getTime()
+    ) {
+      return { success: true, eventId: existing.id, calendarEventId: lead.trial_calendar_event_id };
+    }
+
     const formattedStart = formatTimeHHMMSS(startTime);
     const formattedEnd = calculateEndTime(startTime, duration);
 
@@ -618,7 +646,8 @@ export async function processTrialLessonScheduledAutomation(
 
     return { success: true, eventId, calendarEventId: eventIdToUse };
   } catch (err: any) {
-    return { success: false, error: err.message || String(err) };
+    const errMsg = await failAutomationEvent(lead.teacher_id, "lead.trial_scheduled", lead.id, idempotencyKey, basePayload, err);
+    return { success: false, error: errMsg };
   }
 }
 
@@ -638,9 +667,34 @@ export async function processProposalRecordedAutomation(
   if (!lead || !lead.id || !lead.teacher_id) return { success: false, error: "Invalid lead" };
 
   const settings = await getOrCreateAutomationSettings(lead.teacher_id);
-  const idempotencyKey = `proposal-recorded:${lead.id}:${packageId || "custom"}`;
+  let idempotencyKey = "";
+  const basePayload = { package_id: packageId };
 
   try {
+    // Stable proposal cycle: same cycle while the latest proposal event is unfinished or
+    // its follow-up is still pending (update); otherwise a new cycle number (new follow-up).
+    const { data: events, error: evErr } = await supabase
+      .from("automation_events")
+      .select("id, status, idempotency_key")
+      .eq("teacher_id", lead.teacher_id)
+      .eq("source_id", lead.id)
+      .eq("event_type", "lead.proposal_recorded");
+    if (evErr) throw new Error(evErr.message);
+    const { data: pend, error: pendErr } = await supabase
+      .from("tasks")
+      .select("automation_event_id")
+      .eq("teacher_id", lead.teacher_id)
+      .eq("lead_id", lead.id)
+      .neq("status", "completed")
+      .not("automation_event_id", "is", null);
+    if (pendErr) throw new Error(pendErr.message);
+    const cycle = resolveProposalCycle(
+      lead.id,
+      (events || []) as ProposalEventRow[],
+      new Set((pend || []).map((t: any) => t.automation_event_id)),
+    );
+    idempotencyKey = cycle.key;
+
     let finalValue = potentialValue || lead.potential_value || 0;
 
     // Fetch package price if packageId provided and value not set
@@ -681,7 +735,7 @@ export async function processProposalRecordedAutomation(
         title: `Acompanhar proposta com ${lead.full_name}`,
         description: `Verificar resposta referente à proposta enviada de R$ ${finalValue.toFixed(2)}.`,
         due_date: dueDate.toISOString(),
-      }], true);
+      }], true, true);
     }
 
     const eventId = await recordAutomationEvent(
@@ -704,7 +758,9 @@ export async function processProposalRecordedAutomation(
 
     return { success: true, eventId };
   } catch (err: any) {
-    return { success: false, error: err.message || String(err) };
+    if (!idempotencyKey) return { success: false, error: err.message || String(err) };
+    const errMsg = await failAutomationEvent(lead.teacher_id, "lead.proposal_recorded", lead.id, idempotencyKey, basePayload, err);
+    return { success: false, error: errMsg };
   }
 }
 
