@@ -2,6 +2,8 @@ import { supabase } from "@/lib/supabase";
 import { formatLocalDateStr } from "@/lib/time-off-engine";
 import { calculateLastDueDate } from "@/lib/finance-engine";
 import { billingModelFromAgreement } from "@/lib/billing-domain";
+import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
+import { inactivityReference } from "@/lib/lead-inactivity";
 
 /**
  * Unified, categorized Today priorities data layer (Phase 1).
@@ -61,9 +63,7 @@ export interface DailyPrioritiesResult {
 
 export const PAYMENT_REMINDER_DAYS = 5;
 export const ATTENDANCE_CRITICAL_DAYS = 5;
-export const LEAD_STALE_DAYS = 7;
 export const TRIAL_LOOKAHEAD_DAYS = 2;
-const CLOSED_LEAD_STAGES = ["Convertido", "won", "Perdido", "lost"];
 const PROPOSAL_STAGES = ["Proposta enviada", "proposal"];
 const RESOLVED_INVOICE_STATUSES = ["paid", "Paid", "Pago", "cancelled", "Cancelled"];
 
@@ -306,20 +306,14 @@ async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowSt
   return items;
 }
 
-async function fetchLeads(teacherId: string, todayStr: string, staleBeforeIso: string): Promise<DailyPriorityItem[]> {
-  const closed = `(${CLOSED_LEAD_STAGES.map((s) => `"${s}"`).join(",")})`;
+async function fetchLeads(teacherId: string, todayStr: string, now: Date): Promise<DailyPriorityItem[]> {
   // No trial alert without a confirmed persisted lead/occurrence relationship.
   // Names and free-text notes cannot establish that association.
   const [proposals, stale] = await Promise.all([
     supabase.from("leads").select("id, full_name, updated_at").eq("teacher_id", teacherId).in("stage", PROPOSAL_STAGES),
-    supabase
-      .from("leads")
-      .select("id, full_name, updated_at, stage")
-      .eq("teacher_id", teacherId)
-      .not("stage", "in", closed)
-      .lt("updated_at", staleBeforeIso),
+    fetchInactiveLeadCandidates(teacherId, now),
   ]);
-  for (const r of [proposals, stale]) if (r.error) throw r.error;
+  if (proposals.error) throw proposals.error;
 
   const items: DailyPriorityItem[] = [];
   const proposalIds = new Set<string>();
@@ -338,9 +332,11 @@ async function fetchLeads(teacherId: string, todayStr: string, staleBeforeIso: s
       action: { route: "/leads", params: { leadId: l.id } },
     });
   }
-  for (const l of (stale.data || []) as any[]) {
+  for (const l of stale.leads) {
     if (proposalIds.has(l.id)) continue; // one priority per lead condition
-    const since = formatLocalDateStr(new Date(l.updated_at));
+    const reference = inactivityReference(l);
+    if (!reference) continue;
+    const since = formatLocalDateStr(reference);
     items.push({
       id: `lead-stale:${l.id}`,
       category: "lead",
@@ -366,7 +362,6 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
   const nowHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const reminderEndStr = formatLocalDateStr(addDays(now, PAYMENT_REMINDER_DAYS));
   const tomorrowStartIso = addDays(now, 1).toISOString();
-  const staleBeforeIso = addDays(now, -LEAD_STALE_DAYS).toISOString();
 
   const [attendance, payments, contracts, homework, tasks, leads] = await Promise.allSettled([
     fetchAttendance(teacherId, todayStr, nowHHMM),
@@ -374,7 +369,7 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
     fetchContracts(teacherId, todayStr),
     fetchHomework(teacherId, todayStr),
     fetchPendingTasks(teacherId, todayStr, tomorrowStartIso),
-    fetchLeads(teacherId, todayStr, staleBeforeIso),
+    fetchLeads(teacherId, todayStr, now),
   ]);
 
   const failed = new Set<DailyPriorityCategory>();

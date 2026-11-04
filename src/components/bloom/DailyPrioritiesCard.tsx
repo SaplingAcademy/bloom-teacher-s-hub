@@ -19,6 +19,7 @@ import {
 } from "@/lib/daily-priorities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
@@ -84,6 +85,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const loadPriorities = async () => {
     if (!teacherId) return;
     try {
+      await runInactiveLeadCheckOnLoad(teacherId);
       const res = await fetchDailyPriorities(teacherId, new Date());
       setItems(res.items);
       setFailed(res.failed);

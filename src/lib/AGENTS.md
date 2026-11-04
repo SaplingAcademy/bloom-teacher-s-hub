@@ -1,0 +1,5 @@
+# CRM inactivity
+
+- Rule E calculations live in pure `lead-inactivity.ts`; Today and attention consume read-only `lead-inactivity-data.ts` candidates so both use persisted settings and the same contact reference.
+- `inactive-lead-automation.ts` runs only at authenticated queue load/refresh boundaries, throttled in memory; durable activation/cycle ownership lives in the existing automation event ledger, never browser storage or settings defaults, avoiding retroactive backlog tasks and concurrent duplicates.
+- Each settings revision gets a first-observed activation boundary; old inactive leads remain visible but only cycles becoming inactive after that boundary may create tasks. Event claims are insert-only or failed-status compare-and-set; do not steal processing events without an atomic database task constraint, because a paused tab may still own them.
