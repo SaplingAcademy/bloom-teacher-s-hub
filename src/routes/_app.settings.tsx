@@ -292,7 +292,11 @@ function SettingsPage() {
       </Tabs>
       <UnsavedChangesDialog
         open={pendingTab !== null || blocker.status === "blocked"}
-        onKeepEditing={() => { setPendingTab(null); if (blocker.status === "blocked") blocker.reset(); }}
+        onKeepEditing={() => {
+          setPendingTab(null);
+          if (blocker.status === "blocked") blocker.reset();
+          revealTeachingOptionsSave();
+        }}
         onLeave={() => {
           setTeachingDirty(false);
           if (blocker.status === "blocked") blocker.proceed();
