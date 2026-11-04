@@ -77,6 +77,10 @@ const HISTORICAL_ALIASES: Record<CatalogCategory, Record<string, string>> = {
 };
 
 const aliasKey = (value: string) => value.trim().toLowerCase();
+const historicalAliasId = (category: CatalogCategory, key: string): string | undefined =>
+  Object.prototype.hasOwnProperty.call(HISTORICAL_ALIASES[category], key)
+    ? HISTORICAL_ALIASES[category][key]
+    : undefined;
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const isText = (value: unknown): value is string =>
@@ -116,7 +120,7 @@ export function validateCatalogOptions(value: unknown): CatalogValidationIssue[]
       for (const candidate of [entry.id, ...customAliases]) {
         if (typeof candidate !== "string") continue;
         const key = aliasKey(candidate);
-        const reservedId = HISTORICAL_ALIASES[category][key];
+        const reservedId = historicalAliasId(category, key);
         const existingId = aliases.get(key);
         if ((reservedId && reservedId !== entry.id) || (existingId && existingId !== entry.id)) {
           issues.push({ path, code: "ambiguous_alias" });
@@ -189,7 +193,7 @@ export function resolveCatalogValue(
   }
   const key = aliasKey(value);
   const custom = options.find((option) => option.aliases?.some((alias) => aliasKey(alias) === key));
-  const historicalId = HISTORICAL_ALIASES[category][key];
+  const historicalId = historicalAliasId(category, key);
   const configured = custom ?? options.find((option) => option.id === historicalId);
   // Display-only fallback: never adds removed/inactive choices to new-record selectors.
   const historical = historicalId
