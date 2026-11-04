@@ -38,3 +38,27 @@ describe("lead profile", () => {
     expect(validateLeadProfileDraft({ ...leadToProfileDraft(base), potential_value: "abc" })).toBe("invalidValue");
   });
 });
+
+import { buildNewLeadInsert, emptyLeadProfileDraft, leadPedagogyParts } from "@/lib/lead-profile";
+
+describe("new lead and card display", () => {
+  const resolve = {
+    language: (v: string) => (v === "English" ? "Inglês" : v),
+    catalog: (_c: string, v: string) => (v === "lvl_b1" ? "Intermediário" : null),
+  };
+  it("new lead preselects no pedagogical value and saves blanks as null", () => {
+    const row = buildNewLeadInsert("t1", { ...emptyLeadProfileDraft(), full_name: " Ana " });
+    expect(row).toMatchObject({ full_name: "Ana", language_studied: null, level: null, focus: null, modality: null, tags: null, potential_value: null, stage: "Novo contato" });
+  });
+  it("new lead saves selected stable IDs", () => {
+    const row = buildNewLeadInsert("t1", { ...emptyLeadProfileDraft(), full_name: "A", level: "lvl_b1", modality: "mod_online" });
+    expect(row.level).toBe("lvl_b1");
+    expect(row.modality).toBe("mod_online");
+  });
+  it("cards omit empty fields instead of showing Inglês/A1", () => {
+    expect(leadPedagogyParts({}, resolve as any)).toEqual([]);
+  });
+  it("cards resolve custom labels and keep unknown historical values", () => {
+    expect(leadPedagogyParts({ language_studied: "English", level: "lvl_b1", focus: "Legado" }, resolve as any)).toEqual(["Inglês", "Intermediário", "Legado"]);
+  });
+});
