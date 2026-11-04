@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/use-language";
+import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
 
 interface AttentionQueueWidgetProps {
   teacherId?: string;
@@ -34,7 +35,7 @@ export function AttentionQueueWidget({
   maxItems = 6,
   className = "",
 }: AttentionQueueWidgetProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [items, setItems] = useState<AttentionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -42,7 +43,8 @@ export function AttentionQueueWidget({
   const loadQueue = async () => {
     if (!teacherId) return;
     setLoading(true);
-    const queue = await fetchAttentionQueue(teacherId);
+    await runInactiveLeadCheckOnLoad(teacherId);
+    const queue = await fetchAttentionQueue(teacherId, lang);
     setItems(queue);
     setLoading(false);
   };

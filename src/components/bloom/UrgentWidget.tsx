@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
 import { ShieldAlert, CheckCircle2, AlertTriangle, ArrowUpRight, RefreshCw } from "lucide-react";
+import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
 
 interface UrgentWidgetProps {
   teacherId: string;
@@ -23,6 +24,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
     }
     try {
       setLoading(true);
+      await runInactiveLeadCheckOnLoad(teacherId);
       const items = await fetchAttentionQueue(teacherId, lang);
       // Filter high-urgency items
       const highUrgent = items.filter((item) => item.urgency === "high");

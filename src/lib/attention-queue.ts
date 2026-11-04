@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { formatDateString } from "@/lib/calendar-sync";
 import { fetchAttendancePriorityCandidates } from "@/lib/attendance-priorities";
+import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
 
 export type AttentionCategory =
   | "overdue_followup"
@@ -202,31 +203,25 @@ export async function fetchAttentionQueue(teacherId: string, language: "pt" | "e
       }
     }
 
-    // 5. Inactive leads (no activity for 7+ days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const { data: inactiveLeads } = await supabase
-      .from("leads")
-      .select("id, full_name, last_interaction_at, updated_at")
-      .eq("teacher_id", teacherId)
-      .not("stage", "in", '("Convertido","won","Perdido","lost")')
-      .lt("updated_at", sevenDaysAgo.toISOString())
-      .limit(5);
-
-    if (inactiveLeads) {
+    // 5. Commercial inactivity, with the same persisted threshold as Today.
+    try {
+      const { leads: inactiveLeads, settings } = await fetchInactiveLeadCandidates(teacherId, now);
       for (const l of inactiveLeads) {
         items.push({
           id: `inactive-lead-${l.id}`,
           category: "inactive_lead",
-          title: `Lead inativo: ${l.full_name}`,
-          reason: "Sem nenhuma interação há mais de 7 dias",
-          recommendedAction: "Retomar contato com convite para aula experimental",
+          title: `${language === "pt" ? "Lead inativo" : "Inactive lead"}: ${l.full_name}`,
+          reason: language === "pt"
+            ? `Sem contato comercial há pelo menos ${settings.inactivity_period_days} dias`
+            : `No commercial contact for at least ${settings.inactivity_period_days} days`,
+          recommendedAction: language === "pt" ? "Retomar contato comercial" : "Resume commercial contact",
           leadId: l.id,
           urgency: "medium",
           targetUrl: `/leads?leadId=${l.id}`,
         });
       }
+    } catch (inactivityError) {
+      console.warn("[attention-queue] Inactivity unavailable:", inactivityError);
     }
 
     // 6. Failed automations requiring retry

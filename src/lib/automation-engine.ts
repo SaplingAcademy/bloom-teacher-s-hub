@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { formatTimeHHMMSS, calculateEndTime, formatDateString } from "@/lib/calendar-sync";
+import { processInactiveLeadCheck } from "@/lib/inactive-lead-automation";
+export { processInactiveLeadCheck } from "@/lib/inactive-lead-automation";
 
 export interface AutomationSettings {
   id?: string;
@@ -765,110 +767,6 @@ export async function processProposalRecordedAutomation(
 }
 
 /**
- * RULE E — INACTIVE LEAD CHECK
- * Scans active leads that have no interaction and no future task for >= inactivity_period_days.
- * Actions:
- * - Creates a follow-up task
- * - Surfaces lead in "Precisa de atenção" queue
- * - Does NOT auto-mark lost or send external messages
- */
-export async function processInactiveLeadCheck(
-  teacherId: string
-): Promise<{ processedCount: number; error?: string }> {
-  if (!teacherId) return { processedCount: 0, error: "Missing teacherId" };
-
-  try {
-    const settings = await getOrCreateAutomationSettings(teacherId);
-    const inactivityDays = settings.inactivity_period_days || 7;
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() - inactivityDays);
-    const thresholdIso = thresholdDate.toISOString();
-    const todayStr = formatDateString(new Date());
-
-    // Fetch active leads (not converted and not lost)
-    const { data: leads, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("teacher_id", teacherId)
-      .not("stage", "in", '("Convertido","won","Perdido","lost")');
-
-    if (error || !leads) return { processedCount: 0, error: error?.message };
-
-    let processedCount = 0;
-
-    for (const lead of leads as Lead[]) {
-      const lastActivity = lead.last_interaction_at || lead.updated_at || lead.created_at;
-      if (!lastActivity) continue;
-
-      const isInactive = new Date(lastActivity) < thresholdDate;
-      if (!isInactive) continue;
-
-      // Check if there is already a future pending task for this lead
-      const { data: futureTasks } = await supabase
-        .from("tasks")
-        .select("id")
-        .eq("lead_id", lead.id)
-        .eq("status", "pending")
-        .gte("due_date", todayStr);
-
-      if (futureTasks && futureTasks.length > 0) {
-        continue; // Lead has an active scheduled follow-up
-      }
-
-      const idempotencyKey = `inactive-lead:${lead.id}:${todayStr}`;
-
-      // Create reminder task if enabled
-      if (settings.auto_task_creation_enabled) {
-        const taskTitle = `Retomar contato com ${lead.full_name} (Inativo há ${inactivityDays} dias)`;
-        
-        // Prevent duplicate task for today
-        const { data: existingTask } = await supabase
-          .from("tasks")
-          .select("id")
-          .eq("lead_id", lead.id)
-          .eq("title", taskTitle)
-          .maybeSingle();
-
-        if (!existingTask) {
-          await supabase.from("tasks").insert({
-            teacher_id: teacherId,
-            lead_id: lead.id,
-            title: taskTitle,
-            description: `Lead sem interação recente. Sugestão: enviar mensagem de acompanhamento.`,
-            status: "pending",
-            due_date: new Date().toISOString(),
-          });
-        }
-      }
-
-      const eventId = await recordAutomationEvent(
-        teacherId,
-        "lead.inactive",
-        "leads",
-        lead.id,
-        idempotencyKey,
-        { inactivity_days: inactivityDays, last_activity: lastActivity }
-      );
-
-      await logAutomationActivity(
-        teacherId,
-        eventId,
-        "attention_flagged",
-        "leads",
-        lead.id,
-        `Bloom sinalizou o lead ${lead.full_name} como inativo em 'Precisa de atenção'.`
-      );
-
-      processedCount++;
-    }
-
-    return { processedCount };
-  } catch (err: any) {
-    return { processedCount: 0, error: err.message || String(err) };
-  }
-}
-
-/**
  * RULE F & G — LEAD CONVERTED TO STUDENT
  * Calls the secure Supabase RPC `convert_lead_to_student` for transactional execution.
  * Pre-fills student information from lead and creates student, package link, schedule, and 8-week calendar events.
@@ -1009,6 +907,11 @@ export async function retryFailedAutomation(
       .single();
 
     if (error || !event) return { success: false, error: "Event not found" };
+
+    if (event.event_type === "lead.inactive") {
+      const result = await processInactiveLeadCheck(event.teacher_id);
+      return result.error ? { success: false, error: result.error } : { success: true };
+    }
 
     // Update event status to retrying
     await supabase
