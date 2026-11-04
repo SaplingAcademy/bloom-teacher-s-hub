@@ -1946,9 +1946,10 @@ function StudentsPage() {
       const matchSearch =
         (s.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (s.focus || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.languageStudied || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchLevel = selectedLevel === "ALL" || s.level === selectedLevel;
-      const matchFocus = selectedFocus === "ALL" || s.focus === selectedFocus;
+      const matchFocus = selectedFocus === "ALL" || s.languageStudied === selectedFocus;
       const matchStatus = selectedStatus === "ALL" || s.status === selectedStatus;
       return matchSearch && matchLevel && matchFocus && matchStatus;
     })
@@ -1973,6 +1974,32 @@ function StudentsPage() {
   });
 
   const t = translations[lang];
+
+  // Display-only label resolution: historical/archived values keep their stored ID.
+  const catalogLabel = (category: CatalogCategory, value: string | null | undefined): string => {
+    if (!value) return "";
+    if (!catalogOptions) return value;
+    return resolveCatalogLabel(catalogOptions, category, value) ?? value;
+  };
+
+  // Level filter: active catalog levels plus any historical level still in use.
+  const levelFilterOptions = (() => {
+    const seen = new Set<string>();
+    const options: { id: string; label: string }[] = [];
+    if (catalogOptions) {
+      for (const option of getActiveCatalogOptions(catalogOptions, "levels")) {
+        seen.add(option.id);
+        options.push({ id: option.id, label: option.label });
+      }
+    }
+    for (const s of students) {
+      if (s.level && !seen.has(s.level)) {
+        seen.add(s.level);
+        options.push({ id: s.level, label: catalogLabel("levels", s.level) });
+      }
+    }
+    return options;
+  })();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2046,7 +2073,18 @@ function StudentsPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground font-medium">
-                  {selectedStudent.focus} • {t.fieldLevel} {selectedStudent.level}
+                  {[
+                    selectedStudent.languageStudied
+                      ? formatLanguageLabel(selectedStudent.languageStudied, lang)
+                      : "",
+                    selectedStudent.level
+                      ? `${t.fieldLevel} ${catalogLabel("levels", selectedStudent.level)}`
+                      : "",
+                    catalogLabel("focuses", selectedStudent.focus),
+                    catalogLabel("modalities", selectedStudent.modality),
+                  ]
+                    .filter(Boolean)
+                    .join(" • ") || "\u00A0"}
                 </p>
               </div>
             </div>
@@ -2607,12 +2645,11 @@ function StudentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">{t.filterLevel}</SelectItem>
-                <SelectItem value="A1">A1</SelectItem>
-                <SelectItem value="A2">A2</SelectItem>
-                <SelectItem value="B1">B1</SelectItem>
-                <SelectItem value="B2">B2</SelectItem>
-                <SelectItem value="C1">C1</SelectItem>
-                <SelectItem value="C2">C2</SelectItem>
+                {levelFilterOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -2774,8 +2811,9 @@ function StudentsPage() {
                       </div>
 
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
-                        <span className="font-bold text-foreground/80">{student.level}</span> •{" "}
-                        {student.focus}
+                        <span className="font-bold text-foreground/80">{catalogLabel("levels", student.level)}</span>
+                        {student.languageStudied ? ` • ${formatLanguageLabel(student.languageStudied, lang)}` : ""}
+                        {student.focus ? ` • ${catalogLabel("focuses", student.focus)}` : ""}
                       </p>
 
                       {student.status?.toLowerCase() === "inactive" && (student.inactivationDate || student.inactivationReason) && (
@@ -2891,25 +2929,22 @@ function StudentsPage() {
                     <Label htmlFor="std-level" className="text-xs font-semibold text-foreground select-none">
                       {t.fieldLevel}
                     </Label>
-                    <Select value={formLevel} onValueChange={(val) => setFormLevel(val as CEFRLevel)}>
-                      <SelectTrigger id="std-level" className="h-11 rounded-xl border-border bg-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A1">A1</SelectItem>
-                        <SelectItem value="A2">A2</SelectItem>
-                        <SelectItem value="B1">B1</SelectItem>
-                        <SelectItem value="B2">B2</SelectItem>
-                        <SelectItem value="C1">C1</SelectItem>
-                        <SelectItem value="C2">C2</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <CatalogOptionSelect
+                      id="std-level"
+                      catalog={catalogOptions}
+                      category="levels"
+                      value={formLevel}
+                      onChange={setFormLevel}
+                      placeholder={t.selectLevel}
+                      noneLabel={t.noneOption}
+                      className="h-11 rounded-xl border-border bg-white"
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="std-focus" className="text-xs font-semibold text-foreground select-none">
                       {tr("auditUi.languageStudied")}
                     </Label>
-                    <Select value={formFocus} onValueChange={(val) => setFormFocus(val)}>
+                    <Select value={formLanguage} onValueChange={(val) => setFormLanguage(val)}>
                       <SelectTrigger id="std-focus" className="h-11 rounded-xl border-border bg-white">
                         <SelectValue
                           placeholder={
@@ -2926,9 +2961,9 @@ function StudentsPage() {
                               {formatLanguageLabel(langItem, lang)}
                             </SelectItem>
                           ))
-                        ) : formFocus ? (
-                          <SelectItem value={formFocus}>
-                            {formatLanguageLabel(formFocus, lang)}
+                        ) : formLanguage ? (
+                          <SelectItem value={formLanguage}>
+                            {formatLanguageLabel(formLanguage, lang)}
                           </SelectItem>
                         ) : null}
                       </SelectContent>
@@ -2947,6 +2982,36 @@ function StudentsPage() {
                         </button>
                       </p>
                     )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="std-focus-goal" className="text-xs font-semibold text-foreground select-none">
+                      {t.fieldFocus}
+                    </Label>
+                    <CatalogOptionSelect
+                      id="std-focus-goal"
+                      catalog={catalogOptions}
+                      category="focuses"
+                      value={formFocus}
+                      onChange={setFormFocus}
+                      placeholder={t.selectFocus}
+                      noneLabel={t.noneOption}
+                      className="h-11 rounded-xl border-border bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="std-modality" className="text-xs font-semibold text-foreground select-none">
+                      {t.fieldModality}
+                    </Label>
+                    <CatalogOptionSelect
+                      id="std-modality"
+                      catalog={catalogOptions}
+                      category="modalities"
+                      value={formModality}
+                      onChange={setFormModality}
+                      placeholder={t.selectModality}
+                      noneLabel={t.noneOption}
+                      className="h-11 rounded-xl border-border bg-white"
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="std-type" className="text-xs font-semibold text-foreground select-none">
