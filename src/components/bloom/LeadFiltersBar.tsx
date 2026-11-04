@@ -9,7 +9,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { sortCatalogOptions, type CatalogCategory } from "@/lib/catalog-options";
-import { countActiveLeadFilters, EMPTY_LEAD_FILTERS, pendingContactAge, type LeadFilters } from "@/lib/lead-filters";
+import { countActiveLeadFilters, EMPTY_LEAD_FILTERS, isTaskFilterUnavailable, pendingContactAge, type LeadFilters } from "@/lib/lead-filters";
 import type { Lead } from "@/lib/automation-engine";
 
 const ALL = "__all__";
@@ -29,6 +29,9 @@ interface Props {
   resultCount: number;
   hasSearch: boolean;
   onClearSearch: () => void;
+  /** True when the pending-task read failed; task filters then show an explicit error instead of zero results. */
+  tasksError: boolean;
+  onRetryTasks: () => Promise<void> | void;
 }
 
 export function LeadFiltersBar({ filters, onChange, stages, leads, resultCount, hasSearch, onClearSearch }: Props) {
