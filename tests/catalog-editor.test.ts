@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CatalogValidationError, getDefaultCatalogOptions, normalizeCatalogOptions } from "../src/lib/catalog-options";
-import { addCatalogOption, moveCatalogOption, prepareCatalogForSave, renameCatalogOption, setCatalogModalityNature, setCatalogOptionActive } from "../src/lib/catalog-editor";
+import { CatalogValidationError, getActiveCatalogOptions, getDefaultCatalogOptions, normalizeCatalogOptions, resolveCatalogLabel } from "../src/lib/catalog-options";
+import { addCatalogOption, moveCatalogOption, prepareCatalogForSave, removeCatalogOption, renameCatalogOption, restoreCatalogOption, setCatalogModalityNature, setCatalogOptionActive } from "../src/lib/catalog-editor";
 
 describe("teaching options editing", () => {
   it("renames without changing stable IDs or historical aliases", () => {
@@ -91,5 +91,46 @@ describe("teaching options editing", () => {
     const second = normalizeCatalogOptions({});
     expect(prepareCatalogForSave(first).levels[0]?.label).toBe("Teacher one");
     expect(second.levels[0]?.label).toBe("A1");
+  });
+
+  it.each([["levels", "a1"], ["focuses", "general"], ["modalities", "online"]] as const)("permanently removes an unused %s option without reintroducing it after normalization", (category, id) => {
+    const before = getDefaultCatalogOptions();
+    const removed = prepareCatalogForSave(removeCatalogOption(before, category, id, false));
+    expect(removed[category].some((option) => option.id === id)).toBe(false);
+    expect(normalizeCatalogOptions(JSON.parse(JSON.stringify(removed)))[category].some((option) => option.id === id)).toBe(false);
+    expect(before[category].some((option) => option.id === id)).toBe(true);
+  });
+
+  it.each([["levels", "a1"], ["focuses", "general"], ["modalities", "online"]] as const)("archives a used %s option with its existing ID and metadata", (category, id) => {
+    const before = getDefaultCatalogOptions();
+    const previous = before[category].find((option) => option.id === id);
+    const archived = prepareCatalogForSave(removeCatalogOption(before, category, id, true));
+    expect(archived[category].find((option) => option.id === id)).toEqual({ ...previous, active: false });
+    expect(getActiveCatalogOptions(archived, category).some((option) => option.id === id)).toBe(false);
+    expect(resolveCatalogLabel(archived, category, id)).toBe(previous?.label);
+    expect(normalizeCatalogOptions(JSON.parse(JSON.stringify(archived)))[category].find((option) => option.id === id)?.active).toBe(false);
+  });
+
+  it("recovers the same archived option without duplicate IDs, even on repeat recovery", () => {
+    const before = getDefaultCatalogOptions();
+    const archived = removeCatalogOption(before, "modalities", "online", true);
+    const restored = restoreCatalogOption(archived, "modalities", "online");
+    expect(restored).toEqual(before);
+    expect(restoreCatalogOption(restored, "modalities", "online").modalities.filter((option) => option.id === "online")).toHaveLength(1);
+    expect(restored.modalities[0]?.nature).toBe("online");
+  });
+
+  it("does not restore or remove unknown IDs", () => {
+    const before = getDefaultCatalogOptions();
+    expect(() => restoreCatalogOption(before, "levels", "missing")).toThrow();
+    expect(() => removeCatalogOption(before, "levels", "missing", false)).toThrow();
+  });
+
+  it("reorders visible active options without using hidden inactive entries as neighbors", () => {
+    const before = setCatalogOptionActive(getDefaultCatalogOptions(), "levels", "a2", false);
+    const moved = moveCatalogOption(before, "levels", "a1", 1);
+    expect(getActiveCatalogOptions(moved, "levels").map((option) => option.id)).toEqual(["b1", "a1", "b2", "c1", "c2"]);
+    expect(moved.levels.find((option) => option.id === "a2")?.active).toBe(false);
+    expect(moved.levels).toHaveLength(6);
   });
 });
