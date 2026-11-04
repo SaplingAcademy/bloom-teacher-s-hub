@@ -588,7 +588,7 @@ function LeadsPage() {
                       <div
                         key={lead.id}
                         onClick={() => setSelectedLead(lead)}
-                        className="bg-card border border-border hover:border-primary/50 relative hover:z-20 hover:-translate-y-[3px] hover:scale-[1.02] hover:shadow-lg transition-all duration-[180ms] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 rounded-lg p-3.5 shadow-sm cursor-pointer space-y-2 group"
+                        className="bg-card border border-border hover:border-primary/50 min-w-0 break-words hover:relative hover:z-20 hover:-translate-y-[3px] hover:scale-[1.02] hover:shadow-lg transition-all duration-[180ms] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 rounded-lg p-3.5 shadow-sm cursor-pointer space-y-2 group"
                       >
                         <div className="flex items-start justify-between">
                           <h4 className="font-semibold text-sm text-card-foreground group-hover:text-primary transition-colors">
