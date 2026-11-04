@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Add confirmed trash removal after the reorder arrows for every teaching-options group, persist removal immediately and show inactive options separately with ID-preserving recovery.
+- [ ] Check authenticated teacher historical usage before permanent removal; archive used options and fail closed on uncertain reads, preserving other settings and records without schema changes.
+- [ ] Run only focused catalog removal/recovery/usage/persistence tests and check the Settings flow; real authenticated readback depends on available session.
+
 - [x] Add only the Teaching options section to existing Settings with stable-ID editing, ordering, activation and modality nature in PT/EN; preserve languages, other screens and historical data.
 - [x] Save the complete normalized catalog only to the freshly verified authenticated teacher's existing settings row, updating only catalog_options and the exported teacher-scoped cache; missing rows fail explicitly without partial settings creation.
 - [x] Run only catalog-options, catalog-editor and catalog-settings focused tests: 53 passed. Isolated real-editor checks passed additions/renames/order/activity/nature, blocked blank names, failed-save draft retention and PT/EN mobile fit, with no runtime errors. No manual build, typecheck, migrations, audit or broad suite; automatic preview build OK.
