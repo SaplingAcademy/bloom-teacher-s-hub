@@ -38,7 +38,7 @@ export async function hasCatalogOptionUsage(teacherId: string, catalog: CatalogO
     for (;;) {
       let query = supabase.from(table).select(`id,${field}`).eq("teacher_id", teacherId).order("id", { ascending: true }).limit(pageSize);
       if (cursor) query = query.gt("id", cursor);
-      const { data, error } = await query;
+      const { data, error } = await query.returns<Record<string, unknown>[]>();
       if (error) throw error;
       if (!Array.isArray(data)) throw new Error("Incomplete catalog usage read");
       for (const row of data) {

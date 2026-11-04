@@ -173,7 +173,7 @@ export function TeachingOptionsEditor({ initialCatalog, onSave, onLifecycle }: {
                         <Input id={inputId} value={option.label} disabled={saving} aria-invalid={invalid} aria-describedby={invalid ? `${inputId}-error` : undefined} onChange={(event) => change(renameCatalogOption(draft, category, option.id, event.target.value))} />
                         {invalid && <p id={`${inputId}-error`} className="text-xs text-destructive">{t("teachingOptions.requiredName")}</p>}
                       </div>
-                      {category === "modalities" && "nature" in option && <NaturePicker id={`${inputId}-nature`} value={option.nature} disabled={saving} onChange={(nature) => change(setCatalogModalityNature(draft, option.id, nature))} />}
+                      {category === "modalities" && "nature" in option && (option.nature === "online" || option.nature === "in_person" || option.nature === "hybrid") && <NaturePicker id={`${inputId}-nature`} value={option.nature} disabled={busy} onChange={(nature) => change(setCatalogModalityNature(draft, option.id, nature))} />}
                     </div>
                     <div className="flex h-9 shrink-0 items-center justify-end gap-3">
                       <div className="flex items-center gap-2">
