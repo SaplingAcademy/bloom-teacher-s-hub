@@ -68,13 +68,16 @@ export function TeachingOptionsEditor({ initialCatalog, onSave, onLifecycle }: {
     setError(null);
     setLifecycleMessage(null);
     setLifecycleError(null);
-    if (dirty || adding) { setError(t("teachingOptions.saveFirst")); return; }
     setPendingRemoval({ category, id, label });
   }
 
   async function runLifecycle(category: CatalogCategory, id: string, action: "remove" | "restore") {
     if (savingRef.current) return;
-    if (dirty || adding) { setError(t("teachingOptions.saveFirst")); return; }
+    if (dirty || adding) {
+      if (action === "remove") setLifecycleError(t("teachingOptions.saveFirst"));
+      else setError(t("teachingOptions.saveFirst"));
+      return;
+    }
     savingRef.current = true;
     setLifecycleBusy(true);
     setLifecycleError(null);
