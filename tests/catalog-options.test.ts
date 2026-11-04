@@ -122,6 +122,13 @@ describe("historical and unknown values", () => {
     expect(resolveModalityNature(catalog, "Custom unknown mode")).toBeNull();
   });
 
+  it("treats prototype property names as literal unknown values and valid custom IDs", () => {
+    const catalog = normalizeCatalogOptions({ focuses: [{ id: "constructor", label: "Custom course" }] });
+    expect(resolveCatalogLabel(catalog, "focuses", "constructor")).toBe("Custom course");
+    expect(resolveCatalogValue(catalog, "levels", "toString")).toMatchObject({ id: null, label: "toString" });
+    expect(resolveCatalogValue(catalog, "modalities", "__proto__")).toMatchObject({ id: null, label: "__proto__" });
+  });
+
   it("keeps historical built-ins readable when omitted from a customized category", () => {
     const catalog = normalizeCatalogOptions({ focuses: [] });
     expect(resolveCatalogValue(catalog, "focuses", "Business")).toMatchObject({ id: "business", label: "Business English", isHistoricalDefault: true });

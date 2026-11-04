@@ -147,9 +147,10 @@ export function normalizeCatalogOptions(value: unknown): CatalogOptions {
   if (issues.length > 0) throw new CatalogValidationError(issues);
   const defaults = getDefaultCatalogOptions();
   if (!isObject(value)) return defaults;
+  const configuredValue = value;
 
   function normalizeCategory(category: CatalogCategory): CatalogOption[] {
-    const entries = value[category];
+    const entries = configuredValue[category];
     if (!Array.isArray(entries)) return defaults[category];
     return sortCatalogOptions(entries.map((entry: Record<string, unknown>, index) => ({
       // Validation above guarantees these types; IDs are copied literally, never slugified.
