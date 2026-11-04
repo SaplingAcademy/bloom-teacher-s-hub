@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Lead tasks reuse the canonical `public.tasks` table (linked by `lead_id`,

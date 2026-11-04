@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 import { buildLeadTaskInsert, groupLeadTasks, validateLeadTaskDraft, type LeadTask } from "@/lib/lead-tasks";
 
 const task = (id: string, status: string, due: string | null, auto = false): LeadTask => ({
