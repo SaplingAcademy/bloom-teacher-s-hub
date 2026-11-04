@@ -436,7 +436,10 @@ export const uiTranslations = {
       "dupBody": "Já existe um lead com o mesmo telefone ou e-mail. Contatos semelhantes podem ser legítimos.",
       "dupOpen": "Abrir",
       "dupContinue": "Cadastrar mesmo assim",
-      "dupCheckError": "Não foi possível verificar duplicidades. Tente novamente."
+      "dupCheckError": "Não foi possível verificar duplicidades. Tente novamente.",
+      "tasksError": "Não foi possível consultar as tarefas.",
+      "tasksErrorBanner": "Não foi possível consultar as tarefas. O resultado do filtro pode estar incompleto.",
+      "tasksRetry": "Tentar novamente"
     },
     "leadPanel": {
       "profile": "Perfil",

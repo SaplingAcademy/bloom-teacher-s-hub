@@ -36,6 +36,15 @@ export interface LeadTaskSummary {
   overdue: number;
 }
 
+/**
+ * True when a task-filter result must not be trusted: the required task data
+ * failed to load while a pending/overdue task filter is active. An empty
+ * result in that situation is an unknown, not a valid conclusion.
+ */
+export function isTaskFilterUnavailable(tasksError: boolean, tasksFilter: TaskFilter): boolean {
+  return tasksError && tasksFilter !== "all";
+}
+
 /** Per-lead pending/overdue counts from pending tasks of the teacher. */
 export function summarizeLeadTasks(
   tasks: { lead_id?: string | null; status?: string | null; due_date?: string | null }[],
