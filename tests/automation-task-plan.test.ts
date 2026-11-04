@@ -34,3 +34,32 @@ describe("automation task planning", () => {
     expect(a).toEqual([{ kind: "update", taskId: "p", spec: spec("follow_up") }]);
   });
 });
+
+import { resolveProposalCycle } from "@/lib/automation-task-plan";
+describe("proposal cycles (Rule D)", () => {
+  const ev = (id: string, status: string, key: string) => ({ id, status, idempotency_key: key });
+  const k = (n: number) => `proposal-recorded:L:cycle:${n}`;
+  it("first proposal starts cycle 1", () => {
+    expect(resolveProposalCycle("L", [], new Set()).key).toBe(k(1));
+  });
+  it("updating the same proposal (pending follow-up) reuses the cycle", () => {
+    expect(resolveProposalCycle("L", [ev("e1", "completed", k(1))], new Set(["e1"])).key).toBe(k(1));
+  });
+  it("new proposal after completed follow-up opens a new cycle", () => {
+    const r = resolveProposalCycle("L", [ev("e1", "completed", k(1))], new Set());
+    expect(r.key).toBe(k(2));
+    expect(planAutoTasks([row("t", "completed", "e1", "follow_up")], new Set(["e2"]), [spec("follow_up")], true))
+      .toEqual([{ kind: "insert", spec: spec("follow_up") }]);
+  });
+  it("failed cycle is retried with the same key", () => {
+    expect(resolveProposalCycle("L", [ev("e1", "failed", k(1))], new Set()).key).toBe(k(1));
+  });
+  it("legacy event with pending follow-up keeps its key", () => {
+    expect(resolveProposalCycle("L", [ev("e0", "completed", "proposal-recorded:L:custom")], new Set(["e0"])).key)
+      .toBe("proposal-recorded:L:custom");
+  });
+  it("retry after partial failure inserts only the missing task", () => {
+    const a = planAutoTasks([row("c", "pending", "e1", "whatsapp")], new Set(["e1"]), [spec("whatsapp"), spec("follow_up")], true);
+    expect(a.map((x) => x.kind)).toEqual(["update", "insert"]);
+  });
+});

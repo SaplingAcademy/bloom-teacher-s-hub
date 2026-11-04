@@ -43,3 +43,38 @@ export function planAutoTasks(
     return { kind: "insert", spec };
   });
 }
+
+export interface ProposalEventRow {
+  id: string;
+  status: string | null;
+  idempotency_key: string;
+}
+
+/**
+ * Stable proposal cycle identity (Rule D), derived only from persisted events/tasks — never timestamps.
+ * - Latest cycle unfinished (failed/processing/retrying) → same key (retry).
+ * - Latest cycle has a pending linked task → same key (update of the same proposal).
+ * - Otherwise → next cycle number (a new proposal gets its own follow-up).
+ * Legacy keys without a cycle number count as cycle 0.
+ */
+export function resolveProposalCycle(
+  leadId: string,
+  events: ProposalEventRow[],
+  pendingTaskEventIds: Set<string>,
+): { key: string; cycle: number; isNew: boolean } {
+  const prefix = `proposal-recorded:${leadId}:cycle:`;
+  const numbered = events.map((e) => {
+    const n = e.idempotency_key.startsWith(prefix) ? Number(e.idempotency_key.slice(prefix.length)) : 0;
+    return { ...e, n: Number.isFinite(n) ? n : 0 };
+  });
+  if (numbered.length === 0) return { key: `${prefix}1`, cycle: 1, isNew: true };
+  const maxN = Math.max(...numbered.map((e) => e.n));
+  const latest = numbered.filter((e) => e.n === maxN);
+  const reuse = latest.some((e) => e.status !== "completed" || pendingTaskEventIds.has(e.id));
+  if (reuse) {
+    // Legacy events keep their original key so their pending follow-up is updated, not duplicated.
+    const target = latest.find((e) => e.status !== "completed" || pendingTaskEventIds.has(e.id))!;
+    return { key: maxN > 0 ? `${prefix}${maxN}` : target.idempotency_key, cycle: maxN, isNew: false };
+  }
+  return { key: `${prefix}${maxN + 1}`, cycle: maxN + 1, isNew: true };
+}
