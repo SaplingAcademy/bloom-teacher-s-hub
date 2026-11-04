@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { CATALOG_OPTIONS_QUERY_KEY, useCatalogOptions } from "@/hooks/use-catalog-options";
 import { CatalogValidationError, type CatalogOptions } from "@/lib/catalog-options";
-import { CatalogSettingsError, saveCatalogSettings } from "@/lib/catalog-settings";
+import { CatalogSettingsError, changeCatalogOptionLifecycle, saveCatalogSettings } from "@/lib/catalog-settings";
+import type { CatalogCategory } from "@/lib/catalog-options";
 import { TeachingOptionsEditor } from "@/components/bloom/TeachingOptionsEditor";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +19,10 @@ export function TeachingOptionsSettings() {
     onSuccess: (persisted, { teacherId }) => {
       queryClient.setQueryData(CATALOG_OPTIONS_QUERY_KEY(teacherId), persisted);
     },
+  });
+  const lifecycle = useMutation({
+    mutationFn: ({ teacherId, catalog, category, id, action }: { teacherId: string; catalog: CatalogOptions; category: CatalogCategory; id: string; action: "remove" | "restore" }) => changeCatalogOptionLifecycle(teacherId, catalog, category, id, action),
+    onSuccess: (result, { teacherId }) => queryClient.setQueryData(CATALOG_OPTIONS_QUERY_KEY(teacherId), result.catalog),
   });
 
   if (isLoading) return <p role="status" className="flex items-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t("teachingOptions.loading")}</p>;
@@ -33,5 +38,8 @@ export function TeachingOptionsSettings() {
   return <TeachingOptionsEditor key={teacherId} initialCatalog={catalogOptions} onSave={(catalog) => {
     if (authLoading || session?.user.id !== teacherId) return Promise.reject(new CatalogSettingsError("authentication"));
     return mutation.mutateAsync({ teacherId, catalog });
+  }} onLifecycle={(catalog, category, id, action) => {
+    if (authLoading || session?.user.id !== teacherId) return Promise.reject(new CatalogSettingsError("authentication"));
+    return lifecycle.mutateAsync({ teacherId, catalog, category, id, action });
   }} />;
 }
