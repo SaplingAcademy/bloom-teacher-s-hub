@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Pin, PinOff, MessageCircle } from "lucide-react";
-import { navSections, bottomNav } from "@/lib/navigation";
+import { navSections, bottomNav, adminNavItem } from "@/lib/navigation";
+import { usePlan } from "@/hooks/use-plan";
 import { BloomLogo, BloomMark } from "@/components/bloom/Logo";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/use-language";
@@ -28,6 +29,7 @@ export function AppSidebar({
   onExpandChange,
 }: AppSidebarProps) {
   const { t } = useLanguage();
+  const { isSuperAdmin } = usePlan();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 
@@ -275,8 +277,8 @@ export function AppSidebar({
             </button>
           )}
 
-          {/* Bottom Utility Nav */}
-          {bottomNav.map((item) => {
+          {/* Bottom Utility Nav (Administração só aparece para super_admin) */}
+          {(isSuperAdmin ? [...bottomNav, adminNavItem] : bottomNav).map((item) => {
             const active = isActive(item.to);
             const itemLabel = t(`nav.${item.id}`, item.label);
             const navLink = (
