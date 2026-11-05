@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
-import type { SubscriptionPlan, UserRole } from "@/lib/plans";
+import { canAccessFeature, type PlanFeature, type SubscriptionPlan, type UserRole } from "@/lib/plans";
 
 /** Reuse this exact teacher-scoped key for any future plan/role reads. */
 export const PLAN_QUERY_KEY = (teacherId: string | undefined) =>
