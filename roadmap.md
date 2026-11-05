@@ -117,3 +117,5 @@
 - [x] Etapa 3 personalização pedagógica: formulário de alunos usa useCatalogOptions (nível/foco/modalidade) e useTeacherLanguages (idioma); IDs estáveis salvos, sem auto-seleção, campos vazios permitidos, valores históricos preservados; corrigida associação focus↔language_studied; students.modality gravado; filtros e exibição resolvem labels do catálogo; testes focados (42) passam.
 - [ ] Apply manual SQL docs/migrations/20261105040000_roles_plans_manual.sql (roles, plans, free-plan trigger) — pending user authorization
 - [ ] Promote the two designated accounts to super_admin via section 7 of that SQL (UUIDs needed)
+- [x] Painel Administrativo v1: /admin (super_admin) lista professores reais com plano, alunos ativos e cadastro; busca, filtro por plano, indicadores e troca de plano com confirmação; rebaixamento bloqueado acima de 5 ativos; menu Administração só para super_admin; 9 testes focados passam.
+- [ ] Apply manual SQL docs/migrations/20261105050000_admin_panel_manual.sql (list_admin_teachers + set_teacher_plan RPCs) — pending user authorization
