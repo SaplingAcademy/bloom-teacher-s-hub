@@ -48,6 +48,7 @@ import {
   type AdminTeacher,
 } from "@/lib/admin";
 import { FREE_PLAN_ACTIVE_STUDENT_LIMIT, type SubscriptionPlan } from "@/lib/plans";
+import { AdminLibraryResources } from "@/components/bloom/AdminLibraryResources";
 
 export const Route = createFileRoute("/_app/admin")({
   head: () => ({
@@ -270,6 +271,8 @@ function AdminPage() {
           </ul>
         </div>
       )}
+
+      <AdminLibraryResources />
 
       {/* Plan change confirmation */}
       <Dialog open={pendingChange !== null} onOpenChange={(open) => !open && setPendingChange(null)}>
