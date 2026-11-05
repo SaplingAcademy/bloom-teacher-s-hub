@@ -1,6 +1,16 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "libraryAccess": {
+      "adminTitle": "Recursos da Biblioteca", "search": "Buscar recurso por nome", "free": "Free", "premium": "Premium",
+      "makeFree": "Tornar Free", "makePremium": "Tornar Premium", "confirmTitle": "Alterar classificação do recurso?",
+      "confirmPremium": "O recurso {name} ficará disponível somente para professores Premium e administradoras.",
+      "confirmFree": "O recurso {name} ficará disponível para todos os professores.", "confirm": "Confirmar alteração",
+      "saved": "Classificação salva.", "saveError": "Não foi possível salvar a classificação. Tente novamente.",
+      "loadError": "Não foi possível consultar as classificações.", "accessError": "Não foi possível confirmar o acesso a este recurso. Tente novamente.",
+      "checking": "Confirmando acesso…", "empty": "Nenhum recurso encontrado.",
+      "categories": { "contracts": "Contratos", "finance": "Finanças", "communication": "Comunicação", "business": "Políticas Comerciais", "placement": "Nivelamento", "assessment": "Avaliação", "records": "Fichas de Aluno", "planning": "Planejamento", "certificates": "Certificados" }
+    },
     "admin": {
       "title": "Administração",
       "description": "Professores do Bloom e gerenciamento de planos.",
@@ -1327,6 +1337,16 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "libraryAccess": {
+      "adminTitle": "Library Resources", "search": "Search resources by name", "free": "Free", "premium": "Premium",
+      "makeFree": "Make Free", "makePremium": "Make Premium", "confirmTitle": "Change resource classification?",
+      "confirmPremium": "The resource {name} will be available only to Premium teachers and administrators.",
+      "confirmFree": "The resource {name} will be available to all teachers.", "confirm": "Confirm change",
+      "saved": "Classification saved.", "saveError": "Could not save the classification. Please try again.",
+      "loadError": "Could not check resource classifications.", "accessError": "Could not confirm access to this resource. Please try again.",
+      "checking": "Checking access…", "empty": "No resources found.",
+      "categories": { "contracts": "Contracts", "finance": "Finance", "communication": "Communication", "business": "Business Policies", "placement": "Placement", "assessment": "Assessment", "records": "Student Records", "planning": "Planning", "certificates": "Certificates" }
+    },
     "admin": {
       "title": "Administration",
       "description": "Bloom teachers and plan management.",
