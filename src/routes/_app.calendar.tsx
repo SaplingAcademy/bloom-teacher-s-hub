@@ -30,6 +30,7 @@ import {
   RotateCcw,
   } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { CalendarRowsSkeleton, MonthGridSkeleton } from "@/components/bloom/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
