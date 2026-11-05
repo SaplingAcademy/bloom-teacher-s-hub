@@ -5,6 +5,8 @@ import { coursePeriodFromStudent } from "@/lib/lesson-plan-period";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
+import { usePlan } from "@/hooks/use-plan";
+import { canAddActiveStudent, countActiveStudents, isFreePlanLimitError } from "@/lib/plans";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
