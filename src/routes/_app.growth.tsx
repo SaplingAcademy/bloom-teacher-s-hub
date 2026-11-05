@@ -584,15 +584,7 @@ function GrowthPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         {/* MONTHLY GOAL CARD */}
         {loadingGrowth ? (
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] animate-pulse">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary opacity-50" />
-              <div className="h-5 w-32 bg-secondary rounded" />
-            </div>
-            <div className="my-8 flex items-center justify-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          </div>
+          <PanelSkeleton label={t.title} />
         ) : monthlyGoal === null || monthlyGoal <= 0 ? (
           /* EMPTY STATE CARD: No Goal Set */
           <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">

@@ -549,9 +549,11 @@ function LeadsPage() {
 
       {/* Main Content Area */}
       {loading ? (
-        <div className="py-16 text-center text-muted-foreground flex items-center justify-center gap-2">
-          <RefreshCw className="w-5 h-5 animate-spin text-primary" /> {t("auditUi.loadingLeadPipeline")}
-        </div>
+        viewMode === "kanban" ? (
+          <KanbanSkeleton label={t("auditUi.loadingLeadPipeline")} />
+        ) : (
+          <ListRowsSkeleton label={t("auditUi.loadingLeadPipeline")} rows={6} />
+        )
       ) : viewMode === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 overflow-x-auto pb-4">
           {KANBAN_STAGES.map((stage) => {

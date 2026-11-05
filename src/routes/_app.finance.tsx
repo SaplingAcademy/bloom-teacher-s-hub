@@ -865,9 +865,7 @@ function FinancePage() {
 
             <ul className="mt-4 divide-y divide-border/60">
               {isLoadingInvoices ? (
-                <div className="py-8 text-center text-xs text-muted-foreground font-medium animate-pulse">
-                  {tr("auditUi.loadingStudentReceivables")}
-                </div>
+                <ListRowsSkeleton label={tr("auditUi.loadingStudentReceivables")} rows={4} className="mt-2 border-0 bg-transparent" />
               ) : invoicesError ? (
                 <div role="alert" className="py-8 text-center text-xs font-medium text-destructive space-y-2">
                   <p>
