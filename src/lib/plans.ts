@@ -50,12 +50,60 @@ export function canAddActiveStudent(
   return currentActiveCount < FREE_PLAN_ACTIVE_STUDENT_LIMIT;
 }
 
+/**
+ * Premium-gated product features. The free plan includes the full dashboard,
+ * finance, calendar, normal community participation (no points/prizes) and a
+ * fixed selection of free library materials; everything below is Premium-only.
+ * "Premium" is only the commercial name shown in the UI — the stored plan
+ * value is `pro`. Stages 2/3 (library, courses, marketplace, community
+ * rewards) reuse this same map; do not create parallel permission systems.
+ */
+export type PlanFeature =
+  | "growth_insights"
+  | "library_full"
+  | "academy_courses"
+  | "marketplace"
+  | "community_rewards";
+
+export const PLAN_FEATURES: Record<SubscriptionPlan, Readonly<Record<PlanFeature, boolean>>> = {
+  free: {
+    growth_insights: false,
+    library_full: false,
+    academy_courses: false,
+    marketplace: false,
+    community_rewards: false,
+  },
+  pro: {
+    growth_insights: true,
+    library_full: true,
+    academy_courses: true,
+    marketplace: true,
+    community_rewards: true,
+  },
+};
+
+/**
+ * Central feature gate. Super admins access every feature regardless of the
+ * registered plan. Unknown plan (still loading or read failure) fails CLOSED
+ * for premium features — unlike the student limit, which fails open and lets
+ * the database trigger decide.
+ */
+export function canAccessFeature(
+  plan: SubscriptionPlan | null,
+  isSuperAdmin: boolean,
+  feature: PlanFeature,
+): boolean {
+  if (isSuperAdmin) return true;
+  if (!plan) return false;
+  return PLAN_FEATURES[plan][feature];
+}
+
 /** Academy full content is exclusive to pro plans and super admins. */
 export function canAccessAcademy(
   plan: SubscriptionPlan | null,
   isSuperAdmin: boolean,
 ): boolean {
-  return isSuperAdmin || plan === "pro";
+  return canAccessFeature(plan, isSuperAdmin, "academy_courses");
 }
 
 /**

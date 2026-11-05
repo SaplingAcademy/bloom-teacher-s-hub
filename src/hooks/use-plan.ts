@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
-import type { SubscriptionPlan, UserRole } from "@/lib/plans";
+import { canAccessFeature, type PlanFeature, type SubscriptionPlan, type UserRole } from "@/lib/plans";
 
 /** Reuse this exact teacher-scoped key for any future plan/role reads. */
 export const PLAN_QUERY_KEY = (teacherId: string | undefined) =>
@@ -68,5 +68,20 @@ export function usePlan() {
     isLoading: authLoading || (authenticated && query.isLoading),
     error: authenticated ? query.error : null,
     refetch: query.refetch,
+  };
+}
+
+/**
+ * Reusable premium-feature gate built on the real account plan/role.
+ * Fails closed: while the plan is loading or unreadable, `allowed` is false —
+ * callers should render a neutral loading state via `isLoading` and never
+ * release premium content on `error`.
+ */
+export function useFeatureAccess(feature: PlanFeature) {
+  const { plan, isSuperAdmin, isLoading, error } = usePlan();
+  return {
+    allowed: canAccessFeature(plan, isSuperAdmin, feature),
+    isLoading,
+    error,
   };
 }

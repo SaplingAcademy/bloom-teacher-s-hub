@@ -51,6 +51,8 @@ import {
   Info,
 } from "lucide-react";
 import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
+import { PremiumBenefitsDialog, PremiumCardLock } from "@/components/bloom/PremiumGate";
+import { useFeatureAccess } from "@/hooks/use-plan";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Label } from "@/components/ui/label";
@@ -252,6 +254,12 @@ function GrowthPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Premium gate: Revenue Potential + Growth Opportunities cards. Fails closed
+  // while the plan loads or is unreadable — locked users never compute or
+  // receive the premium insights below.
+  const growthInsights = useFeatureAccess("growth_insights");
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+
   // Growth Goal & Real Data States
   const [loadingGrowth, setLoadingGrowth] = useState(true);
   const queryClient = useQueryClient();
@@ -343,6 +351,7 @@ function GrowthPage() {
   });
 
   const opportunities = useMemo<GrowthOpportunity[]>(() => {
+    if (!growthInsights.allowed) return [];
     const d = growthQuery.data;
     if (!d || !d.capacityRes.hasWorkingHours) return [];
     return buildGrowthOpportunities({
@@ -356,7 +365,7 @@ function GrowthPage() {
       classRevenue: d.hourlyRes.mrr?.classRevenue ?? d.mrrRes.classRevenue,
       receivedHistoryCents: d.receivedHistory,
     });
-  }, [growthQuery.data]);
+  }, [growthQuery.data, growthInsights.allowed]);
 
   const loadGrowthData = useCallback(async () => {
     if (!user) return;
@@ -553,7 +562,7 @@ function GrowthPage() {
   const circumference = 2 * Math.PI * radius;
   const ringProgress = Math.min(100, metrics.progressPct);
   const strokeDashoffset = circumference - (ringProgress / 100) * circumference;
-  const revenueCardData = !growthQuery.isLoading && !growthQuery.isError ? growthQuery.data : undefined;
+  const revenueCardData = growthInsights.allowed && !growthQuery.isLoading && !growthQuery.isError ? growthQuery.data : undefined;
   const revenuePotential = revenueCardData ? calculateRevenuePotential({
     mrr: revenueCardData.mrrRes,
     hourly: revenueCardData.hourlyRes,
@@ -1596,6 +1605,15 @@ function GrowthPage() {
             </div>
           </div>
 
+          {growthInsights.isLoading ? (
+            <div className="mt-6 flex-1 space-y-4 animate-pulse" aria-hidden="true">
+              <div className="h-4 w-2/3 rounded bg-sidebar-accent-foreground/15" />
+              <div className="h-4 w-1/2 rounded bg-sidebar-accent-foreground/15" />
+              <div className="h-8 w-4/5 rounded bg-sidebar-accent-foreground/15" />
+            </div>
+          ) : !growthInsights.allowed ? (
+            <PremiumCardLock tone="dark" onLearnMore={() => setIsPremiumDialogOpen(true)} />
+          ) : (
           <div className="mt-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
               <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.projectedRevenue")}</span>
@@ -1632,6 +1650,7 @@ function GrowthPage() {
               </p>
             </div>
           </div>
+          )}
         </div>
 
         {/* GROWTH OPPORTUNITIES SECTION */}
@@ -1644,7 +1663,14 @@ function GrowthPage() {
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t.opportunitiesSubtitle}</p>
 
-          {opportunities.length > 0 ? (
+          {growthInsights.isLoading ? (
+            <div className="mt-5 flex-1 space-y-3 animate-pulse" aria-hidden="true">
+              <div className="h-16 rounded-xl bg-secondary/60" />
+              <div className="h-16 rounded-xl bg-secondary/60" />
+            </div>
+          ) : !growthInsights.allowed ? (
+            <PremiumCardLock onLearnMore={() => setIsPremiumDialogOpen(true)} />
+          ) : opportunities.length > 0 ? (
             <ul className="mt-5 flex-1 space-y-3">
               {opportunities.map((op) => (
                 <OpportunityCard key={op.family} op={op} lang={lang} tr={tr} formatWeekday={formatWeekday} />
@@ -1778,6 +1804,9 @@ function GrowthPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* PREMIUM BENEFITS PRESENTATION (no checkout in this stage) */}
+      <PremiumBenefitsDialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen} />
 
       {/* CENTRAL AVAILABILITY MODAL */}
       {user && (
