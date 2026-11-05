@@ -35,6 +35,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     common: {
       save: "Salvar",
       cancel: "Cancelar",
+      tryAgain: "Tentar novamente",
       delete: "Excluir",
       edit: "Editar",
       search: "Buscar...",
