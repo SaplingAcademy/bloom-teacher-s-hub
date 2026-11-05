@@ -13,6 +13,7 @@ import {
   Store,
   UserCircle,
   Settings,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,6 +119,15 @@ export const navSections: NavSection[] = [
 export const bottomNav: NavItem[] = [
   { id: "settings", label: "Settings", to: "/settings", icon: Settings, description: "Workspace preferences" },
 ];
+
+/** Rendered only for super_admin users (see AppSidebar); the database re-verifies the role. */
+export const adminNavItem: NavItem = {
+  id: "admin",
+  label: "Administration",
+  to: "/admin",
+  icon: ShieldCheck,
+  description: "Teachers and plans",
+};
 
 export const aiNav: NavItem = {
   id: "askBloomAi",

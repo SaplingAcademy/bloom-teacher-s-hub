@@ -35,6 +35,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     common: {
       save: "Salvar",
       cancel: "Cancelar",
+      tryAgain: "Tentar novamente",
       delete: "Excluir",
       edit: "Editar",
       search: "Buscar...",
@@ -95,6 +96,8 @@ export const translations: Record<Language, TranslationDictionary> = {
       profileDesc: "Sua reputação docente",
       settings: "Configurações",
       settingsDesc: "Preferências do espaço de trabalho",
+      admin: "Administração",
+      adminDesc: "Professores e planos",
       askBloomAi: "Perguntar à Bloom IA",
       soon: "Em breve",
     },
@@ -979,6 +982,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     common: {
       save: "Save",
       cancel: "Cancel",
+      tryAgain: "Try again",
       delete: "Delete",
       edit: "Edit",
       search: "Search...",
@@ -1039,6 +1043,8 @@ export const translations: Record<Language, TranslationDictionary> = {
       profileDesc: "Your teacher reputation",
       settings: "Settings",
       settingsDesc: "Workspace preferences",
+      admin: "Administration",
+      adminDesc: "Teachers and plans",
       askBloomAi: "Ask Bloom AI",
       soon: "Soon",
     },
