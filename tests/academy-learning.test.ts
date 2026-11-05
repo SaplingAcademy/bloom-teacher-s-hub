@@ -6,6 +6,7 @@ import {
   isCourseInProgress,
   lessonNeighbors,
   resumeLesson,
+  withLessonCompletion,
   youtubeEmbedUrl,
 } from "../src/lib/academy-learning";
 import type { AcademyLessonRow, AcademyModuleRow } from "../src/lib/academy-content";
@@ -53,6 +54,19 @@ describe("academy learning", () => {
     expect(isCourseInProgress({ completed: 0, total: 3, percent: 0 }, true)).toBe(true);
     expect(isCourseInProgress({ completed: 3, total: 3, percent: 100 }, true)).toBe(false);
     expect(isCourseInProgress({ completed: 0, total: 3, percent: 0 }, false)).toBe(false);
+  });
+
+  it("optimistic completion adds the lesson without mutating the previous list", () => {
+    const before = ["a", "b"];
+    const after = withLessonCompletion(before, "c", true);
+    expect(after).toEqual(["a", "b", "c"]);
+    expect(before).toEqual(["a", "b"]);
+    expect(withLessonCompletion(before, "a", true)).toEqual(["a", "b"]);
+  });
+
+  it("optimistic undo removes only the toggled lesson", () => {
+    expect(withLessonCompletion(["a", "b", "c"], "b", false)).toEqual(["a", "c"]);
+    expect(withLessonCompletion(["a"], "missing", false)).toEqual(["a"]);
   });
 
   it("builds the official embed from the stored id", () => {

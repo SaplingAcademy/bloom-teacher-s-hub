@@ -45,6 +45,22 @@ export function computeCourseProgress(
   return { completed, total, percent: total === 0 ? 0 : Math.round((completed / total) * 100) };
 }
 
+/**
+ * Returns a new completed-ID list with the lesson added or removed. Used for
+ * optimistic cache updates: the UI reflects the toggle instantly and rolls
+ * back to the previous list if the save fails.
+ */
+export function withLessonCompletion(
+  completedLessonIds: readonly string[],
+  lessonId: string,
+  completed: boolean,
+): string[] {
+  const set = new Set(completedLessonIds);
+  if (completed) set.add(lessonId);
+  else set.delete(lessonId);
+  return [...set];
+}
+
 export function lessonNeighbors(
   flat: readonly AcademyLessonRow[],
   currentId: string,

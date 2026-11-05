@@ -169,11 +169,13 @@ export async function setVideoCompleted(videoId: string, completed: boolean): Pr
   }
 }
 
-/** Caller's own progress rows for the home "Continue learning" section. */
-export async function fetchMyCourseProgress(): Promise<{
+export type MyCourseProgress = {
   startedCourseIds: string[];
   completedLessonIds: string[];
-}> {
+};
+
+/** Caller's own progress rows for the home "Continue learning" section. */
+export async function fetchMyCourseProgress(): Promise<MyCourseProgress> {
   const userId = await requireUserId();
   const [courses, lessons] = await Promise.all([
     supabase.from("academy_course_progress").select("course_id").eq("user_id", userId),
