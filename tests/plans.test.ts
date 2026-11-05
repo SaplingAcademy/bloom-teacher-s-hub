@@ -82,6 +82,49 @@ describe("canAccessAcademy", () => {
   });
 });
 
+describe("PLAN_FEATURES", () => {
+  it("keeps every premium feature off on free and on on pro", () => {
+    for (const feature of ALL_FEATURES) {
+      expect(PLAN_FEATURES.free[feature]).toBe(false);
+      expect(PLAN_FEATURES.pro[feature]).toBe(true);
+    }
+  });
+});
+
+describe("canAccessFeature", () => {
+  it("grants super admins every feature regardless of the registered plan", () => {
+    for (const feature of ALL_FEATURES) {
+      expect(canAccessFeature("free", true, feature)).toBe(true);
+      expect(canAccessFeature("pro", true, feature)).toBe(true);
+      expect(canAccessFeature(null, true, feature)).toBe(true);
+    }
+  });
+
+  it("grants pro teachers every premium feature", () => {
+    for (const feature of ALL_FEATURES) {
+      expect(canAccessFeature("pro", false, feature)).toBe(true);
+    }
+  });
+
+  it("blocks free teachers from every premium feature", () => {
+    for (const feature of ALL_FEATURES) {
+      expect(canAccessFeature("free", false, feature)).toBe(false);
+    }
+  });
+
+  it("fails closed when the plan is unknown (loading or read failure)", () => {
+    for (const feature of ALL_FEATURES) {
+      expect(canAccessFeature(null, false, feature)).toBe(false);
+    }
+  });
+
+  it("keeps academy access consistent with the feature map", () => {
+    expect(canAccessAcademy("pro", false)).toBe(canAccessFeature("pro", false, "academy_courses"));
+    expect(canAccessAcademy("free", false)).toBe(canAccessFeature("free", false, "academy_courses"));
+    expect(canAccessAcademy(null, true)).toBe(canAccessFeature(null, true, "academy_courses"));
+  });
+});
+
 describe("isFreePlanLimitError", () => {
   it("recognizes the database trigger rejection by its stable marker", () => {
     expect(
