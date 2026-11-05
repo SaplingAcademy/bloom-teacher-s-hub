@@ -1,6 +1,18 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "workspace": {
+      "title": "Workspace", "eyebrow": "Seu espaço de organização",
+      "subtitle": "Organize ideias, projetos e anotações em um só lugar.",
+      "tabsLabel": "Seções do Workspace",
+      "tabs": { "mural": "Meu Mural", "projects": "Projetos", "notebooks": "Cadernos" },
+      "loading": "Carregando Workspace…", "soon": "Disponível em breve",
+      "mural": { "emptyTitle": "Seu mural está vazio", "emptyBody": "Em breve você poderá registrar lembretes e ideias rápidas em post-its." },
+      "projects": { "emptyTitle": "Nenhum projeto ainda", "emptyBody": "Em breve você poderá organizar projetos em fases e tarefas." },
+      "notebooks": { "emptyTitle": "Nenhum caderno ainda", "emptyBody": "Em breve você poderá criar cadernos com páginas de anotações." },
+      "project": { "back": "Voltar aos projetos", "title": "Projeto", "phases": "Fases", "emptyBody": "As fases e tarefas deste projeto aparecerão aqui." },
+      "notebook": { "back": "Voltar aos cadernos", "title": "Caderno", "pages": "Páginas", "noPages": "Nenhuma página", "emptyBody": "Selecione ou crie uma página para começar a escrever." }
+    },
     "academy": {
       "nav": "Bloom Academy", "soonBadge": "Coming Soon",
       "soonTitle": "Bloom Academy — Em breve",
@@ -1459,6 +1471,18 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "workspace": {
+      "title": "Workspace", "eyebrow": "Your organization space",
+      "subtitle": "Organize ideas, projects and notes in one place.",
+      "tabsLabel": "Workspace sections",
+      "tabs": { "mural": "My Board", "projects": "Projects", "notebooks": "Notebooks" },
+      "loading": "Loading Workspace…", "soon": "Coming soon",
+      "mural": { "emptyTitle": "Your board is empty", "emptyBody": "Soon you'll be able to capture reminders and quick ideas on sticky notes." },
+      "projects": { "emptyTitle": "No projects yet", "emptyBody": "Soon you'll be able to organize projects into phases and tasks." },
+      "notebooks": { "emptyTitle": "No notebooks yet", "emptyBody": "Soon you'll be able to create notebooks with note pages." },
+      "project": { "back": "Back to projects", "title": "Project", "phases": "Phases", "emptyBody": "This project's phases and tasks will appear here." },
+      "notebook": { "back": "Back to notebooks", "title": "Notebook", "pages": "Pages", "noPages": "No pages", "emptyBody": "Select or create a page to start writing." }
+    },
     "academy": {
       "nav": "Bloom Academy", "soonBadge": "Coming Soon",
       "soonTitle": "Bloom Academy — Coming soon",
