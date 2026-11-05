@@ -28,6 +28,9 @@ import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppResourcesRouteImport } from './routes/_app.resources'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
+import { Route as AppAcademyCourseCourseIdRouteImport } from './routes/_app.academy_.course.$courseId'
+import { Route as AppAcademyLessonLessonIdRouteImport } from './routes/_app.academy_.lesson.$lessonId'
+import { Route as AppAcademyVideoVideoIdRouteImport } from './routes/_app.academy_.video.$videoId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -123,6 +126,23 @@ const AppStudentsRoute = AppStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAcademyCourseCourseIdRoute =
+  AppAcademyCourseCourseIdRouteImport.update({
+    id: '/academy_/course/$courseId',
+    path: '/academy/course/$courseId',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAcademyLessonLessonIdRoute =
+  AppAcademyLessonLessonIdRouteImport.update({
+    id: '/academy_/lesson/$lessonId',
+    path: '/academy/lesson/$lessonId',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAcademyVideoVideoIdRoute = AppAcademyVideoVideoIdRouteImport.update({
+  id: '/academy_/video/$videoId',
+  path: '/academy/video/$videoId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -143,6 +163,9 @@ export interface FileRoutesByFullPath {
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
+  '/academy/course/$courseId': typeof AppAcademyCourseCourseIdRoute
+  '/academy/lesson/$lessonId': typeof AppAcademyLessonLessonIdRoute
+  '/academy/video/$videoId': typeof AppAcademyVideoVideoIdRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -163,6 +186,9 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
+  '/academy/course/$courseId': typeof AppAcademyCourseCourseIdRoute
+  '/academy/lesson/$lessonId': typeof AppAcademyLessonLessonIdRoute
+  '/academy/video/$videoId': typeof AppAcademyVideoVideoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -185,6 +211,9 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/academy_/course/$courseId': typeof AppAcademyCourseCourseIdRoute
+  '/_app/academy_/lesson/$lessonId': typeof AppAcademyLessonLessonIdRoute
+  '/_app/academy_/video/$videoId': typeof AppAcademyVideoVideoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -207,6 +236,9 @@ export interface FileRouteTypes {
     | '/resources'
     | '/settings'
     | '/students'
+    | '/academy/course/$courseId'
+    | '/academy/lesson/$lessonId'
+    | '/academy/video/$videoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -227,6 +259,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/students'
     | '/'
+    | '/academy/course/$courseId'
+    | '/academy/lesson/$lessonId'
+    | '/academy/video/$videoId'
   id:
     | '__root__'
     | '/_app'
@@ -248,6 +283,9 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/students'
     | '/_app/'
+    | '/_app/academy_/course/$courseId'
+    | '/_app/academy_/lesson/$lessonId'
+    | '/_app/academy_/video/$videoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -392,6 +430,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/academy_/course/$courseId': {
+      id: '/_app/academy_/course/$courseId'
+      path: '/academy/course/$courseId'
+      fullPath: '/academy/course/$courseId'
+      preLoaderRoute: typeof AppAcademyCourseCourseIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/academy_/lesson/$lessonId': {
+      id: '/_app/academy_/lesson/$lessonId'
+      path: '/academy/lesson/$lessonId'
+      fullPath: '/academy/lesson/$lessonId'
+      preLoaderRoute: typeof AppAcademyLessonLessonIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/academy_/video/$videoId': {
+      id: '/_app/academy_/video/$videoId'
+      path: '/academy/video/$videoId'
+      fullPath: '/academy/video/$videoId'
+      preLoaderRoute: typeof AppAcademyVideoVideoIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -411,6 +470,9 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppAcademyCourseCourseIdRoute: typeof AppAcademyCourseCourseIdRoute
+  AppAcademyLessonLessonIdRoute: typeof AppAcademyLessonLessonIdRoute
+  AppAcademyVideoVideoIdRoute: typeof AppAcademyVideoVideoIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -429,6 +491,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppAcademyCourseCourseIdRoute: AppAcademyCourseCourseIdRoute,
+  AppAcademyLessonLessonIdRoute: AppAcademyLessonLessonIdRoute,
+  AppAcademyVideoVideoIdRoute: AppAcademyVideoVideoIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

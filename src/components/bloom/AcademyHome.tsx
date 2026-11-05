@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   BookOpen,
   Users,
@@ -32,6 +33,9 @@ import {
   fetchPublishedVideos,
 } from "@/lib/academy-admin";
 import { AcademyManage } from "@/components/bloom/AcademyManage";
+import { fetchMyCourseProgress, fetchPublishedLessonIdsByCourse } from "@/lib/academy-learning-data";
+import { computeCourseProgress, isCourseInProgress } from "@/lib/academy-learning";
+import { ProgressBar } from "@/components/bloom/academy/AcademyShared";
 
 const CATEGORY_ICONS: Record<AcademyCategoryId, LucideIcon> = {
   teaching_methodology: BookOpen,
@@ -66,6 +70,27 @@ export function AcademyHome() {
     },
   });
 
+  const progressQuery = useQuery({
+    queryKey: ["academy-my-progress", contentQuery.data?.courseRows.map((c) => c.id).join(",") ?? ""],
+    enabled: Boolean(contentQuery.data),
+    staleTime: 0,
+    retry: false,
+    queryFn: async () => {
+      const ids = (contentQuery.data?.courseRows ?? []).map((c) => c.id);
+      const [mine, lessonIds] = await Promise.all([fetchMyCourseProgress(), fetchPublishedLessonIdsByCourse(ids)]);
+      const completed = new Set(mine.completedLessonIds);
+      const started = new Set(mine.startedCourseIds);
+      const result: Record<string, { percent: number; inProgress: boolean }> = {};
+      for (const id of ids) {
+        const progress = computeCourseProgress(lessonIds[id] ?? [], completed);
+        const touched = started.has(id) || progress.completed > 0;
+        result[id] = { percent: progress.percent, inProgress: isCourseInProgress(progress, touched) };
+        if (!touched) delete result[id];
+      }
+      return result;
+    },
+  });
+
   const courses = useMemo<readonly AcademyCourse[]>(
     () =>
       (contentQuery.data?.courseRows ?? []).map((row) => ({
@@ -75,10 +100,10 @@ export function AcademyHome() {
         description: row.short_description,
         coverUrl: row.cover_url,
         lessonCount: contentQuery.data?.lessonCounts[row.id] ?? 0,
-        progressPercent: null,
+        progressPercent: progressQuery.data?.[row.id]?.percent ?? null,
         featured: row.is_featured,
       })),
-    [contentQuery.data],
+    [contentQuery.data, progressQuery.data],
   );
   const videos = useMemo<readonly AcademyVideo[]>(
     () =>
@@ -93,6 +118,10 @@ export function AcademyHome() {
     [contentQuery.data],
   );
 
+  const continueCourses = useMemo(
+    () => courses.filter((c) => progressQuery.data?.[c.id]?.inProgress),
+    [courses, progressQuery.data],
+  );
   const filter = useMemo(() => ({ ...EMPTY_ACADEMY_FILTER, search, category }), [search, category]);
   const visibleCourses = useMemo(() => filterAcademyCourses(courses, filter), [courses, filter]);
   const visibleVideos = useMemo(() => filterAcademyVideos(videos, filter), [videos, filter]);
@@ -169,7 +198,35 @@ export function AcademyHome() {
         <h2 id="academy-continue" className="font-display text-lg font-semibold text-foreground">
           {t("academy.home.continueTitle")}
         </h2>
-        <p className="text-sm text-muted-foreground">{t("academy.home.continueEmpty")}</p>
+        {progressQuery.isError ? (
+          <p className="text-sm text-muted-foreground">{t("academy.loadError")}</p>
+        ) : continueCourses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("academy.home.continueEmpty")}</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {continueCourses.map((course) => (
+              <Link
+                key={course.id}
+                to="/academy/course/$courseId"
+                params={{ courseId: course.id }}
+                className="flex gap-3 rounded-xl border border-border bg-card p-3 transition-shadow hover:shadow-md"
+              >
+                {course.coverUrl ? (
+                  <img src={course.coverUrl} alt="" className="h-16 w-24 shrink-0 rounded-md object-cover" />
+                ) : (
+                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <BookOpen className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="truncate font-display text-sm font-semibold text-foreground">{course.title}</p>
+                  <ProgressBar percent={course.progressPercent ?? 0} label={t("academy.learn.progress")} />
+                  <span className="text-xs font-medium text-primary">{t("academy.learn.resume")}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Categories */}
@@ -264,7 +321,11 @@ export function AcademyHome() {
 function CourseCard({ course, featured = false }: { course: AcademyCourse & { featured?: boolean }; featured?: boolean }) {
   const { t } = useLanguage();
   return (
-    <article className="overflow-hidden rounded-xl border border-border bg-card">
+    <Link
+      to="/academy/course/$courseId"
+      params={{ courseId: course.id }}
+      className="block overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       {course.coverUrl ? (
         <img src={course.coverUrl} alt="" className="aspect-video w-full object-cover" />
       ) : (
@@ -287,15 +348,22 @@ function CourseCard({ course, featured = false }: { course: AcademyCourse & { fe
         <p className="text-xs text-muted-foreground">
           {t("academy.home.lessonCount").replace("{count}", String(course.lessonCount))}
         </p>
+        {course.progressPercent !== null ? (
+          <ProgressBar percent={course.progressPercent} label={t("academy.learn.progress")} />
+        ) : null}
       </div>
-    </article>
+    </Link>
   );
 }
 
 function VideoCard({ video, featured = false }: { video: AcademyVideo & { featured?: boolean }; featured?: boolean }) {
   const { t } = useLanguage();
   return (
-    <article className="overflow-hidden rounded-xl border border-border bg-card">
+    <Link
+      to="/academy/video/$videoId"
+      params={{ videoId: video.id }}
+      className="block overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       {video.thumbnailUrl ? (
         <img src={video.thumbnailUrl} alt="" className="aspect-video w-full object-cover" />
       ) : (
@@ -318,7 +386,7 @@ function VideoCard({ video, featured = false }: { video: AcademyVideo & { featur
           <p className="text-xs text-muted-foreground">{video.durationMinutes} min</p>
         ) : null}
       </div>
-    </article>
+    </Link>
   );
 }
 
