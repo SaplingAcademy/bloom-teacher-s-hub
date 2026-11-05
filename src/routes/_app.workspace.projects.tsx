@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { FolderKanban } from "lucide-react";
-import { WorkspaceEmptyState, WorkspaceGridSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
-import { useLanguage } from "@/hooks/use-language";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { WorkspaceGridSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
+import { ProjectsList } from "@/components/bloom/workspace/ProjectsList";
+import type { StatusFilter } from "@/lib/workspace-projects";
 
 export const Route = createFileRoute("/_app/workspace/projects")({
+  validateSearch: (search: Record<string, unknown>): { status?: StatusFilter } =>
+    search.status === "archived" || search.status === "all" ? { status: search.status } : {},
   head: () => ({
     meta: [
       { title: "Projects · Workspace · Bloom" },
@@ -19,6 +21,7 @@ export const Route = createFileRoute("/_app/workspace/projects")({
 });
 
 function ProjectsPage() {
-  const { t } = useLanguage();
-  return <WorkspaceEmptyState icon={FolderKanban} title={t("workspace.projects.emptyTitle")} body={t("workspace.projects.emptyBody")} />;
+  const { status = "active" } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  return <ProjectsList filter={status} onFilter={(f) => void navigate({ search: f === "active" ? {} : { status: f }, replace: true })} />;
 }

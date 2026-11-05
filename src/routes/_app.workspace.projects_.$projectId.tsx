@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Layers } from "lucide-react";
-import { WorkspaceBackLink, WorkspaceDetailSkeleton, WorkspaceEmptyState } from "@/components/bloom/workspace/WorkspaceShell";
-import { useLanguage } from "@/hooks/use-language";
+import { WorkspaceDetailSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
+import { ProjectDetailView } from "@/components/bloom/workspace/ProjectDetailView";
 
 export const Route = createFileRoute("/_app/workspace/projects_/$projectId")({
   head: () => ({
@@ -20,14 +19,6 @@ export const Route = createFileRoute("/_app/workspace/projects_/$projectId")({
 });
 
 function ProjectPage() {
-  const { t } = useLanguage();
-  return (
-    <div className="space-y-4">
-      <WorkspaceBackLink to="/workspace/projects">{t("workspace.project.back")}</WorkspaceBackLink>
-      <h2 className="font-display text-xl font-semibold text-foreground">{t("workspace.project.title")}</h2>
-      <section aria-label={t("workspace.project.phases")}>
-        <WorkspaceEmptyState icon={Layers} title={t("workspace.project.phases")} body={t("workspace.project.emptyBody")} />
-      </section>
-    </div>
-  );
+  const { projectId } = Route.useParams();
+  return <ProjectDetailView key={projectId} projectId={projectId} />;
 }

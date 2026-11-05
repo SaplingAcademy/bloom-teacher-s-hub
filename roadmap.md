@@ -2,6 +2,7 @@
 
 - [x] Workspace Entrega 3: personal notes in existing workspace_notes, PT/EN compact editor, seven colors, confirmation, pinning and single-row accessible persisted ordering; optimistic rollback, serialized writes, stable create UUID and Auth-derived ownership. No SQL, Projects/Notebooks changes or Entrega 4.
 - [ ] Workspace Entrega 3: verify saved note operations with real authenticated teachers and production RLS; blocked by unavailable external session (live /workspace/mural redirects to /auth). Focused tests and isolated real-component desktop/tablet/mobile flows verify behavior but not real database persistence.
+- [x] Workspace Entrega 4: personal projects, phases, tasks/checklists, notes and links with derived progress. Real-account check pending (no signed-in session available).
 
 - [x] Academy: add PT/EN Coming Soon navigation/page for Free and Pro; private construction page for server-verified super_admin only, keeping publication separate from entitlement. No courses, uploads, tables or SQL execution; existing user_roles/has_role are reused without changing can_access_academy's plan entitlement.
 - [x] Verify Academy rules/server authorization and existing plan compatibility: 32 focused tests passed. Direct signed-out /academy on desktop/mobile reaches /auth without runtime errors; direct unauthenticated calls are blocked. Automatic preview compilation OK. No new SQL required because no Academy content tables, storage or write operations exist.
