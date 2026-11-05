@@ -169,6 +169,10 @@ export function AcademyHome() {
         </div>
       </header>
 
+      {contentQuery.isPending ? (
+        <CourseCardsSkeleton count={6} label={t("academy.learn.loading")} />
+      ) : (
+      <>
       {/* Featured */}
       <section aria-labelledby="academy-featured" className="space-y-3">
         <h2 id="academy-featured" className="font-display text-lg font-semibold text-foreground">
@@ -302,6 +306,8 @@ export function AcademyHome() {
           </div>
         )}
       </section>
+      </>
+      )}
 
       {/* Content management */}
       <section aria-labelledby="academy-admin" className="space-y-3 border-t border-border pt-8">
