@@ -2743,7 +2743,9 @@ function StudentsPage() {
           {/* GRID OF CLASSES & GROUPS OR INDIVIDUAL STUDENTS */}
           {activeViewTab === "classes" ? (
             <div className="space-y-4">
-              {filteredClasses.length === 0 ? (
+              {classesQuery.isPending && !classesQuery.data ? (
+                <CardsGridSkeleton label={tr("auditUi.loading")} />
+              ) : filteredClasses.length === 0 ? (
                 <div className="p-12 text-center bg-card rounded-2xl border border-border/80 space-y-4">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto" />
                   <h3 className="text-lg font-bold font-outfit">
@@ -2786,6 +2788,8 @@ function StudentsPage() {
                 </div>
               )}
             </div>
+          ) : studentsQuery.isPending && !studentsQuery.data ? (
+            <CardsGridSkeleton label={tr("auditUi.loading")} />
           ) : filteredStudents.length === 0 ? (
             <div className="py-16 text-center text-sm text-muted-foreground bg-card rounded-2xl border border-border/80">
               {t.emptyList}

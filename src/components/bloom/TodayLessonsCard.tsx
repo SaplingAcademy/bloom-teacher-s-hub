@@ -4,6 +4,7 @@ import type { CalendarEvent } from "@/lib/calendar-sync";
 import { StatCard } from "@/components/bloom/StatCard";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TodayLessonsCardProps {
   events: CalendarEvent[];
