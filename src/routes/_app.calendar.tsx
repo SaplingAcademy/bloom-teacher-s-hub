@@ -1576,6 +1576,7 @@ function CalendarPage() {
                 );
               })}
             </div>
+            )
           )}
 
           {/* MONTH VIEW */}

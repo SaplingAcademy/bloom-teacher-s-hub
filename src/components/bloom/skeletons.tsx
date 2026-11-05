@@ -151,6 +151,20 @@ export function CalendarRowsSkeleton({
   );
 }
 
+/** Month-view grid (35 day cells). */
+export function MonthGridSkeleton({ label, className }: { label?: string; className?: string }) {
+  return (
+    <Status label={label} className={cn("grid grid-cols-7 gap-1", className)}>
+      {Array.from({ length: 35 }, (_, i) => (
+        <div key={i} className="min-h-20 space-y-1.5 rounded-lg border border-border/50 p-1.5">
+          <Skeleton className="h-3 w-5" />
+          {i % 4 === 1 ? <Skeleton className="h-4 w-full rounded-md" /> : null}
+        </div>
+      ))}
+    </Status>
+  );
+}
+
 /** Generic panel card (e.g. Growth goal card). */
 export function PanelSkeleton({ label, className }: { label?: string; className?: string }) {
   return (
