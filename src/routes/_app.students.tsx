@@ -1768,6 +1768,20 @@ function StudentsPage() {
       return;
     }
 
+    // Free-plan pre-flight: the database trigger remains the authority; this
+    // only avoids a needless round-trip when the limit is visibly reached.
+    if (
+      !editingStudentIdForModal &&
+      !canAddActiveStudent(
+        plan,
+        countActiveStudents(students.map((s) => s.status)),
+        formStatus || "Active",
+      )
+    ) {
+      toast.error(translations[lang].planLimitReached);
+      return;
+    }
+
     setIsSaving(true);
 
     const scheduleString = formLinkedGroupId 
@@ -1904,7 +1918,11 @@ function StudentsPage() {
       openPriorPaymentsIfNeeded();
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
-      toast.error(reportUserError(error, i18nT("classes.toastSaveError", lang)));
+      if (isFreePlanLimitError(error)) {
+        toast.error(translations[lang].planLimitReached);
+      } else {
+        toast.error(reportUserError(error, i18nT("classes.toastSaveError", lang)));
+      }
     } finally {
       setIsSaving(false);
     }
