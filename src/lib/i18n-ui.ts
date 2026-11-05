@@ -1,6 +1,17 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "academy": {
+      "nav": "Bloom Academy", "soonBadge": "Coming Soon",
+      "soonTitle": "Bloom Academy — Em breve",
+      "soonDescription": "Estamos preparando um espaço exclusivo para o seu desenvolvimento profissional. Novidades em breve!",
+      "adminTitle": "Bloom Academy",
+      "adminBadge": "Desenvolvimento privado",
+      "adminHeading": "Academy em construção",
+      "adminDescription": "A Bloom Academy está em desenvolvimento e ainda não foi publicada.",
+      "loadError": "Não foi possível carregar a Academy. Tente novamente.",
+      "retry": "Tentar novamente"
+    },
     "libraryAccess": {
       "adminTitle": "Recursos da Biblioteca", "search": "Buscar recurso por nome", "free": "Free", "premium": "Premium",
       "makeFree": "Tornar Free", "makePremium": "Tornar Premium", "confirmTitle": "Alterar classificação do recurso?",
@@ -1337,6 +1348,17 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "academy": {
+      "nav": "Bloom Academy", "soonBadge": "Coming Soon",
+      "soonTitle": "Bloom Academy — Coming soon",
+      "soonDescription": "We're preparing a dedicated space for your professional development. Stay tuned for updates!",
+      "adminTitle": "Bloom Academy",
+      "adminBadge": "Private development",
+      "adminHeading": "Academy under construction",
+      "adminDescription": "Bloom Academy is in development and has not been published yet.",
+      "loadError": "Could not load the Academy. Please try again.",
+      "retry": "Try again"
+    },
     "libraryAccess": {
       "adminTitle": "Library Resources", "search": "Search resources by name", "free": "Free", "premium": "Premium",
       "makeFree": "Make Free", "makePremium": "Make Premium", "confirmTitle": "Change resource classification?",

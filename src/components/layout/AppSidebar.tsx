@@ -3,6 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Pin, PinOff, MessageCircle } from "lucide-react";
 import { navSections, bottomNav, adminNavItem } from "@/lib/navigation";
 import { usePlan } from "@/hooks/use-plan";
+import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
 import { BloomLogo, BloomMark } from "@/components/bloom/Logo";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/use-language";
@@ -175,8 +176,10 @@ export function AppSidebar({
               <ul className="space-y-1">
                 {section.items.map((item) => {
                   const active = !item.disabled && isActive(item.to);
-                  const itemLabel = t(`nav.${item.id}`, item.label);
-                  const badgeLabel = item.badge ? t("nav.soon", item.badge) : null;
+                  const itemLabel = item.id === "academy" ? t("academy.nav") : t(`nav.${item.id}`, item.label);
+                  const badgeLabel = item.id === "academy"
+                    ? (!ACADEMY_PUBLISHED && !isSuperAdmin ? t("academy.soonBadge") : null)
+                    : item.badge ? t("nav.soon", item.badge) : null;
 
                   const baseClasses = cn(
                     "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150",
@@ -196,13 +199,13 @@ export function AppSidebar({
                   );
 
                   const labelSpan = isExpanded && (
-                    <span className="flex-1 truncate transition-opacity duration-200">
+                    <span className={cn("flex-1 transition-opacity duration-200", item.id === "academy" ? "min-w-0 break-words" : "truncate")}>
                       {itemLabel}
                     </span>
                   );
 
                   const badgeSpan = isExpanded && badgeLabel && (
-                    <span className="rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
+                    <span className="shrink-0 rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
                       {badgeLabel}
                     </span>
                   );
@@ -237,6 +240,7 @@ export function AppSidebar({
                           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                           <TooltipContent side="right" sideOffset={10}>
                             <p className="text-xs font-semibold">{itemLabel}</p>
+                            {item.id === "academy" && badgeLabel && <p className="mt-1 text-xs">{badgeLabel}</p>}
                           </TooltipContent>
                         </Tooltip>
                       ) : (

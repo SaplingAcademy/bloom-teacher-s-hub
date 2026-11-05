@@ -17,3 +17,8 @@
 - The free-plan limit (5 active students; Active/Trial count, Inactive/Paused/Archived do not) is enforced by the `students` trigger with a per-teacher advisory lock; frontend checks are convenience only and must stay fail-open on read errors so the database decides.
 - The admin panel (`admin.ts`, `/admin`) reads and changes plans only through the `list_admin_teachers`/`set_teacher_plan` SECURITY DEFINER RPCs, which re-verify `has_role(auth.uid(), 'super_admin')`; the sidebar item is display-only, never the protection, and downgrade-to-free is blocked above 5 active students in the database.
 - Premium features are gated only through `PLAN_FEATURES`/`canAccessFeature` in `plans.ts` + `useFeatureAccess` (fail-closed on unknown plan; super_admin bypasses); locked UI reuses `PremiumGate.tsx`, which renders blurred neutral placeholders and never loads or fabricates premium data.
+
+# Academy
+
+- `academy-access.ts` keeps publication separate from existing plan entitlement; `/academy` loads an uncached, user-scoped server authorization result before rendering internal state, preventing a Pro plan or sidebar bypass from exposing development content.
+- Academy calls attach the existing external session bearer locally, then `academy-access.server.ts` revalidates identity and `has_role` without service-role access or client-asserted roles; future internal operations and content tables/storage must enforce the same publication/role rule before exposure.

@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppAcademyRouteImport } from './routes/_app.academy'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 import { Route as AppCommunityRouteImport } from './routes/_app.community'
@@ -50,6 +51,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAcademyRoute = AppAcademyRouteImport.update({
+  id: '/academy',
+  path: '/academy',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAdminRoute = AppAdminRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/academy': typeof AppAcademyRoute
   '/admin': typeof AppAdminRoute
   '/calendar': typeof AppCalendarRoute
   '/community': typeof AppCommunityRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/academy': typeof AppAcademyRoute
   '/admin': typeof AppAdminRoute
   '/calendar': typeof AppCalendarRoute
   '/community': typeof AppCommunityRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_app/academy': typeof AppAcademyRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/community': typeof AppCommunityRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/sitemap.xml'
+    | '/academy'
     | '/admin'
     | '/calendar'
     | '/community'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/sitemap.xml'
+    | '/academy'
     | '/admin'
     | '/calendar'
     | '/community'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/sitemap.xml'
+    | '/_app/academy'
     | '/_app/admin'
     | '/_app/calendar'
     | '/_app/community'
@@ -280,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/academy': {
+      id: '/_app/academy'
+      path: '/academy'
+      fullPath: '/academy'
+      preLoaderRoute: typeof AppAcademyRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/admin': {
@@ -377,6 +396,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAcademyRoute: typeof AppAcademyRoute
   AppAdminRoute: typeof AppAdminRoute
   AppCalendarRoute: typeof AppCalendarRoute
   AppCommunityRoute: typeof AppCommunityRoute
@@ -394,6 +414,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAcademyRoute: AppAcademyRoute,
   AppAdminRoute: AppAdminRoute,
   AppCalendarRoute: AppCalendarRoute,
   AppCommunityRoute: AppCommunityRoute,

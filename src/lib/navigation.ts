@@ -14,6 +14,7 @@ import {
   UserCircle,
   Settings,
   ShieldCheck,
+  GraduationCap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -82,6 +83,13 @@ export const navSections: NavSection[] = [
         to: "/growth",
         icon: TrendingUp,
         description: "Scale and optimize your school",
+      },
+      {
+        id: "academy",
+        label: "Bloom Academy",
+        to: "/academy",
+        icon: GraduationCap,
+        description: "Professional development",
       },
     ],
   },
