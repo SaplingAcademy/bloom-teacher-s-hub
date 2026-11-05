@@ -551,6 +551,7 @@ export const uiTranslations = {
       "cefrLevel": "Nível (CEFR)",
       "courseFocus": "Foco do curso",
       "studentPackage": "Pacote do aluno",
+      "convertDescription": "Confira os dados do lead antes de cadastrá-lo como aluno.",
       "converting": "Convertendo..."
     },
     "notificationsUi": { "title": "Notificações", "markAllRead": "Marcar todas como lidas", "empty": "Você ainda não tem notificações.", "loading": "Carregando…", "loadError": "Não foi possível carregar as notificações.", "unread": "não lidas" },
@@ -1846,6 +1847,7 @@ export const uiTranslations = {
       "cefrLevel": "Level (CEFR)",
       "courseFocus": "Course focus",
       "studentPackage": "Student package",
+      "convertDescription": "Review the lead's details before registering them as a student.",
       "converting": "Converting..."
     },
     "notificationsUi": { "title": "Notifications", "markAllRead": "Mark all as read", "empty": "You have no notifications yet.", "loading": "Loading…", "loadError": "Could not load notifications.", "unread": "unread" },
