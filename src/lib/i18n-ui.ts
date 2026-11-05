@@ -18,9 +18,35 @@ export const uiTranslations = {
         "loadError": "Não foi possível carregar suas notas.", "retry": "Tentar novamente", "saving": "Salvando…", "pinned": "Fixadas", "notes": "Notas",
         "colors": { "yellow": "Amarelo", "peach": "Pêssego", "mint": "Menta", "lavender": "Lavanda", "rose": "Rosa", "sky": "Azul-céu", "neutral": "Neutro" }
       },
-      "projects": { "emptyTitle": "Nenhum projeto ainda", "emptyBody": "Em breve você poderá organizar projetos em fases e tarefas." },
+      "projects": {
+        "emptyTitle": "Nenhum projeto ainda", "emptyBody": "Organize ideias, materiais e iniciativas pessoais em fases e tarefas simples.",
+        "noneInFilter": "Nenhum projeto neste filtro", "first": "Criar meu primeiro projeto", "new": "Novo projeto", "edit": "Editar projeto",
+        "titleLabel": "Título", "titlePlaceholder": "Ex.: Material do semestre", "titleRequired": "Informe um título.",
+        "descriptionLabel": "Descrição (opcional)", "descriptionPlaceholder": "Qual é o objetivo deste projeto?", "colorLabel": "Cor", "iconLabel": "Ícone",
+        "filterLabel": "Filtrar por status", "filters": { "active": "Ativos", "archived": "Arquivados", "all": "Todos" },
+        "activeBadge": "Ativo", "archivedBadge": "Arquivado", "actions": "Ações do projeto", "archive": "Arquivar", "reactivate": "Reativar",
+        "deleteTitle": "Excluir este projeto?", "deleteBody": "O projeto, suas fases, tarefas, notas e links serão excluídos permanentemente.",
+        "loadError": "Não foi possível carregar seus projetos.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
+        "toast": { "create": "Projeto criado.", "edit": "Projeto atualizado.", "setStatus": "Status do projeto atualizado.", "delete": "Projeto excluído." },
+        "colors": { "forest": "Verde", "terracotta": "Terracota", "lilac": "Lilás", "sky": "Azul", "amber": "Âmbar", "slate": "Ardósia" },
+        "icons": { "folder": "Pasta", "book-open": "Livro", "graduation-cap": "Formatura", "lightbulb": "Ideia", "calendar": "Calendário", "megaphone": "Divulgação", "target": "Meta", "palette": "Criatividade" }
+      },
       "notebooks": { "emptyTitle": "Nenhum caderno ainda", "emptyBody": "Em breve você poderá criar cadernos com páginas de anotações." },
-      "project": { "back": "Voltar aos projetos", "title": "Projeto", "phases": "Fases", "emptyBody": "As fases e tarefas deste projeto aparecerão aqui." },
+      "project": {
+        "back": "Voltar aos projetos", "title": "Projeto", "phases": "Fases", "emptyBody": "As fases e tarefas deste projeto aparecerão aqui.",
+        "notFoundTitle": "Projeto não encontrado", "notFoundBody": "Este projeto não existe ou não está disponível para sua conta.",
+        "loadError": "Não foi possível carregar este projeto.", "saved": "Alteração salva.",
+        "progressLabel": "{done} de {total} tarefas concluídas", "general": "Geral", "emptyContainer": "Nada aqui ainda.", "addHere": "Adicionar item",
+        "newItem": "Novo item", "editItem": "Editar item", "newPhase": "Nova fase", "renamePhase": "Renomear fase", "phaseName": "Nome da fase",
+        "deletePhase": "Excluir fase", "deletePhaseTitle": "Excluir esta fase?",
+        "deletePhaseBody": "Os {count} itens desta fase não serão excluídos: eles serão movidos para a área Geral do projeto.",
+        "deleteItemTitle": "Excluir este item?", "phaseActions": "Ações da fase", "itemActions": "Ações do item",
+        "moveUp": "Mover para cima", "moveDown": "Mover para baixo", "moveTo": "Mover para",
+        "typeLabel": "Tipo", "phaseLabel": "Fase", "urlLabel": "Endereço (URL)", "detailsLabel": "Detalhes (opcional)",
+        "invalidUrl": "Informe um link válido começando com https:// ou http://.", "opensNewTab": "(abre em nova aba)",
+        "complete": "Concluir {title}", "reopen": "Reabrir {title}",
+        "types": { "task": "Tarefa", "checklist": "Checklist", "note": "Nota", "link": "Link" }
+      },
       "notebook": { "back": "Voltar aos cadernos", "title": "Caderno", "pages": "Páginas", "noPages": "Nenhuma página", "emptyBody": "Selecione ou crie uma página para começar a escrever." }
     },
     "academy": {
@@ -1498,9 +1524,35 @@ export const uiTranslations = {
         "loadError": "Could not load your notes.", "retry": "Try again", "saving": "Saving…", "pinned": "Pinned", "notes": "Notes",
         "colors": { "yellow": "Yellow", "peach": "Peach", "mint": "Mint", "lavender": "Lavender", "rose": "Rose", "sky": "Sky blue", "neutral": "Neutral" }
       },
-      "projects": { "emptyTitle": "No projects yet", "emptyBody": "Soon you'll be able to organize projects into phases and tasks." },
+      "projects": {
+        "emptyTitle": "No projects yet", "emptyBody": "Organize ideas, materials and personal initiatives into simple phases and tasks.",
+        "noneInFilter": "No projects in this filter", "first": "Create my first project", "new": "New project", "edit": "Edit project",
+        "titleLabel": "Title", "titlePlaceholder": "E.g. Semester materials", "titleRequired": "Please enter a title.",
+        "descriptionLabel": "Description (optional)", "descriptionPlaceholder": "What is this project about?", "colorLabel": "Color", "iconLabel": "Icon",
+        "filterLabel": "Filter by status", "filters": { "active": "Active", "archived": "Archived", "all": "All" },
+        "activeBadge": "Active", "archivedBadge": "Archived", "actions": "Project actions", "archive": "Archive", "reactivate": "Reactivate",
+        "deleteTitle": "Delete this project?", "deleteBody": "The project and all its phases, tasks, notes and links will be permanently deleted.",
+        "loadError": "Could not load your projects.", "saveError": "Could not save this change. Please try again.",
+        "toast": { "create": "Project created.", "edit": "Project updated.", "setStatus": "Project status updated.", "delete": "Project deleted." },
+        "colors": { "forest": "Green", "terracotta": "Terracotta", "lilac": "Lilac", "sky": "Blue", "amber": "Amber", "slate": "Slate" },
+        "icons": { "folder": "Folder", "book-open": "Book", "graduation-cap": "Graduation", "lightbulb": "Idea", "calendar": "Calendar", "megaphone": "Outreach", "target": "Goal", "palette": "Creativity" }
+      },
       "notebooks": { "emptyTitle": "No notebooks yet", "emptyBody": "Soon you'll be able to create notebooks with note pages." },
-      "project": { "back": "Back to projects", "title": "Project", "phases": "Phases", "emptyBody": "This project's phases and tasks will appear here." },
+      "project": {
+        "back": "Back to projects", "title": "Project", "phases": "Phases", "emptyBody": "This project's phases and tasks will appear here.",
+        "notFoundTitle": "Project not found", "notFoundBody": "This project doesn't exist or isn't available to your account.",
+        "loadError": "Could not load this project.", "saved": "Change saved.",
+        "progressLabel": "{done} of {total} tasks done", "general": "General", "emptyContainer": "Nothing here yet.", "addHere": "Add item",
+        "newItem": "New item", "editItem": "Edit item", "newPhase": "New phase", "renamePhase": "Rename phase", "phaseName": "Phase name",
+        "deletePhase": "Delete phase", "deletePhaseTitle": "Delete this phase?",
+        "deletePhaseBody": "The {count} items in this phase won't be deleted: they'll move to the project's General area.",
+        "deleteItemTitle": "Delete this item?", "phaseActions": "Phase actions", "itemActions": "Item actions",
+        "moveUp": "Move up", "moveDown": "Move down", "moveTo": "Move to",
+        "typeLabel": "Type", "phaseLabel": "Phase", "urlLabel": "Address (URL)", "detailsLabel": "Details (optional)",
+        "invalidUrl": "Enter a valid link starting with https:// or http://.", "opensNewTab": "(opens in a new tab)",
+        "complete": "Complete {title}", "reopen": "Reopen {title}",
+        "types": { "task": "Task", "checklist": "Checklist", "note": "Note", "link": "Link" }
+      },
       "notebook": { "back": "Back to notebooks", "title": "Notebook", "pages": "Pages", "noPages": "No pages", "emptyBody": "Select or create a page to start writing." }
     },
     "academy": {
