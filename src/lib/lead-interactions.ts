@@ -124,8 +124,37 @@ export async function fetchLeadAutomationActivity(teacherId: string, leadId: str
       .range(from, from + PAGE - 1);
     if (error) throw error;
     all.push(...((data ?? []) as AutomationActivity[]));
-    if (!data || data.length < PAGE) return all;
+    if (!data || data.length < PAGE) break;
   }
+
+  // Older conversion RPCs targeted the student. Resolve only conversion events
+  // whose canonical source is THIS teacher's original lead, never all students.
+  const { data: conversions, error: conversionError } = await supabase
+    .from("automation_events")
+    .select("id")
+    .eq("teacher_id", teacherId)
+    .eq("source_table", "leads")
+    .eq("source_id", leadId)
+    .eq("event_type", "lead.converted");
+  if (conversionError) throw conversionError;
+  const eventIds = (conversions ?? []).map((event: { id: string }) => event.id);
+  if (eventIds.length > 0) {
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("automation_activity")
+        .select("*")
+        .eq("teacher_id", teacherId)
+        .eq("action_type", "lead_converted")
+        .in("automation_event_id", eventIds)
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const knownIds = new Set(all.map((entry) => entry.id));
+      all.push(...((data ?? []) as AutomationActivity[]).filter((entry) => !knownIds.has(entry.id)));
+      if (!data || data.length < PAGE) break;
+    }
+  }
+  return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export type TimelineEntry =
