@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Loader2, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
+import { LearningSkeleton } from "@/components/bloom/skeletons";
 import { youtubeEmbedUrl } from "@/lib/academy-learning";
 
 export function YoutubePlayer({ youtubeId, title }: { youtubeId: string; title: string }) {

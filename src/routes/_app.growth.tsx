@@ -1598,10 +1598,10 @@ function GrowthPage() {
           </div>
 
           {growthInsights.isLoading ? (
-            <div className="mt-6 flex-1 space-y-4 animate-pulse" aria-hidden="true">
-              <div className="h-4 w-2/3 rounded bg-sidebar-accent-foreground/15" />
-              <div className="h-4 w-1/2 rounded bg-sidebar-accent-foreground/15" />
-              <div className="h-8 w-4/5 rounded bg-sidebar-accent-foreground/15" />
+            <div className="mt-6 flex-1 space-y-4" role="status" aria-label={tr("growthRevenue.title")}>
+              <Skeleton className="h-4 w-2/3 bg-sidebar-accent-foreground/15" />
+              <Skeleton className="h-4 w-1/2 bg-sidebar-accent-foreground/15" />
+              <Skeleton className="h-8 w-4/5 bg-sidebar-accent-foreground/15" />
             </div>
           ) : !growthInsights.allowed ? (
             <PremiumCardLock tone="dark" onLearnMore={() => setIsPremiumDialogOpen(true)} />
@@ -1656,9 +1656,9 @@ function GrowthPage() {
           <p className="mt-1 text-xs text-muted-foreground">{t.opportunitiesSubtitle}</p>
 
           {growthInsights.isLoading ? (
-            <div className="mt-5 flex-1 space-y-3 animate-pulse" aria-hidden="true">
-              <div className="h-16 rounded-xl bg-secondary/60" />
-              <div className="h-16 rounded-xl bg-secondary/60" />
+            <div className="mt-5 flex-1 space-y-3" role="status" aria-label={t.opportunitiesTitle}>
+              <Skeleton className="h-16 rounded-xl bg-secondary/60" />
+              <Skeleton className="h-16 rounded-xl bg-secondary/60" />
             </div>
           ) : !growthInsights.allowed ? (
             <PremiumCardLock onLearnMore={() => setIsPremiumDialogOpen(true)} />
