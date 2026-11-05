@@ -72,10 +72,28 @@
   --color-header-border: var(--header-border);
   --color-search-bg: var(--search-bg);
   --color-search-border: var(--search-border);
+  --color-note-yellow: var(--note-yellow);
+  --color-note-peach: var(--note-peach);
+  --color-note-mint: var(--note-mint);
+  --color-note-lavender: var(--note-lavender);
+  --color-note-rose: var(--note-rose);
+  --color-note-sky: var(--note-sky);
+  --color-note-neutral: var(--note-neutral);
+  --color-note-ink: var(--note-ink);
+  --shadow-note: var(--note-shadow);
 }
 
 :root {
   --radius: 0.875rem;
+  --note-yellow: oklch(0.95 0.072 94);
+  --note-peach: oklch(0.93 0.051 54);
+  --note-mint: oklch(0.93 0.042 155);
+  --note-lavender: oklch(0.93 0.039 305);
+  --note-rose: oklch(0.93 0.039 15);
+  --note-sky: oklch(0.93 0.036 230);
+  --note-neutral: oklch(0.965 0.009 100);
+  --note-ink: oklch(0.3 0.022 150);
+  --note-shadow: 0 2px 3px oklch(0.26 0.03 150 / 0.04), 0 5px 14px oklch(0.26 0.03 150 / 0.045);
 
   /* Base surfaces — warm off-white, paper-like */
   --background: oklch(0.985 0.006 120);
@@ -149,6 +167,15 @@
 }
 
 .dark {
+  --note-yellow: oklch(0.35 0.047 94);
+  --note-peach: oklch(0.35 0.043 54);
+  --note-mint: oklch(0.35 0.037 155);
+  --note-lavender: oklch(0.35 0.037 305);
+  --note-rose: oklch(0.35 0.034 15);
+  --note-sky: oklch(0.35 0.034 230);
+  --note-neutral: oklch(0.32 0.008 100);
+  --note-ink: oklch(0.95 0.008 100);
+  --note-shadow: 0 2px 3px oklch(0.1 0.01 150 / 0.15), 0 5px 14px oklch(0.1 0.01 150 / 0.12);
   --background: oklch(0.22 0.02 150);
   --foreground: oklch(0.94 0.015 130);
   --card: oklch(0.26 0.025 152);

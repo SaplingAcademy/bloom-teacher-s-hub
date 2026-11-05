@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { StickyNote } from "lucide-react";
-import { WorkspaceEmptyState, WorkspaceGridSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
-import { useLanguage } from "@/hooks/use-language";
+import { WorkspaceGridSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
+import { NotesBoard } from "@/components/bloom/workspace/NotesBoard";
 
 export const Route = createFileRoute("/_app/workspace/mural")({
   head: () => ({
@@ -15,10 +14,5 @@ export const Route = createFileRoute("/_app/workspace/mural")({
     ],
   }),
   pendingComponent: () => <WorkspaceGridSkeleton variant="notes" />,
-  component: MuralPage,
+  component: NotesBoard,
 });
-
-function MuralPage() {
-  const { t } = useLanguage();
-  return <WorkspaceEmptyState icon={StickyNote} title={t("workspace.mural.emptyTitle")} body={t("workspace.mural.emptyBody")} />;
-}
