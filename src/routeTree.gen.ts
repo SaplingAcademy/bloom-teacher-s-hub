@@ -23,13 +23,21 @@ import { Route as AppGrowthRouteImport } from './routes/_app.growth'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppMarketplaceRouteImport } from './routes/_app.marketplace'
+import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppResourcesRouteImport } from './routes/_app.resources'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
+import { Route as AppWorkspaceRouteImport } from './routes/_app.workspace'
+import { Route as AppWorkspaceIndexRouteImport } from './routes/_app.workspace.index'
+import { Route as AppWorkspaceMuralRouteImport } from './routes/_app.workspace.mural'
+import { Route as AppWorkspaceNotebooksRouteImport } from './routes/_app.workspace.notebooks'
+import { Route as AppWorkspaceProjectsRouteImport } from './routes/_app.workspace.projects'
 import { Route as AppAcademyCourseCourseIdRouteImport } from './routes/_app.academy_.course.$courseId'
 import { Route as AppAcademyLessonLessonIdRouteImport } from './routes/_app.academy_.lesson.$lessonId'
 import { Route as AppAcademyVideoVideoIdRouteImport } from './routes/_app.academy_.video.$videoId'
+import { Route as AppWorkspaceNotebooksNotebookIdRouteImport } from './routes/_app.workspace.notebooks_.$notebookId'
+import { Route as AppWorkspaceProjectsProjectIdRouteImport } from './routes/_app.workspace.projects_.$projectId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -100,6 +108,11 @@ const AppMarketplaceRoute = AppMarketplaceRouteImport.update({
   path: '/marketplace',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMessagesRoute = AppMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -120,6 +133,31 @@ const AppStudentsRoute = AppStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWorkspaceRoute = AppWorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWorkspaceIndexRoute = AppWorkspaceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppWorkspaceRoute,
+} as any)
+const AppWorkspaceMuralRoute = AppWorkspaceMuralRouteImport.update({
+  id: '/mural',
+  path: '/mural',
+  getParentRoute: () => AppWorkspaceRoute,
+} as any)
+const AppWorkspaceNotebooksRoute = AppWorkspaceNotebooksRouteImport.update({
+  id: '/notebooks',
+  path: '/notebooks',
+  getParentRoute: () => AppWorkspaceRoute,
+} as any)
+const AppWorkspaceProjectsRoute = AppWorkspaceProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AppWorkspaceRoute,
+} as any)
 const AppAcademyCourseCourseIdRoute =
   AppAcademyCourseCourseIdRouteImport.update({
     id: '/academy_/course/$courseId',
@@ -137,6 +175,18 @@ const AppAcademyVideoVideoIdRoute = AppAcademyVideoVideoIdRouteImport.update({
   path: '/academy/video/$videoId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWorkspaceNotebooksNotebookIdRoute =
+  AppWorkspaceNotebooksNotebookIdRouteImport.update({
+    id: '/notebooks_/$notebookId',
+    path: '/notebooks/$notebookId',
+    getParentRoute: () => AppWorkspaceRoute,
+  } as any)
+const AppWorkspaceProjectsProjectIdRoute =
+  AppWorkspaceProjectsProjectIdRouteImport.update({
+    id: '/projects_/$projectId',
+    path: '/projects/$projectId',
+    getParentRoute: () => AppWorkspaceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -152,13 +202,21 @@ export interface FileRoutesByFullPath {
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
+  '/messages': typeof AppMessagesRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
+  '/workspace': typeof AppWorkspaceRouteWithChildren
+  '/workspace/mural': typeof AppWorkspaceMuralRoute
+  '/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
+  '/workspace/projects': typeof AppWorkspaceProjectsRoute
+  '/workspace/': typeof AppWorkspaceIndexRoute
   '/academy/course/$courseId': typeof AppAcademyCourseCourseIdRoute
   '/academy/lesson/$lessonId': typeof AppAcademyLessonLessonIdRoute
   '/academy/video/$videoId': typeof AppAcademyVideoVideoIdRoute
+  '/workspace/notebooks/$notebookId': typeof AppWorkspaceNotebooksNotebookIdRoute
+  '/workspace/projects/$projectId': typeof AppWorkspaceProjectsProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -173,14 +231,21 @@ export interface FileRoutesByTo {
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
+  '/messages': typeof AppMessagesRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
+  '/workspace/mural': typeof AppWorkspaceMuralRoute
+  '/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
+  '/workspace/projects': typeof AppWorkspaceProjectsRoute
+  '/workspace': typeof AppWorkspaceIndexRoute
   '/academy/course/$courseId': typeof AppAcademyCourseCourseIdRoute
   '/academy/lesson/$lessonId': typeof AppAcademyLessonLessonIdRoute
   '/academy/video/$videoId': typeof AppAcademyVideoVideoIdRoute
+  '/workspace/notebooks/$notebookId': typeof AppWorkspaceNotebooksNotebookIdRoute
+  '/workspace/projects/$projectId': typeof AppWorkspaceProjectsProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -197,14 +262,22 @@ export interface FileRoutesById {
   '/_app/leads': typeof AppLeadsRoute
   '/_app/lessons': typeof AppLessonsRoute
   '/_app/marketplace': typeof AppMarketplaceRoute
+  '/_app/messages': typeof AppMessagesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/resources': typeof AppResourcesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/students': typeof AppStudentsRoute
+  '/_app/workspace': typeof AppWorkspaceRouteWithChildren
   '/_app/': typeof AppIndexRoute
+  '/_app/workspace/mural': typeof AppWorkspaceMuralRoute
+  '/_app/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
+  '/_app/workspace/projects': typeof AppWorkspaceProjectsRoute
+  '/_app/workspace/': typeof AppWorkspaceIndexRoute
   '/_app/academy_/course/$courseId': typeof AppAcademyCourseCourseIdRoute
   '/_app/academy_/lesson/$lessonId': typeof AppAcademyLessonLessonIdRoute
   '/_app/academy_/video/$videoId': typeof AppAcademyVideoVideoIdRoute
+  '/_app/workspace/notebooks_/$notebookId': typeof AppWorkspaceNotebooksNotebookIdRoute
+  '/_app/workspace/projects_/$projectId': typeof AppWorkspaceProjectsProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -222,13 +295,21 @@ export interface FileRouteTypes {
     | '/leads'
     | '/lessons'
     | '/marketplace'
+    | '/messages'
     | '/profile'
     | '/resources'
     | '/settings'
     | '/students'
+    | '/workspace'
+    | '/workspace/mural'
+    | '/workspace/notebooks'
+    | '/workspace/projects'
+    | '/workspace/'
     | '/academy/course/$courseId'
     | '/academy/lesson/$lessonId'
     | '/academy/video/$videoId'
+    | '/workspace/notebooks/$notebookId'
+    | '/workspace/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -243,14 +324,21 @@ export interface FileRouteTypes {
     | '/leads'
     | '/lessons'
     | '/marketplace'
+    | '/messages'
     | '/profile'
     | '/resources'
     | '/settings'
     | '/students'
     | '/'
+    | '/workspace/mural'
+    | '/workspace/notebooks'
+    | '/workspace/projects'
+    | '/workspace'
     | '/academy/course/$courseId'
     | '/academy/lesson/$lessonId'
     | '/academy/video/$videoId'
+    | '/workspace/notebooks/$notebookId'
+    | '/workspace/projects/$projectId'
   id:
     | '__root__'
     | '/_app'
@@ -266,14 +354,22 @@ export interface FileRouteTypes {
     | '/_app/leads'
     | '/_app/lessons'
     | '/_app/marketplace'
+    | '/_app/messages'
     | '/_app/profile'
     | '/_app/resources'
     | '/_app/settings'
     | '/_app/students'
+    | '/_app/workspace'
     | '/_app/'
+    | '/_app/workspace/mural'
+    | '/_app/workspace/notebooks'
+    | '/_app/workspace/projects'
+    | '/_app/workspace/'
     | '/_app/academy_/course/$courseId'
     | '/_app/academy_/lesson/$lessonId'
     | '/_app/academy_/video/$videoId'
+    | '/_app/workspace/notebooks_/$notebookId'
+    | '/_app/workspace/projects_/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -383,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMarketplaceRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/messages': {
+      id: '/_app/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AppMessagesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/profile': {
       id: '/_app/profile'
       path: '/profile'
@@ -411,6 +514,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/workspace': {
+      id: '/_app/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof AppWorkspaceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/workspace/': {
+      id: '/_app/workspace/'
+      path: '/'
+      fullPath: '/workspace/'
+      preLoaderRoute: typeof AppWorkspaceIndexRouteImport
+      parentRoute: typeof AppWorkspaceRoute
+    }
+    '/_app/workspace/mural': {
+      id: '/_app/workspace/mural'
+      path: '/mural'
+      fullPath: '/workspace/mural'
+      preLoaderRoute: typeof AppWorkspaceMuralRouteImport
+      parentRoute: typeof AppWorkspaceRoute
+    }
+    '/_app/workspace/notebooks': {
+      id: '/_app/workspace/notebooks'
+      path: '/notebooks'
+      fullPath: '/workspace/notebooks'
+      preLoaderRoute: typeof AppWorkspaceNotebooksRouteImport
+      parentRoute: typeof AppWorkspaceRoute
+    }
+    '/_app/workspace/projects': {
+      id: '/_app/workspace/projects'
+      path: '/projects'
+      fullPath: '/workspace/projects'
+      preLoaderRoute: typeof AppWorkspaceProjectsRouteImport
+      parentRoute: typeof AppWorkspaceRoute
+    }
     '/_app/academy_/course/$courseId': {
       id: '/_app/academy_/course/$courseId'
       path: '/academy/course/$courseId'
@@ -432,8 +570,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAcademyVideoVideoIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/workspace/notebooks_/$notebookId': {
+      id: '/_app/workspace/notebooks_/$notebookId'
+      path: '/notebooks/$notebookId'
+      fullPath: '/workspace/notebooks/$notebookId'
+      preLoaderRoute: typeof AppWorkspaceNotebooksNotebookIdRouteImport
+      parentRoute: typeof AppWorkspaceRoute
+    }
+    '/_app/workspace/projects_/$projectId': {
+      id: '/_app/workspace/projects_/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/workspace/projects/$projectId'
+      preLoaderRoute: typeof AppWorkspaceProjectsProjectIdRouteImport
+      parentRoute: typeof AppWorkspaceRoute
+    }
   }
 }
+
+interface AppWorkspaceRouteChildren {
+  AppWorkspaceMuralRoute: typeof AppWorkspaceMuralRoute
+  AppWorkspaceNotebooksRoute: typeof AppWorkspaceNotebooksRoute
+  AppWorkspaceProjectsRoute: typeof AppWorkspaceProjectsRoute
+  AppWorkspaceIndexRoute: typeof AppWorkspaceIndexRoute
+  AppWorkspaceNotebooksNotebookIdRoute: typeof AppWorkspaceNotebooksNotebookIdRoute
+  AppWorkspaceProjectsProjectIdRoute: typeof AppWorkspaceProjectsProjectIdRoute
+}
+
+const AppWorkspaceRouteChildren: AppWorkspaceRouteChildren = {
+  AppWorkspaceMuralRoute: AppWorkspaceMuralRoute,
+  AppWorkspaceNotebooksRoute: AppWorkspaceNotebooksRoute,
+  AppWorkspaceProjectsRoute: AppWorkspaceProjectsRoute,
+  AppWorkspaceIndexRoute: AppWorkspaceIndexRoute,
+  AppWorkspaceNotebooksNotebookIdRoute: AppWorkspaceNotebooksNotebookIdRoute,
+  AppWorkspaceProjectsProjectIdRoute: AppWorkspaceProjectsProjectIdRoute,
+}
+
+const AppWorkspaceRouteWithChildren = AppWorkspaceRoute._addFileChildren(
+  AppWorkspaceRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAcademyRoute: typeof AppAcademyRoute
@@ -445,10 +619,12 @@ interface AppRouteChildren {
   AppLeadsRoute: typeof AppLeadsRoute
   AppLessonsRoute: typeof AppLessonsRoute
   AppMarketplaceRoute: typeof AppMarketplaceRoute
+  AppMessagesRoute: typeof AppMessagesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppResourcesRoute: typeof AppResourcesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStudentsRoute: typeof AppStudentsRoute
+  AppWorkspaceRoute: typeof AppWorkspaceRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppAcademyCourseCourseIdRoute: typeof AppAcademyCourseCourseIdRoute
   AppAcademyLessonLessonIdRoute: typeof AppAcademyLessonLessonIdRoute
@@ -465,10 +641,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeadsRoute: AppLeadsRoute,
   AppLessonsRoute: AppLessonsRoute,
   AppMarketplaceRoute: AppMarketplaceRoute,
+  AppMessagesRoute: AppMessagesRoute,
   AppProfileRoute: AppProfileRoute,
   AppResourcesRoute: AppResourcesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStudentsRoute: AppStudentsRoute,
+  AppWorkspaceRoute: AppWorkspaceRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppAcademyCourseCourseIdRoute: AppAcademyCourseCourseIdRoute,
   AppAcademyLessonLessonIdRoute: AppAcademyLessonLessonIdRoute,
