@@ -29,16 +29,16 @@ export function sortNotes(notes: readonly WorkspaceNote[]): WorkspaceNote[] {
   return [...notes].sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.order_index - b.order_index || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
 }
 
-/** Moves within the same pinned group; pinning remains the authoritative first sort. */
+/** Single-row moves to either end of the pinned group need no multi-write transaction. */
 export function moveNote(notes: readonly WorkspaceNote[], id: string, direction: -1 | 1): WorkspaceNote[] {
   const ordered = sortNotes(notes);
-  const index = ordered.findIndex((note) => note.id === id);
-  const note = ordered[index];
-  const neighbor = ordered[index + direction];
-  if (!note || !neighbor || neighbor.pinned !== note.pinned) return ordered;
-  ordered[index] = neighbor;
-  ordered[index + direction] = note;
-  return ordered.map((entry, order_index) => ({ ...entry, order_index }));
+  const note = ordered.find((entry) => entry.id === id);
+  if (!note) return ordered;
+  const group = ordered.filter((entry) => entry.pinned === note.pinned);
+  if ((direction === -1 ? group[0] : group.at(-1))?.id === id) return ordered;
+  const indexes = group.map((entry) => entry.order_index);
+  const order_index = direction === -1 ? Math.min(...indexes) - 1 : Math.max(...indexes) + 1;
+  return sortNotes(ordered.map((entry) => entry.id === id ? { ...entry, order_index } : entry));
 }
 
 export function applyNoteCommand(notes: readonly WorkspaceNote[], command: NoteCommand, userId: string, now: string): WorkspaceNote[] {
