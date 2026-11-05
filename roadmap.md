@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Workspace Entrega 3: implement only personal notes in existing workspace_notes, with PT/EN compact editor, colors, confirmation, pinning and accessible persisted ordering; optimistic rollback, session-derived ownership and focused checks. No SQL, Projects/Notebooks changes or Entrega 4.
+
 - [x] Academy: add PT/EN Coming Soon navigation/page for Free and Pro; private construction page for server-verified super_admin only, keeping publication separate from entitlement. No courses, uploads, tables or SQL execution; existing user_roles/has_role are reused without changing can_access_academy's plan entitlement.
 - [x] Verify Academy rules/server authorization and existing plan compatibility: 32 focused tests passed. Direct signed-out /academy on desktop/mobile reaches /auth without runtime errors; direct unauthenticated calls are blocked. Automatic preview compilation OK. No new SQL required because no Academy content tables, storage or write operations exist.
 - [x] Academy Stage 2C.1: internal home for super_admin only (header, search, featured/continue empty states, five official categories as filters, courses/videos sections, disabled future "Gerenciar conteúdos"). No fake content, player, progress, tables or SQL; Coming Soon unchanged for Free/Pro.
