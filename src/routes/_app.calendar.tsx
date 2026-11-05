@@ -1387,6 +1387,9 @@ function CalendarPage() {
               </div>
 
               {/* Time rows */}
+              {isLoadingEvents && events.length === 0 ? (
+                <CalendarRowsSkeleton label={t("auditUi.loading")} />
+              ) : (
               <div className="divide-y divide-border/60">
                 {gridHours.map((hour) => (
                   <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[64px]">

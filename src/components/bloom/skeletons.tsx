@@ -122,15 +122,25 @@ export function KanbanSkeleton({ label, columns = 6, className }: { label?: stri
 }
 
 /** Calendar hour rows (week/day grids); day headers stay real. */
-export function CalendarRowsSkeleton({ label, rows = 6, className }: { label?: string; rows?: number; className?: string }) {
+export function CalendarRowsSkeleton({
+  label,
+  rows = 6,
+  columns = 7,
+  className,
+}: {
+  label?: string;
+  rows?: number;
+  columns?: number;
+  className?: string;
+}) {
   return (
     <Status label={label} className={cn("divide-y divide-border/60", className)}>
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="grid min-h-[64px] grid-cols-[80px_repeat(7,1fr)]">
+        <div key={i} className="grid min-h-[64px]" style={{ gridTemplateColumns: `80px repeat(${columns}, 1fr)` }}>
           <div className="flex items-start justify-end border-r border-border bg-secondary/5 p-2 pt-1">
             <Skeleton className="h-3 w-8" />
           </div>
-          {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+          {Array.from({ length: columns }, (_, day) => (
             <div key={day} className="border-r border-border/60 p-1.5">
               {(i + day) % 3 === 0 ? <Skeleton className="h-10 w-full rounded-xl" /> : null}
             </div>
