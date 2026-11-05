@@ -22,3 +22,4 @@
 
 - `academy-access.ts` keeps publication separate from existing plan entitlement; `/academy` loads an uncached, user-scoped server authorization result before rendering internal state, preventing a Pro plan or sidebar bypass from exposing development content.
 - Academy calls attach the existing external session bearer locally, then `academy-access.server.ts` revalidates identity and `has_role` without service-role access or client-asserted roles; future internal operations and content tables/storage must enforce the same publication/role rule before exposure.
+- The internal Academy home (`AcademyHome.tsx` + pure `academy-catalog.ts`) renders only for the server-authorized construction state; content lists stay empty until real tables exist, the five official category IDs are stable, and future actions (manage content, player, progress) must remain absent or disabled, never fake.
