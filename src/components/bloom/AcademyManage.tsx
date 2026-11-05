@@ -1244,7 +1244,7 @@ function VideoFormDialog({
   const valid = title.trim().length > 0 && category !== "" && youtubeId !== null;
 
   async function handleSave() {
-    if (!valid || !youtubeId || category === "") return;
+    if (!valid || !youtubeId) return;
     setBusy(true);
     const input: admin.VideoInput = {
       title: title.trim(),

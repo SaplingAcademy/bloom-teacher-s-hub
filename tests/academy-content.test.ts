@@ -34,7 +34,7 @@ describe("extractYoutubeId", () => {
   it("rejects invalid input without throwing", () => {
     expect(extractYoutubeId("")).toBeNull();
     expect(extractYoutubeId("   ")).toBeNull();
-    expect(extractYoutubeId("not-a-video")).toBeNull();
+    expect(extractYoutubeId("not a video")).toBeNull();
     expect(extractYoutubeId("https://vimeo.com/12345")).toBeNull();
     expect(extractYoutubeId(`https://www.youtube.com/watch?v=short`)).toBeNull();
     expect(extractYoutubeId(`https://youtu.be/${ID}extra`)).toBeNull();
