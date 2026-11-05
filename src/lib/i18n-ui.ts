@@ -11,6 +11,17 @@ export const uiTranslations = {
       "adminDescription": "A Bloom Academy está em desenvolvimento e ainda não foi publicada.",
       "loadError": "Não foi possível carregar a Academy. Tente novamente.",
       "retry": "Tentar novamente",
+      "learn": {
+        "loading": "Carregando…", "notFound": "Este conteúdo não está disponível.",
+        "progress": "Seu progresso", "moduleCount": "{count} módulos", "moduleLabel": "Módulo {n}",
+        "start": "Começar curso", "continue": "Continuar aprendendo", "review": "Rever aulas", "resume": "Retomar",
+        "content": "Conteúdo do curso", "noLessons": "Este curso ainda não tem aulas publicadas.",
+        "completed": "Concluída", "notCompleted": "Não concluída",
+        "markComplete": "Marcar como concluída", "markedComplete": "Concluída",
+        "previous": "Aula anterior", "next": "Próxima aula", "backToCourse": "Voltar ao curso",
+        "courseCompleted": "Parabéns! Você concluiu todas as aulas deste curso. Fique à vontade para revê-las quando quiser.",
+        "saveError": "Não foi possível salvar seu progresso. Tente novamente.", "percentDone": "{percent}% concluído"
+      },
       "home": {
         "title": "Bloom Academy",
         "subtitle": "Seu espaço para aprender, evoluir e transformar sua prática docente.",
@@ -1458,6 +1469,17 @@ export const uiTranslations = {
       "adminDescription": "Bloom Academy is in development and has not been published yet.",
       "loadError": "Could not load the Academy. Please try again.",
       "retry": "Try again",
+      "learn": {
+        "loading": "Loading…", "notFound": "This content is not available.",
+        "progress": "Your progress", "moduleCount": "{count} modules", "moduleLabel": "Module {n}",
+        "start": "Start course", "continue": "Continue learning", "review": "Review lessons", "resume": "Resume",
+        "content": "Course content", "noLessons": "This course has no published lessons yet.",
+        "completed": "Completed", "notCompleted": "Not completed",
+        "markComplete": "Mark as complete", "markedComplete": "Completed",
+        "previous": "Previous lesson", "next": "Next lesson", "backToCourse": "Back to course",
+        "courseCompleted": "Congratulations! You've completed every lesson in this course. Feel free to review them anytime.",
+        "saveError": "Could not save your progress. Please try again.", "percentDone": "{percent}% complete"
+      },
       "home": {
         "title": "Bloom Academy",
         "subtitle": "Your space to learn, grow and transform your teaching practice.",
