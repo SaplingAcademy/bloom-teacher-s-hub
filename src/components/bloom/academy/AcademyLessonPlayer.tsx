@@ -7,6 +7,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fetchCourseLearning, fetchLessonCourseId, recordLastLesson, setLessonCompleted } from "@/lib/academy-learning-data";
+import type { CourseLearningData, MyCourseProgress } from "@/lib/academy-learning-data";
 import { buildCourseOutline, computeCourseProgress, flattenOutline, lessonNeighbors, withLessonCompletion } from "@/lib/academy-learning";
 import { BackToAcademy, courseLearningKey } from "./AcademyCoursePage";
 import { LearningError, LearningLoading, LearningNotFound, ProgressBar, YoutubePlayer } from "./AcademyShared";
