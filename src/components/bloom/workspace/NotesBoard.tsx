@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { ArrowDownToLine, ArrowUpToLine, MoreHorizontal, Pencil, Pin, PinOff, Plus, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,8 +17,14 @@ export function NotesBoard() {
   const { notes, isLoading, error, pending, execute, refetch } = useWorkspaceNotes();
   const [editor, setEditor] = useState<NoteEditorState | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceNote | null>(null);
-  const startCreate = () => setEditor({ id: crypto.randomUUID(), isNew: true, draft: { title: "", content: "", color: "yellow" } });
-  const startEdit = (note: WorkspaceNote) => setEditor({ id: note.id, isNew: false, draft: { title: note.title ?? "", content: note.content, color: note.color } });
+  const startCreate = () => {
+    toast.dismiss("workspace-notes-feedback");
+    setEditor({ id: crypto.randomUUID(), isNew: true, draft: { title: "", content: "", color: "yellow" } });
+  };
+  const startEdit = (note: WorkspaceNote) => {
+    toast.dismiss("workspace-notes-feedback");
+    setEditor({ id: note.id, isNew: false, draft: { title: note.title ?? "", content: note.content, color: note.color } });
+  };
   const groups = [true, false].map((pinned) => ({ pinned, notes: (notes ?? []).filter((note) => note.pinned === pinned) }));
 
   return (

@@ -59,4 +59,15 @@ describe("Workspace session-client persistence", () => {
     expect(mocks.from).toHaveBeenCalledWith("workspace_notes");
     expect(mocks.eq).toHaveBeenCalledWith("user_id", "teacher");
   });
+  it("recovers an already-committed create with the same editor UUID", async () => {
+    const chain = mocks.from.mock.results[0]?.value ?? mocks.from();
+    chain.single.mockResolvedValueOnce({ data: null, error: { code: "23505" } }).mockResolvedValueOnce({ data: saved, error: null });
+    expect(await persistNoteCommand("teacher", { type: "create", id: "n", draft: { title: "", content: "hello", color: "yellow" } }, [saved])).toEqual(saved);
+    expect(mocks.insert).toHaveBeenCalledOnce();
+    expect(mocks.eq).toHaveBeenCalledWith("id", "n");
+  });
+  it("propagates failed ordering writes instead of claiming success", async () => {
+    mocks.result = { data: null, error: { message: "write rejected" } };
+    await expect(persistNoteCommand("teacher", { type: "move", id: "n", direction: -1 }, [saved])).rejects.toEqual({ message: "write rejected" });
+  });
 });

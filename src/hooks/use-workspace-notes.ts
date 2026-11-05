@@ -42,12 +42,12 @@ export function useWorkspaceNotes() {
         saved ? notes.map((note) => note.id === saved.id ? saved : note) : notes.filter((note) => note.id !== command.id),
       ));
       if (command.type === "create" || command.type === "edit" || command.type === "delete") {
-        toast.success(t(command.type === "delete" ? "workspace.mural.deleted" : "workspace.mural.saved"));
+        toast.success(t(command.type === "delete" ? "workspace.mural.deleted" : "workspace.mural.saved"), { id: "workspace-notes-feedback", duration: 1800 });
       }
     },
     onError: (_error, _command, context) => {
       if (context) client.setQueryData(key, context.before);
-      toast.error(t("workspace.mural.saveError"));
+      toast.error(t("workspace.mural.saveError"), { id: "workspace-notes-feedback" });
       // Only failures need a list reconciliation (e.g. a response lost after a commit).
       void client.invalidateQueries({ queryKey: key });
     },
