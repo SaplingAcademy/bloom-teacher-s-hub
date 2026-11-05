@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), rpc: vi.fn() }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }) }));
-vi.mock("@tanstack/react-start", () => ({ createServerFn: () => ({ inputValidator: () => ({ handler: (fn: unknown) => fn }) }) }));
-import { accessLibraryResource } from "@/lib/library-content.functions";
-// The transform is replaced only in this test; exercise the real handler.
-const access = accessLibraryResource as unknown as (input: { data: Record<string, unknown> }) => Promise<{ rendered: string | null; template: { content: string } | null }>;
-const request = { accessToken: "test-only-not-a-real-token", resourceId: "admin-student-contract", operation: "open" };
+import { handleLibraryContent } from "@/lib/library-content.server";
+import type { LibraryContentRequest } from "@/lib/library-content.functions";
+const access = ({ data }: { data: LibraryContentRequest }) => handleLibraryContent(data);
+const request: LibraryContentRequest = { accessToken: "test-only-not-a-real-token", resourceId: "admin-student-contract", operation: "open" };
 
 beforeEach(() => {
   vi.stubEnv("BLOOM_SUPABASE_URL", "https://test.invalid");

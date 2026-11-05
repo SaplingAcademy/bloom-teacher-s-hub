@@ -465,7 +465,7 @@ function ResourcesPage() {
         /* CATEGORY DETAILED VIEW */
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center gap-3">
-            <Button
+            <Button variant="ghost"
               onClick={() => setSelectedCategory(null)}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
             >
@@ -494,10 +494,10 @@ function ResourcesPage() {
                   contentClassName="p-5 flex flex-col justify-between min-h-[140px]"
                 >
                   <div className="flex-1">{accessBadge(template.id)}</div>
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/40">
-                    <Button
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-4 border-t border-border/40">
+                    <Button variant="ghost"
                       onClick={(e) => toggleFavorite(template.id, e)}
-                      className={`p-1.5 rounded-lg border transition-colors hover:bg-secondary cursor-pointer ${
+                      className={`h-auto w-auto p-1.5 rounded-lg border transition-colors hover:bg-secondary cursor-pointer ${
                         isFav
                           ? "text-amber-500 border-amber-200 bg-amber-500/5"
                           : "text-muted-foreground border-border"
@@ -508,14 +508,14 @@ function ResourcesPage() {
                     </Button>
 
                     <div className="flex items-center gap-1.5">
-                      <Button
+                      <Button variant="ghost"
                         onClick={() => handleOpenPreview(template)}
                         className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         {t.preview}
                       </Button>
-                      <Button
+                      <Button variant="ghost"
                         disabled={accessBusy}
                         onClick={(e) => handleUseTemplate(template, e)}
                         className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
@@ -562,12 +562,12 @@ function ResourcesPage() {
                 </div>
               </Button>
 
-              <Button
+              <Button variant="ghost"
                 onClick={(e) => {
                   const temp = allTemplates.find((x) => x.id === "ped-placement-test");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
               >
                 <div className="rounded-xl bg-warning/10 p-2.5 text-warning border border-warning/10">
                   <Target className="h-5 w-5" />
@@ -585,12 +585,12 @@ function ResourcesPage() {
                 </div>
               </Button>
 
-              <Button
+              <Button variant="ghost"
                 onClick={(e) => {
                   const temp = allTemplates.find((x) => x.id === "ped-progress-report");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
               >
                 <div className="rounded-xl bg-lilac-soft p-2.5 text-lilac border border-lilac/10">
                   <GraduationCap className="h-5 w-5" />
@@ -608,12 +608,12 @@ function ResourcesPage() {
                 </div>
               </Button>
 
-              <Button
+              <Button variant="ghost"
                 onClick={(e) => {
                   const temp = allTemplates.find((x) => x.id === "ped-course-certificate");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
               >
                 <div className="rounded-xl bg-accent/15 p-2.5 text-accent border border-accent/10">
                   <Award className="h-5 w-5" />
@@ -671,10 +671,10 @@ function ResourcesPage() {
               ].map((cat) => {
                 const count = getCategoryCount(cat.id);
                 return (
-                  <Button
+                  <Button variant="ghost"
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center justify-between p-5 rounded-2xl border border-border bg-card hover:shadow-sm transition-all text-left cursor-pointer ${cat.color}`}
+                    className={`h-auto whitespace-normal flex items-center justify-between p-5 rounded-2xl border border-border bg-card hover:shadow-sm transition-all text-left cursor-pointer ${cat.color}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="rounded-xl bg-secondary p-2.5 text-foreground border border-border/55">
@@ -740,10 +740,10 @@ function ResourcesPage() {
               ].map((cat) => {
                 const count = getCategoryCount(cat.id);
                 return (
-                  <Button
+                  <Button variant="ghost"
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex flex-col justify-between p-5 rounded-2xl border border-border bg-card hover:shadow-sm transition-all text-left cursor-pointer min-h-[120px] ${cat.color}`}
+                    className={`h-auto whitespace-normal flex flex-col justify-between p-5 rounded-2xl border border-border bg-card hover:shadow-sm transition-all text-left cursor-pointer min-h-[120px] ${cat.color}`}
                   >
                     <div className="rounded-xl bg-secondary p-2.5 text-foreground border border-border/55 w-fit">
                       <cat.icon className="h-4 w-4" />
@@ -791,16 +791,16 @@ function ResourcesPage() {
                         {accessBadge(template.id)}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button
+                        <Button variant="ghost"
                           onClick={(e) => handleUseTemplate(template, e)}
-                          className="p-1 text-primary hover:bg-primary-soft rounded transition-colors cursor-pointer"
+                          className="h-auto w-auto p-1 text-primary hover:bg-primary-soft rounded transition-colors cursor-pointer"
                           title={t.useTemplate}
                         >
                           <FileSpreadsheet className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
+                        <Button variant="ghost"
                           onClick={(e) => toggleFavorite(template.id, e)}
-                          className="p-1 text-amber-500 hover:bg-secondary rounded transition-colors cursor-pointer"
+                          className="h-auto w-auto p-1 text-amber-500 hover:bg-secondary rounded transition-colors cursor-pointer"
                           title={t.unfavorite}
                         >
                           <BookmarkCheck className="h-3.5 w-3.5" />
@@ -840,16 +840,16 @@ function ResourcesPage() {
                         {accessBadge(template.id)}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button
+                        <Button variant="ghost"
                           onClick={(e) => handleUseTemplate(template, e)}
-                          className="p-1 text-primary hover:bg-primary-soft rounded transition-colors cursor-pointer"
+                          className="h-auto w-auto p-1 text-primary hover:bg-primary-soft rounded transition-colors cursor-pointer"
                           title={t.useTemplate}
                         >
                           <FileSpreadsheet className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
+                        <Button variant="ghost"
                           onClick={(e) => toggleFavorite(template.id, e)}
-                          className={`p-1 rounded transition-colors cursor-pointer ${
+                          className={`h-auto w-auto p-1 rounded transition-colors cursor-pointer ${
                             isFav ? "text-amber-500" : "text-muted-foreground hover:bg-secondary"
                           }`}
                         >
@@ -900,7 +900,7 @@ function ResourcesPage() {
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border">
-                <Button
+                <Button variant="ghost"
                   onClick={(e) => handleDuplicateTemplate(previewTemplate, e)}
                   className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
                 >
@@ -910,11 +910,11 @@ function ResourcesPage() {
 
                 <div className="flex items-center gap-2">
                   <DialogClose asChild>
-                    <Button className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-card px-4 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer">
+                    <Button variant="ghost" className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-card px-4 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer">
                       {t.close}
                     </Button>
                   </DialogClose>
-                  <Button
+                  <Button variant="ghost"
                     onClick={(e) => handleUseTemplate(previewTemplate, e)}
                     className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
                   >
@@ -985,7 +985,7 @@ function ResourcesPage() {
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       {t.documentPreview}
                     </h3>
-                    <Button
+                    <Button variant="ghost"
                       disabled={accessBusy}
                       onClick={copyToClipboard}
                       className="inline-flex h-7 items-center gap-1 rounded-lg bg-primary/10 border border-primary/20 px-2 text-[11px] font-semibold text-primary transition-all hover:bg-primary-soft cursor-pointer"
@@ -1006,7 +1006,7 @@ function ResourcesPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border mt-2">
                 {/* Future Roadmap Actions - Styled but disabled */}
                 <div className="flex items-center gap-2">
-                  <Button
+                  <Button variant="ghost"
                     disabled
                     className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground cursor-not-allowed opacity-65"
                     title={`${t.exportPdf} (${t.soon})`}
@@ -1021,7 +1021,7 @@ function ResourcesPage() {
                     </Badge>
                   </Button>
 
-                  <Button
+                  <Button variant="ghost"
                     disabled
                     className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground cursor-not-allowed opacity-65"
                     title={`${t.sendStudent} (${t.soon})`}
@@ -1039,11 +1039,11 @@ function ResourcesPage() {
 
                 <div className="flex items-center gap-2">
                   <DialogClose asChild>
-                    <Button className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-card px-4 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer">
+                    <Button variant="ghost" className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-card px-4 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer">
                       {t.close}
                     </Button>
                   </DialogClose>
-                  <Button
+                  <Button variant="ghost"
                     onClick={copyToClipboard}
                     className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
                   >
