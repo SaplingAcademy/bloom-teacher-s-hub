@@ -34,6 +34,7 @@ export type AcademyCourse = {
   lessonCount: number;
   /** 0–100; only present when real progress exists. */
   progressPercent: number | null;
+  featured?: boolean;
 };
 
 export type AcademyVideo = {
@@ -42,6 +43,7 @@ export type AcademyVideo = {
   category: AcademyCategoryId;
   thumbnailUrl: string | null;
   durationMinutes: number;
+  featured?: boolean;
 };
 
 export type AcademyContentFilter = {
