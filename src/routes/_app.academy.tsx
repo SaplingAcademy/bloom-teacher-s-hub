@@ -17,14 +17,14 @@ const academyQuery = (userId: string) => queryOptions({
 
 export const Route = createFileRoute("/_app/academy")({
   ssr: false,
-  beforeLoad: async () => {
+  // SSR-disabled loaders run after hydration; the existing app shell owns
+  // sign-in UI and the server function independently verifies every request.
+  loader: async ({ context }) => {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) throw redirect({ to: "/auth" });
-    return { academyUserId: data.session.user.id };
-  },
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(academyQuery(context.academyUserId));
-    return { userId: context.academyUserId };
+    const userId = data.session.user.id;
+    await context.queryClient.ensureQueryData(academyQuery(userId));
+    return { userId };
   },
   head: () => ({
     meta: [
