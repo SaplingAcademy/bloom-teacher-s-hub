@@ -61,6 +61,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TodayLessonsCard } from "@/components/bloom/TodayLessonsCard";
 import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
