@@ -95,6 +95,56 @@ export async function fetchAllVideos(): Promise<AcademyVideoRow[]> {
   return (data ?? []) as AcademyVideoRow[];
 }
 
+// --- Published catalog reads (home page; drafts never appear here) ---
+
+export async function fetchPublishedCourses(): Promise<AcademyCourseRow[]> {
+  await requireUserId();
+  const { data, error } = await supabase
+    .from("academy_courses")
+    .select("*")
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AcademyCourseRow[];
+}
+
+export async function fetchPublishedVideos(): Promise<AcademyVideoRow[]> {
+  await requireUserId();
+  const { data, error } = await supabase
+    .from("academy_videos")
+    .select("*")
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AcademyVideoRow[];
+}
+
+/** Published lesson counts per course, for catalog cards. */
+export async function fetchPublishedLessonCounts(courseIds: string[]): Promise<Record<string, number>> {
+  if (courseIds.length === 0) return {};
+  await requireUserId();
+  const { data: modules, error: modulesError } = await supabase
+    .from("academy_modules")
+    .select("id, course_id")
+    .in("course_id", courseIds);
+  if (modulesError) throw modulesError;
+  const moduleIds = (modules ?? []).map((m) => m.id as string);
+  if (moduleIds.length === 0) return {};
+  const { data: lessons, error: lessonsError } = await supabase
+    .from("academy_lessons")
+    .select("module_id")
+    .in("module_id", moduleIds)
+    .eq("status", "published");
+  if (lessonsError) throw lessonsError;
+  const moduleToCourse = new Map((modules ?? []).map((m) => [m.id as string, m.course_id as string]));
+  const counts: Record<string, number> = {};
+  for (const lesson of lessons ?? []) {
+    const courseId = moduleToCourse.get(lesson.module_id as string);
+    if (courseId) counts[courseId] = (counts[courseId] ?? 0) + 1;
+  }
+  return counts;
+}
+
 // --- Course writes ---
 
 export async function createCourse(input: CourseInput): Promise<AcademyCourseRow> {

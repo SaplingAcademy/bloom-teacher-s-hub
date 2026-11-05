@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   Users,
@@ -8,6 +9,7 @@ import {
   Search,
   PlayCircle,
   Settings2,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
@@ -24,6 +26,12 @@ import {
   type AcademyCourse,
   type AcademyVideo,
 } from "@/lib/academy-catalog";
+import {
+  fetchPublishedCourses,
+  fetchPublishedLessonCounts,
+  fetchPublishedVideos,
+} from "@/lib/academy-admin";
+import { AcademyManage } from "@/components/bloom/AcademyManage";
 
 const CATEGORY_ICONS: Record<AcademyCategoryId, LucideIcon> = {
   teaching_methodology: BookOpen,
@@ -35,22 +43,74 @@ const CATEGORY_ICONS: Record<AcademyCategoryId, LucideIcon> = {
 
 /**
  * Internal Academy home, visible only to super_admin while unpublished.
- * Content lists are empty by design; this stage delivers navigation,
- * filters and empty states only — no fake courses, videos or progress.
+ * Published content comes from the database under RLS; drafts never appear
+ * here, only in the management area. No fake courses, videos or progress.
  */
 export function AcademyHome() {
   const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<AcademyCategoryId | null>(null);
+  const [managing, setManaging] = useState(false);
 
-  // Real content arrives in a later stage; the structure is ready for it.
-  const courses = useMemo<readonly AcademyCourse[]>(() => [], []);
-  const videos = useMemo<readonly AcademyVideo[]>(() => [], []);
+  const contentQuery = useQuery({
+    queryKey: ["academy-published-content"],
+    staleTime: 30_000,
+    retry: false,
+    queryFn: async () => {
+      const [courseRows, videoRows] = await Promise.all([
+        fetchPublishedCourses(),
+        fetchPublishedVideos(),
+      ]);
+      const lessonCounts = await fetchPublishedLessonCounts(courseRows.map((c) => c.id));
+      return { courseRows, videoRows, lessonCounts };
+    },
+  });
+
+  const courses = useMemo<readonly AcademyCourse[]>(
+    () =>
+      (contentQuery.data?.courseRows ?? []).map((row) => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        description: row.short_description,
+        coverUrl: row.cover_url,
+        lessonCount: contentQuery.data?.lessonCounts[row.id] ?? 0,
+        progressPercent: null,
+        featured: row.is_featured,
+      })),
+    [contentQuery.data],
+  );
+  const videos = useMemo<readonly AcademyVideo[]>(
+    () =>
+      (contentQuery.data?.videoRows ?? []).map((row) => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        thumbnailUrl: row.thumbnail_url,
+        durationMinutes: row.duration_minutes ?? 0,
+        featured: row.is_featured,
+      })),
+    [contentQuery.data],
+  );
 
   const filter = useMemo(() => ({ ...EMPTY_ACADEMY_FILTER, search, category }), [search, category]);
   const visibleCourses = useMemo(() => filterAcademyCourses(courses, filter), [courses, filter]);
   const visibleVideos = useMemo(() => filterAcademyVideos(videos, filter), [videos, filter]);
   const hasAnyContent = courses.length > 0 || videos.length > 0;
+  const featuredCourses = useMemo(() => visibleCourses.filter((c) => c.featured), [visibleCourses]);
+  const featuredVideos = useMemo(() => visibleVideos.filter((v) => v.featured), [visibleVideos]);
+  const hasFeatured = featuredCourses.length > 0 || featuredVideos.length > 0;
+
+  if (managing) {
+    return (
+      <div className="space-y-4 py-2">
+        <Button variant="ghost" size="sm" onClick={() => setManaging(false)}>
+          {t("academy.manage.backToHome")}
+        </Button>
+        <AcademyManage />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 py-2">
@@ -85,12 +145,23 @@ export function AcademyHome() {
         <h2 id="academy-featured" className="font-display text-lg font-semibold text-foreground">
           {t("academy.home.featuredTitle")}
         </h2>
-        <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center">
-          <GraduationCap className="h-8 w-8 text-primary" strokeWidth={1.5} aria-hidden="true" />
-          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-            {t("academy.home.featuredEmpty")}
-          </p>
-        </div>
+        {hasFeatured ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredCourses.map((course) => (
+              <CourseCard key={course.id} course={course} featured />
+            ))}
+            {featuredVideos.map((video) => (
+              <VideoCard key={video.id} video={video} featured />
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center">
+            <GraduationCap className="h-8 w-8 text-primary" strokeWidth={1.5} aria-hidden="true" />
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              {t("academy.home.featuredEmpty")}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Continue learning */}
@@ -151,19 +222,7 @@ export function AcademyHome() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visibleCourses.map((course) => (
-              <article
-                key={course.id}
-                className="overflow-hidden rounded-xl border border-border bg-card"
-              >
-                <div className="aspect-video bg-muted" />
-                <div className="space-y-2 p-4">
-                  <Badge variant="secondary">{t(`academy.categories.${course.category}`)}</Badge>
-                  <h3 className="font-display text-base font-semibold text-foreground">
-                    {course.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{course.description}</p>
-                </div>
-              </article>
+              <CourseCard key={course.id} course={course} />
             ))}
           </div>
         )}
@@ -181,37 +240,85 @@ export function AcademyHome() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visibleVideos.map((video) => (
-              <article
-                key={video.id}
-                className="overflow-hidden rounded-xl border border-border bg-card"
-              >
-                <div className="flex aspect-video items-center justify-center bg-muted">
-                  <PlayCircle className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                </div>
-                <div className="space-y-2 p-4">
-                  <Badge variant="secondary">{t(`academy.categories.${video.category}`)}</Badge>
-                  <h3 className="font-display text-base font-semibold text-foreground">
-                    {video.title}
-                  </h3>
-                </div>
-              </article>
+              <VideoCard key={video.id} video={video} />
             ))}
           </div>
         )}
       </section>
 
-      {/* Future administration space — action intentionally unavailable. */}
+      {/* Content management */}
       <section aria-labelledby="academy-admin" className="space-y-3 border-t border-border pt-8">
         <h2 id="academy-admin" className="font-display text-lg font-semibold text-foreground">
           {t("academy.home.manageTitle")}
         </h2>
         <p className="max-w-xl text-sm text-muted-foreground">{t("academy.home.manageDescription")}</p>
-        <Button variant="outline" disabled title={t("academy.home.manageUnavailable")}>
+        <Button variant="outline" onClick={() => setManaging(true)}>
           <Settings2 className="h-4 w-4" aria-hidden="true" />
           {t("academy.home.manageButton")}
         </Button>
       </section>
     </div>
+  );
+}
+
+function CourseCard({ course, featured = false }: { course: AcademyCourse & { featured?: boolean }; featured?: boolean }) {
+  const { t } = useLanguage();
+  return (
+    <article className="overflow-hidden rounded-xl border border-border bg-card">
+      {course.coverUrl ? (
+        <img src={course.coverUrl} alt="" className="aspect-video w-full object-cover" />
+      ) : (
+        <div className="flex aspect-video items-center justify-center bg-muted">
+          <BookOpen className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        </div>
+      )}
+      <div className="space-y-2 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{t(`academy.categories.${course.category}`)}</Badge>
+          {featured ? (
+            <Badge variant="outline">
+              <Star className="h-3 w-3" aria-hidden="true" />
+              {t("academy.manage.featuredBadge")}
+            </Badge>
+          ) : null}
+        </div>
+        <h3 className="font-display text-base font-semibold text-foreground">{course.title}</h3>
+        <p className="text-sm text-muted-foreground">{course.description}</p>
+        <p className="text-xs text-muted-foreground">
+          {t("academy.home.lessonCount").replace("{count}", String(course.lessonCount))}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+function VideoCard({ video, featured = false }: { video: AcademyVideo & { featured?: boolean }; featured?: boolean }) {
+  const { t } = useLanguage();
+  return (
+    <article className="overflow-hidden rounded-xl border border-border bg-card">
+      {video.thumbnailUrl ? (
+        <img src={video.thumbnailUrl} alt="" className="aspect-video w-full object-cover" />
+      ) : (
+        <div className="flex aspect-video items-center justify-center bg-muted">
+          <PlayCircle className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        </div>
+      )}
+      <div className="space-y-2 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{t(`academy.categories.${video.category}`)}</Badge>
+          {featured ? (
+            <Badge variant="outline">
+              <Star className="h-3 w-3" aria-hidden="true" />
+              {t("academy.manage.featuredBadge")}
+            </Badge>
+          ) : null}
+        </div>
+        <h3 className="font-display text-base font-semibold text-foreground">{video.title}</h3>
+        {video.durationMinutes > 0 ? (
+          <p className="text-xs text-muted-foreground">{video.durationMinutes} min</p>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
