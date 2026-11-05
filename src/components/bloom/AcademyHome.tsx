@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
+import { CourseCardsSkeleton } from "@/components/bloom/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
