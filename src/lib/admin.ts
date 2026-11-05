@@ -104,7 +104,7 @@ export function canDowngradeToFree(teacher: Pick<AdminTeacher, "active_students"
 export async function fetchAdminTeachers(): Promise<AdminTeacher[]> {
   const { data, error } = await supabase.rpc("list_admin_teachers");
   if (error) throw error;
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map((row: Record<string, unknown>) => ({
     teacher_id: row.teacher_id as string,
     full_name: (row.full_name as string | null) ?? null,
     email: (row.email as string | null) ?? null,
