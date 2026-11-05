@@ -313,6 +313,8 @@ const translations = {
     reactivateStudent: "Reactivate student",
     detailsTitle: "Student Details",
     privateNotesTitle: "Private Student Notes",
+    planLimitReached:
+      "The free plan allows up to 5 active students at once. Archive or deactivate a student to add a new one, or upgrade to Pro.",
   },
   pt: {
     langToggle: "EN",
@@ -390,6 +392,8 @@ const translations = {
     reactivateStudent: "Reativar aluno",
     detailsTitle: "Detalhes do Aluno",
     privateNotesTitle: "Notas Privadas do Aluno",
+    planLimitReached:
+      "O plano gratuito permite até 5 alunos ativos simultâneos. Arquive ou desative um aluno para adicionar outro, ou faça upgrade para o Pro.",
   },
 };
 
@@ -595,6 +599,7 @@ function StudentsPage() {
     formatLanguageLabel,
   } = useTeacherLanguages();
   const { catalogOptions } = useCatalogOptions();
+  const { plan } = usePlan();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
