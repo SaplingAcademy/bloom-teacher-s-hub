@@ -1,11 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { GraduationCap, Construction, RotateCcw } from "lucide-react";
+import { GraduationCap, RotateCcw } from "lucide-react";
 import { getAcademyAccess } from "@/lib/academy-access.functions";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/hooks/use-language";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AcademyHome } from "@/components/bloom/AcademyHome";
 
 const academyQuery = (userId: string) => queryOptions({
   queryKey: ["academy-access", userId],
@@ -62,19 +62,7 @@ function AuthorizedAcademy({ userId }: { userId: string }) {
     );
   }
 
-  return (
-    <section className="space-y-10 py-2">
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl font-semibold text-foreground">{t("academy.adminTitle")}</h1>
-        <Badge variant="secondary">{t("academy.adminBadge")}</Badge>
-      </header>
-      <div className="flex max-w-xl flex-col gap-4 py-8">
-        <Construction className="h-10 w-10 text-accent" strokeWidth={1.5} aria-hidden="true" />
-        <h2 className="font-display text-xl font-semibold text-foreground">{t("academy.adminHeading")}</h2>
-        <p className="text-base leading-relaxed text-muted-foreground">{t("academy.adminDescription")}</p>
-      </div>
-    </section>
-  );
+  return <AcademyHome />;
 }
 
 function AcademyLoadError({ reset }: { reset: () => void }) {

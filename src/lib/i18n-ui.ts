@@ -10,7 +10,34 @@ export const uiTranslations = {
       "adminHeading": "Academy em construção",
       "adminDescription": "A Bloom Academy está em desenvolvimento e ainda não foi publicada.",
       "loadError": "Não foi possível carregar a Academy. Tente novamente.",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "home": {
+        "title": "Bloom Academy",
+        "subtitle": "Seu espaço para aprender, evoluir e transformar sua prática docente.",
+        "searchPlaceholder": "Buscar cursos e videoaulas",
+        "featuredTitle": "Destaques",
+        "featuredEmpty": "Os cursos e conteúdos em destaque aparecerão aqui quando forem publicados.",
+        "continueTitle": "Continue aprendendo",
+        "continueEmpty": "Quando você iniciar um curso ou videoaula, poderá continuar de onde parou por aqui.",
+        "categoriesTitle": "Categorias",
+        "allCategories": "Todas",
+        "coursesTitle": "Cursos",
+        "coursesEmpty": "Nenhum curso publicado ainda. Os cursos aparecerão aqui com capa, categoria, aulas e seu progresso.",
+        "videosTitle": "Videoaulas",
+        "videosEmpty": "Nenhuma videoaula publicada ainda. Vídeos independentes aparecerão aqui com miniatura, categoria e duração.",
+        "noResults": "Nenhum conteúdo encontrado para esta busca ou categoria.",
+        "manageTitle": "Gerenciamento de conteúdos",
+        "manageDescription": "Em breve você poderá cadastrar e organizar cursos, módulos e videoaulas da Academy por aqui.",
+        "manageButton": "Gerenciar conteúdos",
+        "manageUnavailable": "Disponível em uma próxima etapa"
+      },
+      "categories": {
+        "teaching_methodology": "Metodologia de Ensino",
+        "student_management": "Gestão de Alunos",
+        "business_management": "Gestão do Negócio",
+        "professional_development": "Desenvolvimento Profissional",
+        "mastering_bloom": "Dominando o Bloom"
+      }
     },
     "libraryAccess": {
       "adminTitle": "Recursos da Biblioteca", "search": "Buscar recurso por nome", "free": "Free", "premium": "Premium",
@@ -1357,7 +1384,34 @@ export const uiTranslations = {
       "adminHeading": "Academy under construction",
       "adminDescription": "Bloom Academy is in development and has not been published yet.",
       "loadError": "Could not load the Academy. Please try again.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "home": {
+        "title": "Bloom Academy",
+        "subtitle": "Your space to learn, grow and transform your teaching practice.",
+        "searchPlaceholder": "Search courses and video lessons",
+        "featuredTitle": "Featured",
+        "featuredEmpty": "Featured courses and content will appear here once published.",
+        "continueTitle": "Continue learning",
+        "continueEmpty": "Once you start a course or video lesson, you can pick up where you left off right here.",
+        "categoriesTitle": "Categories",
+        "allCategories": "All",
+        "coursesTitle": "Courses",
+        "coursesEmpty": "No courses published yet. Courses will appear here with cover, category, lessons and your progress.",
+        "videosTitle": "Video lessons",
+        "videosEmpty": "No video lessons published yet. Standalone videos will appear here with thumbnail, category and duration.",
+        "noResults": "No content found for this search or category.",
+        "manageTitle": "Content management",
+        "manageDescription": "Soon you will be able to create and organize Academy courses, modules and video lessons right here.",
+        "manageButton": "Manage content",
+        "manageUnavailable": "Available in a future stage"
+      },
+      "categories": {
+        "teaching_methodology": "Teaching Methodology",
+        "student_management": "Student Management",
+        "business_management": "Business Management",
+        "professional_development": "Professional Development",
+        "mastering_bloom": "Mastering Bloom"
+      }
     },
     "libraryAccess": {
       "adminTitle": "Library Resources", "search": "Search resources by name", "free": "Free", "premium": "Premium",
