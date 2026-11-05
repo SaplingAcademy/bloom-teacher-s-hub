@@ -1,5 +1,11 @@
 # Roadmap
 
+- [x] Stage 2A: retain all 23 original templates verbatim with stable metadata IDs; move content server-only and add actual authenticated database assertions at preview/use/duplicate/generate/copy. Copies retain original classification; complete paginated reads and 30-second/focus refresh never substitute unknown permissions for Free.
+- [x] Add only super_admin Library administration with search/category/current classification and confirmed RPC saved read-back. Prepare docs/migrations/20261105060000_library_access_manual.sql: one classification table, 23 literal Free seed rows, authorized access/admin RPCs, no unrelated RLS changes or SQL execution.
+- [x] Run only library-access, library-content and plans tests: all 33 passed; original content preservation verified; automatic preview compilation OK. Real desktop/mobile /resources and /admin redirect to /auth without runtime errors, not an authenticated flow verification.
+- [ ] Apply the manual Library SQL before publishing these changes; without its table/RPCs resource access deliberately remains denied, including Free resources. Blocker: production SQL requires manual application under project conventions.
+- [ ] Verify real Free/Pro/super_admin access, admin confirmation/save/read-back and PT/EN Library layout after SQL application; no authenticated external teacher/admin session is available. Tests use isolated authorization responses, not production RLS verification.
+
 - [x] Correct only Lead conversion pedagogical prefill/selectors and NULL payloads using the shared teacher catalog; preserve personal/commercial values and historical options. Skip schedule recreation on the existing RPC already-converted response.
 - [x] Restore original-lead history reads through teacher/source-scoped lead.converted events for old student-targeted activities; deduplicate activity IDs without writes/backfill. Provide narrowly guarded manual SQL that patches only the installed function's activity target; no SQL or migrations executed.
 - [x] Run only tests/lead-conversion.test.ts, tests/lead-conversion-history.test.ts and tests/lead-interactions.test.ts: 23 passed; no manual build or broad checks.

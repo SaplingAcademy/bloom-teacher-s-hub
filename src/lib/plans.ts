@@ -53,7 +53,7 @@ export function canAddActiveStudent(
 /**
  * Premium-gated product features. The free plan includes the full dashboard,
  * finance, calendar, normal community participation (no points/prizes) and a
- * fixed selection of free library materials; everything below is Premium-only.
+ * database-classified free library materials; everything below is Premium-only.
  * "Premium" is only the commercial name shown in the UI — the stored plan
  * value is `pro`. Stages 2/3 (library, courses, marketplace, community
  * rewards) reuse this same map; do not create parallel permission systems.
