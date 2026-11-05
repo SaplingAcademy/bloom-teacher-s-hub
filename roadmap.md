@@ -1,8 +1,9 @@
 # Roadmap
 
-- [ ] Correct only Lead conversion pedagogical prefill/selectors and NULL payloads using the shared teacher catalog; preserve personal/commercial values and historical options.
-- [ ] Provide narrowly guarded manual SQL for original-lead conversion history, keeping the live RPC signature, ownership checks, row lock and atomic/idempotent conversion; do not execute SQL or migrations.
-- [ ] Run only focused conversion tests and verify the conversion UI where authenticated access is available; no manual build or broad checks.
+- [x] Correct only Lead conversion pedagogical prefill/selectors and NULL payloads using the shared teacher catalog; preserve personal/commercial values and historical options. Skip schedule recreation on the existing RPC already-converted response.
+- [x] Restore original-lead history reads through teacher/source-scoped lead.converted events for old student-targeted activities; deduplicate activity IDs without writes/backfill. Provide narrowly guarded manual SQL that patches only the installed function's activity target; no SQL or migrations executed.
+- [x] Run only tests/lead-conversion.test.ts, tests/lead-conversion-history.test.ts and tests/lead-interactions.test.ts: 23 passed; no manual build or broad checks.
+- [ ] Verify conversion through authenticated UI and installed RPC behavior; external teacher session/direct database access unavailable. Optional canonical history-target SQL awaits manual application; frontend history works with existing linked conversion events meanwhile.
 
 - [x] Correct Rule E contact-based inactivity and shared persisted threshold in Today/attention; exclude closed leads and ignore notes/profile edits. Queue data readers remain read-only; PT/EN contact descriptions updated.
 - [x] Connect Rule E to existing queue load/refresh callbacks, dedupe concurrent loads and throttle one minute; persist first-observed activation per settings revision and contact-cycle event claims in existing tables. Create linked follow_up tasks and lead-targeted history; retain manual/completed tasks, retry missing writes only, exclude activation backlog. Rules A/C/D and layout unchanged; no SQL/migrations/manual build/audit.
