@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { formatTimeHHMMSS, calculateEndTime, formatDateString } from "@/lib/calendar-sync";
 import { processInactiveLeadCheck } from "@/lib/inactive-lead-automation";
+import { conversionOptionalText } from "@/lib/lead-conversion";
 export { processInactiveLeadCheck } from "@/lib/inactive-lead-automation";
 
 export interface AutomationSettings {
@@ -792,10 +793,10 @@ export async function convertLeadToStudentAutomation(params: {
     fullName,
     email,
     phone,
-    languageStudied = "English",
-    level = "A1",
-    focus = "General",
-    modality = "Online",
+    languageStudied,
+    level,
+    focus,
+    modality,
     packageId,
     notes,
     scheduleText,
@@ -812,10 +813,10 @@ export async function convertLeadToStudentAutomation(params: {
       p_full_name: fullName,
       p_email: email || null,
       p_phone: phone || null,
-      p_language_studied: languageStudied,
-      p_level: level,
-      p_focus: focus,
-      p_modality: modality,
+      p_language_studied: conversionOptionalText(languageStudied),
+      p_level: conversionOptionalText(level),
+      p_focus: conversionOptionalText(focus),
+      p_modality: conversionOptionalText(modality),
       p_package_id: packageId || null,
       p_notes: notes || null,
       p_schedule_text: scheduleText || null,
@@ -831,6 +832,10 @@ export async function convertLeadToStudentAutomation(params: {
     }
 
     const studentId = rpcRes.student_id;
+
+    // The RPC's locked duplicate guard is authoritative: do not recreate schedules
+    // or calendar occurrences when the lead was already converted.
+    if (rpcRes.already_converted) return { success: true, studentId };
 
     // 2. If schedules provided, insert student_schedules and trigger 8-week calendar event generation
     if (schedules.length > 0 && studentId) {

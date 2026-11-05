@@ -36,6 +36,8 @@ import { PageHeader } from "@/components/bloom/PageHeader";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
 import { LeadInteractionDialog } from "@/components/bloom/LeadInteractionDialog";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
+import { CatalogOptionSelect } from "@/components/bloom/CatalogOptionSelect";
+import { conversionLanguageOptions, leadToConversionDraft } from "@/lib/lead-conversion";
 import { LeadFiltersBar, PendingContactBadge } from "@/components/bloom/LeadFiltersBar";
 import {
   applyLeadFilters,
@@ -160,10 +162,10 @@ function LeadsPage() {
     full_name: "",
     email: "",
     phone: "",
-    language_studied: "English",
-    level: "A1",
-    focus: "General English",
-    modality: "Online",
+    language_studied: "",
+    level: "",
+    focus: "",
+    modality: "",
     package_id: "",
     schedule_weekday: "Monday",
     schedule_start_time: "10:00",
@@ -172,6 +174,7 @@ function LeadsPage() {
 
   const teacherId = user?.id;
   const { catalogOptions } = useCatalogOptions();
+  const convertLanguages = conversionLanguageOptions(teacherLanguages, convertForm.language_studied);
   const pedagogyLabel = (lead: Lead) =>
     leadPedagogyParts(lead, {
       language: (v) => formatLanguageLabel(v, lang),
@@ -418,19 +421,7 @@ function LeadsPage() {
   // 5. Open Conversion Modal & Prefill
   const openConvertModal = (lead: Lead) => {
     setSelectedLead(lead);
-    setConvertForm({
-      full_name: lead.full_name,
-      email: lead.email || "",
-      phone: lead.phone || "",
-      language_studied: lead.language_studied || "English",
-      level: lead.level || "A1",
-      focus: lead.focus || "General English",
-      modality: lead.modality || "Online",
-      package_id: lead.package_id || (packages[0]?.id || ""),
-      schedule_weekday: "Monday",
-      schedule_start_time: "10:00",
-      notes: lead.notes || "",
-    });
+    setConvertForm(leadToConversionDraft(lead));
     setIsConvertOpen(true);
   };
 
@@ -897,13 +888,13 @@ function LeadsPage() {
 
       {/* Modal: Convert Lead to Student (Rule F & G) */}
       <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <UserCheck className="w-5 h-5" /> {t("leads.convertToStudent")}
             </DialogTitle>
             <DialogDescription>
-              Bloom preencheu os dados com base no lead. Ao confirmar, o aluno será cadastrado, os horários e a Agenda dos próximos 2 meses serão gerados de forma transacional.
+              {t("leadsUi.convertDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -943,12 +934,13 @@ function LeadsPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="convert_language">{t("leadsUi.languageStudied")}</Label>
                 <Select
-                  value={convertForm.language_studied}
-                  onValueChange={(val) => setConvertForm({ ...convertForm, language_studied: val })}
+                  value={convertForm.language_studied || "__none__"}
+                  onValueChange={(val) => setConvertForm({ ...convertForm, language_studied: val === "__none__" ? "" : val })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="convert_language"><SelectValue placeholder={t("leadPanel.select")} /></SelectTrigger>
                   <SelectContent>
-                    {(["English", "Spanish", "French", "German", "Italian", "Portuguese"] as const).map((language) => (
+                    <SelectItem value="__none__">{t("leadPanel.none")}</SelectItem>
+                    {convertLanguages.map((language) => (
                       <SelectItem key={language} value={language}>{formatLanguageLabel(language, lang)}</SelectItem>
                     ))}
                   </SelectContent>
@@ -958,44 +950,54 @@ function LeadsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="convert_level">{t("leadsUi.cefrLevel")}</Label>
-                <Select
+                <Label htmlFor="convert_level">{t("leadPanel.level")}</Label>
+                <CatalogOptionSelect
+                  id="convert_level"
+                  catalog={catalogOptions}
+                  category="levels"
                   value={convertForm.level}
-                  onValueChange={(val) => setConvertForm({ ...convertForm, level: val })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["A1", "A2", "B1", "B2", "C1", "C2"] as const).map((level) => (
-                      <SelectItem key={level} value={level}>{formatStatus(level)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(val) => setConvertForm({ ...convertForm, level: val })}
+                  placeholder={t("leadPanel.select")}
+                  noneLabel={t("leadPanel.none")}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="convert_focus">{t("leadsUi.courseFocus")}</Label>
-                <Select
+                <CatalogOptionSelect
+                  id="convert_focus"
+                  catalog={catalogOptions}
+                  category="focuses"
                   value={convertForm.focus}
-                  onValueChange={(val) => setConvertForm({ ...convertForm, focus: val })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["General English", "Business", "Conversation", "Exam Prep", "Travel", "Kids / Teens"] as const).map((focus) => (
-                      <SelectItem key={focus} value={focus}>{formatStatus(focus)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(val) => setConvertForm({ ...convertForm, focus: val })}
+                  placeholder={t("leadPanel.select")}
+                  noneLabel={t("leadPanel.none")}
+                />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="convert_modality">{t("leadPanel.modality")}</Label>
+              <CatalogOptionSelect
+                id="convert_modality"
+                catalog={catalogOptions}
+                category="modalities"
+                value={convertForm.modality}
+                onChange={(val) => setConvertForm({ ...convertForm, modality: val })}
+                placeholder={t("leadPanel.select")}
+                noneLabel={t("leadPanel.none")}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label>{t("leadsUi.studentPackage")}</Label>
               <Select
-                value={convertForm.package_id}
-                onValueChange={(val) => setConvertForm({ ...convertForm, package_id: val })}
+                value={convertForm.package_id || "__none__"}
+                onValueChange={(val) => setConvertForm({ ...convertForm, package_id: val === "__none__" ? "" : val })}
               >
                 <SelectTrigger><SelectValue placeholder={t("leadsUi.selectPackage")} /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">{t("leadPanel.none")}</SelectItem>
                   {packages.map((pkg) => {
                     const isTotal = pkg.frequency === "total" || pkg.frequency === "Valor total do curso" || (pkg.frequency && pkg.frequency.toLowerCase().includes("total"));
                     const priceFormatted = formatReaisToBRL(pkg.price);
