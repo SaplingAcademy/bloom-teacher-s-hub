@@ -30,6 +30,7 @@ import {
   RotateCcw,
   } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { CalendarRowsSkeleton, MonthGridSkeleton } from "@/components/bloom/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -1387,6 +1388,9 @@ function CalendarPage() {
               </div>
 
               {/* Time rows */}
+              {isLoadingEvents && events.length === 0 ? (
+                <CalendarRowsSkeleton label={t("auditUi.loading")} />
+              ) : (
               <div className="divide-y divide-border/60">
                 {gridHours.map((hour) => (
                   <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[64px]">
@@ -1481,11 +1485,15 @@ function CalendarPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
           {/* DAY VIEW */}
           {viewMode === "day" && (
+            isLoadingEvents && events.length === 0 ? (
+              <CalendarRowsSkeleton label={t("auditUi.loading")} columns={1} />
+            ) : (
             <div className="divide-y divide-border">
               {gridHours.map((hour) => {
                 const dateStr = formatDateString(currentDate);
@@ -1569,6 +1577,7 @@ function CalendarPage() {
                 );
               })}
             </div>
+            )
           )}
 
           {/* MONTH VIEW */}
@@ -1582,6 +1591,9 @@ function CalendarPage() {
               </div>
 
               {/* Month dates grid (35 dynamic cells for current month) */}
+              {isLoadingEvents && events.length === 0 ? (
+                <MonthGridSkeleton label={t("auditUi.loading")} />
+              ) : (
               <div className="grid grid-cols-7 gap-1">
                 {(() => {
                   const mYear = currentDate.getFullYear();
@@ -1637,6 +1649,7 @@ function CalendarPage() {
                   });
                 })()}
               </div>
+              )}
             </div>
           )}
         </div>

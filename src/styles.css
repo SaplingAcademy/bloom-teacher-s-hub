@@ -285,3 +285,27 @@ main::-webkit-scrollbar-thumb {
 main::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted-foreground);
 }
+
+/*
+ * Skeleton shimmer — soft, transform-based (cheap), disabled under
+ * prefers-reduced-motion so loading placeholders stay static.
+ */
+@keyframes skeleton-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+}

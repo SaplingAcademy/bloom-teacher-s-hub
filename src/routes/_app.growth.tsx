@@ -55,6 +55,8 @@ import { PremiumBenefitsDialog, PremiumCardLock } from "@/components/bloom/Premi
 import { useFeatureAccess } from "@/hooks/use-plan";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { PanelSkeleton } from "@/components/bloom/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -584,15 +586,7 @@ function GrowthPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         {/* MONTHLY GOAL CARD */}
         {loadingGrowth ? (
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] animate-pulse">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary opacity-50" />
-              <div className="h-5 w-32 bg-secondary rounded" />
-            </div>
-            <div className="my-8 flex items-center justify-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          </div>
+          <PanelSkeleton label={t.title} />
         ) : monthlyGoal === null || monthlyGoal <= 0 ? (
           /* EMPTY STATE CARD: No Goal Set */
           <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
@@ -1606,10 +1600,10 @@ function GrowthPage() {
           </div>
 
           {growthInsights.isLoading ? (
-            <div className="mt-6 flex-1 space-y-4 animate-pulse" aria-hidden="true">
-              <div className="h-4 w-2/3 rounded bg-sidebar-accent-foreground/15" />
-              <div className="h-4 w-1/2 rounded bg-sidebar-accent-foreground/15" />
-              <div className="h-8 w-4/5 rounded bg-sidebar-accent-foreground/15" />
+            <div className="mt-6 flex-1 space-y-4" role="status" aria-label={tr("growthRevenue.title")}>
+              <Skeleton className="h-4 w-2/3 bg-sidebar-accent-foreground/15" />
+              <Skeleton className="h-4 w-1/2 bg-sidebar-accent-foreground/15" />
+              <Skeleton className="h-8 w-4/5 bg-sidebar-accent-foreground/15" />
             </div>
           ) : !growthInsights.allowed ? (
             <PremiumCardLock tone="dark" onLearnMore={() => setIsPremiumDialogOpen(true)} />
@@ -1664,9 +1658,9 @@ function GrowthPage() {
           <p className="mt-1 text-xs text-muted-foreground">{t.opportunitiesSubtitle}</p>
 
           {growthInsights.isLoading ? (
-            <div className="mt-5 flex-1 space-y-3 animate-pulse" aria-hidden="true">
-              <div className="h-16 rounded-xl bg-secondary/60" />
-              <div className="h-16 rounded-xl bg-secondary/60" />
+            <div className="mt-5 flex-1 space-y-3" role="status" aria-label={t.opportunitiesTitle}>
+              <Skeleton className="h-16 rounded-xl bg-secondary/60" />
+              <Skeleton className="h-16 rounded-xl bg-secondary/60" />
             </div>
           ) : !growthInsights.allowed ? (
             <PremiumCardLock onLearnMore={() => setIsPremiumDialogOpen(true)} />

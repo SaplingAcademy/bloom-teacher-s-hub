@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +14,7 @@ const toneMap: Record<Tone, string> = {
 
 type StatCardProps = {
   label: string;
-  value: string;
+  value: ReactNode;
   icon: LucideIcon;
   tone?: Tone;
   trend?: { value: string; positive?: boolean };

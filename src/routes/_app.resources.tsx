@@ -37,10 +37,10 @@ import {
   Check,
   X,
   Lock,
-  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelCard } from "@/components/bloom/PanelCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -870,7 +870,13 @@ function ResourcesPage() {
         </div>
       )}
 
-      {accessBusy && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{translate("libraryAccess.checking")}</p>}
+      {accessBusy && (
+        <div role="status" aria-label={translate("libraryAccess.checking")} className="space-y-2">
+          <span className="sr-only">{translate("libraryAccess.checking")}</span>
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      )}
       <PremiumBenefitsDialog open={premiumOpen} onOpenChange={setPremiumOpen} />
 
       {/* TEMPLATE PREVIEW MODAL */}

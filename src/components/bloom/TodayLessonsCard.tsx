@@ -4,6 +4,7 @@ import type { CalendarEvent } from "@/lib/calendar-sync";
 import { StatCard } from "@/components/bloom/StatCard";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TodayLessonsCardProps {
   events: CalendarEvent[];
@@ -59,7 +60,18 @@ export function TodayLessonsCard({
           {error ? (
             <li role="alert" className="px-4 py-5 text-sm text-destructive">{errorLabel}</li>
           ) : loading ? (
-            <li role="status" className="px-4 py-5 text-sm text-muted-foreground">…</li>
+            <li role="status" aria-label={title} className="space-y-3 px-4 py-5">
+              <span className="sr-only">{title}</span>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-8 w-14 shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/5" />
+                    <Skeleton className="h-3 w-2/5" />
+                  </div>
+                </div>
+              ))}
+            </li>
           ) : events.length === 0 ? (
             <li className="px-4 py-5 text-sm text-muted-foreground">{emptyLabel}</li>
           ) : events.map((event) => (

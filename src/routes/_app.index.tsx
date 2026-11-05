@@ -61,6 +61,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TodayLessonsCard } from "@/components/bloom/TodayLessonsCard";
 import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
@@ -880,7 +881,7 @@ function TodayPage() {
         />
         <StatCard
           label={t.activeStudents}
-          value={metricsLoading ? "—" : String(metrics.activeStudents)}
+          value={metricsLoading ? <Skeleton className="mt-1 h-7 w-14" /> : String(metrics.activeStudents)}
           icon={Users}
           tone="lilac"
           trend={metrics.activeStudentsTrend ?? undefined}
@@ -888,7 +889,7 @@ function TodayPage() {
         />
         <StatCard
           label={t.newLeads}
-          value={metricsLoading ? "—" : String(metrics.newLeads)}
+          value={metricsLoading ? <Skeleton className="mt-1 h-7 w-14" /> : String(metrics.newLeads)}
           icon={UserPlus}
           tone="accent"
           trend={metrics.newLeadsTrend ?? undefined}
@@ -897,9 +898,11 @@ function TodayPage() {
         <StatCard
           label={t.thisMonth}
           value={
-            metricsLoading || !metrics.hasRevenueSource
-              ? "—"
-              : money(formatCentsToBRL(metrics.monthRevenueCents))
+            metricsLoading
+              ? <Skeleton className="mt-1 h-7 w-24" />
+              : !metrics.hasRevenueSource
+                ? "—"
+                : money(formatCentsToBRL(metrics.monthRevenueCents))
           }
           icon={Wallet}
           tone="warning"

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Loader2, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
+import { LearningSkeleton } from "@/components/bloom/skeletons";
 import { youtubeEmbedUrl } from "@/lib/academy-learning";
 
 export function YoutubePlayer({ youtubeId, title }: { youtubeId: string; title: string }) {
@@ -22,12 +23,7 @@ export function YoutubePlayer({ youtubeId, title }: { youtubeId: string; title: 
 
 export function LearningLoading() {
   const { t } = useLanguage();
-  return (
-    <div className="flex min-h-60 items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
-      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-      {t("academy.learn.loading")}
-    </div>
-  );
+  return <LearningSkeleton label={t("academy.learn.loading")} />;
 }
 
 export function LearningError({ onRetry }: { onRetry: () => void }) {
