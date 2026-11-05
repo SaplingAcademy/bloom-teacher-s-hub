@@ -70,3 +70,18 @@ export function usePlan() {
     refetch: query.refetch,
   };
 }
+
+/**
+ * Reusable premium-feature gate built on the real account plan/role.
+ * Fails closed: while the plan is loading or unreadable, `allowed` is false —
+ * callers should render a neutral loading state via `isLoading` and never
+ * release premium content on `error`.
+ */
+export function useFeatureAccess(feature: PlanFeature) {
+  const { plan, isSuperAdmin, isLoading, error } = usePlan();
+  return {
+    allowed: canAccessFeature(plan, isSuperAdmin, feature),
+    isLoading,
+    error,
+  };
+}

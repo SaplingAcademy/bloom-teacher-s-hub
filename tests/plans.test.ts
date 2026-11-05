@@ -2,12 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   FREE_PLAN_ACTIVE_STUDENT_LIMIT,
   FREE_PLAN_LIMIT_ERROR_MARKER,
+  PLAN_FEATURES,
   canAccessAcademy,
+  canAccessFeature,
   canAddActiveStudent,
   countActiveStudents,
   countsTowardActiveLimit,
   isFreePlanLimitError,
+  type PlanFeature,
 } from "@/lib/plans";
+
+const ALL_FEATURES: PlanFeature[] = [
+  "growth_insights",
+  "library_full",
+  "academy_courses",
+  "marketplace",
+  "community_rewards",
+];
 
 describe("countsTowardActiveLimit", () => {
   it("counts Active and Trial students toward the limit", () => {
