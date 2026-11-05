@@ -1,7 +1,8 @@
 # Roadmap
 
-- [ ] Academy: add PT/EN Coming Soon navigation/page for Free and Pro; private construction page for server-verified super_admin only, keeping publication separate from entitlement. No courses, uploads, tables or SQL execution.
-- [ ] Verify only Academy access rules, its server authorization and desktop/mobile navigation; report any SQL dependency and real authenticated verification limits.
+- [x] Academy: add PT/EN Coming Soon navigation/page for Free and Pro; private construction page for server-verified super_admin only, keeping publication separate from entitlement. No courses, uploads, tables or SQL execution; existing user_roles/has_role are reused without changing can_access_academy's plan entitlement.
+- [x] Verify Academy rules/server authorization and existing plan compatibility: 32 focused tests passed. Direct signed-out /academy on desktop/mobile reaches /auth without runtime errors; direct unauthenticated calls are blocked. Automatic preview compilation OK. No new SQL required because no Academy content tables, storage or write operations exist.
+- [ ] Verify the signed-in Free/Pro Coming Soon page, super_admin construction page and PT/EN sidebar with real accounts; blocked by unavailable external authenticated session. Unit authorization cases do not establish production has_role configuration or authenticated UI behavior.
 
 - [x] Stage 2A: retain all 23 original templates verbatim with stable metadata IDs; move content server-only and add actual authenticated database assertions at preview/use/duplicate/generate/copy. Copies retain original classification; complete paginated reads and 30-second/focus refresh never substitute unknown permissions for Free.
 - [x] Add only super_admin Library administration with search/category/current classification and confirmed RPC saved read-back. Prepare docs/migrations/20261105060000_library_access_manual.sql: one classification table, 23 literal Free seed rows, authorized access/admin RPCs, no unrelated RLS changes or SQL execution.
