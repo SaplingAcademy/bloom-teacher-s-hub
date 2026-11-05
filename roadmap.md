@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Stage 2A: preserve Library content/IDs/layout; add database-backed per-resource free/pro classification and authenticated access checks at preview, use, duplication and copy/generation.
+- [ ] Add only super_admin Library administration with search/category/current classification, confirmed changes and saved read-back; provide full manual SQL without execution.
+- [ ] Run only focused Library permission tests and targeted browser checks; report pending SQL and authenticated verification blockers.
+
 - [x] Correct only Lead conversion pedagogical prefill/selectors and NULL payloads using the shared teacher catalog; preserve personal/commercial values and historical options. Skip schedule recreation on the existing RPC already-converted response.
 - [x] Restore original-lead history reads through teacher/source-scoped lead.converted events for old student-targeted activities; deduplicate activity IDs without writes/backfill. Provide narrowly guarded manual SQL that patches only the installed function's activity target; no SQL or migrations executed.
 - [x] Run only tests/lead-conversion.test.ts, tests/lead-conversion-history.test.ts and tests/lead-interactions.test.ts: 23 passed; no manual build or broad checks.
