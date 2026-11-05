@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { GraduationCap, Construction, RotateCcw } from "lucide-react";
 import { getAcademyAccess } from "@/lib/academy-access.functions";
@@ -21,7 +21,8 @@ export const Route = createFileRoute("/_app/academy")({
   // sign-in UI and the server function independently verifies every request.
   loader: async ({ context }) => {
     const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session) throw redirect({ to: "/auth" });
+    // Let the existing shell show sign-in; do not fetch anything without a session.
+    if (error || !data.session) return { userId: null };
     const userId = data.session.user.id;
     await context.queryClient.ensureQueryData(academyQuery(userId));
     return { userId };
@@ -42,8 +43,13 @@ export const Route = createFileRoute("/_app/academy")({
 });
 
 function AcademyPage() {
-  const { t } = useLanguage();
   const { userId } = Route.useLoaderData();
+  if (!userId) return null;
+  return <AuthorizedAcademy userId={userId} />;
+}
+
+function AuthorizedAcademy({ userId }: { userId: string }) {
+  const { t } = useLanguage();
   const { data } = useSuspenseQuery(academyQuery(userId));
 
   if (data.state !== "construction") {
