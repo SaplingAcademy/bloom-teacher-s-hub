@@ -52,7 +52,6 @@ export async function fetchProjectDetail(expectedId: string, projectId: string):
   return { project: project as WorkspaceProject, phases, items };
 }
 
-const check = ({ error }: { error: unknown }) => { if (error) throw error; };
 async function single<T>(promise: PromiseLike<{ data: unknown; error: unknown }>, notFound: string): Promise<T> {
   const { data, error } = await promise;
   if (error) throw error;
@@ -124,5 +123,4 @@ export async function persistDetailCommand(expectedId: string, projectId: string
       for (const u of command.updates) await single(items().update({ order_index: u.order_index }).eq("user_id", owner).eq("project_id", projectId).eq("id", u.id).select("id").maybeSingle(), "item_not_found");
       return;
   }
-  check({ error: null });
 }
