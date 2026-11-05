@@ -37,10 +37,10 @@ import {
   Check,
   X,
   Lock,
-  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelCard } from "@/components/bloom/PanelCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
