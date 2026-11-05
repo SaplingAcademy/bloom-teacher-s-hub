@@ -28,9 +28,16 @@ export function parseLibraryClassifications(data: unknown): LibraryClassificatio
 }
 
 export async function fetchLibraryClassifications(): Promise<LibraryClassification[]> {
-  const { data, error } = await supabase.from("library_resource_access").select("resource_id, access_level");
-  if (error) throw error;
-  return parseLibraryClassifications(data);
+  const rows: LibraryClassification[] = [];
+  const pageSize = 500;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase.from("library_resource_access")
+      .select("resource_id, access_level").order("resource_id").range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = parseLibraryClassifications(data);
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
 }
 
 export async function setLibraryClassification(resourceId: string, level: SubscriptionPlan): Promise<LibraryClassification> {

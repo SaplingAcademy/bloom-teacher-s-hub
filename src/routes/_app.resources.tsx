@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLibraryAccess } from "@/hooks/use-library-access";
 import { LIBRARY_CATALOG, librarySourceId, type LibraryResource, type ResourceTemplate } from "@/lib/library-catalog";
 import { accessLibraryResource } from "@/lib/library-content.functions";
-import { isLibraryPremiumError } from "@/lib/library-access";
+import { isLibraryPremiumError, LIBRARY_ACCESS_QUERY_KEY, type LibraryClassification } from "@/lib/library-access";
 import { PremiumBenefitsDialog } from "@/components/bloom/PremiumGate";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/use-language";
@@ -167,6 +168,7 @@ const TRANSLATIONS = {
 function ResourcesPage() {
   const { lang, t: translate } = useLanguage();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const library = useLibraryAccess();
   const [premiumOpen, setPremiumOpen] = useState(false);
   const [accessBusy, setAccessBusy] = useState(false);
@@ -235,6 +237,9 @@ function ResourcesPage() {
       } });
       if (attempt !== accessAttempt.current || userRef.current !== owner || !result.template) return null;
       setLoadedLevel(result.accessLevel);
+      queryClient.setQueryData<LibraryClassification[]>(LIBRARY_ACCESS_QUERY_KEY(owner), (rows) => rows
+        ? [...rows.filter((row) => row.resource_id !== librarySourceId(template.id)), { resource_id: librarySourceId(template.id), access_level: result.accessLevel }]
+        : undefined);
       const custom = customTemplates.find((item) => item.id === template.id);
       return custom ? { ...result.template, ...custom } : result.template;
     } catch (error) {
@@ -1044,6 +1049,7 @@ function ResourcesPage() {
                     </Button>
                   </DialogClose>
                   <Button variant="ghost"
+                    disabled={accessBusy}
                     onClick={copyToClipboard}
                     className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
                   >
