@@ -23,7 +23,6 @@ import { Route as AppGrowthRouteImport } from './routes/_app.growth'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppMarketplaceRouteImport } from './routes/_app.marketplace'
-import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppResourcesRouteImport } from './routes/_app.resources'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -101,11 +100,6 @@ const AppMarketplaceRoute = AppMarketplaceRouteImport.update({
   path: '/marketplace',
   getParentRoute: () => AppRoute,
 } as any)
-const AppMessagesRoute = AppMessagesRouteImport.update({
-  id: '/messages',
-  path: '/messages',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -158,7 +152,6 @@ export interface FileRoutesByFullPath {
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
-  '/messages': typeof AppMessagesRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
@@ -180,7 +173,6 @@ export interface FileRoutesByTo {
   '/leads': typeof AppLeadsRoute
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
-  '/messages': typeof AppMessagesRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
@@ -205,7 +197,6 @@ export interface FileRoutesById {
   '/_app/leads': typeof AppLeadsRoute
   '/_app/lessons': typeof AppLessonsRoute
   '/_app/marketplace': typeof AppMarketplaceRoute
-  '/_app/messages': typeof AppMessagesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/resources': typeof AppResourcesRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -231,7 +222,6 @@ export interface FileRouteTypes {
     | '/leads'
     | '/lessons'
     | '/marketplace'
-    | '/messages'
     | '/profile'
     | '/resources'
     | '/settings'
@@ -253,7 +243,6 @@ export interface FileRouteTypes {
     | '/leads'
     | '/lessons'
     | '/marketplace'
-    | '/messages'
     | '/profile'
     | '/resources'
     | '/settings'
@@ -277,7 +266,6 @@ export interface FileRouteTypes {
     | '/_app/leads'
     | '/_app/lessons'
     | '/_app/marketplace'
-    | '/_app/messages'
     | '/_app/profile'
     | '/_app/resources'
     | '/_app/settings'
@@ -395,13 +383,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMarketplaceRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/messages': {
-      id: '/_app/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof AppMessagesRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/profile': {
       id: '/_app/profile'
       path: '/profile'
@@ -464,7 +445,6 @@ interface AppRouteChildren {
   AppLeadsRoute: typeof AppLeadsRoute
   AppLessonsRoute: typeof AppLessonsRoute
   AppMarketplaceRoute: typeof AppMarketplaceRoute
-  AppMessagesRoute: typeof AppMessagesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppResourcesRoute: typeof AppResourcesRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -485,7 +465,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeadsRoute: AppLeadsRoute,
   AppLessonsRoute: AppLessonsRoute,
   AppMarketplaceRoute: AppMarketplaceRoute,
-  AppMessagesRoute: AppMessagesRoute,
   AppProfileRoute: AppProfileRoute,
   AppResourcesRoute: AppResourcesRoute,
   AppSettingsRoute: AppSettingsRoute,
