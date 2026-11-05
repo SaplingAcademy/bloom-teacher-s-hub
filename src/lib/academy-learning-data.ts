@@ -169,13 +169,6 @@ export async function setVideoCompleted(videoId: string, completed: boolean): Pr
   }
 }
 
-export type CourseProgressSummary = {
-  courseId: string;
-  startedCourseIds: string[];
-  completedLessonIds: string[];
-  lastLessonByCourse: Record<string, string | null>;
-};
-
 /** Caller's own progress rows for the home "Continue learning" section. */
 export async function fetchMyCourseProgress(): Promise<{
   startedCourseIds: string[];
