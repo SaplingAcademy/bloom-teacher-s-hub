@@ -539,12 +539,12 @@ function ResourcesPage() {
               {t.quickActions}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Button
+              <Button variant="ghost"
                 onClick={(e) => {
                   const temp = allTemplates.find((x) => x.id === "admin-student-contract");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
               >
                 <div className="rounded-xl bg-primary-soft p-2.5 text-primary border border-primary/10">
                   <FileText className="h-5 w-5" />
