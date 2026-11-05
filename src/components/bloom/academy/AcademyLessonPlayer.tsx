@@ -7,7 +7,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fetchCourseLearning, fetchLessonCourseId, recordLastLesson, setLessonCompleted } from "@/lib/academy-learning-data";
-import { buildCourseOutline, computeCourseProgress, flattenOutline, lessonNeighbors } from "@/lib/academy-learning";
+import { buildCourseOutline, computeCourseProgress, flattenOutline, lessonNeighbors, withLessonCompletion } from "@/lib/academy-learning";
 import { BackToAcademy, courseLearningKey } from "./AcademyCoursePage";
 import { LearningError, LearningLoading, LearningNotFound, ProgressBar, YoutubePlayer } from "./AcademyShared";
 
@@ -52,13 +52,47 @@ export function AcademyLessonPlayer({ lessonId }: { lessonId: string }) {
     });
   }, [courseId, lessonId, lessonFound]);
 
+  // Optimistic toggle: update cached completion instantly, save in the
+  // background, roll back on error. The button stays disabled while pending,
+  // so rapid repeated clicks cannot race the save.
   const toggle = useMutation({
     mutationFn: (completed: boolean) => setLessonCompleted(lessonId, completed),
-    onSuccess: () => {
+    onMutate: async (completed) => {
+      const courseKey = courseLearningKey(courseId ?? "");
+      const myProgressKey = ["academy-my-progress"] as const;
+      await queryClient.cancelQueries({ queryKey: courseKey });
+      await queryClient.cancelQueries({ queryKey: myProgressKey });
+      const previousCourse = queryClient.getQueryData<CourseLearningData>(courseKey);
+      const previousMyProgress = queryClient.getQueryData<MyCourseProgress>(myProgressKey);
+      if (previousCourse) {
+        queryClient.setQueryData<CourseLearningData>(courseKey, {
+          ...previousCourse,
+          completedLessonIds: withLessonCompletion(previousCourse.completedLessonIds, lessonId, completed),
+        });
+      }
+      if (previousMyProgress) {
+        queryClient.setQueryData<MyCourseProgress>(myProgressKey, {
+          ...previousMyProgress,
+          completedLessonIds: withLessonCompletion(previousMyProgress.completedLessonIds, lessonId, completed),
+        });
+      }
+      return { previousCourse, previousMyProgress };
+    },
+    onError: (_error, _completed, context) => {
+      if (courseId && context?.previousCourse) {
+        queryClient.setQueryData(courseLearningKey(courseId), context.previousCourse);
+      }
+      if (context?.previousMyProgress) {
+        queryClient.setQueryData(["academy-my-progress"], context.previousMyProgress);
+      }
+      toast.error(t("academy.learn.saveError"));
+    },
+    onSettled: () => {
+      // Background resync with the server; the optimistic state already
+      // rendered, so this never blocks or reloads the page.
       if (courseId) void queryClient.invalidateQueries({ queryKey: courseLearningKey(courseId) });
       void queryClient.invalidateQueries({ queryKey: ["academy-my-progress"] });
     },
-    onError: () => toast.error(t("academy.learn.saveError")),
   });
 
   if (courseIdQuery.isPending || (courseId && courseQuery.isPending)) return <LearningLoading />;
