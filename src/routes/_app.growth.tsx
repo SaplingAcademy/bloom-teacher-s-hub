@@ -55,6 +55,8 @@ import { PremiumBenefitsDialog, PremiumCardLock } from "@/components/bloom/Premi
 import { useFeatureAccess } from "@/hooks/use-plan";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { PanelSkeleton } from "@/components/bloom/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

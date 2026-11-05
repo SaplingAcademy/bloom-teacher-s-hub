@@ -33,6 +33,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { KanbanSkeleton, ListRowsSkeleton } from "@/components/bloom/skeletons";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
 import { LeadInteractionDialog } from "@/components/bloom/LeadInteractionDialog";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
