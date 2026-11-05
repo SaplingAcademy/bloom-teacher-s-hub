@@ -11,6 +11,8 @@
 - Manual history SQL patches only the installed RPC activity target, failing closed on an unfamiliar definition; never replace the live function with an older repository definition.
 # Roles & plans
 
+- Library metadata uses stable IDs in `library-catalog.ts`; template content stays in `library-templates.server.ts` and is returned only after `assert_library_resource_access` validates the actual session/plan. Every open/copy/generation reauthorizes; copies inherit the canonical source ID. Admin classifications use only the role-checking `set_library_resource_access` RPC; no content is duplicated in the database, and other resource tables/policies stay unchanged.
+
 - Roles (`user_roles`) and plans (`teacher_subscriptions`) are independent, server-authoritative tables; `plans.ts` holds only pure presentation/pre-flight rules and the UI never protects admin or paid features by itself.
 - The free-plan limit (5 active students; Active/Trial count, Inactive/Paused/Archived do not) is enforced by the `students` trigger with a per-teacher advisory lock; frontend checks are convenience only and must stay fail-open on read errors so the database decides.
 - The admin panel (`admin.ts`, `/admin`) reads and changes plans only through the `list_admin_teachers`/`set_teacher_plan` SECURITY DEFINER RPCs, which re-verify `has_role(auth.uid(), 'super_admin')`; the sidebar item is display-only, never the protection, and downgrade-to-free is blocked above 5 active students in the database.
