@@ -22,7 +22,8 @@ export type NoteCommand =
 export function prepareNoteDraft(draft: NoteDraft) {
   if (!draft.content.trim()) throw new Error("empty_content");
   if (!NOTE_COLORS.includes(draft.color)) throw new Error("invalid_color");
-  return { title: draft.title.trim() || null, content: draft.content.trim(), color: draft.color };
+  // Existing SQL defines title NOT NULL DEFAULT ''; optional means empty text, not NULL.
+  return { title: draft.title.trim(), content: draft.content.trim(), color: draft.color };
 }
 
 export function sortNotes(notes: readonly WorkspaceNote[]): WorkspaceNote[] {

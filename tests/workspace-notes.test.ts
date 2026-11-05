@@ -8,7 +8,7 @@ const note = (id: string, order_index: number, pinned = false): WorkspaceNote =>
 describe("personal Workspace notes", () => {
   it("requires nonblank content while leaving title optional", () => {
     expect(() => prepareNoteDraft({ title: "Title", content: " \n ", color: "yellow" })).toThrow("empty_content");
-    expect(prepareNoteDraft({ title: " ", content: " Reminder ", color: "mint" })).toEqual({ title: null, content: "Reminder", color: "mint" });
+    expect(prepareNoteDraft({ title: " ", content: " Reminder ", color: "mint" })).toEqual({ title: "", content: "Reminder", color: "mint" });
   });
   it("accepts precisely the seven existing saved colors", () => {
     expect(NOTE_COLORS).toEqual(["yellow", "peach", "mint", "lavender", "rose", "sky", "neutral"]);

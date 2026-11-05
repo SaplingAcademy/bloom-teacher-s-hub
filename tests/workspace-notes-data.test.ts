@@ -4,7 +4,7 @@ import type { WorkspaceNote } from "../src/lib/workspace-notes";
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn(), eq: vi.fn(), result: { data: null as unknown, error: null as unknown } }));
 vi.mock("@/lib/supabase", () => ({ supabase: { auth: { getUser: mocks.getUser }, from: mocks.from } }));
 import { fetchWorkspaceNotes, persistNoteCommand } from "../src/lib/workspace-notes-data";
-const saved: WorkspaceNote = { id: "n", user_id: "teacher", title: null, content: "hello", color: "yellow", pinned: false, order_index: 0, created_at: "now", updated_at: "now" };
+const saved: WorkspaceNote = { id: "n", user_id: "teacher", title: "", content: "hello", color: "yellow", pinned: false, order_index: 0, created_at: "now", updated_at: "now" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -29,7 +29,7 @@ describe("Workspace session-client persistence", () => {
   it("creates with Auth owner and editor ID, never client-supplied ownership", async () => {
     const command = { type: "create", id: "n", draft: { title: "", content: "hello", color: "yellow" } } as const;
     expect(await persistNoteCommand("teacher", command, [saved])).toEqual(saved);
-    expect(mocks.insert).toHaveBeenCalledWith({ id: "n", user_id: "teacher", title: null, content: "hello", color: "yellow", pinned: false, order_index: 0 });
+    expect(mocks.insert).toHaveBeenCalledWith({ id: "n", user_id: "teacher", title: "", content: "hello", color: "yellow", pinned: false, order_index: 0 });
     await expect(persistNoteCommand("teacher", command, [{ ...saved, user_id: "other" }])).rejects.toThrow("note_not_found");
   });
   it("pins using a single-column owner/id-scoped update with saved readback", async () => {
