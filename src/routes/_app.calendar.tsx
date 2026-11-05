@@ -1484,11 +1484,15 @@ function CalendarPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
           {/* DAY VIEW */}
           {viewMode === "day" && (
+            isLoadingEvents && events.length === 0 ? (
+              <CalendarRowsSkeleton label={t("auditUi.loading")} columns={1} />
+            ) : (
             <div className="divide-y divide-border">
               {gridHours.map((hour) => {
                 const dateStr = formatDateString(currentDate);
