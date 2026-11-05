@@ -5,6 +5,8 @@ import { coursePeriodFromStudent } from "@/lib/lesson-plan-period";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { t as i18nT } from "@/lib/i18n";
+import { usePlan } from "@/hooks/use-plan";
+import { canAddActiveStudent, countActiveStudents, isFreePlanLimitError } from "@/lib/plans";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
@@ -313,6 +315,8 @@ const translations = {
     reactivateStudent: "Reactivate student",
     detailsTitle: "Student Details",
     privateNotesTitle: "Private Student Notes",
+    planLimitReached:
+      "The free plan allows up to 5 active students at once. Archive or deactivate a student to add a new one, or upgrade to Pro.",
   },
   pt: {
     langToggle: "EN",
@@ -390,6 +394,8 @@ const translations = {
     reactivateStudent: "Reativar aluno",
     detailsTitle: "Detalhes do Aluno",
     privateNotesTitle: "Notas Privadas do Aluno",
+    planLimitReached:
+      "O plano gratuito permite até 5 alunos ativos simultâneos. Arquive ou desative um aluno para adicionar outro, ou faça upgrade para o Pro.",
   },
 };
 
@@ -595,6 +601,7 @@ function StudentsPage() {
     formatLanguageLabel,
   } = useTeacherLanguages();
   const { catalogOptions } = useCatalogOptions();
+  const { plan } = usePlan();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -1763,6 +1770,20 @@ function StudentsPage() {
       return;
     }
 
+    // Free-plan pre-flight: the database trigger remains the authority; this
+    // only avoids a needless round-trip when the limit is visibly reached.
+    if (
+      !editingStudentIdForModal &&
+      !canAddActiveStudent(
+        plan,
+        countActiveStudents(students.map((s) => s.status)),
+        formStatus || "Active",
+      )
+    ) {
+      toast.error(translations[lang].planLimitReached);
+      return;
+    }
+
     setIsSaving(true);
 
     const scheduleString = formLinkedGroupId 
@@ -1899,7 +1920,11 @@ function StudentsPage() {
       openPriorPaymentsIfNeeded();
     } catch (error: any) {
       console.error("[Students] Error saving student via modal:", error);
-      toast.error(reportUserError(error, i18nT("classes.toastSaveError", lang)));
+      if (isFreePlanLimitError(error)) {
+        toast.error(translations[lang].planLimitReached);
+      } else {
+        toast.error(reportUserError(error, i18nT("classes.toastSaveError", lang)));
+      }
     } finally {
       setIsSaving(false);
     }

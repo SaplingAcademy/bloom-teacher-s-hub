@@ -9,3 +9,7 @@
 - `lead-conversion.ts` copies the shared profile draft literally and supplies explicit NULL RPC arguments; shared catalog selectors change only teacher selections, never historical IDs or labels.
 - Keep conversion writes inside the existing RPC and respect its already-converted guard before schedule recreation; conversion history reads union lead-targeted activity with conversion-only activity linked through the owner-scoped canonical lead event, deduplicating by activity ID without backfill.
 - Manual history SQL patches only the installed RPC activity target, failing closed on an unfamiliar definition; never replace the live function with an older repository definition.
+# Roles & plans
+
+- Roles (`user_roles`) and plans (`teacher_subscriptions`) are independent, server-authoritative tables; `plans.ts` holds only pure presentation/pre-flight rules and the UI never protects admin or paid features by itself.
+- The free-plan limit (5 active students; Active/Trial count, Inactive/Paused/Archived do not) is enforced by the `students` trigger with a per-teacher advisory lock; frontend checks are convenience only and must stay fail-open on read errors so the database decides.
