@@ -1590,6 +1590,9 @@ function CalendarPage() {
               </div>
 
               {/* Month dates grid (35 dynamic cells for current month) */}
+              {isLoadingEvents && events.length === 0 ? (
+                <MonthGridSkeleton label={t("auditUi.loading")} />
+              ) : (
               <div className="grid grid-cols-7 gap-1">
                 {(() => {
                   const mYear = currentDate.getFullYear();
