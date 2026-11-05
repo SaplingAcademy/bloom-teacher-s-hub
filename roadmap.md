@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Academy: add PT/EN Coming Soon navigation/page for Free and Pro; private construction page for server-verified super_admin only, keeping publication separate from entitlement. No courses, uploads, tables or SQL execution.
+- [ ] Verify only Academy access rules, its server authorization and desktop/mobile navigation; report any SQL dependency and real authenticated verification limits.
+
 - [x] Stage 2A: retain all 23 original templates verbatim with stable metadata IDs; move content server-only and add actual authenticated database assertions at preview/use/duplicate/generate/copy. Copies retain original classification; complete paginated reads and 30-second/focus refresh never substitute unknown permissions for Free.
 - [x] Add only super_admin Library administration with search/category/current classification and confirmed RPC saved read-back. Prepare docs/migrations/20261105060000_library_access_manual.sql: one classification table, 23 literal Free seed rows, authorized access/admin RPCs, no unrelated RLS changes or SQL execution.
 - [x] Run only library-access, library-content and plans tests: all 33 passed; original content preservation verified; automatic preview compilation OK. Real desktop/mobile /resources and /admin redirect to /auth without runtime errors, not an authenticated flow verification.
