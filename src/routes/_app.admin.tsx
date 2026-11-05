@@ -144,22 +144,22 @@ function AdminPage() {
       {/* Indicators */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
-          title={t("admin.statsTeachers")}
+          label={t("admin.statsTeachers")}
           value={String(stats.totalTeachers)}
           icon={Users}
         />
         <StatCard
-          title={t("admin.statsFree")}
+          label={t("admin.statsFree")}
           value={String(stats.freeTeachers)}
           icon={GraduationCap}
         />
         <StatCard
-          title={t("admin.statsPro")}
+          label={t("admin.statsPro")}
           value={String(stats.proTeachers)}
           icon={Crown}
         />
         <StatCard
-          title={t("admin.statsActiveStudents")}
+          label={t("admin.statsActiveStudents")}
           value={String(stats.totalActiveStudents)}
           icon={ShieldCheck}
         />
@@ -227,13 +227,9 @@ function AdminPage() {
                       <p className="truncate text-sm text-muted-foreground">{teacher.email}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {t("admin.activeStudentsCount", {
-                        count: String(teacher.active_students),
-                      })}
+                      {`${teacher.active_students} ${t("admin.activeStudentsCount")}`}
                       {teacher.created_at
-                        ? ` · ${t("admin.memberSince", {
-                            date: new Date(teacher.created_at).toLocaleDateString(),
-                          })}`
+                        ? ` · ${t("admin.memberSince")} ${new Date(teacher.created_at).toLocaleDateString()}`
                         : ""}
                     </p>
                   </div>
@@ -264,9 +260,7 @@ function AdminPage() {
                     )}
                     {downgradeBlocked && (
                       <p className="max-w-56 text-right text-xs text-muted-foreground">
-                        {t("admin.downgradeBlockedHint", {
-                          limit: String(FREE_PLAN_ACTIVE_STUDENT_LIMIT),
-                        })}
+                        {t("admin.downgradeBlockedHint")}
                       </p>
                     )}
                   </div>
@@ -288,13 +282,8 @@ function AdminPage() {
             </DialogTitle>
             <DialogDescription>
               {pendingChange?.targetPlan === "pro"
-                ? t("admin.confirmUpgradeDescription", {
-                    name: pendingChange ? teacherName(pendingChange.teacher) : "",
-                  })
-                : t("admin.confirmDowngradeDescription", {
-                    name: pendingChange ? teacherName(pendingChange.teacher) : "",
-                    limit: String(FREE_PLAN_ACTIVE_STUDENT_LIMIT),
-                  })}
+                ? `${t("admin.confirmUpgradeDescription")} ${pendingChange ? teacherName(pendingChange.teacher) : ""}`
+                : `${t("admin.confirmDowngradeDescription")} ${pendingChange ? teacherName(pendingChange.teacher) : ""}`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
