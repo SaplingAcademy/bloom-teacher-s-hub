@@ -251,7 +251,7 @@ export function ChecklistCard() {
           </div> : <div ref={carouselRef} role="region" aria-roledescription="carousel" aria-label={t("checklist.carouselLabel")}
             tabIndex={0} onKeyDown={carouselKeys} className="min-h-0 overflow-hidden focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring xl:flex-1">
             <div className="flex h-full touch-pan-y">
-              <div role="group" aria-roledescription="slide" aria-label={t("checklist.currentSlide")} aria-hidden={selected !== 0}
+              <div role="group" aria-roledescription="slide" aria-label={t("checklist.currentSlide")} aria-hidden={selected !== 0} inert={selected !== 0 ? true : undefined}
                 className="flex min-h-0 min-w-0 flex-[0_0_100%] flex-col">
                 <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5">
                   <form onSubmit={add} className="space-y-2">
@@ -277,7 +277,7 @@ export function ChecklistCard() {
                 </footer>}
               </div>
 
-              <div role="group" aria-roledescription="slide" aria-label={t("checklist.historySlide")} aria-hidden={selected !== 1}
+              <div role="group" aria-roledescription="slide" aria-label={t("checklist.historySlide")} aria-hidden={selected !== 1} inert={selected !== 1 ? true : undefined}
                 className="flex min-h-0 min-w-0 flex-[0_0_100%] flex-col">
                 <div className="shrink-0 px-4 pb-2 pt-4 text-xs text-muted-foreground sm:px-5">{t("checklist.historyDescription")}</div>
                 {history.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">

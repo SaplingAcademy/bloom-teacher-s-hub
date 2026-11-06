@@ -70,6 +70,16 @@ describe("Checklist optimistic cache and independence", () => {
     expect(client.getQueryData<TeacherChecklistItem[]>(["teacher-checklist", "teacher"])?.map((item) => [item.id, item.title])).toEqual([["one", "one"], ["two", "Saved edit"]]);
     expect(mocks.toast).toHaveBeenCalledOnce();
   });
+  it("moves a recovered row to its new deadline immediately without inserting or refetching", async () => {
+    await mount(); await ready();
+    mocks.write.mockResolvedValue({ item: { ...row("one"), deadline_type: "today", due_date: "2026-11-06" } });
+    await act(async () => { await state.execute({ type: "recover", id: "one", deadline: { deadline_type: "today", due_date: "2026-11-06" } }); });
+    expect(client.getQueryData<TeacherChecklistItem[]>(["teacher-checklist", "teacher"])?.find((item) => item.id === "one")).toMatchObject({
+      id: "one", completed: false, deadline_type: "today", due_date: "2026-11-06",
+    });
+    expect(mocks.write).toHaveBeenCalledOnce();
+    expect(mocks.read).toHaveBeenCalledTimes(1);
+  });
   it("keeps read failure distinct from an empty successful checklist", async () => {
     mocks.read.mockRejectedValueOnce(new Error("RLS"));
     await mount(); await ready();
