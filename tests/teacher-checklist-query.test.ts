@@ -63,8 +63,8 @@ describe("Checklist optimistic cache and independence", () => {
       ? new Promise((_resolve, reject) => { fail = reject; })
       : Promise.resolve({ item: { ...row("two"), title: "Saved edit" } }));
     let failed: Promise<boolean> | undefined;
-    await act(async () => { failed = state.execute({ type: "edit", id: "one", title: "Failed edit" }); });
-    await act(async () => { await state.execute({ type: "edit", id: "two", title: "Saved edit" }); });
+    await act(async () => { failed = state.execute({ type: "edit", id: "one", title: "Failed edit", deadline: NONE }); });
+    await act(async () => { await state.execute({ type: "edit", id: "two", title: "Saved edit", deadline: NONE }); });
     mocks.read.mockReturnValue(new Promise(() => undefined));
     await act(async () => { fail?.(new Error("network")); expect(await failed).toBe(false); });
     expect(client.getQueryData<TeacherChecklistItem[]>(["teacher-checklist", "teacher"])?.map((item) => [item.id, item.title])).toEqual([["one", "one"], ["two", "Saved edit"]]);
