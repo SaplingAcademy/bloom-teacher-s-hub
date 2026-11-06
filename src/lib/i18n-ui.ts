@@ -1559,7 +1559,14 @@ export const uiTranslations = {
       "clearOne": "The completed task will be permanently deleted. Pending tasks will be kept.", "confirmClear": "Delete completed",
       "loadError": "Could not load your Checklist.", "saveError": "Could not save this change. Please try again.",
       "retry": "Try again", "loading": "Loading Checklist…", "saving": "Saving…", "required": "Enter a task.",
-      "listLabel": "Personal tasks", "saveEdit": "Save task", "cancelEdit": "Cancel editing"
+      "listLabel": "Personal tasks", "saveEdit": "Save task", "cancelEdit": "Cancel editing",
+      "history": "History", "historyListLabel": "Overdue pending tasks", "historyDescription": "Incomplete tasks whose deadline has passed.",
+      "historyEmpty": "No overdue pending tasks", "historyEmptyDescription": "Tasks with a past deadline will appear here without being deleted.",
+      "overdue": "Overdue", "overdueCount": "{count} overdue", "overdueOne": "1 overdue", "originalDue": "Original deadline: {date}",
+      "deadlineLabel": "Task deadline", "noDeadline": "No deadline", "deadlineToday": "Today", "deadlineSpecific": "Specific deadline", "specificDate": "Due date",
+      "recover": "Recover task", "recoverTitle": "Recover overdue task", "recoverDescription": "Choose a new deadline. The original deadline was {date}.",
+      "confirmRecover": "Recover to Checklist", "carouselLabel": "Checklist and overdue history", "currentSlide": "Slide 1 of 2: Checklist",
+      "historySlide": "Slide 2 of 2: History", "navigationLabel": "Checklist navigation", "showChecklist": "Show Checklist", "showHistory": "Show History"
     },
     "workspace": {
       "title": "Workspace", "eyebrow": "Your organization space",

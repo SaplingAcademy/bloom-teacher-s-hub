@@ -1,6 +1,7 @@
 # Today priorities
 
 - `DailyPrioritiesCard` reads through `useDailyPrioritiesQuery`, keyed by teacher and local day; cached content remains visible during mandatory remount revalidation. Inactivity automation runs concurrently and invalidates only after creating tasks, so priority reads never wait for automation writes and caches never cross accounts or days.
+- `ChecklistCard` derives current/history screens from the same teacher-scoped `teacher_checklist_items` cache using local calendar dates; deadline edits and recovery update the same row through the existing optimistic command path, with no extra priority queries or browser-only task storage.
 
 # Pedagogical settings editor
 
