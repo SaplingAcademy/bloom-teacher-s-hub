@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -11,15 +11,14 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
-import {
+import type {
   DailyPriorityCategory,
   DailyPriorityItem,
   DailyPriorityUrgency,
-  fetchDailyPriorities,
 } from "@/lib/daily-priorities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
+import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
@@ -77,29 +76,10 @@ function fill(template: string, params: Record<string, string | number>): string
 export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<DailyPriorityItem[]>([]);
-  const [failed, setFailed] = useState<DailyPriorityCategory[]>([]);
   const [filter, setFilter] = useState<CategoryFilter>("all");
-
-  const loadPriorities = async () => {
-    if (!teacherId) return;
-    try {
-      await runInactiveLeadCheckOnLoad(teacherId);
-      const res = await fetchDailyPriorities(teacherId, new Date());
-      setItems(res.items);
-      setFailed(res.failed);
-    } catch (err) {
-      console.error("[DailyPrioritiesCard] Error loading priorities:", err);
-      setFailed(CATEGORY_ORDER);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPriorities();
-  }, [teacherId]);
+  const { data, isLoading: loading, isError } = useDailyPrioritiesQuery(teacherId);
+  const items = data?.items ?? [];
+  const failed = isError ? CATEGORY_ORDER : (data?.failed ?? []);
 
   const locale = lang === "pt" ? "pt-BR" : "en-US";
 

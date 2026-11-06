@@ -1,3 +1,7 @@
+# Today priorities
+
+- `DailyPrioritiesCard` reads through `useDailyPrioritiesQuery`, keyed by teacher and local day; cached content remains visible during mandatory remount revalidation. Inactivity automation runs concurrently and invalidates only after creating tasks, so priority reads never wait for automation writes and caches never cross accounts or days.
+
 # Pedagogical settings editor
 
 - Keep teaching-options drafts in pure `src/lib/catalog-editor.ts` operations; IDs are generated once and never edited or derived from labels, so renames preserve identity.
