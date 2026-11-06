@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Calendar drag preview: removed the floating date/duration tag and grid target label; the cloned lesson card now shows the complete quarter-hour destination interval and restores its original time while returning after cancellation/failure. Scheduling, confirmations, persistence and outcome animations unchanged. Seven focused tests passed and automatic preview builds are OK; no SQL.
+
 - [x] Calendar drag polish: Pointer Events floating clone with direct rAF transform painting, original-card fading, quarter-hour/duration feedback, pending/return/settle outcomes, canonical destination alignment, 450ms touch hold and reduced motion. Existing confirmation/persistence helpers and occurrence rules remain unchanged; no SQL or other modules. 40 focused tests, typecheck and production build passed; real-component Chromium checks passed mouse tracking, save/cancel/Escape, reduced motion, native pre-hold touch scrolling and long-press activation. Authenticated production save/readback remains unverified because no teacher session is available.
 
 - [x] Dashboard Urgent: existing high-urgency card now sits after the main indicators and above the unchanged 2/3–1/3 Priorities/Checklist grid; it renders nothing during initial loading, with no high-urgency items, or after a refresh confirms resolution. Existing urgency queries, actions and automation remain unchanged. 14 focused Vitest cases plus 4 priority integration tests passed; automatic builds OK. No SQL or real-data changes; authenticated production resolution was not exercised.

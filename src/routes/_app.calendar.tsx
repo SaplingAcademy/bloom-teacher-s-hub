@@ -1427,11 +1427,6 @@ function CalendarPage() {
                               : "bg-card hover:bg-secondary/10"
                           } ${weekDrag.target?.date === dateStr && weekDrag.target.hour === hour ? "ring-2 ring-inset ring-primary bg-primary-soft/30" : ""}`}
                         >
-                          {weekDrag.target?.date === dateStr && weekDrag.target.hour === hour && (
-                            <span className="pointer-events-none absolute bottom-0 right-0 z-10 max-w-full truncate rounded bg-primary px-1 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                              {dateStr} · {weekDrag.target.startTime}
-                            </span>
-                          )}
                           {cellEvents.map((evt) => {
                             const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
                             const colorMeta = eventColor(evt);
@@ -1455,7 +1450,7 @@ function CalendarPage() {
                                 {evt.studentName}
                               </div>
                               <div className="min-w-0 text-[10px] font-semibold flex items-center justify-between gap-1 opacity-80">
-                                <span className="min-w-0 truncate">
+                                <span data-calendar-event-time="" className="min-w-0 truncate">
                                   {fmtTime(evt.startTime)}–{fmtTime(evt.endTime)}
                                 </span>
                                 {evt.eventType !== "custom" && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}

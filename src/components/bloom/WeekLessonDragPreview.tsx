@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Check, Clock, LoaderCircle } from "lucide-react";
+import { Check, LoaderCircle } from "lucide-react";
 import type { WeekDropTarget, WeekLessonDragPreview as WeekLessonDragPreviewState } from "@/hooks/use-week-lesson-drag";
 
 interface WeekLessonDragPreviewProps {
@@ -11,6 +11,15 @@ interface WeekLessonDragPreviewProps {
   destinationLabel: string;
   pendingLabel: string;
   savedLabel: string;
+}
+
+export function weekLessonPreviewTimeRange(startTime: string, duration?: number) {
+  const start = startTime.slice(0, 5);
+  const [hours, minutes] = start.split(":").map(Number);
+  if (!duration || duration <= 0 || !Number.isFinite(duration) || !Number.isFinite(hours) || !Number.isFinite(minutes)) return start;
+  const end = (hours * 60 + minutes + Math.round(duration)) % (24 * 60);
+  const endTime = `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
+  return `${start}–${endTime}`;
 }
 
 /** A temporary visual clone; it never owns event data or scheduling behavior. */
@@ -24,6 +33,7 @@ export function WeekLessonDragPreview({
   savedLabel,
 }: WeekLessonDragPreviewProps) {
   const cloneContainer = useRef<HTMLDivElement | null>(null);
+  const originalTime = useRef("");
 
   useLayoutEffect(() => {
     const container = cloneContainer.current;
@@ -42,9 +52,18 @@ export function WeekLessonDragPreview({
     clone.style.transform = "none";
     clone.style.transition = "none";
     clone.querySelectorAll<HTMLElement>("[id]").forEach((element) => element.removeAttribute("id"));
+    originalTime.current = clone.querySelector<HTMLElement>("[data-calendar-event-time]")?.textContent ?? "";
     container.replaceChildren(clone);
     return () => container.replaceChildren();
   }, [preview?.source]);
+
+  useLayoutEffect(() => {
+    const time = cloneContainer.current?.querySelector<HTMLElement>("[data-calendar-event-time]");
+    if (!time || !preview) return;
+    time.textContent = target && preview.phase !== "returning"
+      ? weekLessonPreviewTimeRange(target.startTime, duration)
+      : originalTime.current;
+  }, [duration, preview, preview?.phase, preview?.source, target]);
 
   if (!preview || typeof document === "undefined") return null;
   const accessibleStatus = preview.phase === "pending"
@@ -66,15 +85,6 @@ export function WeekLessonDragPreview({
         style={{ width: preview.origin.width }}
       >
         <div ref={cloneContainer} className="pointer-events-none" />
-        {target && preview.phase !== "returning" && (
-          <div className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-card px-2 py-1 text-[10px] font-semibold text-foreground shadow-lg">
-            <span className="flex min-w-0 items-center gap-1.5 truncate">
-              <Clock className="h-3 w-3 shrink-0 text-primary" />
-              <span className="truncate">{target.date} · {target.startTime}</span>
-            </span>
-            {duration ? <span className="shrink-0 text-muted-foreground">{duration} min</span> : null}
-          </div>
-        )}
         {preview.phase === "pending" && (
           <div role="presentation" className="mt-1 flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5 text-[10px] font-medium text-foreground shadow-lg">
             <LoaderCircle className="h-3 w-3 shrink-0 animate-spin text-primary motion-reduce:animate-none" />
