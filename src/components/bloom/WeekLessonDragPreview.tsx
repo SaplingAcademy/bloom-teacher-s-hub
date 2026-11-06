@@ -59,6 +59,8 @@ export function WeekLessonDragPreview({
     <>
       <div
         ref={previewRef}
+        data-calendar-drag-preview=""
+        data-drag-phase={preview.phase}
         aria-hidden="true"
         className="pointer-events-none fixed left-0 top-0 z-40 select-none will-change-transform motion-reduce:will-change-auto"
         style={{ width: preview.origin.width }}

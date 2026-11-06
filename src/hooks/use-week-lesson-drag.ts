@@ -189,7 +189,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       if (frame.current === null) {
         frame.current = requestAnimationFrame(() => {
           frame.current = null;
-          paint(event.clientX - active.grabX, event.clientY - active.grabY);
+          paint(active.latestX - active.grabX, active.latestY - active.grabY);
         });
       }
     };
