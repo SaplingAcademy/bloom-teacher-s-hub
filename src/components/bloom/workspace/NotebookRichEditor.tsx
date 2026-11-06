@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/hooks/use-language";
 import { normalizeDocument, safeNotebookLink, type RichDocument } from "@/lib/workspace-notebooks";
+import { NotebookFormatting } from "@/lib/notebook-formatting";
 
 export function NotebookRichEditor({ document, onChange, editable = true, onReady }: { document: RichDocument; onChange: (document: RichDocument) => void; editable?: boolean; onReady?: (editor: Editor | null) => void }) {
   const { t } = useLanguage();
@@ -21,7 +22,7 @@ export function NotebookRichEditor({ document, onChange, editable = true, onRead
     immediatelyRender: false,
     editable,
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, blockquote: false, code: false, codeBlock: false, horizontalRule: false, strike: false,
-      link: { openOnClick: true, autolink: true, defaultProtocol: "https", protocols: ["http", "https"], isAllowedUri: (url) => Boolean(safeNotebookLink(url)), HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" } } }), TaskList, TaskItem.configure({ nested: true, a11y: { checkboxLabel: (node) => `${t("workspace.notebook.tools.taskList")}: ${node.textContent}` } })],
+      link: { openOnClick: true, autolink: true, defaultProtocol: "https", protocols: ["http", "https"], isAllowedUri: (url) => Boolean(safeNotebookLink(url)), HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" } } }), TaskList, TaskItem.configure({ nested: true, a11y: { checkboxLabel: (node) => `${t("workspace.notebook.tools.taskList")}: ${node.textContent}` } }), NotebookFormatting],
     content: document,
     editorProps: { attributes: { class: "notebook-prose", role: "textbox", "aria-multiline": "true", "aria-label": t("workspace.notebook.contentLabel") } },
     onUpdate: ({ editor }) => onChange(normalizeDocument(editor.getJSON())),
@@ -36,7 +37,7 @@ export function NotebookRichEditor({ document, onChange, editable = true, onRead
     heading: [1, 2, 3].find((level) => editor.isActive("heading", { level })) ?? 0,
     undo: editor.can().undo(), redo: editor.can().redo(),
   } : null });
-  const tool = (key: string, Icon: LucideIcon, run: () => void, active = false, disabled = false) => <Tooltip key={key}><TooltipTrigger asChild><Button type="button" size="icon" variant={active ? "secondary" : "ghost"} className="h-8 w-8 shrink-0" aria-label={t(`workspace.notebook.tools.${key}`)} aria-pressed={active} disabled={!editor || !editable || disabled} onClick={run}><Icon className="h-4 w-4" aria-hidden /></Button></TooltipTrigger><TooltipContent>{t(`workspace.notebook.tools.${key}`)}</TooltipContent></Tooltip>;
+  const tool = (key: string, Icon: LucideIcon, run: () => void, active = false, disabled = false) => <Tooltip key={key}><TooltipTrigger asChild><Button type="button" size="icon" variant={active ? "secondary" : "ghost"} className="h-8 w-8 shrink-0" aria-label={t(`workspace.notebook.tools.${key}`)} aria-pressed={active} disabled={!editor || !editable || disabled} onMouseDown={(event) => event.preventDefault()} onClick={run}><Icon className="h-4 w-4" aria-hidden /></Button></TooltipTrigger><TooltipContent>{t(`workspace.notebook.tools.${key}`)}</TooltipContent></Tooltip>;
   return <div className="min-w-0">
     <TooltipProvider delayDuration={300}><div role="toolbar" aria-label={t("workspace.notebook.formatting")} className="flex flex-wrap items-center gap-0.5 border-y border-border bg-muted/30 px-3 py-2 sm:px-5">
       <Select value={String(state?.heading ?? 0)} onValueChange={(value) => { if (!editor) return; const level = Number(value); if (level === 1 || level === 2 || level === 3) editor.chain().focus().toggleHeading({ level }).run(); else editor.chain().focus().setParagraph().run(); }}><SelectTrigger className="mr-2 h-8 w-32 border-0 bg-transparent text-xs shadow-none" aria-label={t("workspace.notebook.tools.style")}><SelectValue /></SelectTrigger><SelectContent>{[0, 1, 2, 3].map((level) => <SelectItem key={level} value={String(level)}>{t(`workspace.notebook.tools.h${level}`)}</SelectItem>)}</SelectContent></Select>
