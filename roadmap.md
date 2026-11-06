@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Calendar drag preview: remove the floating date/duration tag and grid target label; show the complete quarter-hour destination interval inside the cloned lesson card only, preserving scheduling, confirmations, persistence and outcome animations. Focused tests and automatic build required; no SQL.
+- [x] Calendar drag preview: removed the floating date/duration tag and grid target label; the cloned lesson card now shows the complete quarter-hour destination interval and restores its original time while returning after cancellation/failure. Scheduling, confirmations, persistence and outcome animations unchanged. Seven focused tests passed and automatic preview builds are OK; no SQL.
 
 - [x] Calendar drag polish: Pointer Events floating clone with direct rAF transform painting, original-card fading, quarter-hour/duration feedback, pending/return/settle outcomes, canonical destination alignment, 450ms touch hold and reduced motion. Existing confirmation/persistence helpers and occurrence rules remain unchanged; no SQL or other modules. 40 focused tests, typecheck and production build passed; real-component Chromium checks passed mouse tracking, save/cancel/Escape, reduced motion, native pre-hold touch scrolling and long-press activation. Authenticated production save/readback remains unverified because no teacher session is available.
 
