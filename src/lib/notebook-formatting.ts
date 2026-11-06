@@ -1,5 +1,5 @@
 import { commands, Extension, type RawCommands } from "@tiptap/core";
-import { Fragment } from "@tiptap/pm/model";
+import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 
 const listNames = new Set(["bulletList", "orderedList", "taskList"]);
@@ -20,9 +20,11 @@ export const toggleNotebookList: RawCommands["toggleList"] =
 
     const source = $from.node(depth), listPos = $from.before(depth);
     const start = $from.index(depth), end = $to.index(depth) + 1;
-    const before = source.content.cutByIndex(0, start), selected = source.content.cutByIndex(start, end);
-    const after = source.content.cutByIndex(end, source.childCount);
-    const converted = [];
+    const items: ProseMirrorNode[] = [];
+    source.forEach((item) => items.push(item));
+    const before = Fragment.fromArray(items.slice(0, start)), selected = Fragment.fromArray(items.slice(start, end));
+    const after = Fragment.fromArray(items.slice(end));
+    const converted: ProseMirrorNode[] = [];
     for (let index = 0; index < selected.childCount; index += 1) {
       const item = selected.child(index);
       // Only the selected item's wrapper changes. Its text, marks and nested lists remain intact.
