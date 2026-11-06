@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BookText } from "lucide-react";
-import { WorkspaceEmptyState, WorkspaceGridSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
-import { useLanguage } from "@/hooks/use-language";
+import { WorkspaceGridSkeleton } from "@/components/bloom/workspace/WorkspaceShell";
+import { NotebooksList } from "@/components/bloom/workspace/NotebooksList";
 
 export const Route = createFileRoute("/_app/workspace/notebooks")({
   head: () => ({
@@ -15,10 +14,5 @@ export const Route = createFileRoute("/_app/workspace/notebooks")({
     ],
   }),
   pendingComponent: () => <WorkspaceGridSkeleton />,
-  component: NotebooksPage,
+  component: NotebooksList,
 });
-
-function NotebooksPage() {
-  const { t } = useLanguage();
-  return <WorkspaceEmptyState icon={BookText} title={t("workspace.notebooks.emptyTitle")} body={t("workspace.notebooks.emptyBody")} />;
-}
