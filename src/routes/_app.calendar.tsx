@@ -1450,7 +1450,7 @@ function CalendarPage() {
                                 {evt.studentName}
                               </div>
                               <div className="min-w-0 text-[10px] font-semibold flex items-center justify-between gap-1 opacity-80">
-                                <span className="min-w-0 truncate">
+                                <span data-calendar-event-time="" className="min-w-0 truncate">
                                   {fmtTime(evt.startTime)}–{fmtTime(evt.endTime)}
                                 </span>
                                 {evt.eventType !== "custom" && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}

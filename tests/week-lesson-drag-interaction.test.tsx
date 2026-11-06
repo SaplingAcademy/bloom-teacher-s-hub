@@ -115,17 +115,24 @@ describe("week drag presentation lifecycle", () => {
     await startMouseDrag();
     const preview = document.querySelector<HTMLElement>("[data-calendar-drag-preview]")!;
     expect(preview.textContent).toContain("Julia · English");
-    expect(preview.textContent).toContain("16:30");
-    expect(preview.textContent).toContain("60 min");
+    expect(preview.textContent).toContain("16:30–17:30");
+    expect(preview.textContent).not.toContain("2026-11-06");
+    expect(preview.textContent).not.toContain("60 min");
     expect(preview.style.transform).toBe("translate3d(300px, 112px, 0)");
 
-    await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 132 }); });
-    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ date: "2026-11-06", startTime: "16:30" }));
+    await act(async () => { pointer(window, "pointermove", { clientX: 310, clientY: 148 }); });
+    await act(async () => { flushRaf(); });
+    expect(preview.textContent).toContain("16:45–17:45");
+
+    await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 148 }); });
+    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ date: "2026-11-06", startTime: "16:45" }));
     expect(preview.dataset.dragPhase).toBe("pending");
     expect(preview.textContent).toContain("Saving new time...");
 
     await act(async () => { rejectDrop(false); });
     expect(preview.dataset.dragPhase).toBe("returning");
+    expect(preview.textContent).toContain("10:00–11:00");
+    expect(preview.textContent).not.toContain("16:45–17:45");
     expect(preview.style.transform).toBe("translate3d(100px, 100px, 0)");
     expect(preview.style.transition).toContain(`${WEEK_DRAG_TRANSITION_MS}ms`);
     await act(async () => { vi.advanceTimersByTime(WEEK_DRAG_TRANSITION_MS); });
