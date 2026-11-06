@@ -88,6 +88,7 @@ import { CalendarColorPicker } from "@/components/bloom/CalendarColorPicker";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialog";
 import { useWeekLessonDrag } from "@/hooks/use-week-lesson-drag";
+import { WeekLessonDragPreview } from "@/components/bloom/WeekLessonDragPreview";
 import { useRescheduleConfirmation } from "@/hooks/use-reschedule-confirmation";
 import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDialog";
 import { useHomeworkStatus } from "@/hooks/use-homework-status";
@@ -594,30 +595,32 @@ function CalendarPage() {
 
   const weekDrag = useWeekLessonDrag(async (eventId, position) => {
     const event = events.find((item) => item.id === eventId);
-    if (!event || pendingMoves.current.has(eventId)) return;
-    if (event.date === position.date && fmtTime(event.startTime) === position.startTime) return;
+    if (!event || pendingMoves.current.has(eventId)) return false;
+    if (event.date === position.date && fmtTime(event.startTime) === position.startTime) return false;
     pendingMoves.current.add(eventId);
     setMovingIds(new Set(pendingMoves.current));
     try {
       if (event.eventType === "custom") {
-        if (!user?.id) return;
+        if (!user?.id) return false;
         await moveCustomEvent(user.id, eventId, position.date, position.startTime, event.duration);
         await queryClient.invalidateQueries({ queryKey: ["growth-data", user.id] });
         await fetchEvents();
-        return;
+        return true;
       }
       const result = await rescheduleConfirmation.request(eventId, position.date, position.startTime);
-      if (!result) return;
+      if (!result) return false;
       if (!result.ok) {
         const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
         const reason = known.includes(result.reason) ? result.reason : "save_failed";
         toast.error(t(`calendarUi.rescheduleErr_${reason}`));
-        return;
+        return false;
       }
       // Read back the canonical saved occurrence; no optimistic move or local storage writes.
       await fetchEvents();
+      return true;
     } catch (error) {
       toast.error(t(event.eventType === "custom" ? `customCalendar.${customEventErrorKey(error)}` : "calendarUi.rescheduleErr_save_failed"));
+      return false;
     } finally {
       pendingMoves.current.delete(eventId);
       setMovingIds(new Set(pendingMoves.current));
@@ -1436,6 +1439,7 @@ function CalendarPage() {
                               <div
                                 key={evt.id}
                                 data-calendar-event=""
+                                data-calendar-event-id={evt.id}
                                 aria-busy={movingIds.has(evt.id)}
                                 onPointerDown={(event) => {
                                   if (canDrag && !pendingMoves.current.has(evt.id)) weekDrag.start(event, evt.id);
@@ -1445,7 +1449,7 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
@@ -1529,13 +1533,14 @@ function CalendarPage() {
                             <div
                               key={evt.id}
                               data-calendar-event=""
+                              data-calendar-event-id={evt.id}
                               onPointerDown={(event) => { if (evt.eventType === "custom" && !movingIds.has(evt.id)) weekDrag.start(event, evt.id); }}
                               onClick={() => {
                                 if (evt.eventType === "custom" && (weekDrag.consumeClick(evt.id) || pendingMoves.current.has(evt.id))) return;
                                 setSelectedEvent(evt);
                                 setNotesText(evt.notes || "");
                               }}
-                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? `${colorMeta ? `${colorMeta.cardTintClass} border-l-4 ${colorMeta.borderClass}` : "bg-lilac-soft border-lilac/40"} border-dashed touch-none select-none cursor-grab` : colorMeta?.cardTintClass} ${
+                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? `${colorMeta ? `${colorMeta.cardTintClass} border-l-4 ${colorMeta.borderClass}` : "bg-lilac-soft border-lilac/40"} border-dashed touch-auto select-none cursor-grab` : colorMeta?.cardTintClass} ${
                                 evt.eventType === "custom" ? "" : colorMeta && colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
                               }`}
                             >
@@ -1695,6 +1700,15 @@ function CalendarPage() {
         onRequestReschedule={rescheduleConfirmation.request}
       />
       <RescheduleWarningDialog warnings={rescheduleConfirmation.warnings} onAnswer={rescheduleConfirmation.respond} />
+      <WeekLessonDragPreview
+        preview={weekDrag.preview}
+        target={weekDrag.target}
+        duration={events.find((event) => event.id === weekDrag.draggedId)?.duration}
+        previewRef={weekDrag.previewRef}
+        destinationLabel={t("calendarUi.dragDestination")}
+        pendingLabel={t(rescheduleConfirmation.warnings.length ? "calendarUi.dragConfirmWarnings" : "calendarUi.dragSaving")}
+        savedLabel={t("calendarUi.dragSaved")}
+      />
 
       {/* SIDE DETAILS MODAL PANEL */}
       {(isNewEventOpen || selectedEvent?.eventType === "custom") && <CustomCalendarEventDialog
