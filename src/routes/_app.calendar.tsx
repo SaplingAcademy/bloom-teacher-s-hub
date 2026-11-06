@@ -1449,7 +1449,7 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-none select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
@@ -1700,6 +1700,15 @@ function CalendarPage() {
         onRequestReschedule={rescheduleConfirmation.request}
       />
       <RescheduleWarningDialog warnings={rescheduleConfirmation.warnings} onAnswer={rescheduleConfirmation.respond} />
+      <WeekLessonDragPreview
+        preview={weekDrag.preview}
+        target={weekDrag.target}
+        duration={events.find((event) => event.id === weekDrag.draggedId)?.duration}
+        previewRef={weekDrag.previewRef}
+        destinationLabel={t("calendarUi.dragDestination")}
+        pendingLabel={t(rescheduleConfirmation.warnings.length ? "calendarUi.dragConfirmWarnings" : "calendarUi.dragSaving")}
+        savedLabel={t("calendarUi.dragSaved")}
+      />
 
       {/* SIDE DETAILS MODAL PANEL */}
       {(isNewEventOpen || selectedEvent?.eventType === "custom") && <CustomCalendarEventDialog

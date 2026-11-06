@@ -104,6 +104,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
   }, []);
 
   const clearPreview = useCallback(() => {
+    targetRef.current = null;
     setPreview(null);
     setTarget(null);
   }, [setPreview]);
@@ -111,15 +112,17 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
   const settle = useCallback((successful: boolean) => {
     const current = preview.current;
     if (!current || !mounted.current) return;
-    const activeTarget = target;
+    const activeTarget = targetRef.current;
     let nextPhase: WeekDragPhase = "returning";
     if (successful && activeTarget) {
       const cell = Array.from(document.querySelectorAll<HTMLElement>("[data-calendar-drop-cell]"))
         .find((candidate) => candidate.dataset.date === activeTarget.date && candidate.dataset.hour === activeTarget.hour);
-      if (cell) {
-        const rect = cell.getBoundingClientRect();
+      const canonical = Array.from(document.querySelectorAll<HTMLElement>("[data-calendar-event-id]"))
+        .find((candidate) => candidate.dataset.calendarEventId === current.id && candidate.closest<HTMLElement>("[data-calendar-drop-cell]") === cell);
+      const destination = canonical?.getBoundingClientRect() ?? cell?.getBoundingClientRect();
+      if (destination) {
         nextPhase = "settling";
-        paint(rect.left + 4, rect.top + 4, true);
+        paint(destination.left + (canonical ? 0 : 4), destination.top + (canonical ? 0 : 4), true);
       } else {
         paint(current.origin.left, current.origin.top, true);
       }
@@ -129,7 +132,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     setPreview({ ...current, phase: nextPhase });
     if (finishTimer.current) clearTimeout(finishTimer.current);
     finishTimer.current = setTimeout(clearPreview, current.reducedMotion ? 0 : WEEK_DRAG_TRANSITION_MS);
-  }, [clearPreview, paint, setPreview, target]);
+  }, [clearPreview, paint, setPreview]);
 
   const updateTarget = useCallback((active: NonNullable<typeof gesture.current>, clientX: number, clientY: number) => {
     const cell = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-calendar-drop-cell]");
