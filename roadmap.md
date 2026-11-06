@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Dashboard Checklist: first analyze 2/3 + 1/3 layout, existing storage suitability, files and risks; propose isolated SQL/RLS if required without execution or UI changes.
+- [ ] Dashboard Checklist: database structural changes and UI implementation await user authorization after the analysis.
+
 - [x] Notebook formatting: reproduced Tiptap's whole-containing-list conversion; notebook-only shared toggleList override splits selected items and preserves neighboring wrappers, checked/nested content, numbering, cursor, toolbar and native shortcuts. Toolbar mouse press preserves selection; autosave/SQL/Mural/Projects unchanged.
 - [x] Notebook formatting: 48 focused formatting/autosave/JSON/data tests passed (18 new regressions); actual components verified toolbar/shortcuts, isolated saved JSON and page switching in EN 1280px/800px and PT 390px with no runtime errors or horizontal overflow. Automatic compilation OK; installed happy-dom/vitest for reproducible editor tests.
 - [ ] Notebook formatting: real authenticated autosave/reload read-back remains unverified because /workspace/notebooks redirects to /auth and no external teacher session is available. Isolated adapter/editor recreation verifies JSON preservation, not production persistence/RLS.
