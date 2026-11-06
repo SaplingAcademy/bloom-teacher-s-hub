@@ -34,8 +34,10 @@ describe("Confirmed-step persistence", () => {
   });
   it("records trial confirmation in history without scheduling a lesson or creating tasks", async () => {
     await recordConfirmedStep("teacher", "lead", "trial", "2026-11-01T10:00:00Z", "Scheduling confirmed.");
-    expect(mock.upsert.mock.calls[0]).toMatchObject(["automation_events", { status: "completed", event_type: "lead.stage_confirmed", payload: { step: "trial", occurred_at: "2026-11-01T10:00:00.000Z", origin: "manual_confirmation" } }]);
-    expect(mock.upsert.mock.calls[1]).toMatchObject(["automation_activity", { action_type: "manual_stage_confirmation", created_at: "2026-11-01T10:00:00.000Z" }]);
+    expect(mock.upsert.mock.calls[0][0]).toBe("automation_events");
+    expect(mock.upsert.mock.calls[0][1]).toMatchObject({ status: "completed", event_type: "lead.stage_confirmed", payload: { step: "trial", occurred_at: "2026-11-01T10:00:00.000Z", origin: "manual_confirmation" } });
+    expect(mock.upsert.mock.calls[1][0]).toBe("automation_activity");
+    expect(mock.upsert.mock.calls[1][1]).toMatchObject({ action_type: "manual_stage_confirmation", created_at: "2026-11-01T10:00:00.000Z" });
     expect(mock.from.mock.calls.map(([table]) => table)).not.toContain("calendar_events"); expect(mock.from.mock.calls.map(([table]) => table)).not.toContain("tasks");
   });
   it("uses insert-if-absent on retries and retains original confirmed details", async () => {
