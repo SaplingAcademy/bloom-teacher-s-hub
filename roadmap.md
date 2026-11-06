@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Notebook formatting: diagnose list/selection behavior and apply a localized selection-scoped toolbar/shortcut fix without changing autosave, SQL, Mural or Projects.
+- [ ] Notebook formatting: focused regressions for adjacent list types, inline marks, neighboring blocks, JSON reload and page switching; desktop/mobile actual editor verification, with live persistence verified only if an authenticated account is available.
+
 - [x] Leads: inspected existing funnel and stage-change entry points; canonical stages are Novo contato, Em conversa, Aula experimental agendada, Proposta enviada, Convertido, Perdido. No manual stage selector/drag or Nivelamento concluído exists; actions advance through existing interaction/trial/proposal/conversion flows.
 - [x] Leads: individual prior-step confirmation before trial/proposal/conversion submissions, existing funnel only; no inferred history, real empty-initialized dates, side-effect-free Cancel before final confirmation and No leaves missing step unrecorded. Confirmed contact uses existing triggers; trial/proposal facts use stable event/history IDs without tasks/calendar/Rule B. Existing action automations unchanged.
 - [x] Leads: 55 focused rule/persistence/history/conversion/automation tests passed; isolated actual dialog/hook checks passed cancellation with zero writes, real-date validation, per-step No/Yes, network retry without duplicates and PT/EN desktop/mobile. Automatic compilation OK. Confirmed-event read fallback preserves history if separate activity write fails.
