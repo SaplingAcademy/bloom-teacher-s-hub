@@ -50,7 +50,6 @@ export async function persistNotebookPage(expected: string, notebookId: string, 
   const owner = await ownerId(expected);
   await requireNotebook(owner, notebookId);
   const table = () => supabase.from("workspace_notebook_pages");
-  const scoped = () => table().eq("user_id", owner).eq("notebook_id", notebookId).eq("id", command.id);
   if (command.type === "delete") { await single(table().delete().eq("user_id", owner).eq("notebook_id", notebookId).eq("id", command.id).select("id").maybeSingle()); return null; }
   if (command.type === "create") {
     if (!command.title.trim()) throw new Error("title_required");
@@ -58,7 +57,7 @@ export async function persistNotebookPage(expected: string, notebookId: string, 
     const { data, error } = await table().insert({ id: command.id, user_id: owner, notebook_id: notebookId, title: command.title.trim(), content_json: document, plain_preview: documentPreview(document), pinned: false, order_index: command.order_index }).select(PAGE_FIELDS).single();
     if (!error) return data as NotebookPage;
     if (error.code !== "23505") throw error;
-    return single(scoped().select(PAGE_FIELDS).maybeSingle());
+    return single(table().select(PAGE_FIELDS).eq("user_id", owner).eq("notebook_id", notebookId).eq("id", command.id).maybeSingle());
   }
   const patch = command.type === "rename" ? { title: command.title.trim() } : command.type === "pin" ? { pinned: command.pinned, order_index: command.order_index } : { order_index: command.order_index };
   if (command.type === "rename" && !command.title.trim()) throw new Error("title_required");
