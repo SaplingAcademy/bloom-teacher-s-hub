@@ -10,7 +10,14 @@ export const uiTranslations = {
       "clearOne": "A tarefa concluída será excluída permanentemente. As pendentes serão mantidas.", "confirmClear": "Excluir concluídas",
       "loadError": "Não foi possível carregar seu Checklist.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
       "retry": "Tentar novamente", "loading": "Carregando Checklist…", "saving": "Salvando…", "required": "Informe uma tarefa.",
-      "listLabel": "Tarefas pessoais", "saveEdit": "Salvar tarefa", "cancelEdit": "Cancelar edição"
+      "listLabel": "Tarefas pessoais", "saveEdit": "Salvar tarefa", "cancelEdit": "Cancelar edição",
+      "history": "Histórico", "historyListLabel": "Pendências vencidas", "historyDescription": "Tarefas não concluídas cujo prazo já passou.",
+      "historyEmpty": "Nenhuma pendência vencida", "historyEmptyDescription": "Tarefas com prazo vencido aparecerão aqui sem serem excluídas.",
+      "overdue": "Vencida", "overdueCount": "{count} vencidas", "overdueOne": "1 vencida", "originalDue": "Prazo original: {date}",
+      "deadlineLabel": "Prazo da tarefa", "noDeadline": "Sem prazo", "deadlineToday": "Hoje", "deadlineSpecific": "Prazo específico", "specificDate": "Data de vencimento",
+      "recover": "Recuperar tarefa", "recoverTitle": "Recuperar tarefa vencida", "recoverDescription": "Defina um novo prazo. O prazo original era {date}.",
+      "confirmRecover": "Recuperar para o Checklist", "carouselLabel": "Checklist e histórico de pendências", "currentSlide": "Tela 1 de 2: Checklist",
+      "historySlide": "Tela 2 de 2: Histórico", "navigationLabel": "Navegação do Checklist", "showChecklist": "Mostrar Checklist", "showHistory": "Mostrar Histórico"
     },
     "workspace": {
       "title": "Workspace", "eyebrow": "Seu espaço de organização",

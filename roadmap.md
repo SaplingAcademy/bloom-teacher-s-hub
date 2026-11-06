@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Dashboard Checklist carousel/history/deadlines: diagnosis and minimal SQL proposal delivered; existing rows remain no-deadline, RLS unchanged, new-column INSERT/UPDATE grants required. Awaiting user confirmation before any dependent implementation or SQL execution.
+- [ ] Dashboard Checklist carousel/history/deadlines: user confirmed 20261106000200_teacher_checklist_deadlines applied; implement local-date deadline editing, two-screen swipe/button/keyboard carousel, overdue recovery on the same row, equal-height desktop cards and focused regression tests. No additional SQL execution.
 - [x] Dashboard Checklist: analyzed 2/3 + 1/3 layout and storage; existing tasks serve CRM/priorities, Workspace items require projects and legacy dashboard tasks are browser-only. Proposed teacher_checklist_items with owner-only RLS/grants, separate Query cache and no priority invalidations; repository evidence only, live schema not verified. No UI/SQL execution.
 - [x] Dashboard Checklist: approved plan's SQL saved verbatim to docs/migrations/20261106000100_teacher_checklist_manual.sql with owner-only SELECT/INSERT/UPDATE/DELETE RLS, narrow grants, index and updated_at trigger. No SQL execution or frontend changes.
 - [x] Dashboard Checklist: user confirmed successful manual application of the table/RLS/index/trigger and authorized UI implementation; no SQL execution.
