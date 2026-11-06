@@ -58,7 +58,7 @@ describe("Checklist carousel and recovery UI", () => {
     await act(async () => { historyDot?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
     expect(mocks.api.scrollTo).toHaveBeenCalledWith(1);
     expect(historyDot?.getAttribute("aria-current")).toBe("page");
-    expect(container.textContent).toContain("checklist.historyEmptyDescription");
+    expect(container.textContent).toContain("Original deadline: Jan 02, 2000");
     expect(container.textContent).toContain("1 overdue");
     await act(async () => { button("checklist.showChecklist")?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
     expect(mocks.api.scrollTo).toHaveBeenLastCalledWith(0);
