@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => {
 });
 vi.mock("embla-carousel-react", () => ({ default: () => [vi.fn(), mocks.api] }));
 vi.mock("@/hooks/use-language", () => ({ useLanguage: () => ({ lang: "en", t: (key: string) => ({
-  "checklist.pending": "{count} pending", "checklist.overdueCount": "{count} overdue", "checklist.originalDue": "Original deadline: {date}",
+  "checklist.pending": "{count} pending", "checklist.overdueCount": "{count} overdue", "checklist.overdueOne": "1 overdue", "checklist.originalDue": "Original deadline: {date}",
   "checklist.recoverDescription": "Choose a new deadline. The original deadline was {date}.",
 }[key] ?? key) }) }));
 vi.mock("@/hooks/use-teacher-checklist", () => ({ useTeacherChecklist: () => ({
