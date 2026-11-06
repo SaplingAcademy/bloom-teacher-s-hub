@@ -362,7 +362,7 @@ function checkAndNotify(task: Task, lang: "en" | "pt") {
   }
 }
 
-function TodayPage() {
+export function TodayPage() {
   const { user, profile } = useAuth();
   const { money } = useFinancialPrivacy();
   const navigate = useNavigate();

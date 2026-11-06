@@ -54,9 +54,7 @@ vi.mock("@/components/bloom/UrgentWidget", () => ({ UrgentWidget: () => createEl
 vi.mock("@/components/bloom/DailyPrioritiesCard", () => ({ DailyPrioritiesCard: () => createElement("section", { "data-testid": "priorities" }) }));
 vi.mock("@/components/bloom/ChecklistCard", () => ({ ChecklistCard: () => createElement("section", { "data-testid": "checklist" }) }));
 
-import { Route } from "../src/routes/_app.index";
-
-const TodayPage = (Route as unknown as { component: React.ComponentType }).component;
+import { TodayPage } from "../src/routes/_app.index";
 let root: Root;
 let container: HTMLDivElement;
 
