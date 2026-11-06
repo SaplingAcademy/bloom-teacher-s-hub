@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Workspace Entrega 5: personal notebook/page CRUD on existing tables, safe rich-text JSON editor, pinned ordering and PT/EN desktop/mobile UI; no SQL, quotas, collaboration or Mural/Projects changes.
+- [ ] Workspace Entrega 5: debounced serialized autosave with preserved drafts, explicit confirmed/error status, retry and navigation protection; focused notebook tests plus existing Mural/Projects regressions.
+- [ ] Workspace Entrega 5: verify notebook creation, pages, editing, save/reopen and failures in desktop/mobile; report any real-account access blocker.
+
 - [x] Today performance: production telemetry confirmed priority reads began about two seconds after inactivity automation; the controlled real-component baseline took 2,414 ms and duplicated the read. No business-rule, database or Workspace changes.
 - [x] Today performance: priorities now start concurrently with automation in a teacher/local-day React Query cache, deduplicate mounts, retain cached content during revalidation and invalidate after newly created automation tasks. Controlled result 416 ms (-1,998 ms / -82.8%); 470 Vitest + 159 Bun tests, typecheck and preview build passed.
 - [ ] Today performance: repeat the after timing with a real authenticated teacher and production data; blocked by unavailable authenticated sandbox session. The before timing was observed in production telemetry, while the equivalent before/after comparison used controlled 2,000 ms automation and 300 ms priority delays.
