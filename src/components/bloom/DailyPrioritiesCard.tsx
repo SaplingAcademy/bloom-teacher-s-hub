@@ -248,8 +248,8 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                 onClick={() => setFilter(cat)}
                 className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
                   filter === cat
-                    ? "bg-primary text-primary-foreground border-primary hover:bg-primary hover:text-primary-foreground"
-                    : "bg-card text-muted-foreground border-border hover:bg-card hover:text-foreground"
+                    ? "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar"
+                    : "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
