@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Dashboard Checklist: first analyze 2/3 + 1/3 layout, existing storage suitability, files and risks; propose isolated SQL/RLS if required without execution or UI changes.
+- [x] Dashboard Checklist: analyzed 2/3 + 1/3 layout and storage; existing tasks serve CRM/priorities, Workspace items require projects and legacy dashboard tasks are browser-only. Proposed teacher_checklist_items with owner-only RLS/grants, separate Query cache and no priority invalidations; repository evidence only, live schema not verified. No UI/SQL execution.
 - [ ] Dashboard Checklist: database structural changes and UI implementation await user authorization after the analysis.
 
 - [x] Notebook formatting: reproduced Tiptap's whole-containing-list conversion; notebook-only shared toggleList override splits selected items and preserves neighboring wrappers, checked/nested content, numbering, cursor, toolbar and native shortcuts. Toolbar mouse press preserves selection; autosave/SQL/Mural/Projects unchanged.
