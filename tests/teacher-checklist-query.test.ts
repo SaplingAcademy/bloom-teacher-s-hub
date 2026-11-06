@@ -15,7 +15,8 @@ vi.mock("@/lib/inactive-lead-automation", () => ({ runInactiveLeadCheckOnLoad: m
 import { useTeacherChecklist } from "../src/hooks/use-teacher-checklist";
 import { useDailyPrioritiesQuery } from "../src/hooks/use-daily-priorities-query";
 
-const row = (id: string): TeacherChecklistItem => ({ id, teacher_id: "teacher", title: id, completed: false,
+const NONE = { deadline_type: "none", due_date: null } as const;
+const row = (id: string): TeacherChecklistItem => ({ id, teacher_id: "teacher", title: id, completed: false, ...NONE,
   created_at: "2026-11-06T00:00:00Z", updated_at: "2026-11-06T00:00:00Z" });
 let root: Root;
 let container: HTMLDivElement;
@@ -62,12 +63,22 @@ describe("Checklist optimistic cache and independence", () => {
       ? new Promise((_resolve, reject) => { fail = reject; })
       : Promise.resolve({ item: { ...row("two"), title: "Saved edit" } }));
     let failed: Promise<boolean> | undefined;
-    await act(async () => { failed = state.execute({ type: "edit", id: "one", title: "Failed edit" }); });
-    await act(async () => { await state.execute({ type: "edit", id: "two", title: "Saved edit" }); });
+    await act(async () => { failed = state.execute({ type: "edit", id: "one", title: "Failed edit", deadline: NONE }); });
+    await act(async () => { await state.execute({ type: "edit", id: "two", title: "Saved edit", deadline: NONE }); });
     mocks.read.mockReturnValue(new Promise(() => undefined));
     await act(async () => { fail?.(new Error("network")); expect(await failed).toBe(false); });
     expect(client.getQueryData<TeacherChecklistItem[]>(["teacher-checklist", "teacher"])?.map((item) => [item.id, item.title])).toEqual([["one", "one"], ["two", "Saved edit"]]);
     expect(mocks.toast).toHaveBeenCalledOnce();
+  });
+  it("moves a recovered row to its new deadline immediately without inserting or refetching", async () => {
+    await mount(); await ready();
+    mocks.write.mockResolvedValue({ item: { ...row("one"), deadline_type: "today", due_date: "2026-11-06" } });
+    await act(async () => { await state.execute({ type: "recover", id: "one", deadline: { deadline_type: "today", due_date: "2026-11-06" } }); });
+    expect(client.getQueryData<TeacherChecklistItem[]>(["teacher-checklist", "teacher"])?.find((item) => item.id === "one")).toMatchObject({
+      id: "one", completed: false, deadline_type: "today", due_date: "2026-11-06",
+    });
+    expect(mocks.write).toHaveBeenCalledOnce();
+    expect(mocks.read).toHaveBeenCalledTimes(1);
   });
   it("keeps read failure distinct from an empty successful checklist", async () => {
     mocks.read.mockRejectedValueOnce(new Error("RLS"));
