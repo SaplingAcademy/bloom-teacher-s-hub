@@ -17,6 +17,25 @@ export interface WeekLessonDragPreview {
   reducedMotion: boolean;
 }
 
+interface WeekDragGesture {
+  id: string;
+  pointerId: number;
+  pointerType: string;
+  x: number;
+  y: number;
+  latestX: number;
+  latestY: number;
+  ready: boolean;
+  moved: boolean;
+  element: HTMLElement;
+  target: WeekDropTarget | null;
+  origin: WeekLessonDragPreview["origin"];
+  grabX: number;
+  grabY: number;
+  reducedMotion: boolean;
+  holdTimer?: ReturnType<typeof setTimeout>;
+}
+
 export const WEEK_DRAG_TRANSITION_MS = 180;
 export const WEEK_DRAG_TOUCH_HOLD_MS = 450;
 
