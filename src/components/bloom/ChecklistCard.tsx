@@ -56,7 +56,7 @@ export function ChecklistCard() {
 
   return (
     <TooltipProvider delayDuration={350}>
-      <section aria-label={t("checklist.title")} className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <section aria-label={t("checklist.title")} className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm xl:h-full">
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 py-4 sm:px-5">
           <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
             <ListChecks className="h-5 w-5 shrink-0" aria-hidden="true" />{t("checklist.title")}
