@@ -74,7 +74,7 @@ export function ChecklistCard() {
   const input = useRef<HTMLInputElement>(null);
   const [carouselRef, carouselApi] = useEmblaCarousel({
     align: "start", duration: reducedMotion ? 0 : 25,
-    watchDrag: (event) => {
+    watchDrag: (_api, event) => {
       const target = event.target;
       return target instanceof Element && !target.closest("input, textarea, select, button, [role='checkbox']");
     },
