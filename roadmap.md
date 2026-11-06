@@ -1,7 +1,8 @@
 # Roadmap
 
 - [x] Dashboard Checklist: analyzed 2/3 + 1/3 layout and storage; existing tasks serve CRM/priorities, Workspace items require projects and legacy dashboard tasks are browser-only. Proposed teacher_checklist_items with owner-only RLS/grants, separate Query cache and no priority invalidations; repository evidence only, live schema not verified. No UI/SQL execution.
-- [ ] Dashboard Checklist: database structural changes and UI implementation await user authorization after the analysis.
+- [x] Dashboard Checklist: approved plan's SQL saved verbatim to docs/migrations/20261106000100_teacher_checklist_manual.sql with owner-only SELECT/INSERT/UPDATE/DELETE RLS, narrow grants, index and updated_at trigger. No SQL execution or frontend changes.
+- [ ] Dashboard Checklist: manual SQL application awaits user confirmation; only afterward implement the approved two-column layout, personal checklist and focused validation. Blocker: the approved sequence requires confirmed manual application first.
 
 - [x] Notebook formatting: reproduced Tiptap's whole-containing-list conversion; notebook-only shared toggleList override splits selected items and preserves neighboring wrappers, checked/nested content, numbering, cursor, toolbar and native shortcuts. Toolbar mouse press preserves selection; autosave/SQL/Mural/Projects unchanged.
 - [x] Notebook formatting: 48 focused formatting/autosave/JSON/data tests passed (18 new regressions); actual components verified toolbar/shortcuts, isolated saved JSON and page switching in EN 1280px/800px and PT 390px with no runtime errors or horizontal overflow. Automatic compilation OK; installed happy-dom/vitest for reproducible editor tests.
