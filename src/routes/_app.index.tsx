@@ -6,9 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { UrgentWidget } from "@/components/bloom/UrgentWidget";
-import { DailyPrioritiesCard } from "@/components/bloom/DailyPrioritiesCard";
-import { ChecklistCard } from "@/components/bloom/ChecklistCard";
+import { DashboardAttentionSections } from "@/components/bloom/DashboardAttentionSections";
 import { t as i18nT } from "@/lib/i18n";
 
 /**
@@ -913,18 +911,8 @@ function TodayPage() {
         />
       </div>
 
-      {/* DAILY PRIORITIES SECTION */}
-      {user?.id && (
-        <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:relative xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-stretch">
-          <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />
-          <div className="min-w-0 xl:absolute xl:inset-y-0 xl:right-0 xl:w-[calc((100%-1.5rem)/3)]">
-            <ChecklistCard key={`checklist-${user.id}`} />
-          </div>
-        </div>
-      )}
-
-      {/* SINGLE URGENT SECTION */}
-      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
+      {/* URGENT, DAILY PRIORITIES AND CHECKLIST SECTIONS */}
+      {user?.id && <DashboardAttentionSections teacherId={user.id} refreshKey={refreshKey} />}
 
       {/* ADD/EDIT TASK MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
