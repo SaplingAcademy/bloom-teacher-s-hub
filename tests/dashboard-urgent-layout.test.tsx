@@ -80,6 +80,7 @@ describe("Dashboard section order", () => {
     const priorities = container.querySelector("[data-testid='priorities']");
     const checklist = container.querySelector("[data-testid='checklist']");
 
+    console.log(container.innerHTML);
     expect(urgent).toHaveLength(1);
     expect(indicators?.compareDocumentPosition(urgent[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(urgent[0].compareDocumentPosition(priorities!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
