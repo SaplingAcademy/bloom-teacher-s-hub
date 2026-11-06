@@ -1427,11 +1427,6 @@ function CalendarPage() {
                               : "bg-card hover:bg-secondary/10"
                           } ${weekDrag.target?.date === dateStr && weekDrag.target.hour === hour ? "ring-2 ring-inset ring-primary bg-primary-soft/30" : ""}`}
                         >
-                          {weekDrag.target?.date === dateStr && weekDrag.target.hour === hour && (
-                            <span className="pointer-events-none absolute bottom-0 right-0 z-10 max-w-full truncate rounded bg-primary px-1 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                              {dateStr} · {weekDrag.target.startTime}
-                            </span>
-                          )}
                           {cellEvents.map((evt) => {
                             const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
                             const colorMeta = eventColor(evt);

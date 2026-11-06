@@ -22,7 +22,10 @@ function Harness({ onDrop }: { onDrop: (id: string, position: WeekDropPosition) 
       "data-calendar-event-id": "lesson-1",
       className: "bg-primary-soft opacity-100",
       onPointerDown: (event: React.PointerEvent<HTMLElement>) => drag.start(event, "lesson-1"),
-    }, "Julia · English"),
+    },
+    createElement("span", null, "Julia · English"),
+    createElement("span", { "data-calendar-event-time": "" }, "10:00–11:00"),
+  ),
     createElement("div", { id: "target", "data-calendar-drop-cell": "", "data-date": "2026-11-06", "data-hour": "16:00" }),
     createElement("output", { id: "phase" }, drag.preview?.phase || "idle"),
     createElement(WeekLessonDragPreview, {
