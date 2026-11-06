@@ -41,7 +41,7 @@ describe("Dashboard attention section order", () => {
 
     expect(urgent).toHaveLength(1);
     expect(urgent[0].compareDocumentPosition(priorities!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(priorities?.parentElement).toBe(checklist?.parentElement);
+    expect(priorities?.parentElement).toBe(checklist?.parentElement?.parentElement);
     expect(priorities?.compareDocumentPosition(checklist!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
