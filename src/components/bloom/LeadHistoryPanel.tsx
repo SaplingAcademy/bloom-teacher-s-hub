@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Clock, FileText, Mail, MessageSquare, Phone, Plus, Users, Workflow, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Mail, MessageSquare, Phone, Plus, Users, Workflow, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/use-language";
@@ -76,7 +76,7 @@ export function LeadHistoryPanel({ teacherId, leadId, refreshKey, onAddInteracti
       ) : (
         <ol className="space-y-2">
           {timeline.map((e) => {
-            const Icon = e.kind === "manual" ? TYPE_ICONS[e.type] ?? Clock : Workflow;
+            const Icon = e.kind === "manual" ? TYPE_ICONS[e.type] ?? Clock : e.kind === "confirmation" ? CheckCircle2 : Workflow;
             return (
               <li key={e.id} className="rounded-lg border border-border p-3 text-xs space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
