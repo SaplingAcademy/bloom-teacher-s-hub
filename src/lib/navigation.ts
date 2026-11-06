@@ -4,7 +4,7 @@ import {
   UserPlus,
   CalendarDays,
   BookOpen,
-  FolderOpen,
+  LibraryBig,
   Wallet,
   LayoutGrid,
   TrendingUp,
@@ -60,7 +60,7 @@ export const navSections: NavSection[] = [
         id: "resources",
         label: "Resources",
         to: "/resources",
-        icon: FolderOpen,
+        icon: LibraryBig,
         description: "Your teaching library",
       },
       {
