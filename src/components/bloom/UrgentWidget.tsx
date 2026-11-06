@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
-import { ShieldAlert, CheckCircle2, AlertTriangle, ArrowUpRight, RefreshCw } from "lucide-react";
+import { ShieldAlert, AlertTriangle, ArrowUpRight, RefreshCw } from "lucide-react";
 import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
 
 interface UrgentWidgetProps {
@@ -46,6 +46,8 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
       navigate({ to: targetUrl as any });
     }
   };
+
+  if (urgentItems.length === 0) return null;
 
   return (
     <div className="rounded-2xl border border-stone-200/80 bg-card p-5 sm:p-6 shadow-sm select-none transition-all">
@@ -93,52 +95,36 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
 
       {/* Content area */}
       <div className="mt-4">
-        {urgentItems.length === 0 ? (
-          /* Compact Empty State */
-          <div className="py-4 px-5 rounded-xl border border-dashed border-stone-200/80 bg-stone-50/50 dark:bg-stone-900/20 dark:border-stone-800 flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-foreground">
-                {t("today.allClearTitle")}
-              </p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {t("today.allClearSubtitle")}
-              </p>
-            </div>
-          </div>
-        ) : (
-          /* Urgent Items List */
-          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-            {urgentItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50 hover:border-rose-300 transition-all text-xs"
-              >
-                <div className="flex items-start gap-3 min-w-0 pr-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <span className="font-bold text-rose-950 dark:text-rose-200 truncate block text-xs">
-                      {item.title}
-                    </span>
-                    <span className="text-[11px] text-rose-800/80 dark:text-rose-300/80 block truncate">
-                      {item.reason}
-                    </span>
-                  </div>
+        <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+          {urgentItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between p-3.5 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50 hover:border-rose-300 transition-all text-xs"
+            >
+              <div className="flex items-start gap-3 min-w-0 pr-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="font-bold text-rose-950 dark:text-rose-200 truncate block text-xs">
+                    {item.title}
+                  </span>
+                  <span className="text-[11px] text-rose-800/80 dark:text-rose-300/80 block truncate">
+                    {item.reason}
+                  </span>
                 </div>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => handleAction(item.targetUrl)}
-                  className="h-8 px-3 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shrink-0 gap-1 cursor-pointer"
-                >
-                  <span>{t("today.resolveAction")}</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </Button>
               </div>
-            ))}
-          </div>
-        )}
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleAction(item.targetUrl)}
+                className="h-8 px-3 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shrink-0 gap-1 cursor-pointer"
+              >
+                <span>{t("today.resolveAction")}</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

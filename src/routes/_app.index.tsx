@@ -913,6 +913,9 @@ function TodayPage() {
         />
       </div>
 
+      {/* SINGLE URGENT SECTION */}
+      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
+
       {/* DAILY PRIORITIES SECTION */}
       {user?.id && (
         <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:relative xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-stretch">
@@ -922,9 +925,6 @@ function TodayPage() {
           </div>
         </div>
       )}
-
-      {/* SINGLE URGENT SECTION */}
-      {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
 
       {/* ADD/EDIT TASK MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
