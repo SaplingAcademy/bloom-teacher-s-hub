@@ -36,7 +36,7 @@ function sameTarget(a: WeekDropTarget | null, b: WeekDropTarget | null) {
  * of confirmation and persistence; false/null means cancel/failure, true/void success.
  */
 export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPosition) => void | boolean | Promise<void | boolean>) {
-  const [preview, setPreviewState] = useState<WeekLessonDragPreview | null>(null);
+  const [previewState, setPreviewState] = useState<WeekLessonDragPreview | null>(null);
   const [target, setTarget] = useState<WeekDropTarget | null>(null);
   const targetRef = useRef<WeekDropTarget | null>(null);
   const preview = useRef<WeekLessonDragPreview | null>(null);
