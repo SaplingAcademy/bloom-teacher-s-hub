@@ -21,7 +21,7 @@ export function NotebookRichEditor({ document, onChange, editable = true, onRead
     immediatelyRender: false,
     editable,
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, blockquote: false, code: false, codeBlock: false, horizontalRule: false, strike: false,
-      link: { openOnClick: true, autolink: true, defaultProtocol: "https", protocols: ["http", "https"], isAllowedUri: (url) => Boolean(safeNotebookLink(url)), HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" } } }), TaskList, TaskItem.configure({ nested: true })],
+      link: { openOnClick: true, autolink: true, defaultProtocol: "https", protocols: ["http", "https"], isAllowedUri: (url) => Boolean(safeNotebookLink(url)), HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" } } }), TaskList, TaskItem.configure({ nested: true, a11y: { checkboxLabel: (node) => `${t("workspace.notebook.tools.taskList")}: ${node.textContent}` } })],
     content: document,
     editorProps: { attributes: { class: "notebook-prose", role: "textbox", "aria-multiline": "true", "aria-label": t("workspace.notebook.contentLabel") } },
     onUpdate: ({ editor }) => onChange(normalizeDocument(editor.getJSON())),
