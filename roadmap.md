@@ -1,8 +1,9 @@
 # Roadmap
 
 - [x] Leads: inspected existing funnel and stage-change entry points; canonical stages are Novo contato, Em conversa, Aula experimental agendada, Proposta enviada, Convertido, Perdido. No manual stage selector/drag or Nivelamento concluído exists; actions advance through existing interaction/trial/proposal/conversion flows.
-- [ ] Leads: confirm individually missing earlier steps in the existing funnel without presumed dates/details or duplicate history; integrate before trial/proposal/conversion submissions, preserve existing automations. Current funnel confirmed by user; no assessment-stage redesign.
-- [ ] Leads: focused rule/persistence tests and desktop/mobile confirmation checks; report real-account/schema blockers if present.
+- [x] Leads: individual prior-step confirmation before trial/proposal/conversion submissions, existing funnel only; no inferred history, real empty-initialized dates, side-effect-free Cancel before final confirmation and No leaves missing step unrecorded. Confirmed contact uses existing triggers; trial/proposal facts use stable event/history IDs without tasks/calendar/Rule B. Existing action automations unchanged.
+- [x] Leads: 55 focused rule/persistence/history/conversion/automation tests passed; isolated actual dialog/hook checks passed cancellation with zero writes, real-date validation, per-step No/Yes, network retry without duplicates and PT/EN desktop/mobile. Automatic compilation OK. Confirmed-event read fallback preserves history if separate activity write fails.
+- [ ] Leads: real authenticated end-to-end trial/proposal/conversion + confirmation readback/RLS check remains blocked by unavailable external session; isolated persistence does not verify live database triggers or rows.
 
 - [x] Workspace Entrega 5: personal notebook/page CRUD on existing tables, lazy Tiptap rich-text JSON editor, pinned ordering and PT/EN desktop/mobile UI; no SQL, quotas, collaboration or Mural/Projects changes.
 - [x] Workspace Entrega 5: 700ms serialized autosave, page-scoped preserved drafts, latest confirmed/error status, retry, metadata-write editing lock and save-before-navigation protection. All 65 focused notebook/Mural/Projects tests passed; automatic compilation OK.
