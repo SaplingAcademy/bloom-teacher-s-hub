@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Leads: inspect canonical funnel/history evidence and all stage-change paths; confirm individually missing earlier steps without presumed dates/details or duplicate history, preserve existing automations.
+- [ ] Leads: focused rule/persistence tests and desktop/mobile confirmation checks; report real-account/schema blockers if present.
+
 - [x] Workspace Entrega 5: personal notebook/page CRUD on existing tables, lazy Tiptap rich-text JSON editor, pinned ordering and PT/EN desktop/mobile UI; no SQL, quotas, collaboration or Mural/Projects changes.
 - [x] Workspace Entrega 5: 700ms serialized autosave, page-scoped preserved drafts, latest confirmed/error status, retry, metadata-write editing lock and save-before-navigation protection. All 65 focused notebook/Mural/Projects tests passed; automatic compilation OK.
 - [x] Workspace Entrega 5: isolated actual components verified notebook create/edit/delete, pages rename/duplicate/pin/reorder/delete, formatting/checklist/safe links, debounce/rapid switching, network error/retry, blocked failed navigation and saved reopen in PT/EN at 1280px/800px/390px without runtime errors. Mock persistence does not establish production RLS or real saves.
