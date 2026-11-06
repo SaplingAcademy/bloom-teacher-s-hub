@@ -36,6 +36,8 @@ import { PageHeader } from "@/components/bloom/PageHeader";
 import { KanbanSkeleton, ListRowsSkeleton } from "@/components/bloom/skeletons";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
 import { LeadInteractionDialog } from "@/components/bloom/LeadInteractionDialog";
+import { LeadStageConfirmationDialog } from "@/components/bloom/LeadStageConfirmationDialog";
+import { useLeadStageConfirmation } from "@/hooks/use-lead-stage-confirmation";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
 import { CatalogOptionSelect } from "@/components/bloom/CatalogOptionSelect";
 import { conversionLanguageOptions, leadToConversionDraft } from "@/lib/lead-conversion";
@@ -174,6 +176,13 @@ function LeadsPage() {
   });
 
   const teacherId = user?.id;
+  const stageConfirmation = useLeadStageConfirmation(teacherId, (fresh) => {
+    setHistoryRefreshKey((key) => key + 1);
+    if (!fresh) return;
+    const saved = { ...fresh, stage: normalizeLeadStage(fresh.stage) };
+    setLeads((prev) => prev.map((lead) => lead.id === saved.id ? saved : lead));
+    setSelectedLead((prev) => prev?.id === saved.id ? saved : prev);
+  });
   const { catalogOptions } = useCatalogOptions();
   const convertLanguages = conversionLanguageOptions(teacherLanguages, convertForm.language_studied);
   const pedagogyLabel = (lead: Lead) =>
@@ -364,8 +373,10 @@ function LeadsPage() {
 
     setSubmitting(true);
     try {
+      const confirmedLead = await stageConfirmation.confirmBefore(selectedLead, "Aula experimental agendada");
+      if (!confirmedLead) return;
       const res = await processTrialLessonScheduledAutomation(
-        selectedLead,
+        confirmedLead,
         trialForm.date,
         trialForm.time,
         trialForm.duration
@@ -397,8 +408,10 @@ function LeadsPage() {
 
     setSubmitting(true);
     try {
+      const confirmedLead = await stageConfirmation.confirmBefore(selectedLead, "Proposta enviada");
+      if (!confirmedLead) return;
       const valueNum = parseFloat(proposalForm.potential_value) || 0;
-      const res = await processProposalRecordedAutomation(selectedLead, proposalForm.package_id || undefined, valueNum);
+      const res = await processProposalRecordedAutomation(confirmedLead, proposalForm.package_id || undefined, valueNum);
 
       if (res.success) {
         toast.success(t("leads.toastProposalSuccess"));
@@ -433,8 +446,10 @@ function LeadsPage() {
 
     setSubmitting(true);
     try {
+      const confirmedLead = await stageConfirmation.confirmBefore(selectedLead, "Convertido");
+      if (!confirmedLead) return;
       const res = await convertLeadToStudentAutomation({
-        leadId: selectedLead.id,
+        leadId: confirmedLead.id,
         teacherId,
         fullName: convertForm.full_name,
         email: convertForm.email,
@@ -484,6 +499,7 @@ function LeadsPage() {
 
   return (
     <div className="space-y-6 pb-12">
+      {stageConfirmation.error && !stageConfirmation.request && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{stageConfirmation.error}</p>}
       <PageHeader
         eyebrow={t("auditUi.salesPipeline")}
         title={t("leads.title")}
@@ -768,8 +784,19 @@ function LeadsPage() {
         onSaved={handleInteractionSaved}
       />
 
+      {stageConfirmation.request && <LeadStageConfirmationDialog
+        key={`${teacherId}:${stageConfirmation.request.lead.id}:${stageConfirmation.request.target}`}
+        steps={stageConfirmation.request.steps}
+        leadName={stageConfirmation.request.lead.full_name}
+        saving={stageConfirmation.saving}
+        started={stageConfirmation.started}
+        error={stageConfirmation.error}
+        onCancel={stageConfirmation.cancel}
+        onConfirm={stageConfirmation.submit}
+      />}
+
       {/* Modal: Schedule Trial Lesson */}
-      <Dialog open={isTrialOpen} onOpenChange={setIsTrialOpen}>
+      <Dialog open={isTrialOpen && !stageConfirmation.request} onOpenChange={(open) => { if (!submitting) setIsTrialOpen(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -818,7 +845,7 @@ function LeadsPage() {
       </Dialog>
 
       {/* Modal: Record Proposal */}
-      <Dialog open={isProposalOpen} onOpenChange={setIsProposalOpen}>
+      <Dialog open={isProposalOpen && !stageConfirmation.request} onOpenChange={(open) => { if (!submitting) setIsProposalOpen(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -890,7 +917,7 @@ function LeadsPage() {
       </Dialog>
 
       {/* Modal: Convert Lead to Student (Rule F & G) */}
-      <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
+      <Dialog open={isConvertOpen && !stageConfirmation.request} onOpenChange={(open) => { if (!submitting) setIsConvertOpen(open); }}>
         <DialogContent className="sm:max-w-lg max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">

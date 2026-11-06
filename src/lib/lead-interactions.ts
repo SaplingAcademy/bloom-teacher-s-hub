@@ -154,18 +154,33 @@ export async function fetchLeadAutomationActivity(teacherId: string, leadId: str
       if (!data || data.length < PAGE) break;
     }
   }
+  // The confirmed fact is canonical in the event payload. If a separate activity
+  // write failed, show that persisted fact read-only, never fabricate or backfill it.
+  for (let from = 0; ; from += PAGE) {
+    const { data: confirmations, error } = await supabase.from("automation_events")
+      .select("id,payload").eq("teacher_id", teacherId).eq("source_table", "leads")
+      .eq("source_id", leadId).eq("event_type", "lead.stage_confirmed").eq("status", "completed")
+      .order("id").range(from, from + PAGE - 1);
+    if (error) throw error;
+    const linked = new Set(all.map((row) => row.automation_event_id));
+    for (const event of confirmations ?? []) {
+      if (linked.has(event.id) || !["trial", "proposal"].includes(event.payload?.step) || typeof event.payload?.description !== "string" || typeof event.payload?.occurred_at !== "string" || !Number.isFinite(new Date(event.payload.occurred_at).getTime())) continue;
+      all.push({ id: `confirmed-event-${event.id}`, teacher_id: teacherId, automation_event_id: event.id, action_type: "manual_stage_confirmation", target_table: "leads", target_id: leadId, description: event.payload.description, created_at: event.payload.occurred_at });
+    }
+    if (!confirmations || confirmations.length < PAGE) break;
+  }
   return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export type TimelineEntry =
   | { kind: "manual"; id: string; at: string; type: string; description: string }
-  | { kind: "automatic"; id: string; at: string; description: string };
+  | { kind: "automatic" | "confirmation"; id: string; at: string; description: string };
 
 /** Unified timeline, newest first. Manual and automatic entries stay distinguishable. */
 export function mergeLeadTimeline(manual: LeadInteraction[], automatic: AutomationActivity[]): TimelineEntry[] {
   const entries: TimelineEntry[] = [
     ...manual.map((m) => ({ kind: "manual" as const, id: `m-${m.id}`, at: m.occurred_at, type: m.type, description: m.description })),
-    ...automatic.map((a) => ({ kind: "automatic" as const, id: `a-${a.id}`, at: a.created_at, description: a.description })),
+    ...automatic.map((a) => ({ kind: a.action_type === "manual_stage_confirmation" ? "confirmation" as const : "automatic" as const, id: `a-${a.id}`, at: a.created_at, description: a.description })),
   ];
   return entries.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 }

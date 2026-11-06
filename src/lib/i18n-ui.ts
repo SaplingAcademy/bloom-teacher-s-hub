@@ -683,6 +683,16 @@ export const uiTranslations = {
       "due": "Vence", "noDue": "Sem vencimento", "automatic": "Automática", "activityType": "Tipo de atividade",
       "types": { "whatsapp": "WhatsApp", "call": "Ligação", "email": "E-mail", "meeting": "Reunião", "follow_up": "Follow-up", "general": "Tarefa geral" }
     },
+    "leadStageConfirmation": {
+      "title": "Confirmar etapas anteriores", "intro": "Identificamos que algumas etapas anteriores não foram registradas.", "stepCount": "{current} de {total}",
+      "questions": { "contact": "O primeiro contato com este lead já aconteceu?", "trial": "Uma aula experimental já foi agendada para este lead?", "proposal": "Uma proposta já foi enviada para este lead?" },
+      "facts": { "contact": "Primeiro contato confirmado pelo professor.", "trial": "Agendamento de aula experimental confirmado pelo professor.", "proposal": "Envio de proposta confirmado pelo professor." },
+      "yes": "Sim, aconteceu", "no": "Não aconteceu", "actualDate": "Data e horário reais", "dateHint": "Informe quando aconteceu. Nenhuma data será preenchida automaticamente.",
+      "back": "Voltar", "next": "Próxima etapa", "continue": "Confirmar e continuar", "saving": "Registrando…", "retry": "Tentar novamente", "historyLabel": "Etapa confirmada",
+      "dateRequired": "Informe a data e o horário reais.", "dateInvalid": "Informe uma data válida.", "dateFuture": "Um acontecimento confirmado não pode estar no futuro.", "choice_required": "Confirme cada etapa individualmente.",
+      "loadError": "Não foi possível verificar as etapas anteriores. Nenhuma atualização foi realizada; tente novamente.",
+      "saveError": "Não foi possível concluir o registro. Confirmações já salvas foram preservadas; tente novamente sem duplicá-las."
+    },
     "leadInteractions": {
       "title": "Registrar interação", "type": "Tipo", "occurredAt": "Data e horário", "description": "Descrição",
       "save": "Salvar interação", "saving": "Salvando...", "cancel": "Cancelar", "saved": "Interação registrada.", "stageError": "Interação registrada, mas não foi possível mover o lead para \"Em conversa\". Altere o estágio manualmente.",
@@ -2203,6 +2213,16 @@ export const uiTranslations = {
       "overdueEmpty": "No overdue tasks.", "pendingEmpty": "No pending tasks.", "completedEmpty": "No completed tasks.",
       "due": "Due", "noDue": "No due date", "automatic": "Automatic", "activityType": "Activity type",
       "types": { "whatsapp": "WhatsApp", "call": "Call", "email": "Email", "meeting": "Meeting", "follow_up": "Follow-up", "general": "General task" }
+    },
+    "leadStageConfirmation": {
+      "title": "Confirm earlier steps", "intro": "Some earlier steps have not been recorded.", "stepCount": "{current} of {total}",
+      "questions": { "contact": "Has the first contact with this lead already happened?", "trial": "Has a trial lesson already been scheduled for this lead?", "proposal": "Has a proposal already been sent to this lead?" },
+      "facts": { "contact": "First contact confirmed by the teacher.", "trial": "Trial lesson scheduling confirmed by the teacher.", "proposal": "Proposal sending confirmed by the teacher." },
+      "yes": "Yes, it happened", "no": "It did not happen", "actualDate": "Actual date and time", "dateHint": "Enter when it happened. No date is filled in automatically.",
+      "back": "Back", "next": "Next step", "continue": "Confirm and continue", "saving": "Recording…", "retry": "Try again", "historyLabel": "Confirmed step",
+      "dateRequired": "Enter the actual date and time.", "dateInvalid": "Enter a valid date.", "dateFuture": "A confirmed event cannot be in the future.", "choice_required": "Confirm each step individually.",
+      "loadError": "Could not check earlier steps. Nothing was updated; please try again.",
+      "saveError": "Could not finish recording. Saved confirmations were kept; try again without duplicating them."
     },
     "leadInteractions": {
       "title": "Record interaction", "type": "Type", "occurredAt": "Date and time", "description": "Description",

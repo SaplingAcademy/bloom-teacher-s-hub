@@ -52,4 +52,11 @@ describe("Original-lead conversion history", () => {
     db.fail = "automation_events";
     await expect(fetchLeadAutomationActivity("teacher-1", "lead-1")).rejects.toMatchObject({ message: "History unavailable" });
   });
+  it("retains confirmed-step history from its persisted event when the activity write failed", async () => {
+    db.rows.automation_events.push({ id: "confirmed", teacher_id: "teacher-1", source_table: "leads", source_id: "lead-1", event_type: "lead.stage_confirmed", status: "completed", payload: { step: "proposal", description: "Teacher confirmed proposal", occurred_at: "2026-11-01T14:00:00Z" } });
+    const history = await fetchLeadAutomationActivity("teacher-1", "lead-1");
+    expect(history.find((e) => e.automation_event_id === "confirmed")).toMatchObject({ action_type: "manual_stage_confirmation", description: "Teacher confirmed proposal", created_at: "2026-11-01T14:00:00Z" });
+    db.rows.automation_activity.push({ id: "activity", teacher_id: "teacher-1", target_id: "lead-1", automation_event_id: "confirmed", action_type: "manual_stage_confirmation", description: "Teacher confirmed proposal", created_at: "2026-11-01T14:00:00Z" });
+    expect((await fetchLeadAutomationActivity("teacher-1", "lead-1")).filter((e) => e.automation_event_id === "confirmed")).toHaveLength(1);
+  });
 });
