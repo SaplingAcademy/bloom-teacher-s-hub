@@ -1,8 +1,9 @@
 # Roadmap
 
-- [ ] Workspace Entrega 5: personal notebook/page CRUD on existing tables, safe rich-text JSON editor, pinned ordering and PT/EN desktop/mobile UI; no SQL, quotas, collaboration or Mural/Projects changes.
-- [ ] Workspace Entrega 5: debounced serialized autosave with preserved drafts, explicit confirmed/error status, retry and navigation protection; focused notebook tests plus existing Mural/Projects regressions.
-- [ ] Workspace Entrega 5: verify notebook creation, pages, editing, save/reopen and failures in desktop/mobile; report any real-account access blocker.
+- [x] Workspace Entrega 5: personal notebook/page CRUD on existing tables, lazy Tiptap rich-text JSON editor, pinned ordering and PT/EN desktop/mobile UI; no SQL, quotas, collaboration or Mural/Projects changes.
+- [x] Workspace Entrega 5: 700ms serialized autosave, page-scoped preserved drafts, latest confirmed/error status, retry, metadata-write editing lock and save-before-navigation protection. All 65 focused notebook/Mural/Projects tests passed; automatic compilation OK.
+- [x] Workspace Entrega 5: isolated actual components verified notebook create/edit/delete, pages rename/duplicate/pin/reorder/delete, formatting/checklist/safe links, debounce/rapid switching, network error/retry, blocked failed navigation and saved reopen in PT/EN at 1280px/800px/390px without runtime errors. Mock persistence does not establish production RLS or real saves.
+- [ ] Workspace Entrega 5: verify authenticated notebook/page persistence and RLS with real teacher accounts; blocked by unavailable external session (live /workspace/notebooks redirects to /auth).
 
 - [x] Today performance: production telemetry confirmed priority reads began about two seconds after inactivity automation; the controlled real-component baseline took 2,414 ms and duplicated the read. No business-rule, database or Workspace changes.
 - [x] Today performance: priorities now start concurrently with automation in a teacher/local-day React Query cache, deduplicate mounts, retain cached content during revalidation and invalidate after newly created automation tasks. Controlled result 416 ms (-1,998 ms / -82.8%); 470 Vitest + 159 Bun tests, typecheck and preview build passed.
