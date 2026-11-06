@@ -136,7 +136,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     finishTimer.current = setTimeout(clearPreview, current.reducedMotion ? 0 : WEEK_DRAG_TRANSITION_MS);
   }, [clearPreview, paint, setPreview]);
 
-  const updateTarget = useCallback((active: NonNullable<typeof gesture.current>, clientX: number, clientY: number) => {
+  const updateTarget = useCallback((active: WeekDragGesture, clientX: number, clientY: number) => {
     const cell = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-calendar-drop-cell]");
     if (!cell?.dataset.date || !cell.dataset.hour) {
       active.target = null;
@@ -152,7 +152,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     setTarget((current) => sameTarget(current, next) ? current : next);
   }, []);
 
-  const beginPreview = useCallback((active: NonNullable<typeof gesture.current>, clientX: number, clientY: number) => {
+  const beginPreview = useCallback((active: WeekDragGesture, clientX: number, clientY: number) => {
     active.moved = true;
     suppressedClick.current = active.id;
     const x = clientX - active.grabX;
@@ -252,7 +252,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     const element = event.currentTarget;
     const rect = element.getBoundingClientRect();
     const pointerType = event.pointerType || "mouse";
-    const active: NonNullable<typeof gesture.current> = {
+    const active: WeekDragGesture = {
       id,
       pointerId: event.pointerId,
       pointerType,
