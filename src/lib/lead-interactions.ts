@@ -159,13 +159,13 @@ export async function fetchLeadAutomationActivity(teacherId: string, leadId: str
 
 export type TimelineEntry =
   | { kind: "manual"; id: string; at: string; type: string; description: string }
-  | { kind: "automatic"; id: string; at: string; description: string };
+  | { kind: "automatic" | "confirmation"; id: string; at: string; description: string };
 
 /** Unified timeline, newest first. Manual and automatic entries stay distinguishable. */
 export function mergeLeadTimeline(manual: LeadInteraction[], automatic: AutomationActivity[]): TimelineEntry[] {
   const entries: TimelineEntry[] = [
     ...manual.map((m) => ({ kind: "manual" as const, id: `m-${m.id}`, at: m.occurred_at, type: m.type, description: m.description })),
-    ...automatic.map((a) => ({ kind: "automatic" as const, id: `a-${a.id}`, at: a.created_at, description: a.description })),
+    ...automatic.map((a) => ({ kind: a.action_type === "manual_stage_confirmation" ? "confirmation" as const : "automatic" as const, id: `a-${a.id}`, at: a.created_at, description: a.description })),
   ];
   return entries.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 }

@@ -82,10 +82,10 @@ export function LeadHistoryPanel({ teacherId, leadId, refreshKey, onAddInteracti
                 <div className="flex flex-wrap items-center gap-2">
                   <Icon className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="font-medium">
-                    {e.kind === "manual" ? (TYPE_ICONS[e.type] ? L(`types.${e.type}`) : e.type) : L("automatic")}
+                    {e.kind === "manual" ? (TYPE_ICONS[e.type] ? L(`types.${e.type}`) : e.type) : e.kind === "confirmation" ? t("leadStageConfirmation.historyLabel") : L("automatic")}
                   </span>
-                  <Badge variant={e.kind === "manual" ? "secondary" : "outline"} className="text-[10px]">
-                    {e.kind === "manual" ? L("manual") : L("automatic")}
+                  <Badge variant={e.kind !== "automatic" ? "secondary" : "outline"} className="text-[10px]">
+                    {e.kind !== "automatic" ? L("manual") : L("automatic")}
                   </Badge>
                   <span className="ml-auto text-muted-foreground">{fmt(e.at)}</span>
                 </div>
