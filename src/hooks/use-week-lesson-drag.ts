@@ -38,6 +38,7 @@ function sameTarget(a: WeekDropTarget | null, b: WeekDropTarget | null) {
 export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPosition) => void | boolean | Promise<void | boolean>) {
   const [preview, setPreviewState] = useState<WeekLessonDragPreview | null>(null);
   const [target, setTarget] = useState<WeekDropTarget | null>(null);
+  const targetRef = useRef<WeekDropTarget | null>(null);
   const preview = useRef<WeekLessonDragPreview | null>(null);
   const overlay = useRef<HTMLElement | null>(null);
   const position = useRef({ x: 0, y: 0 });

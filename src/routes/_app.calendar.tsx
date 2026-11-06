@@ -595,30 +595,32 @@ function CalendarPage() {
 
   const weekDrag = useWeekLessonDrag(async (eventId, position) => {
     const event = events.find((item) => item.id === eventId);
-    if (!event || pendingMoves.current.has(eventId)) return;
-    if (event.date === position.date && fmtTime(event.startTime) === position.startTime) return;
+    if (!event || pendingMoves.current.has(eventId)) return false;
+    if (event.date === position.date && fmtTime(event.startTime) === position.startTime) return false;
     pendingMoves.current.add(eventId);
     setMovingIds(new Set(pendingMoves.current));
     try {
       if (event.eventType === "custom") {
-        if (!user?.id) return;
+        if (!user?.id) return false;
         await moveCustomEvent(user.id, eventId, position.date, position.startTime, event.duration);
         await queryClient.invalidateQueries({ queryKey: ["growth-data", user.id] });
         await fetchEvents();
-        return;
+        return true;
       }
       const result = await rescheduleConfirmation.request(eventId, position.date, position.startTime);
-      if (!result) return;
+      if (!result) return false;
       if (!result.ok) {
         const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
         const reason = known.includes(result.reason) ? result.reason : "save_failed";
         toast.error(t(`calendarUi.rescheduleErr_${reason}`));
-        return;
+        return false;
       }
       // Read back the canonical saved occurrence; no optimistic move or local storage writes.
       await fetchEvents();
+      return true;
     } catch (error) {
       toast.error(t(event.eventType === "custom" ? `customCalendar.${customEventErrorKey(error)}` : "calendarUi.rescheduleErr_save_failed"));
+      return false;
     } finally {
       pendingMoves.current.delete(eventId);
       setMovingIds(new Set(pendingMoves.current));
@@ -1437,6 +1439,7 @@ function CalendarPage() {
                               <div
                                 key={evt.id}
                                 data-calendar-event=""
+                                data-calendar-event-id={evt.id}
                                 aria-busy={movingIds.has(evt.id)}
                                 onPointerDown={(event) => {
                                   if (canDrag && !pendingMoves.current.has(evt.id)) weekDrag.start(event, evt.id);
@@ -1530,6 +1533,7 @@ function CalendarPage() {
                             <div
                               key={evt.id}
                               data-calendar-event=""
+                              data-calendar-event-id={evt.id}
                               onPointerDown={(event) => { if (evt.eventType === "custom" && !movingIds.has(evt.id)) weekDrag.start(event, evt.id); }}
                               onClick={() => {
                                 if (evt.eventType === "custom" && (weekDrag.consumeClick(evt.id) || pendingMoves.current.has(evt.id))) return;
