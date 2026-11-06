@@ -4,7 +4,7 @@ import { confirmedChoices, missingPriorSteps, type ConfirmationChoice, type Prio
 import type { Lead } from "@/lib/automation-engine";
 import { useLanguage } from "./use-language";
 interface Request { lead: Lead; target: string; steps: PriorStep[] }
-export function useLeadStageConfirmation(owner: string | undefined, onRecorded: () => void) {
+export function useLeadStageConfirmation(owner: string | undefined, onRecorded: (lead?: Lead) => void) {
   const { t } = useLanguage();
   const [request, setRequest] = useState<Request | null>(null), [checking, setChecking] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState<string | null>(null), [started, setStarted] = useState(false);
   const resolver = useRef<((lead: Lead | null) => void) | null>(null), lock = useRef(false), submitLock = useRef(false), currentOwner = useRef(owner), callback = useRef(onRecorded);
@@ -39,8 +39,13 @@ export function useLeadStageConfirmation(owner: string | undefined, onRecorded: 
       }
       const fresh = await readStageEvidence(owner, request.lead.id);
       if (currentOwner.current !== owner) throw new Error("authentication_changed");
+      callback.current(fresh.lead);
       setRequest(null); resolver.current?.(fresh.lead); resolver.current = null;
-    } catch { setError(t("leadStageConfirmation.saveError")); }
+    } catch {
+      setError(t("leadStageConfirmation.saveError"));
+      // A confirmed contact can already be persisted even if a later confirmation fails.
+      try { const fresh = await readStageEvidence(owner, request.lead.id); if (currentOwner.current === owner) callback.current(fresh.lead); } catch { /* Preserve the error and explicit retry. */ }
+    }
     finally { submitLock.current = false; setSaving(false); }
   };
   return { request, checking, saving, error, started, confirmBefore, cancel, submit };

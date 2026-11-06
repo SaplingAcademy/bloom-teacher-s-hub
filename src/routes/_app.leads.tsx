@@ -176,7 +176,13 @@ function LeadsPage() {
   });
 
   const teacherId = user?.id;
-  const stageConfirmation = useLeadStageConfirmation(teacherId, () => setHistoryRefreshKey((key) => key + 1));
+  const stageConfirmation = useLeadStageConfirmation(teacherId, (fresh) => {
+    setHistoryRefreshKey((key) => key + 1);
+    if (!fresh) return;
+    const saved = { ...fresh, stage: normalizeLeadStage(fresh.stage) };
+    setLeads((prev) => prev.map((lead) => lead.id === saved.id ? saved : lead));
+    setSelectedLead((prev) => prev?.id === saved.id ? saved : prev);
+  });
   const { catalogOptions } = useCatalogOptions();
   const convertLanguages = conversionLanguageOptions(teacherLanguages, convertForm.language_studied);
   const pedagogyLabel = (lead: Lead) =>
