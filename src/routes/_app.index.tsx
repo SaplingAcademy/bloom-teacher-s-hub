@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { UrgentWidget } from "@/components/bloom/UrgentWidget";
 import { DailyPrioritiesCard } from "@/components/bloom/DailyPrioritiesCard";
+import { ChecklistCard } from "@/components/bloom/ChecklistCard";
 import { t as i18nT } from "@/lib/i18n";
 
 /**
@@ -913,7 +914,12 @@ function TodayPage() {
       </div>
 
       {/* DAILY PRIORITIES SECTION */}
-      {user?.id && <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />}
+      {user?.id && (
+        <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={user.id} />
+          <ChecklistCard key={`checklist-${user.id}`} />
+        </div>
+      )}
 
       {/* SINGLE URGENT SECTION */}
       {user?.id && <UrgentWidget key={`urgent-${refreshKey}`} teacherId={user.id} />}
