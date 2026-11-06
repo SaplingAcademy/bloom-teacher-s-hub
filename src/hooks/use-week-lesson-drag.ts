@@ -67,24 +67,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
   const dropRef = useRef(onDrop);
   dropRef.current = onDrop;
 
-  const gesture = useRef<{
-    id: string;
-    pointerId: number;
-    pointerType: string;
-    x: number;
-    y: number;
-    latestX: number;
-    latestY: number;
-    ready: boolean;
-    moved: boolean;
-    element: HTMLElement;
-    target: WeekDropTarget | null;
-    origin: WeekLessonDragPreview["origin"];
-    grabX: number;
-    grabY: number;
-    reducedMotion: boolean;
-    holdTimer?: ReturnType<typeof setTimeout>;
-  } | null>(null);
+  const gesture = useRef<WeekDragGesture | null>(null);
   const suppressedClick = useRef<string | null>(null);
 
   const setPreview = useCallback((next: WeekLessonDragPreview | null) => {
