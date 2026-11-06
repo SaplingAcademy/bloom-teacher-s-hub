@@ -59,6 +59,6 @@ export async function recordConfirmedStep(owner: string, leadId: string, step: P
     if (readError) throw readError; if (!data) throw new Error("confirmation_unavailable"); event = data;
   }
   // Same ID on uncertain retries prevents repeated history entries. Preserve original fact/date.
-  const { error } = await supabase.from("automation_activity").upsert({ id: await confirmationUuid(`${key}:history`), teacher_id: owner, automation_event_id: event.id, action_type: "manual_stage_confirmation", target_table: "leads", target_id: leadId, description: String(event.payload?.description ?? description) }, { onConflict: "id", ignoreDuplicates: true });
+  const { error } = await supabase.from("automation_activity").upsert({ id: await confirmationUuid(`${key}:history`), teacher_id: owner, automation_event_id: event.id, action_type: "manual_stage_confirmation", target_table: "leads", target_id: leadId, description: String(event.payload?.description ?? description), created_at: String(event.payload?.occurred_at ?? new Date(occurredAt).toISOString()) }, { onConflict: "id", ignoreDuplicates: true });
   if (error) throw error;
 }
