@@ -5,7 +5,8 @@ const mocks = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), insert: vi.fn
   eq: vi.fn(), in: vi.fn(), range: vi.fn(), single: vi.fn(), responses: [] as { data: unknown; error: unknown }[] }));
 vi.mock("@/lib/supabase", () => ({ supabase: { auth: { getUser: mocks.getUser }, from: mocks.from } }));
 import { fetchTeacherChecklist, persistChecklistCommand, teacherChecklistKey } from "../src/lib/teacher-checklist-data";
-const saved: TeacherChecklistItem = { id: "item", teacher_id: "teacher", title: "Prepare", completed: false,
+const NONE = { deadline_type: "none", due_date: null } as const;
+const saved: TeacherChecklistItem = { id: "item", teacher_id: "teacher", title: "Prepare", completed: false, ...NONE,
   created_at: "2026-11-06T01:00:00Z", updated_at: "2026-11-06T02:00:00Z" };
 
 beforeEach(() => {
@@ -37,20 +38,31 @@ describe("Checklist session persistence", () => {
     await expect(persistChecklistCommand("teacher", { type: "delete", id: "item" })).rejects.toThrow("authentication_changed");
     expect(mocks.from).not.toHaveBeenCalled();
   });
-  it("creates with verified teacher ID and only granted input columns, returning saved timestamps", async () => {
-    expect(await persistChecklistCommand("teacher", { type: "create", id: "item", title: " Prepare " })).toEqual({ item: saved });
-    expect(mocks.insert).toHaveBeenCalledWith({ id: "item", teacher_id: "teacher", title: "Prepare", completed: false });
+  it("creates with verified teacher ID and only granted input columns, including the explicit deadline", async () => {
+    const deadline = { deadline_type: "today", due_date: "2026-11-06" } as const;
+    mocks.responses = [{ data: { ...saved, ...deadline }, error: null }];
+    expect(await persistChecklistCommand("teacher", { type: "create", id: "item", title: " Prepare ", deadline })).toEqual({ item: { ...saved, ...deadline } });
+    expect(mocks.insert).toHaveBeenCalledWith({ id: "item", teacher_id: "teacher", title: "Prepare", completed: false, ...deadline });
   });
-  it("edits only title with owner and ID filters and saved readback", async () => {
-    await persistChecklistCommand("teacher", { type: "edit", id: "item", title: "Updated" });
-    expect(mocks.update).toHaveBeenCalledWith({ title: "Updated" });
+  it("edits title and deadline with owner and ID filters and saved readback", async () => {
+    const deadline = { deadline_type: "specific", due_date: "2026-11-20" } as const;
+    mocks.responses = [{ data: { ...saved, title: "Updated", ...deadline }, error: null }];
+    await persistChecklistCommand("teacher", { type: "edit", id: "item", title: "Updated", deadline });
+    expect(mocks.update).toHaveBeenCalledWith({ title: "Updated", ...deadline });
     expect(mocks.eq).toHaveBeenCalledWith("teacher_id", "teacher");
     expect(mocks.eq).toHaveBeenCalledWith("id", "item");
   });
-  it.each([true, false])("changes only completed=%s without overwriting the title", async (completed) => {
+  it.each([true, false])("changes only completed=%s without overwriting title or deadline", async (completed) => {
     mocks.responses = [{ data: { ...saved, completed }, error: null }];
     expect(await persistChecklistCommand("teacher", { type: "complete", id: "item", completed })).toEqual({ item: { ...saved, completed } });
     expect(mocks.update).toHaveBeenCalledWith({ completed });
+  });
+  it("recovers the same row by updating only its new deadline", async () => {
+    const deadline = { deadline_type: "today", due_date: "2026-11-06" } as const;
+    mocks.responses = [{ data: { ...saved, ...deadline }, error: null }];
+    expect(await persistChecklistCommand("teacher", { type: "recover", id: "item", deadline })).toEqual({ item: { ...saved, ...deadline } });
+    expect(mocks.update).toHaveBeenCalledWith(deadline);
+    expect(mocks.insert).not.toHaveBeenCalled();
   });
   it("deletes only the selected owner-scoped task", async () => {
     mocks.responses = [{ data: { id: "item" }, error: null }];
@@ -65,9 +77,15 @@ describe("Checklist session persistence", () => {
   });
   it("recovers an uncertain create with the same UUID without inserting twice", async () => {
     mocks.responses = [{ data: null, error: { code: "23505" } }, { data: saved, error: null }];
-    expect(await persistChecklistCommand("teacher", { type: "create", id: "item", title: "Prepare" })).toEqual({ item: saved });
+    expect(await persistChecklistCommand("teacher", { type: "create", id: "item", title: "Prepare", deadline: NONE })).toEqual({ item: saved });
     expect(mocks.insert).toHaveBeenCalledOnce();
     expect(mocks.eq).toHaveBeenCalledWith("id", "item");
+  });
+  it("does not treat an uncertain create with changed deadline as the same operation", async () => {
+    mocks.responses = [{ data: null, error: { code: "23505" } }, { data: saved, error: null }];
+    await expect(persistChecklistCommand("teacher", { type: "create", id: "item", title: "Prepare",
+      deadline: { deadline_type: "today", due_date: "2026-11-06" } })).rejects.toThrow("checklist_item_changed");
+    expect(mocks.insert).toHaveBeenCalledOnce();
   });
   it("fails visibly on RLS/network read and write failures", async () => {
     const error = { message: "permission denied" };
@@ -75,13 +93,15 @@ describe("Checklist session persistence", () => {
     await expect(fetchTeacherChecklist("teacher")).rejects.toEqual(error);
     await expect(persistChecklistCommand("teacher", { type: "complete", id: "item", completed: true })).rejects.toEqual(error);
   });
-  it("rejects foreign-owner or malformed rows instead of using local defaults", async () => {
+  it("rejects foreign-owner, malformed or inconsistent deadline rows instead of using local defaults", async () => {
     mocks.responses = [{ data: [{ ...saved, teacher_id: "other" }], error: null }];
+    await expect(fetchTeacherChecklist("teacher")).rejects.toThrow("checklist_invalid_row");
+    mocks.responses = [{ data: [{ ...saved, due_date: "2026-11-06" }], error: null }];
     await expect(fetchTeacherChecklist("teacher")).rejects.toThrow("checklist_invalid_row");
   });
   it("reads beyond the Data API row limit", async () => {
     const page = Array.from({ length: 500 }, (_, index) => ({ ...saved, id: String(index) }));
-    mocks.responses = [{ data: page, error: null }, { data: [{ ...saved, id: "last" }], error: null }];
+    mocks.responses = [{ data: page, error: null }, { data: [{ ...saved, id: "last" },], error: null }];
     expect(await fetchTeacherChecklist("teacher")).toHaveLength(501);
     expect(mocks.range.mock.calls).toEqual([[0, 499], [500, 999]]);
   });

@@ -217,10 +217,10 @@ export function ChecklistCard() {
   function taskList(list: TeacherChecklistItem[], fromHistory = false) {
     return <div role="region" aria-label={t(fromHistory ? "checklist.historyListLabel" : "checklist.listLabel")} tabIndex={0}
       data-no-carousel-drag className="max-h-72 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring sm:px-5 xl:max-h-none">
-      <ul className="divide-y divide-border/60">{list.map((item, index) => <div key={item.id} className="contents">
+      <ul className="divide-y divide-border/60">{list.map((item, index) => <Fragment key={item.id}>
         {!fromHistory && item.completed && !list[index - 1]?.completed && <li aria-hidden="true" className="mb-1 mt-1 list-none text-xs font-semibold text-muted-foreground">{t("checklist.completed")}</li>}
         {renderItem(item, fromHistory)}
-      </div>)}</ul>
+      </Fragment>)}</ul>
     </div>;
   }
 

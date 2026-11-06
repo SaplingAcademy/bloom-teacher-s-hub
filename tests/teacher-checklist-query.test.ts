@@ -15,7 +15,8 @@ vi.mock("@/lib/inactive-lead-automation", () => ({ runInactiveLeadCheckOnLoad: m
 import { useTeacherChecklist } from "../src/hooks/use-teacher-checklist";
 import { useDailyPrioritiesQuery } from "../src/hooks/use-daily-priorities-query";
 
-const row = (id: string): TeacherChecklistItem => ({ id, teacher_id: "teacher", title: id, completed: false,
+const NONE = { deadline_type: "none", due_date: null } as const;
+const row = (id: string): TeacherChecklistItem => ({ id, teacher_id: "teacher", title: id, completed: false, ...NONE,
   created_at: "2026-11-06T00:00:00Z", updated_at: "2026-11-06T00:00:00Z" });
 let root: Root;
 let container: HTMLDivElement;
