@@ -1,6 +1,17 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "checklist": {
+      "title": "Checklist", "pending": "{count} pendentes", "pendingOne": "1 pendente", "completed": "Concluídas",
+      "add": "Adicionar tarefa", "titleLabel": "Tarefa", "placeholder": "Nova tarefa…", "edit": "Editar tarefa", "delete": "Excluir tarefa",
+      "save": "Salvar", "cancel": "Cancelar", "complete": "Concluir: {title}", "reopen": "Desmarcar: {title}",
+      "empty": "Nenhuma tarefa por aqui.", "allDone": "Tudo concluído!", "clear": "Limpar concluídas",
+      "clearTitle": "Limpar tarefas concluídas?", "clearBody": "As {count} tarefas concluídas serão excluídas permanentemente. As pendentes serão mantidas.",
+      "clearOne": "A tarefa concluída será excluída permanentemente. As pendentes serão mantidas.", "confirmClear": "Excluir concluídas",
+      "loadError": "Não foi possível carregar seu Checklist.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
+      "retry": "Tentar novamente", "loading": "Carregando Checklist…", "saving": "Salvando…", "required": "Informe uma tarefa.",
+      "listLabel": "Tarefas pessoais", "saveEdit": "Salvar tarefa", "cancelEdit": "Cancelar edição"
+    },
     "workspace": {
       "title": "Workspace", "eyebrow": "Seu espaço de organização",
       "subtitle": "Organize ideias, projetos e anotações em um só lugar.",
@@ -1532,6 +1543,17 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "checklist": {
+      "title": "Checklist", "pending": "{count} pending", "pendingOne": "1 pending", "completed": "Completed",
+      "add": "Add task", "titleLabel": "Task", "placeholder": "New task…", "edit": "Edit task", "delete": "Delete task",
+      "save": "Save", "cancel": "Cancel", "complete": "Complete: {title}", "reopen": "Uncheck: {title}",
+      "empty": "No tasks here yet.", "allDone": "All done!", "clear": "Clear completed",
+      "clearTitle": "Clear completed tasks?", "clearBody": "The {count} completed tasks will be permanently deleted. Pending tasks will be kept.",
+      "clearOne": "The completed task will be permanently deleted. Pending tasks will be kept.", "confirmClear": "Delete completed",
+      "loadError": "Could not load your Checklist.", "saveError": "Could not save this change. Please try again.",
+      "retry": "Try again", "loading": "Loading Checklist…", "saving": "Saving…", "required": "Enter a task.",
+      "listLabel": "Personal tasks", "saveEdit": "Save task", "cancelEdit": "Cancel editing"
+    },
     "workspace": {
       "title": "Workspace", "eyebrow": "Your organization space",
       "subtitle": "Organize ideas, projects and notes in one place.",

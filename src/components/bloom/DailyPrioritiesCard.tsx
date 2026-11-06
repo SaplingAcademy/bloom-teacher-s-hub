@@ -168,10 +168,10 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
               </span>
             )}
           </div>
-          <h4 className="text-xs sm:text-sm font-bold text-stone-900 group-hover:text-emerald-950 transition-colors leading-snug">
+          <h4 className="break-words text-xs sm:text-sm font-bold text-stone-900 group-hover:text-emerald-950 transition-colors leading-snug">
             {item.title}
           </h4>
-          <p className="text-[11px] font-medium text-stone-500 leading-tight">
+          <p className="break-words text-[11px] font-medium text-stone-500 leading-tight">
             {describeItem(item)}
           </p>
         </div>
@@ -185,14 +185,14 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const isEmpty = !loading && items.length === 0;
 
   return (
-    <div className="rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all">
+    <div className="min-w-0 rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all">
       {/* Tinted header + filters area (identity section) */}
       <div className="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 rounded-t-2xl bg-accent-soft/50 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-accent/15">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="font-outfit text-xl font-extrabold text-[#163020]">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-[#163020]">
               {t("today.prioritiesTitle")}
             </h2>
             {!loading && items.length > 0 && (
