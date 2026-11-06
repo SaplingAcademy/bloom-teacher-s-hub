@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Today performance: diagnose the complete Prioridades do Dia loading path and measure an equivalent baseline before changing code; no business-rule, database or Workspace changes.
+- [ ] Today performance: apply only evidence-backed loading/cache optimizations, run focused tests and report an honest before/after measurement; real-account timing remains subject to session availability.
+
 - [x] Workspace Entrega 3: personal notes in existing workspace_notes, PT/EN compact editor, seven colors, confirmation, pinning and single-row accessible persisted ordering; optimistic rollback, serialized writes, stable create UUID and Auth-derived ownership. No SQL, Projects/Notebooks changes or Entrega 4.
 - [ ] Workspace Entrega 3: verify saved note operations with real authenticated teachers and production RLS; blocked by unavailable external session (live /workspace/mural redirects to /auth). Focused tests and isolated real-component desktop/tablet/mobile flows verify behavior but not real database persistence.
 - [x] Workspace Entrega 4: personal projects, phases, tasks/checklists, notes and links with derived progress. Real-account check pending (no signed-in session available).
