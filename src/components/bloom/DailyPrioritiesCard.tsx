@@ -185,25 +185,25 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const isEmpty = !loading && items.length === 0;
 
   return (
-    <div className="min-w-0 rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all">
-      {/* Tinted header + filters area (identity section) */}
-      <div className="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 rounded-t-2xl bg-accent-soft/50 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-accent/15">
+    <div className="min-w-0 rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all xl:h-full">
+      {/* Forest header + filters area; priority content stays on the white card surface */}
+      <div className="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 rounded-t-2xl border-b border-sidebar-border bg-sidebar px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-[#163020]">
+            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-sidebar-accent-foreground">
               {t("today.prioritiesTitle")}
             </h2>
             {!loading && items.length > 0 && (
-              <Badge className="bg-stone-100 text-stone-700 border-stone-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              <Badge className="border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold px-2.5 py-0.5 rounded-full">
                 {items.length === 1
                   ? t("today.priorityCountSingular").replace("{count}", "1")
                   : t("today.priorityCount").replace("{count}", String(items.length))}
               </Badge>
             )}
           </div>
-          <p className="text-xs text-stone-500 font-medium mt-0.5">
+          <p className="text-xs text-sidebar-foreground/80 font-medium mt-0.5">
             {t("today.prioritiesSubtitle")}
           </p>
         </div>
@@ -220,14 +220,14 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             onClick={() => setFilter("all")}
             className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
               filter === "all"
-                ? "bg-primary text-primary-foreground border-primary hover:bg-primary hover:text-primary-foreground"
-                : "bg-card text-muted-foreground border-border hover:bg-card hover:text-foreground"
+                ? "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar"
+                : "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
             {t("today.filterAll")}
             <span
               className={`text-[10px] font-extrabold rounded-full px-1.5 py-px ${
-                filter === "all" ? "bg-primary-foreground/10 text-primary-foreground" : "bg-muted text-muted-foreground"
+                filter === "all" ? "bg-sidebar/10 text-sidebar" : "bg-sidebar-foreground/10 text-sidebar-foreground"
               }`}
             >
               {items.length}
@@ -248,8 +248,8 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                 onClick={() => setFilter(cat)}
                 className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
                   filter === cat
-                    ? "bg-primary text-primary-foreground border-primary hover:bg-primary hover:text-primary-foreground"
-                    : "bg-card text-muted-foreground border-border hover:bg-card hover:text-foreground"
+                    ? "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar"
+                    : "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -259,7 +259,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                 ) : (
                   <span
                     className={`text-[10px] font-extrabold rounded-full px-1.5 py-px ${
-                      filter === cat ? "bg-primary-foreground/10 text-primary-foreground" : "bg-muted text-muted-foreground"
+                      filter === cat ? "bg-sidebar/10 text-sidebar" : "bg-sidebar-foreground/10 text-sidebar-foreground"
                     }`}
                   >
                     {count}
