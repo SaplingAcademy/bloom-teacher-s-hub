@@ -3,10 +3,14 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => (options: unknown) => options,
-  useNavigate: () => vi.fn(),
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    createFileRoute: () => (options: unknown) => options,
+    useNavigate: () => vi.fn(),
+  };
+});
 vi.mock("@tanstack/react-query", () => ({ useQuery: vi.fn(), useQueryClient: () => ({}) }));
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
