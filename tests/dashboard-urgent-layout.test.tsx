@@ -75,6 +75,7 @@ afterEach(async () => {
 describe("Dashboard section order", () => {
   it("places one Urgent section after the main indicators and before Priorities and Checklist", async () => {
     await act(async () => { root.render(createElement(TodayPage)); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     const indicators = container.querySelector("[data-testid='main-indicators']");
     const urgent = container.querySelectorAll("[data-testid='urgent']");
     const priorities = container.querySelector("[data-testid='priorities']");
