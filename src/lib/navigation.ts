@@ -3,7 +3,6 @@ import {
   Users,
   UserPlus,
   CalendarDays,
-  BookOpen,
   LibraryBig,
   Wallet,
   LayoutGrid,
@@ -55,7 +54,6 @@ export const navSections: NavSection[] = [
         icon: CalendarDays,
         description: "Classes and availability",
       },
-      { id: "lessons", label: "Lessons", to: "/lessons", icon: BookOpen, description: "Plan and deliver lessons" },
       {
         id: "resources",
         label: "Resources",
