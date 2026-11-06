@@ -88,6 +88,7 @@ import { CalendarColorPicker } from "@/components/bloom/CalendarColorPicker";
 import { saveAttendanceRecords } from "@/lib/lesson-plans";
 import { RescheduleLessonDialog } from "@/components/bloom/RescheduleLessonDialog";
 import { useWeekLessonDrag } from "@/hooks/use-week-lesson-drag";
+import { WeekLessonDragPreview } from "@/components/bloom/WeekLessonDragPreview";
 import { useRescheduleConfirmation } from "@/hooks/use-reschedule-confirmation";
 import { RescheduleWarningDialog } from "@/components/bloom/RescheduleWarningDialog";
 import { useHomeworkStatus } from "@/hooks/use-homework-status";

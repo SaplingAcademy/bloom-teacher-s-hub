@@ -282,16 +282,11 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
   };
 
   return {
-    draggedId: preview.current?.id ?? null,
-    preview: preview.current && preview === preview.current ? previewStateOrNull(preview.current, preview) : null,
+    draggedId: previewState?.id ?? null,
+    preview: previewState,
     target,
     start,
     consumeClick,
     previewRef,
   };
-}
-
-// Keeps the public snapshot referentially stable while the mutable ref drives paint.
-function previewStateOrNull(current: WeekLessonDragPreview, ref: { current: WeekLessonDragPreview | null }) {
-  return ref.current === current ? current : null;
 }
