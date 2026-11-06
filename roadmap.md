@@ -1,7 +1,7 @@
 # Roadmap
 
 - [x] Leads: inspected existing funnel and stage-change entry points; canonical stages are Novo contato, Em conversa, Aula experimental agendada, Proposta enviada, Convertido, Perdido. No manual stage selector/drag or Nivelamento concluído exists; actions advance through existing interaction/trial/proposal/conversion flows.
-- [ ] Leads: confirm individually missing earlier steps without presumed dates/details or duplicate history, preserve existing automations; blocked on clarifying whether to use current funnel or introduce the example's absent assessment stage.
+- [ ] Leads: confirm individually missing earlier steps in the existing funnel without presumed dates/details or duplicate history; integrate before trial/proposal/conversion submissions, preserve existing automations. Current funnel confirmed by user; no assessment-stage redesign.
 - [ ] Leads: focused rule/persistence tests and desktop/mobile confirmation checks; report real-account/schema blockers if present.
 
 - [x] Workspace Entrega 5: personal notebook/page CRUD on existing tables, lazy Tiptap rich-text JSON editor, pinned ordering and PT/EN desktop/mobile UI; no SQL, quotas, collaboration or Mural/Projects changes.
