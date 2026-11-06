@@ -59,7 +59,7 @@ describe("Independent notebook block formatting", () => {
     const target = source === "taskList" ? "orderedList" : "taskList";
     instance.commands.toggleList(target, target === "taskList" ? "taskItem" : "listItem");
     const output = json(instance).content;
-    expect(output.map((node) => node.type)).toEqual([source, target, source]);
+    expect(output.map((node) => node.type)).toEqual([source, target, source, "paragraph"]);
     expect(output[0]).toEqual(list(source, ["Before"], true));
     const after = list(source, ["After"], true); if (source === "orderedList") after.attrs = { start: 6 };
     expect(output[2]).toEqual(after);
@@ -72,7 +72,7 @@ describe("Independent notebook block formatting", () => {
     select(instance, "Two", 2); const to = instance.state.selection.from;
     instance.commands.setTextSelection({ from: to, to: from });
     instance.commands.toggleTaskList();
-    expect(json(instance).content).toEqual([list("bulletList", ["Before"]), list("taskList", ["One", "Two"]), list("bulletList", ["After"])]);
+    expect(json(instance).content).toEqual([list("bulletList", ["Before"]), list("taskList", ["One", "Two"]), list("bulletList", ["After"]), { type: "paragraph" }]);
     expect(instance.state.selection.anchor).toBeGreaterThan(instance.state.selection.head);
   });
   it("preserves nested lists and inline marks inside a converted item", () => {
@@ -88,13 +88,13 @@ describe("Independent notebook block formatting", () => {
   it("keeps native list removal scoped to the selected item", () => {
     const instance = editor([list("bulletList", ["Before", "Middle", "After"])]);
     select(instance, "Middle"); instance.commands.toggleBulletList();
-    expect(json(instance).content).toEqual([list("bulletList", ["Before"]), paragraph("Middle"), list("bulletList", ["After"])]);
+    expect(json(instance).content).toEqual([list("bulletList", ["Before"]), paragraph("Middle"), list("bulletList", ["After"]), { type: "paragraph" }]);
   });
   it.each([["taskList", "Mod-Shift-9"], ["orderedList", "Mod-Shift-7"], ["bulletList", "Mod-Shift-8"]])("uses the same selection-scoped conversion for the %s shortcut", (target, shortcut) => {
     const source = target === "bulletList" ? "taskList" : "bulletList";
     const instance = editor([list(source, ["First", "Second"])]); select(instance, "Second");
     instance.commands.keyboardShortcut(shortcut);
-    expect(json(instance).content.map((node) => node.type)).toEqual([source, target]);
+    expect(json(instance).content.map((node) => node.type)).toEqual([source, target, "paragraph"]);
   });
   it.each([["bold", "word"], ["italic", "one phrase"], ["underline", "word"]])("applies %s only to selected text", (mark, selected) => {
     const instance = editor([paragraph(`Before ${selected} after`)]);
@@ -109,7 +109,7 @@ describe("Independent notebook block formatting", () => {
     expect(json(instance).content[0].content).toEqual([{ type: "text", text: "Before " }, { type: "text", text: "new ", marks: [{ type: "bold" }] }, { type: "text", text: "after" }]);
   });
   it("preserves mixed blocks through undo and redo", () => {
-    const instance = editor([list("bulletList", ["First", "Second"])]); const before = json(instance);
+    const instance = editor([list("bulletList", ["First", "Second"]), { type: "paragraph" }]); const before = json(instance);
     select(instance, "Second"); instance.commands.toggleTaskList(); const after = json(instance);
     instance.commands.undo(); expect(json(instance)).toEqual(before);
     instance.commands.redo(); expect(json(instance)).toEqual(after);
