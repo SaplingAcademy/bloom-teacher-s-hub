@@ -4,6 +4,7 @@ import { BookOpen, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceNotebooks } from "@/hooks/use-workspace-notebooks";
 import { sortNotebooks, type NotebookDraft, type WorkspaceNotebook } from "@/lib/workspace-notebooks";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,11 @@ import { NotebookDialog } from "./NotebookDialog";
 import { notebookColor, notebookIcon } from "./notebook-appearance";
 
 export function NotebooksList() {
+  const { user } = useAuth();
+  return <NotebooksListSession key={user?.id ?? "signed-out"} />;
+}
+
+function NotebooksListSession() {
   const { t, lang } = useLanguage(), { summaries, isLoading, error, pending, execute, refetch } = useWorkspaceNotebooks();
   const [editor, setEditor] = useState<{ id: string; initial: NotebookDraft | null } | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceNotebook | null>(null);

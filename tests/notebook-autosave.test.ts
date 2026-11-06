@@ -52,4 +52,9 @@ describe("Debounced notebook saving", () => {
     a.seed("same-page-id", emptyDocument()); b.seed("same-page-id", emptyDocument()); a.edit("same-page-id", doc("private A")); await a.flush();
     expect(b.document("same-page-id")).toEqual(emptyDocument()); expect(saveB).not.toHaveBeenCalled();
   });
+  it("accepts fresh server content only for clean saved pages", () => {
+    const manager = new NotebookAutosave(vi.fn(), () => {});
+    manager.seed("a", doc("old server")); manager.seed("a", doc("fresh server")); expect(manager.document("a")).toEqual(doc("fresh server"));
+    manager.edit("a", doc("local draft")); manager.seed("a", doc("conflicting server")); expect(manager.document("a")).toEqual(doc("local draft"));
+  });
 });

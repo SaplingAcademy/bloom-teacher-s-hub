@@ -16,9 +16,11 @@ export class NotebookAutosave {
   getSnapshot = () => this.snapshot;
   private emit() { this.snapshot = { version: this.snapshot.version + 1, pending: [...this.drafts.values()].some((d) => d.signature !== d.persisted || d.status !== "saved") }; this.listeners.forEach((fn) => fn()); }
   seed(id: string, document: RichDocument) {
-    if (this.drafts.has(id)) return;
     const clean = normalizeDocument(document), signature = JSON.stringify(clean);
+    const existing = this.drafts.get(id);
+    if (existing && (existing.status !== "saved" || existing.signature !== existing.persisted || this.running || signature === existing.signature)) return;
     this.drafts.set(id, { document: clean, signature, persisted: signature, revision: 0, status: "saved" });
+    if (existing) this.emit();
   }
   document(id: string) { return this.drafts.get(id)?.document; }
   status(id: string): SaveStatus { return this.drafts.get(id)?.status ?? "saved"; }

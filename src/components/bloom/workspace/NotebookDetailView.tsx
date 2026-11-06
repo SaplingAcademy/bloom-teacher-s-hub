@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { Editor } from "@tiptap/core";
 import { useBlocker } from "@tanstack/react-router";
 import { ArrowLeft, ArrowDownToLine, ArrowUpToLine, Check, Copy, FileText, List, MoreHorizontal, Pencil, Pin, PinOff, Plus, RotateCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ function NotebookSession({ notebookId }: { notebookId: string }) {
   const [renaming, setRenaming] = useState<NotebookPage | null>(null), [deleting, setDeleting] = useState<NotebookPage | null>(null);
   const [actionBusy, setActionBusy] = useState(false), [leaving, setLeaving] = useState(false);
   const actionLock = useRef(false), createIntent = useRef<{ key: string; command: PageCommand } | null>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const editorReady = useCallback((editor: Editor | null) => { editorRef.current = editor; }, []);
   const blocker = useBlocker({ shouldBlockFn: () => autosave.getSnapshot().pending, enableBeforeUnload: () => autosave.getSnapshot().pending, withResolver: true });
   useEffect(() => {
     if (detail) detail.pages.forEach((page) => autosave.seed(page.id, page.content_json));
@@ -51,6 +54,7 @@ function NotebookSession({ notebookId }: { notebookId: string }) {
   const pageAction = async (command: PageCommand) => {
     if (actionLock.current || pending) return false;
     actionLock.current = true; setActionBusy(true);
+    editorRef.current?.setEditable(false);
     try {
       // Metadata writes/duplication/deletion wait for confirmed content, never overwrite an unsaved version.
       if (!await autosave.flush()) return false;
@@ -59,7 +63,7 @@ function NotebookSession({ notebookId }: { notebookId: string }) {
       if (command.type === "delete") { autosave.forget(command.id); if (selected?.id === command.id) setSelectedId(null); }
       if (typeof saved === "object") { if (command.type === "create") { autosave.seed(saved.id, saved.content_json); setSelectedId(saved.id); setMobileEditor(true); } }
       return true;
-    } finally { actionLock.current = false; setActionBusy(false); }
+    } finally { actionLock.current = false; setActionBusy(false); editorRef.current?.setEditable(true); }
   };
   const createPage = async (source?: NotebookPage) => {
     const key = source?.id ?? "new";
@@ -107,7 +111,7 @@ function NotebookSession({ notebookId }: { notebookId: string }) {
       <div className={cn("min-w-0", !mobileEditor && selected && "hidden md:block")}>
         {selected && selectedDocument ? <>
           <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 p-4 sm:px-6"><div className="min-w-0 flex-1"><Button variant="ghost" size="sm" className="mb-2 -ml-2 md:hidden" onClick={() => setMobileEditor(false)}><List aria-hidden />{t("workspace.notebook.pages")}</Button><div className="flex items-center gap-2"><h2 className="min-w-0 break-words font-display text-xl font-semibold">{selected.title}</h2><Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" disabled={disabled} aria-label={t("workspace.notebook.rename")} onClick={() => setRenaming(selected)}><Pencil className="h-3.5 w-3.5" aria-hidden /></Button></div><p className="mt-1 text-xs text-muted-foreground">{t("workspace.notebook.created")}: {date(selected.created_at)} · {t("workspace.notebook.updated")}: {date(selected.updated_at)}</p></div><span role="status" aria-live="polite" className={cn("flex min-w-24 shrink-0 items-center justify-end gap-1.5 pt-1 text-xs", saveStatus === "error" ? "text-destructive" : "text-muted-foreground")}>{saveStatus === "saved" && <Check className="h-3.5 w-3.5" aria-hidden />}{t(`workspace.notebook.save.${saveStatus}`)}</span></div>
-          <Suspense fallback={<Skeleton className="m-5 h-96" />}><RichEditor key={selected.id} document={selectedDocument} onChange={(document) => { autosave.seed(selected.id, selected.content_json); autosave.edit(selected.id, document); }} /></Suspense>
+          <Suspense fallback={<Skeleton className="m-5 h-96" />}><RichEditor key={selected.id} document={selectedDocument} editable={!disabled} onReady={editorReady} onChange={(document) => { autosave.seed(selected.id, selected.content_json); autosave.edit(selected.id, document); }} /></Suspense>
         </> : <div className="flex min-h-96 flex-col items-center justify-center gap-4 px-5 py-12 text-center"><FileText className="h-10 w-10 text-muted-foreground" aria-hidden /><h2 className="font-display text-lg font-semibold">{t("workspace.notebook.noPages")}</h2><Button disabled={disabled} onClick={() => void createPage()}><Plus aria-hidden />{t("workspace.notebook.newPage")}</Button></div>}
       </div>
     </div>
