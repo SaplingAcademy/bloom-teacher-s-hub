@@ -1540,7 +1540,7 @@ function CalendarPage() {
                                 setSelectedEvent(evt);
                                 setNotesText(evt.notes || "");
                               }}
-                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? `${colorMeta ? `${colorMeta.cardTintClass} border-l-4 ${colorMeta.borderClass}` : "bg-lilac-soft border-lilac/40"} border-dashed touch-none select-none cursor-grab` : colorMeta?.cardTintClass} ${
+                              className={`rounded-2xl border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer max-w-2xl transition-all hover:scale-[1.01] ${evt.eventType === "custom" ? `${colorMeta ? `${colorMeta.cardTintClass} border-l-4 ${colorMeta.borderClass}` : "bg-lilac-soft border-lilac/40"} border-dashed touch-auto select-none cursor-grab` : colorMeta?.cardTintClass} ${
                                 evt.eventType === "custom" ? "" : colorMeta && colorMeta.key !== "default" ? `border-l-4 ${colorMeta.borderClass}` : "border-border bg-card"
                               }`}
                             >

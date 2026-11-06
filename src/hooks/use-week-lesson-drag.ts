@@ -138,6 +138,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     const cell = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-calendar-drop-cell]");
     if (!cell?.dataset.date || !cell.dataset.hour) {
       active.target = null;
+      targetRef.current = null;
       setTarget(null);
       return;
     }
@@ -145,6 +146,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     const position = weekDropPosition(cell.dataset.date, cell.dataset.hour, clientY, rect.top, rect.height);
     const next = { ...position, hour: cell.dataset.hour };
     active.target = next;
+    targetRef.current = next;
     setTarget((current) => sameTarget(current, next) ? current : next);
   }, []);
 
