@@ -61,7 +61,8 @@ function renderSidebar(props: { isMobile?: boolean; isPinned?: boolean } = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  act(() => root!.render(createElement(AppSidebar, props)));
+  const mountedRoot = root;
+  act(() => mountedRoot.render(createElement(AppSidebar, props)));
   return container;
 }
 
@@ -119,7 +120,8 @@ describe("AppSidebar without the Aulas entry", () => {
     const text = c.textContent ?? "";
     expect(text).not.toContain("Aulas");
     expect(text).not.toContain("Lessons");
-    expect(text).not.toContain("Biblioteca");
+    const libraryLabel = c.querySelector('a[href="/resources"] > span');
+    expect(libraryLabel?.getAttribute("aria-hidden")).toBe("true");
     expect(navLinks(c)).toEqual([
       "/", "/students", "/leads", "/calendar", "/resources", "/finance",
       "/workspace", "/growth", "/academy", "/community", "/profile", "/settings",

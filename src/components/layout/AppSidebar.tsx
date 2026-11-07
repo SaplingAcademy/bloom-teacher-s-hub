@@ -4,7 +4,8 @@ import { Pin, PinOff, MessageCircle } from "lucide-react";
 import { navSections, bottomNav, adminNavItem } from "@/lib/navigation";
 import { usePlan } from "@/hooks/use-plan";
 import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
-import { BloomLogo, BloomMark } from "@/components/bloom/Logo";
+import { BloomMark } from "@/components/bloom/Logo";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/use-language";
 import {
@@ -41,6 +42,13 @@ export function AppSidebar({
 
   // Derived expansion state: Mobile drawer OR Pinned OR Mouse Hovered OR Keyboard Focus-Within
   const isExpanded = isMobile || isPinned || isHovered || isFocusWithin;
+
+  // Text stays mounted in a reserved track; expansion never changes row geometry.
+  const textClasses = cn(
+    "min-w-0 transition-[opacity,visibility] duration-200 motion-reduce:transition-none",
+    isExpanded ? "visible opacity-100" : "invisible opacity-0"
+  );
+  const rowClasses = "group grid h-10 grid-cols-[47px_minmax(0,1fr)] items-center rounded-xl pr-3 text-sm font-medium transition-colors duration-150";
 
   // Inform parent when expansion state changes
   useEffect(() => {
@@ -125,53 +133,46 @@ export function AppSidebar({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         className={cn(
-          "flex h-screen flex-col overflow-hidden bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl transition-all duration-300 ease-in-out",
+          "flex h-dvh shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl transition-[width] duration-300 ease-in-out motion-reduce:transition-none",
           // Width transition
           isExpanded ? "w-[240px]" : "w-[72px]"
         )}
       >
         {/* ── Header: Logo + Pin Button ───────────────────────────── */}
-        <div
-          className={cn(
-            "flex h-14 shrink-0 items-center border-b border-sidebar-border transition-all duration-200",
-            !isExpanded ? "justify-center px-0" : "justify-between px-4"
-          )}
-        >
-          {!isExpanded ? (
-            <BloomMark className="text-sidebar-primary" />
-          ) : (
-            <div className="flex items-center justify-between w-full">
-              <BloomLogo />
+        <div className="grid h-14 shrink-0 grid-cols-[71px_minmax(0,1fr)] items-center border-b border-sidebar-border">
+          <BloomMark className="justify-self-center text-sidebar-primary" />
+          <div aria-hidden={!isExpanded} className={cn("flex items-center justify-between pr-4", textClasses)}>
+            <span className="font-display text-lg font-bold text-sidebar-foreground">Bloom</span>
 
-              {/* Pin / Unpin button (Desktop only) */}
-              {!isMobile && onTogglePin && (
-                <button
+            {/* Pin / Unpin button (Desktop only) */}
+            {!isMobile && onTogglePin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={onTogglePin}
-                  className="rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer"
+                  tabIndex={isExpanded ? 0 : -1}
+                  className="h-7 w-7 shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   title={isPinned ? t("common.close") : t("common.edit")}
                   aria-label={isPinned ? t("auditUi.unpinMenu") : t("auditUi.pinMenu")}
                 >
                   {isPinned ? (
-                    <PinOff className="h-4 w-4 text-emerald-500 fill-emerald-500/20" />
+                    <PinOff className="h-4 w-4 text-sidebar-pin fill-sidebar-pin/20" />
                   ) : (
                     <Pin className="h-4 w-4" />
                   )}
-                </button>
+                </Button>
               )}
-            </div>
-          )}
+          </div>
         </div>
 
         {/* ── Navigation Items ───────────────────────────────────── */}
-        <nav className="flex-1 overflow-y-auto sidebar-nav px-3 py-4 space-y-5">
+        <nav className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto sidebar-nav px-3 py-4 space-y-5">
           {navSections.map((section) => (
             <div key={section.id}>
               {/* Section Header */}
-              {isExpanded && (
-                <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 transition-opacity duration-200">
+                <p aria-hidden={!isExpanded} className={cn("mb-1.5 h-[15px] whitespace-nowrap px-2 text-[10px] leading-[15px] font-semibold uppercase tracking-widest text-sidebar-foreground/40", textClasses)}>
                   {section.id === "workspace" ? t("nav.workspace", section.label) : t("nav.communitySection", section.label)}
                 </p>
-              )}
 
               <ul className="space-y-1">
                 {section.items.map((item) => {
@@ -182,8 +183,7 @@ export function AppSidebar({
                     : item.badge ? t("nav.soon", item.badge) : null;
 
                   const baseClasses = cn(
-                    "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150",
-                    !isExpanded ? "justify-center px-2 py-2.5" : "px-3 py-2.5",
+                    rowClasses,
                     item.disabled
                       ? "cursor-not-allowed text-sidebar-foreground/40 opacity-60"
                       : active
@@ -192,60 +192,57 @@ export function AppSidebar({
                   );
 
                   const iconClasses = cn(
-                    "h-[18px] w-[18px] shrink-0 transition-colors",
+                    "h-[18px] w-[18px] shrink-0 justify-self-center transition-colors",
                     active
                       ? "text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
                   );
 
-                  const labelSpan = isExpanded && (
-                    <span className={cn("flex-1 transition-opacity duration-200", item.id === "academy" ? "min-w-0 break-words" : "truncate")}>
-                      {itemLabel}
-                    </span>
-                  );
-
-                  const badgeSpan = isExpanded && badgeLabel && (
-                    <span className="shrink-0 rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
-                      {badgeLabel}
+                  const labelSpan = (
+                    <span aria-hidden={!isExpanded} className={cn("flex items-center gap-2 overflow-hidden", textClasses)}>
+                      <span className={cn("min-w-0 flex-1", item.id === "academy" ? "leading-4" : "truncate")}>
+                        {itemLabel}
+                      </span>
+                      {badgeLabel && (
+                        <span className="shrink-0 rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-lilac">
+                          {badgeLabel}
+                        </span>
+                      )}
                     </span>
                   );
 
                   const linkContent = item.disabled ? (
                     <span
                       aria-disabled="true"
+                      aria-label={itemLabel}
                       tabIndex={-1}
                       className={baseClasses}
                       onClick={(e) => e.preventDefault()}
                     >
                       <item.icon className={iconClasses} />
                       {labelSpan}
-                      {badgeSpan}
                     </span>
                   ) : (
                     <Link
                       to={item.to}
+                      aria-label={itemLabel}
                       onClick={handleLinkClick}
                       className={baseClasses}
                     >
                       <item.icon className={iconClasses} />
                       {labelSpan}
-                      {badgeSpan}
                     </Link>
                   );
 
                   return (
                     <li key={item.id}>
-                      {!isExpanded ? (
-                        <Tooltip>
+                        <Tooltip open={isExpanded ? false : undefined}>
                           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                           <TooltipContent side="right" sideOffset={10}>
                             <p className="text-xs font-semibold">{itemLabel}</p>
                             {item.id === "academy" && badgeLabel && <p className="mt-1 text-xs">{badgeLabel}</p>}
                           </TooltipContent>
                         </Tooltip>
-                      ) : (
-                        linkContent
-                      )}
                     </li>
                   );
                 })}
@@ -257,29 +254,22 @@ export function AppSidebar({
         {/* ── Bottom Section: Ask Bloom AI + Utility Links ────────── */}
         <div className="shrink-0 border-t border-sidebar-border px-3 py-3 space-y-1.5">
           {/* Ask Bloom AI CTA */}
-          {!isExpanded ? (
-            <Tooltip>
+            <Tooltip open={isExpanded ? false : undefined}>
               <TooltipTrigger asChild>
-                <button
-                  className="flex w-full items-center justify-center rounded-xl bg-gradient-warm py-2.5 text-accent-foreground shadow-sm hover:opacity-90 cursor-pointer"
+                <Button
+                  variant="ghost"
+                  aria-label={t("nav.askBloomAi")}
+                  className={cn(rowClasses, "w-full justify-start gap-0 bg-gradient-warm p-0 pr-3 font-semibold text-accent-foreground shadow-sm hover:bg-transparent hover:text-accent-foreground hover:opacity-90 [&_svg]:size-[18px]")}
                   title={t("nav.askBloomAi")}
                 >
-                  <MessageCircle className="h-[18px] w-[18px]" />
-                </button>
+                  <MessageCircle className="h-[18px] w-[18px] justify-self-center" />
+                  <span aria-hidden={!isExpanded} className={cn("truncate text-left", textClasses)}>{t("nav.askBloomAi")}</span>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={10}>
                 <p className="text-xs font-semibold">{t("nav.askBloomAi")}</p>
               </TooltipContent>
             </Tooltip>
-          ) : (
-            <button
-              className="flex w-full items-center gap-2.5 rounded-xl bg-gradient-warm px-3 py-2.5 text-sm font-semibold text-accent-foreground shadow-sm hover:opacity-90 transition-all cursor-pointer"
-              title={t("nav.askBloomAi")}
-            >
-              <MessageCircle className="h-[18px] w-[18px] shrink-0" />
-              <span>{t("nav.askBloomAi")}</span>
-            </button>
-          )}
 
           {/* Bottom Utility Nav (Administração só aparece para super_admin) */}
           {(isSuperAdmin ? [...bottomNav, adminNavItem] : bottomNav).map((item) => {
@@ -289,10 +279,10 @@ export function AppSidebar({
               <Link
                 key={item.id}
                 to={item.to}
+                aria-label={itemLabel}
                 onClick={handleLinkClick}
                 className={cn(
-                  "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
-                  !isExpanded ? "justify-center px-2 py-2.5" : "px-3 py-2.5",
+                  rowClasses, "cursor-pointer",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -300,25 +290,23 @@ export function AppSidebar({
               >
                 <item.icon
                   className={cn(
-                    "h-[18px] w-[18px] shrink-0 transition-colors",
+                    "h-[18px] w-[18px] shrink-0 justify-self-center transition-colors",
                     active
                       ? "text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
                   )}
                 />
-                {isExpanded && <span className="truncate">{itemLabel}</span>}
+                <span aria-hidden={!isExpanded} className={cn("truncate", textClasses)}>{itemLabel}</span>
               </Link>
             );
 
-            return !isExpanded ? (
-              <Tooltip key={item.id}>
+            return (
+              <Tooltip key={item.id} open={isExpanded ? false : undefined}>
                 <TooltipTrigger asChild>{navLink}</TooltipTrigger>
                 <TooltipContent side="right" sideOffset={10}>
                   <p className="text-xs font-semibold">{itemLabel}</p>
                 </TooltipContent>
               </Tooltip>
-            ) : (
-              navLink
             );
           })}
         </div>

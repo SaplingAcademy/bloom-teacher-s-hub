@@ -68,6 +68,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-pin: var(--sidebar-pin);
   --color-header-bg: var(--header-bg);
   --color-header-border: var(--header-border);
   --color-search-bg: var(--search-bg);
@@ -156,6 +157,7 @@
   --sidebar-accent-foreground: oklch(0.97 0.015 120);
   --sidebar-border: oklch(0.38 0.035 152);
   --sidebar-ring: oklch(0.66 0.14 45);
+  --sidebar-pin: oklch(0.696 0.17 162.48);
 
   /* Gradients & shadows */
   --gradient-primary: linear-gradient(135deg, oklch(0.52 0.1 150), oklch(0.6 0.11 165));
@@ -224,6 +226,7 @@
   --sidebar-accent-foreground: oklch(0.95 0.015 120);
   --sidebar-border: oklch(0.32 0.03 152);
   --sidebar-ring: oklch(0.68 0.14 48);
+  --sidebar-pin: oklch(0.696 0.17 162.48);
 
   /* Header & Navigation custom brand styling */
   --header-bg: #221c18;
@@ -281,6 +284,8 @@
  * Webkit: full custom styling below.
  */
 .sidebar-nav {
+  /* Keep the icon rail and available text width stable, even when scrolling. */
+  scrollbar-gutter: stable;
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: oklch(0.85 0.012 120 / 0.45) transparent;
