@@ -65,7 +65,7 @@ A solução bloqueia insuficiência antes de qualquer escrita, relê as restriç
 **Sem trabalho adicional autorizado no banco, não é possível prometer atomicidade entre eventos e planos, nem eliminar completamente uma alteração simultânea de folgas ou duas gerações em abas distintas.** Uma falha de rede após criar eventos pode deixá-los aguardando a recuperação do plano; isso será apresentado como erro, nunca como sucesso. Garantia absoluta nesses cenários exigiria uma operação transacional e proteção de concorrência no banco, a discutir separadamente — nenhum SQL será criado ou executado nesta etapa.
 
 ## Detalhes técnicos e escopo
-Arquivos principais: os dois formulários de geração, `lesson-plan-sync.ts`, `lesson-plans.ts`, `lesson-plan-period.ts` e os dicionários PT/EN. Adicionar um pequeno helper puro de resultado/quantidade e um diálogo compartilhado, preservando os formatos específicos de individual e turma. Registrar a fronteira entre geração e edição nas convenções do projeto.
+Alterar os dois formulários, `lesson-plan-sync.ts`, `lesson-plans.ts`, `lesson-plan-period.ts` e os dicionários PT/EN. Adicionar helper puro de quantidade e diálogo compartilhado, preservando os formatos individual/turma. Registrar a separação entre geração e edição nas convenções do projeto.
 
 Não alterar contratos, pacotes, quantidade contratada, períodos acadêmicos do cadastro, regras de disponibilidade, esquema, políticas de acesso ou outros módulos. A quantidade utilizada será a escolhida pelo professor neste planejamento; nenhum ajuste comercial será inferido.
 
