@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { contractFileMimeType, validateContractFile } from "@/lib/contract-document-rules";
 import {
   CONTRACT_DOCUMENT_TYPES,
   CONTRACT_STATUSES,
@@ -50,9 +51,11 @@ function assertStatus(status: string): asserts status is ContractStatus {
     throw new ContractError("invalid_input", `Invalid contract status: ${status}`);
 }
 
-function assertDates(start?: string | null, end?: string | null) {
-  if (start && end && end < start)
-    throw new ContractError("invalid_input", "end_date must be on or after start_date");
+function assertDates(start?: string | null, end?: string | null, requireEnd = false) {
+  if (requireEnd && !end)
+    throw new ContractError("invalid_input", "end_date is required for a new contract");
+  if (start && end && end <= start)
+    throw new ContractError("invalid_input", "end_date must be after start_date");
 }
 
 /** Keeps filenames safe as a single storage path segment. */
@@ -96,7 +99,7 @@ export async function getStudentContract(contractId: string): Promise<StudentCon
 export async function createStudentContract(input: CreateStudentContractInput): Promise<StudentContractRow> {
   if (!input.student_id || !input.start_date)
     throw new ContractError("invalid_input", "student_id and start_date are required");
-  assertDates(input.start_date, input.end_date);
+  assertDates(input.start_date, input.end_date, true);
   if (input.status) assertStatus(input.status);
   const teacherId = await requireTeacherId();
   const { data, error } = await supabase
@@ -106,6 +109,20 @@ export async function createStudentContract(input: CreateStudentContractInput): 
     .single();
   if (error || !data) dbFail("createStudentContract", error);
   return data as StudentContractRow;
+}
+
+/** Activates through the database transaction that renews and links the previous contract. */
+export async function activateStudentContract(contractId: string): Promise<StudentContractRow> {
+  if (!contractId) throw new ContractError("invalid_input", "contractId is required");
+  await requireTeacherId();
+  const { data, error } = await supabase.rpc("activate_student_contract", { p_contract_id: contractId });
+  if (error || !data) dbFail("activateStudentContract", error);
+  return data as StudentContractRow;
+}
+
+export async function createCurrentStudentContract(input: CreateStudentContractInput): Promise<StudentContractRow> {
+  const draft = await createStudentContract({ ...input, status: "draft" });
+  return activateStudentContract(draft.id);
 }
 
 export async function updateStudentContract(
@@ -167,20 +184,23 @@ export interface UploadContractDocumentInput {
  * If recording fails, the uploaded file is removed; any rollback failure is reported.
  */
 export async function uploadContractDocument(input: UploadContractDocumentInput): Promise<StudentContractDocumentRow> {
-  const documentType = input.documentType ?? "original";
+  const documentType = input.documentType ?? "signed";
   if (!(CONTRACT_DOCUMENT_TYPES as readonly string[]).includes(documentType))
     throw new ContractError("invalid_input", `Invalid document type: ${documentType}`);
   if (!input.contractId) throw new ContractError("invalid_input", "contractId is required");
+  if (validateContractFile(input.file, input.fileName))
+    throw new ContractError("invalid_input", "Contract documents must be a non-empty PDF, JPG or PNG up to 10 MB");
+  const mime = contractFileMimeType(input.file, input.fileName);
+  if (!mime) throw new ContractError("invalid_input", "Unsupported contract document type");
 
   const teacherId = await requireTeacherId();
   const contract = await getStudentContract(input.contractId);
   if (!contract) throw new ContractError("not_found", "Contract not found");
 
   const path = buildContractFilePath(teacherId, contract.id, input.fileName);
-  const mime = (input.file as Blob).type || null;
   const { error: upErr } = await supabase.storage
     .from(CONTRACTS_BUCKET)
-    .upload(path, input.file, { upsert: false, contentType: mime ?? undefined });
+    .upload(path, input.file, { upsert: false, contentType: mime });
   if (upErr) throw new ContractError("upload_failed", `Upload failed: ${upErr.message}`, upErr);
 
   const { data, error } = await supabase

@@ -18,9 +18,10 @@ import {
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
 import {
-  ContractError, createStudentContract, deleteContractDocument, getContractDocumentSignedUrl,
+  ContractError, activateStudentContract, createCurrentStudentContract, deleteContractDocument, getContractDocumentSignedUrl,
   listContractDocuments, listStudentContracts, setStudentContractStatus, updateStudentContract, uploadContractDocument,
 } from "@/lib/student-contracts";
+import { ContractDocumentInput } from "@/components/bloom/ContractDocumentInput";
 import {
   emptyContractForm, formFromContract, formToCreateInput, formToPatch, splitContracts, suggestDatesFromPackage,
   validateContractForm, type ContractFormState, type CurrentPackageRef,
@@ -143,29 +144,53 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
 }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<ContractFormState>(() => (contract ? formFromContract(contract) : emptyContractForm()));
+  const [workingContract, setWorkingContract] = useState<StudentContractRow | null>(contract);
+  const [activateOnSave] = useState(contract === null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof ContractFormState>(k: K, v: ContractFormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const save = async () => {
-    const invalid = validateContractForm(form);
+    const invalid = validateContractForm(form, activateOnSave);
     if (invalid) { setError(t(`contracts.${invalid}`)); return; }
     setSaving(true); setError(null);
     try {
-      const saved = contract
-        ? await updateStudentContract(contract.id, formToPatch(form, pkg, contract.student_package_id))
-        : await createStudentContract(formToCreateInput(studentId, form, pkg));
-      toast.success(t(contract ? "contracts.saved" : "contracts.created"));
-      onSaved(saved);
+      const saved = workingContract
+        ? await updateStudentContract(workingContract.id, formToPatch(form, pkg, workingContract.student_package_id))
+        : await createCurrentStudentContract(formToCreateInput(studentId, form, pkg));
+      setWorkingContract(saved);
+      const current = activateOnSave && saved.status !== "active"
+        ? await activateStudentContract(saved.id)
+        : saved;
+      setWorkingContract(current);
+      if (selectedFile) {
+        try {
+          await uploadContractDocument({ contractId: current.id, file: selectedFile, fileName: selectedFile.name, documentType: "signed" });
+        } catch (uploadError) {
+          console.error(uploadError);
+          toast.error(t("contracts.uploadAfterSaveError"));
+          onSaved(current);
+          return;
+        }
+      }
+      toast.success(t(activateOnSave ? "contracts.created" : "contracts.saved"));
+      onSaved(current);
     } catch (e) { console.error(e); setError(t("contracts.saveError")); }
     finally { setSaving(false); }
   };
 
   const changeStatus = async (status: ContractStatus) => {
-    if (!contract) return;
+    if (!workingContract) return;
     setSaving(true); setError(null);
-    try { onSaved(await setStudentContractStatus(contract.id, status)); toast.success(t("contracts.statusSaved")); }
-    catch (e) { console.error(e); setError(t("contracts.saveError")); }
+    try {
+      const saved = status === "active"
+        ? await activateStudentContract(workingContract.id)
+        : await setStudentContractStatus(workingContract.id, status);
+      setWorkingContract(saved);
+      onSaved(saved);
+      toast.success(t("contracts.statusSaved"));
+    } catch (e) { console.error(e); setError(t("contracts.saveError")); }
     finally { setSaving(false); }
   };
 
@@ -173,15 +198,15 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
     <Dialog open onOpenChange={(o) => { if (!o && !saving) onClose(); }}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display">{contract ? t("contracts.edit") : t("contracts.new")}</DialogTitle>
-          <DialogDescription>{t(`contracts.status_${contract?.status ?? "draft"}`)}</DialogDescription>
+          <DialogTitle className="font-display">{workingContract ? t("contracts.edit") : t("contracts.new")}</DialogTitle>
+          <DialogDescription>{t(`contracts.status_${workingContract?.status ?? "draft"}`)}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {contract && (
+          {workingContract && !activateOnSave && (
             <div className="space-y-2 sm:col-span-2">
               <Label>{t("contracts.status")}</Label>
-              <Select value={contract.status} onValueChange={(v) => void changeStatus(v as ContractStatus)} disabled={saving}>
+              <Select value={workingContract.status} onValueChange={(v) => void changeStatus(v as ContractStatus)} disabled={saving}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{CONTRACT_STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`contracts.status_${s}`)}</SelectItem>)}</SelectContent>
               </Select>
@@ -196,29 +221,31 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
             <label className="flex items-center gap-2 text-sm font-medium">
               <Checkbox
                 checked={form.linkPackage}
-                disabled={!pkg && !contract?.student_package_id}
+                disabled={!pkg && !workingContract?.student_package_id}
                 onCheckedChange={(v) => setForm((f) => {
                   const next = { ...f, linkPackage: v === true };
-                  return v === true && !contract ? suggestDatesFromPackage(next, pkg) : next;
+                  return v === true && !workingContract ? suggestDatesFromPackage(next, pkg) : next;
                 })}
               />
               {t("contracts.linkPackage")}
             </label>
-            <p className="text-xs text-muted-foreground">{pkg || contract?.student_package_id ? t("contracts.linkPackageHint") : t("contracts.noPackage")}</p>
+            <p className="text-xs text-muted-foreground">{pkg || workingContract?.student_package_id ? t("contracts.linkPackageHint") : t("contracts.noPackage")}</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="ct-start">{t("contracts.start")}</Label>
-            <Input id="ct-start" type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} />
+            <Input id="ct-start" type="date" value={form.startDate} required onChange={(e) => set("startDate", e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ct-end">{t("contracts.end")}</Label>
-            <Input id="ct-end" type="date" value={form.indefinite ? "" : form.endDate} disabled={form.indefinite} onChange={(e) => set("endDate", e.target.value)} />
+            <Input id="ct-end" type="date" value={form.indefinite ? "" : form.endDate} required={activateOnSave && !form.indefinite} disabled={form.indefinite} onChange={(e) => set("endDate", e.target.value)} />
           </div>
-          <label className="sm:col-span-2 flex items-center gap-2 text-sm">
-            <Checkbox checked={form.indefinite} onCheckedChange={(v) => setForm((f) => ({ ...f, indefinite: v === true, endDate: v === true ? "" : f.endDate }))} />
-            {t("contracts.indefinite")}
-          </label>
+          {workingContract?.end_date === null && (
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm">
+              <Checkbox checked={form.indefinite} onCheckedChange={(v) => setForm((f) => ({ ...f, indefinite: v === true, endDate: v === true ? "" : f.endDate }))} />
+              {t("contracts.indefinite")}
+            </label>
+          )}
 
           <div className="space-y-2">
             <Label>{t("contracts.signerType")}</Label>
@@ -266,6 +293,10 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
           </label>
         </div>
 
+        {activateOnSave && (
+          <ContractDocumentInput id="ct-signed-file" file={selectedFile} onChange={setSelectedFile} disabled={saving} />
+        )}
+
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         <DialogFooter className="gap-2">
@@ -275,9 +306,11 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
           </Button>
         </DialogFooter>
 
-        <div className="border-t border-border pt-4">
-          {contract ? <ContractDocuments contractId={contract.id} /> : <p className="text-sm text-muted-foreground">{t("contracts.saveFirst")}</p>}
-        </div>
+        {workingContract && !activateOnSave && (
+          <div className="border-t border-border pt-4">
+            <ContractDocuments contractId={workingContract.id} />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -331,7 +364,7 @@ function ContractDocuments({ contractId }: { contractId: string }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-display font-semibold">{t("contracts.documents")}</h4>
-        <input ref={inputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={(e) => void onFile(e.target.files?.[0])} />
+        <input ref={inputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(e) => void onFile(e.target.files?.[0])} />
         <Button variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}{busy ? t("contracts.uploading") : t("contracts.attach")}
         </Button>

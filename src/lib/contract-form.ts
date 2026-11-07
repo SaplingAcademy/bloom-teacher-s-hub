@@ -44,11 +44,12 @@ export function suggestDatesFromPackage(form: ContractFormState, pkg: CurrentPac
   };
 }
 
-export type ContractFormError = "requiredStart" | "invalidDates";
+export type ContractFormError = "requiredStart" | "requiredEnd" | "invalidDates";
 
-export function validateContractForm(f: ContractFormState): ContractFormError | null {
+export function validateContractForm(f: ContractFormState, requireEnd = false): ContractFormError | null {
   if (!f.startDate) return "requiredStart";
-  if (!f.indefinite && f.endDate && f.endDate < f.startDate) return "invalidDates";
+  if (!f.indefinite && requireEnd && !f.endDate) return "requiredEnd";
+  if (!f.indefinite && f.endDate && f.endDate <= f.startDate) return "invalidDates";
   return null;
 }
 

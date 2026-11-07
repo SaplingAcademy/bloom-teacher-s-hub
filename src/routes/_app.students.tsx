@@ -134,6 +134,8 @@ import {
 import { StudentLessonPlanTable } from "@/components/bloom/StudentLessonPlanTable";
 import { StudentClassLessonsHistory } from "@/components/bloom/StudentClassLessonsHistory";
 import { StudentContractsSection } from "@/components/bloom/StudentContractsSection";
+import { StudentContractRegistrationFields } from "@/components/bloom/StudentContractRegistrationFields";
+import { createCurrentStudentContract, uploadContractDocument } from "@/lib/student-contracts";
 import {
   StudentLesson,
   fetchStudentLessons,
@@ -705,6 +707,9 @@ function StudentsPage() {
   const [formPackageId, setFormPackageId] = useState<string>("");
   const [formNotes, setFormNotes] = useState("");
   const [formColorKey, setFormColorKey] = useState<string>("default");
+  const [formContractStartDate, setFormContractStartDate] = useState("");
+  const [formContractEndDate, setFormContractEndDate] = useState("");
+  const [formContractFile, setFormContractFile] = useState<File | null>(null);
 
   // Enrollment Agreement Form States
   const [formInstallmentCount, setFormInstallmentCount] = useState<number>(6);
@@ -1566,6 +1571,9 @@ function StudentsPage() {
     setFormPackageId("");
     setFormNotes("");
     setFormColorKey("default");
+    setFormContractStartDate("");
+    setFormContractEndDate("");
+    setFormContractFile(null);
     setFormDueDay(null);
     setFormFirstDueDate("");
     initialStartDateRef.current = null;
@@ -1605,6 +1613,9 @@ function StudentsPage() {
     setFormPackageId(student.packageId || "");
     setFormNotes(student.notes || "");
     setFormColorKey(student.color_key || "default");
+    setFormContractStartDate("");
+    setFormContractEndDate("");
+    setFormContractFile(null);
     setFormDueDay(student.activeAgreement?.dueDay ?? null);
     setFormFirstDueDate(student.activeAgreement?.firstDueDate || "");
     initialStartDateRef.current = student.courseStartDate || "";
@@ -1721,7 +1732,10 @@ function StudentsPage() {
         formSchedulesList[0]?.startTime !== "09:00" ||
         formSchedulesList[0]?.duration !== 60 ||
         formSchedulesList[0]?.deliveryMode !== "Online" ||
-        formSchedulesList[0]?.locationLink !== ""
+        formSchedulesList[0]?.locationLink !== "" ||
+        formContractStartDate !== "" ||
+        formContractEndDate !== "" ||
+        formContractFile !== null
       );
     }
   };
@@ -1755,6 +1769,21 @@ function StudentsPage() {
     if (!formWhatsApp.trim()) {
       toast.error(i18nT("classes.toastPhoneRequired", lang));
       return;
+    }
+
+    if (!editingStudentIdForModal) {
+      if (!formContractStartDate) {
+        toast.error(tr("contracts.requiredStart"));
+        return;
+      }
+      if (!formContractEndDate) {
+        toast.error(tr("contracts.requiredEnd"));
+        return;
+      }
+      if (formContractEndDate <= formContractStartDate) {
+        toast.error(tr("contracts.invalidDates"));
+        return;
+      }
     }
 
     const invalidFormUrl = findInvalidMeetingUrl(formSchedulesList);
@@ -1827,6 +1856,34 @@ function StudentsPage() {
       );
 
       const targetStudentId = data.id;
+      let contractSaveFailed = false;
+      let contractUploadFailed = false;
+
+      if (!editingStudentIdForModal) {
+        try {
+          const currentContract = await createCurrentStudentContract({
+            student_id: targetStudentId,
+            start_date: formContractStartDate,
+            end_date: formContractEndDate,
+          });
+          if (formContractFile) {
+            try {
+              await uploadContractDocument({
+                contractId: currentContract.id,
+                file: formContractFile,
+                fileName: formContractFile.name,
+                documentType: "signed",
+              });
+            } catch (uploadError) {
+              contractUploadFailed = true;
+              console.error("[Students] Initial contract document upload failed:", uploadError);
+            }
+          }
+        } catch (contractError) {
+          contractSaveFailed = true;
+          console.error("[Students] Initial contract creation failed after student save:", contractError);
+        }
+      }
 
       // Local calendar events sync
       try {
@@ -1917,6 +1974,8 @@ function StudentsPage() {
       }
 
       setIsModalOpen(false);
+      if (contractSaveFailed) toast.error(tr("contracts.studentSavedContractError"));
+      if (contractUploadFailed) toast.error(tr("contracts.studentSavedUploadError"));
       void queryClient.invalidateQueries({ queryKey: ["students", user?.id] });
       openPriorPaymentsIfNeeded();
     } catch (error: any) {
@@ -3667,6 +3726,18 @@ function StudentsPage() {
                   </div>
                 )}
               </div>
+
+              {!editingStudentIdForModal && (
+                <StudentContractRegistrationFields
+                  startDate={formContractStartDate}
+                  endDate={formContractEndDate}
+                  file={formContractFile}
+                  onStartDateChange={setFormContractStartDate}
+                  onEndDateChange={setFormContractEndDate}
+                  onFileChange={setFormContractFile}
+                  disabled={isSaving}
+                />
+              )}
 
               {/* BLOCK 5: Observações */}
               <div className="bg-white border border-border/80 p-5 rounded-2xl shadow-sm space-y-4 animate-in fade-in duration-200">
