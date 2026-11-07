@@ -15,7 +15,7 @@ function Harness({ onDrop }: { onDrop: (id: string, position: WeekDropPosition) 
   const drag = useWeekLessonDrag(onDrop);
   return createElement(
     "div",
-    null,
+    { "data-calendar-scroll-area": "" },
     createElement("div", {
       id: "lesson",
       "data-calendar-event": "",
@@ -102,6 +102,29 @@ afterEach(async () => {
 });
 
 describe("week drag presentation lifecycle", () => {
+  it("scrolls at the calendar edge and resolves the newly revealed 23h cell before drop", async () => {
+    const onDrop = vi.fn().mockResolvedValue(false);
+    await act(async () => { root.render(createElement(Harness, { onDrop })); });
+    const source = container.querySelector<HTMLElement>("#lesson");
+    const lateCell = container.querySelector<HTMLDivElement>("#target");
+    const area = container.querySelector<HTMLElement>("[data-calendar-scroll-area]");
+    if (!source || !lateCell || !area) throw new Error("Missing drag harness");
+    Object.defineProperties(area, { clientHeight: { value: 300 }, scrollHeight: { value: 1000 } });
+    area.getBoundingClientRect = () => ({ left: 0, right: 500, top: 0, bottom: 300, height: 300 }) as DOMRect;
+    source.getBoundingClientRect = () => ({ left: 100, top: 100, width: 160, height: 80 }) as DOMRect;
+    lateCell.getBoundingClientRect = () => ({ left: 300, top: 260, width: 180, height: 64 }) as DOMRect;
+    document.elementFromPoint = vi.fn(() => {
+      lateCell.dataset.hour = area.scrollTop >= 20 ? "23:00" : "22:00";
+      return lateCell;
+    });
+    await act(async () => { pointer(source, "pointerdown"); });
+    await act(async () => { pointer(window, "pointermove", { clientX: 310, clientY: 290 }); });
+    await act(async () => { flushRaf(); flushRaf(); });
+    expect(area.scrollTop).toBe(20);
+    await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 290 }); });
+    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ startTime: "23:30" }));
+    expect(rafCallbacks.size).toBe(0);
+  });
   it("clones the original lesson, follows the pointer and returns after a cancelled save", async () => {
     let rejectDrop!: (success: boolean) => void;
     const onDrop = vi.fn(() => new Promise<boolean>((resolve) => { rejectDrop = resolve; }));

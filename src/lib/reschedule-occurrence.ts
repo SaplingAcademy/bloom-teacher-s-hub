@@ -16,7 +16,7 @@ export type RescheduleResult =
   | { ok: true; eventId: string; lessonPlanUpdated: boolean }
   | {
       ok: false;
-      reason: "not_found" | "invalid_input" | "locked" | "non_working_day" | "outside_working_hours" | "conflict" | "save_failed";
+      reason: "not_found" | "invalid_input" | "crosses_midnight" | "locked" | "non_working_day" | "outside_working_hours" | "conflict" | "save_failed";
       conflictEventIds?: string[];
       warnings?: RescheduleWarning[];
       message?: string;
@@ -45,6 +45,8 @@ export function buildRescheduleUpdate(
   const start = formatTimeHHMMSS(newStartTime);
   const span = event.end_time ? toMinutes(event.end_time) - toMinutes(event.start_time) : 0;
   const duration = Number(event.duration) || (span > 0 ? span : 60);
+  // This occurrence model has one date: never silently wrap its end to tomorrow.
+  if (toMinutes(start) + duration >= 1440) throw new Error("crosses_midnight");
   const end = calculateEndTime(start, duration);
   const firstTime = !event.rescheduled_at && !event.original_date;
   return {
@@ -75,12 +77,18 @@ export async function rescheduleOccurrence(eventId: string, newDate: string, new
   if (loadErr || !event) return { ok: false, reason: "not_found" };
   if (LOCKED.has(event.status || "")) return { ok: false, reason: "locked" };
 
+  let update: ReturnType<typeof buildRescheduleUpdate>;
+  try {
+    update = buildRescheduleUpdate(event, newDate, newStartTime, new Date().toISOString());
+  } catch (error) {
+    if (error instanceof Error && error.message === "crosses_midnight") return { ok: false, reason: "crosses_midnight" };
+    throw error;
+  }
+
   // Existing time-off / day-off rule (same one used by the generators).
   const warnings: RescheduleWarning[] = [];
   const timeOff = await fetchTeacherTimeOff(teacherId);
   if (checkDateIsNonWorking(newDate, timeOff)) warnings.push("non_working_day");
-
-  const update = buildRescheduleUpdate(event, newDate, newStartTime, new Date().toISOString());
 
   // Working-availability rule (same canonical source used elsewhere in Bloom):
   // the entire lesson must fit inside a free working interval for that weekday

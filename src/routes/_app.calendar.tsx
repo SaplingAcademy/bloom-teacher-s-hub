@@ -99,6 +99,7 @@ import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { calendarEventsQueryKey, calendarEventsRootKey, calendarEventsWindow } from "@/lib/calendar-events-window";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
+import { calendarGridHours } from "@/lib/calendar-grid";
 import { LessonStudentsSelect, LessonTagsSelect } from "@/components/bloom/LessonSchedulingSelections";
 import { lessonDuration, saveManualLessons, manualLessonErrorKey, ManualLessonPlanError, LESSON_QUICK_TAGS, type ManualLessonInput, type SavedManualEvent } from "@/lib/manual-lesson-scheduling";
 
@@ -610,7 +611,7 @@ function CalendarPage() {
       const result = await rescheduleConfirmation.request(eventId, position.date, position.startTime);
       if (!result) return false;
       if (!result.ok) {
-        const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
+        const known = ["conflict", "outside_working_hours", "non_working_day", "locked", "crosses_midnight"];
         const reason = known.includes(result.reason) ? result.reason : "save_failed";
         toast.error(t(`calendarUi.rescheduleErr_${reason}`));
         return false;
@@ -1037,7 +1038,7 @@ function CalendarPage() {
 
   const currentTranslation = calendarTranslations[lang];
 
-  // Hours for grid display in week/day view (08:00 to 21:00)
+  // Week/day display runs through 23:59 independently of working availability.
   // Grid shading source: teacher availability snapshot (single source of truth)
   const isHourAvailable = useCallback(
     (dateStr: string, hour: string) => {
@@ -1048,23 +1049,7 @@ function CalendarPage() {
     [availabilitySnapshot]
   );
 
-  const gridHours = Array.from(new Set([
-    "08:00",
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-    "20:00",
-    "21:00",
-    ...events.filter((event) => event.eventType === "custom").map((event) => `${event.startTime.slice(0, 2)}:00`),
-  ])).sort();
+  const gridHours = calendarGridHours(events);
 
   const openNewEvent = (date: string, startTime = "") => {
     setNewEventDefaults(customEventDefaults(date, startTime, availabilitySnapshot?.defaultDuration));
@@ -1355,12 +1340,13 @@ function CalendarPage() {
         </div>
 
         {/* RIGHT COLUMN: CALENDAR RENDER CONTAINER */}
-        <div className="min-w-0 rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
+        <div className="min-w-0 self-start rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
+          <div data-calendar-scroll-area="" className={viewMode === "month" ? "" : "max-h-[min(70dvh,900px)] overflow-auto"}>
           {/* WEEK VIEW (DEFAULT) */}
           {viewMode === "week" && (
-            <div className="overflow-x-auto min-w-[700px]">
+            <div className="min-w-[700px]">
               {/* Day column headers */}
-              <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-border text-center bg-secondary/15">
+              <div className="sticky top-0 z-10 grid grid-cols-[80px_repeat(7,1fr)] border-b border-border text-center bg-card">
                 <div className="p-3 text-[10px] uppercase font-bold text-muted-foreground border-r border-border">
                   Time
                 </div>
@@ -1652,6 +1638,7 @@ function CalendarPage() {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 

@@ -31,6 +31,24 @@ describe("manual one-time lessons", () => {
   it("requires at least one existing student", () => {
     expect(() => manualLessonRows("teacher", { ...input, students: [] })).toThrow("requiredStudents");
   });
+  it.each([["21:00", "22:00", 60], ["22:00", "23:00", 60], ["23:00", "23:45", 45], ["23:00", "23:59", 59]])(
+    "creates late lessons %s–%s with their exact duration", async (startTime, endTime, duration) => {
+      await saveManualLessons("teacher", { ...input, startTime: String(startTime), endTime: String(endTime) });
+      expect(query.insert).toHaveBeenCalledWith([
+        expect.objectContaining({ student_id: "ana", start_time: startTime, end_time: endTime, duration }),
+        expect.objectContaining({ student_id: "bia", start_time: startTime, end_time: endTime, duration }),
+      ]);
+      expect(savePlans).toHaveBeenCalledWith("teacher", [
+        expect.objectContaining({ event_id: "event-ana", start_time: startTime, end_time: endTime, duration }),
+        expect.objectContaining({ event_id: "event-bia", start_time: startTime, end_time: endTime, duration }),
+      ]);
+    },
+  );
+  it.each(["00:00", "00:30", "24:00"])("rejects a 23h lesson ending at %s before any writes", async endTime => {
+    await expect(saveManualLessons("teacher", { ...input, startTime: "23:00", endTime })).rejects.toThrow("invalidInterval");
+    expect(query.insert).not.toHaveBeenCalled();
+    expect(savePlans).not.toHaveBeenCalled();
+  });
   it("calculates 75 minutes from 10:00 to 11:15", () => {
     expect(lessonDuration("10:00", "11:15")).toBe(75);
   });

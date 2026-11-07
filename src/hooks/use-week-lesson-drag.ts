@@ -169,6 +169,20 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     updateTarget(active, clientX, clientY);
   }, [paint, setPreview, updateTarget]);
 
+  const scrollAtEdge = useCallback((active: WeekDragGesture) => {
+    const area = active.element.closest<HTMLElement>("[data-calendar-scroll-area]");
+    if (!area || area.scrollHeight <= area.clientHeight) return false;
+    const rect = area.getBoundingClientRect();
+    if (active.latestX < rect.left || active.latestX > rect.right || active.latestY < rect.top || active.latestY > rect.bottom) return false;
+    const edge = Math.min(40, rect.height / 4);
+    const delta = active.latestY > rect.bottom - edge ? 10 : active.latestY < rect.top + edge ? -10 : 0;
+    const before = area.scrollTop;
+    area.scrollTop = Math.max(0, Math.min(area.scrollHeight - area.clientHeight, before + delta));
+    if (area.scrollTop === before) return false;
+    updateTarget(active, active.latestX, active.latestY);
+    return true;
+  }, [updateTarget]);
+
   useEffect(() => {
     mounted.current = true;
     const move = (event: PointerEvent) => {
@@ -191,7 +205,13 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       if (frame.current === null) {
         frame.current = requestAnimationFrame(() => {
           frame.current = null;
-          paint(active.latestX - active.grabX, active.latestY - active.grabY);
+          const tick = () => {
+            frame.current = null;
+            if (gesture.current !== active) return;
+            paint(active.latestX - active.grabX, active.latestY - active.grabY);
+            if (scrollAtEdge(active)) frame.current = requestAnimationFrame(tick);
+          };
+          tick();
         });
       }
     };
@@ -244,7 +264,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("blur", cancel);
     };
-  }, [beginPreview, paint, releaseGesture, setPreview, settle, updateTarget]);
+  }, [beginPreview, paint, releaseGesture, scrollAtEdge, setPreview, settle, updateTarget]);
 
   const start = (event: ReactPointerEvent<HTMLElement>, id: string) => {
     if (event.button !== 0 || !event.isPrimary || gesture.current || preview.current) return;

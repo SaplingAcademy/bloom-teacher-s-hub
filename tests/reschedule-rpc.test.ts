@@ -40,6 +40,31 @@ beforeEach(() => {
   db.lesson_plans = [{ id: "p1", event_id: "e1", scheduled_date: "2026-10-05", start_time: "09:00:00" }];
 });
 describe("reschedule via RPC", () => {
+  it.each([["21:00", 60, "22:00:00"], ["22:00", 60, "23:00:00"], ["23:00", 45, "23:45:00"], ["23:00", 59, "23:59:00"]])(
+    "reschedules to %s and preserves the %i-minute duration", async (startTime, duration, endTime) => {
+      db.calendar_events[0].duration = duration;
+      expect((await rescheduleOccurrence("e1", "2026-11-07", String(startTime))).ok).toBe(true);
+      expect(db.calendar_events[0]).toMatchObject({ date: "2026-11-07", start_time: `${startTime}:00`, end_time: endTime, duration });
+      expect(db.lesson_plans[0]).toMatchObject({ event_id: "e1", scheduled_date: "2026-11-07", start_time: `${startTime}:00` });
+      expect(calls).toEqual([["rpc", "reschedule_calendar_occurrence"]]);
+    },
+  );
+  it.each(["23:00", "23:15", "23:45"])("rejects a 60-minute move at %s even with all warnings confirmed", async startTime => {
+    const eventBefore = { ...db.calendar_events[0] };
+    const planBefore = { ...db.lesson_plans[0] };
+    expect(await rescheduleOccurrence("e1", "2026-11-07", startTime, { confirmedWarnings: ["conflict", "outside_working_hours", "non_working_day"] }))
+      .toEqual({ ok: false, reason: "crosses_midnight" });
+    expect(calls).toEqual([]);
+    expect(db.calendar_events[0]).toEqual(eventBefore);
+    expect(db.lesson_plans[0]).toEqual(planBefore);
+  });
+  it("keeps late outside-availability moves confirmable rather than changing working hours", async () => {
+    available = false;
+    expect(await rescheduleOccurrence("e1", "2026-11-07", "22:00")).toMatchObject({ ok: false, warnings: ["outside_working_hours"] });
+    expect(calls).toEqual([]);
+    expect((await rescheduleOccurrence("e1", "2026-11-07", "22:00", { confirmedWarnings: ["outside_working_hours"] })).ok).toBe(true);
+    expect(db.calendar_events[0]).toMatchObject({ start_time: "22:00:00", end_time: "23:00:00" });
+  });
   it("confirmed conflict moves only the requested occurrence through the RPC", async () => {
     const other = { id: "other", teacher_id: "t1", date: "2026-10-06", start_time: "16:00:00", end_time: "17:00:00", status: "Scheduled" };
     db.calendar_events.push(other);

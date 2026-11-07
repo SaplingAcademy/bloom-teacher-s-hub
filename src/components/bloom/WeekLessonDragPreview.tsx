@@ -17,7 +17,8 @@ export function weekLessonPreviewTimeRange(startTime: string, duration?: number)
   const start = startTime.slice(0, 5);
   const [hours, minutes] = start.split(":").map(Number);
   if (!duration || duration <= 0 || !Number.isFinite(duration) || !Number.isFinite(hours) || !Number.isFinite(minutes)) return start;
-  const end = (hours * 60 + minutes + Math.round(duration)) % (24 * 60);
+  const end = hours * 60 + minutes + Math.round(duration);
+  if (end >= 24 * 60) return start;
   const endTime = `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
   return `${start}–${endTime}`;
 }

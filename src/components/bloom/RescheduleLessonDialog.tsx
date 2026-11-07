@@ -12,8 +12,8 @@ const toMin = (t: string) => {
   return (h || 0) * 60 + (m || 0);
 };
 const fromMin = (n: number) => {
-  const v = ((n % 1440) + 1440) % 1440;
-  return `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
+  if (n >= 1440 || n < 0) return "";
+  return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 };
 
 export interface RescheduleLessonTarget {
@@ -68,7 +68,7 @@ export function RescheduleLessonDialog({
         await onRescheduled();
         return;
       }
-      const known = ["conflict", "outside_working_hours", "non_working_day", "locked"];
+      const known = ["conflict", "outside_working_hours", "non_working_day", "locked", "crosses_midnight"];
       const key = known.includes(res.reason) ? res.reason : "save_failed";
       setError(t(`calendarUi.rescheduleErr_${key}`));
     } catch {
