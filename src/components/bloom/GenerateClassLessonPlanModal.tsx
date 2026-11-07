@@ -139,7 +139,7 @@ export function GenerateClassLessonPlanModal({
   }, [isOpen, cls.id, cls.schedules, cls.start_date, teacherId]);
 
   const targetCount = useMemo(() => {
-    return quantityType === "custom" ? Number(customQuantity) || 1 : quantityType;
+    return quantityType === "custom" ? Number(customQuantity) : quantityType;
   }, [quantityType, customQuantity, packageLessonCount]);
 
   const slots: OccurrenceSlot[] = useMemo(

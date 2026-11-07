@@ -29,11 +29,11 @@ export function LessonPlanQuantityDialog({ quantity, onEdit, onRestart }: {
           <dd className="font-display text-lg font-semibold tabular-nums text-foreground">{quantity[key]}</dd>
         </div>)}
       </dl>}
-      <DialogFooter className="gap-2 sm:space-x-0">
-        <Button ref={editRef} variant="outline" onClick={confirming ? () => setConfirming(false) : edit} className="gap-2">
+      <DialogFooter className="gap-2 sm:space-x-0 sm:flex-col-reverse">
+        <Button ref={editRef} variant="outline" onClick={confirming ? () => setConfirming(false) : edit} className="gap-2 w-full">
           {!confirming && <Pencil className="h-4 w-4" />}{t(confirming ? "common.cancel" : "lessonPlanGeneration.edit")}
         </Button>
-        <Button variant={confirming ? "destructive" : "secondary"} className="gap-2" onClick={() => {
+        <Button variant={confirming ? "destructive" : "secondary"} className="gap-2 w-full" onClick={() => {
           if (!confirming) { setConfirming(true); return; }
           setConfirming(false); onRestart();
         }}><RotateCcw className="h-4 w-4" />{t(confirming ? "lessonPlanGeneration.confirmRestart" : "lessonPlanGeneration.restart")}</Button>

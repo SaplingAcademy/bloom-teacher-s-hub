@@ -12,6 +12,7 @@
 <!-- LOVABLE:END -->
 
 ## Pedagogical catalog
+- Follow Lesson Plan generation rules in src/lib/AGENTS.md to preserve history.
 - Keep catalog normalization/resolution pure in `catalog-options.ts`; separate historical display from active-ID selection to avoid rewriting history.
 - `useCatalogOptions` reads only authenticated teacher settings via the session client; reuse its exported cache key for future saves, and never replace read/validation errors with defaults.
 

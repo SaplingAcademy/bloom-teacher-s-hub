@@ -160,7 +160,7 @@ export function GenerateLessonPlanModal({
 
   // Determine total lesson count to generate
   const getTargetLessonCount = (): number => {
-    return quantityType === "custom" ? Number(customQuantity) || 1 : quantityType;
+    return quantityType === "custom" ? Number(customQuantity) : quantityType;
   };
 
   const targetCount = getTargetLessonCount();

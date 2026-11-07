@@ -20,11 +20,12 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
   auth: { getUser: async () => ({ data: { user: { id: state.userId } }, error: null }) },
   from: (table: string) => {
     let operation = "select", payload: any[] = [], opts: any = {}, filters: Array<[string, any]> = [], inFilter: string[] | null = null;
+    let range: [number, number] | null = null;
     const query: any = {
       select: () => query, eq: (key: string, value: any) => { filters.push([key, value]); return query; },
       in: (_key: string, values: string[]) => { inFilter = values; return query; },
       is: (key: string, value: any) => { filters.push([key, value]); return query; }, order: () => query,
-      range: () => query,
+      range: (start: number, end: number) => { range = [start, end]; return query; },
       insert: (rows: any[]) => { operation = "insert"; payload = rows; return query; },
       upsert: (rows: any[], options: any) => { operation = "upsert"; payload = rows; opts = options; return query; },
       single: () => query,
@@ -47,6 +48,7 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
         let rows = table === "calendar_events" ? state.events : state.plans;
         rows = rows.filter((r) => filters.every(([key, value]) => (r[key] ?? null) === value));
         if (inFilter) rows = rows.filter((p) => inFilter?.includes(p.event_id));
+        if (range) rows = rows.slice(range[0], range[1] + 1);
         return { data: rows.map((r) => ({ ...r })), error: null };
       }).then(resolve, reject),
     };
@@ -106,6 +108,35 @@ for (const [kind, generate] of Object.entries(operations)) describe(`${kind} gen
     await generate(); state.plans[0].content = "Original teacher content";
     state.writes = []; const repeated = await generate();
     expect(repeated[0].content).toBe("Original teacher content"); expect(state.writes).toEqual([]);
+  });
+  it("deduplicates matching events beyond the first 500 historical rows", async () => {
+    await generate();
+    const existing = state.events;
+    const owner = kind === "class" ? { class_id: "c" } : { student_id: "s" };
+    state.events = [...Array.from({ length: 500 }, (_, i) => ({ id: `old${i}`, teacher_id: "t", ...owner,
+      date: "2025-01-01", start_time: "01:00:00", end_time: "02:00:00", duration: 60, status: "Completed" })), ...existing];
+    state.writes = [];
+    await generate();
+    expect(state.events).toHaveLength(520); expect(state.writes).toEqual([]);
+  });
+  it("rescheduled events satisfy the original slot without being moved back or duplicated", async () => {
+    await generate();
+    const moved = state.events[0];
+    Object.assign(moved, { original_date: moved.date, original_start_time: moved.start_time,
+      rescheduled_at: "2026-01-04", date: "2026-01-06", start_time: "15:00:00", status: "Rescheduled" });
+    Object.assign(state.plans[0], { scheduled_date: "2026-01-06", start_time: "15:00:00" });
+    state.writes = [];
+    const saved = await generate();
+    expect(saved[0].event_id).toBe(moved.id);
+    expect(saved[0].scheduled_date).toBe("2026-01-06");
+    expect(moved.date).toBe("2026-01-06");
+    expect(state.events).toHaveLength(20); expect(state.writes).toEqual([]);
+  });
+  it("editing the end date after shortage retries the whole calculation with no partial records", async () => {
+    await expect(generate("2026-04-27")).rejects.toBeInstanceOf(InsufficientLessonPeriodError);
+    expect(state.writes).toEqual([]);
+    const saved = await generate("2026-05-18");
+    expect(saved).toHaveLength(20); expect(state.events).toHaveLength(20); expect(state.plans).toHaveLength(20);
   });
   it("readback failure never counts historical plans as success", async () => {
     state.failVerify = true; await expect(generate()).rejects.toThrow("read failed");
