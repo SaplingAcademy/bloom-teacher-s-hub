@@ -1110,7 +1110,7 @@ function CalendarPage() {
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 text-sm font-semibold text-primary transition-all hover:bg-primary/20 disabled:opacity-50 cursor-pointer"
               title={t("calendarUi.syncTitle")}
             >
-              <RotateCcw className={`h-4 w-4 ${isSyncingAgenda ? "animate-spin" : ""}`} />
+              <RotateCcw className={`h-4 w-4 ${isSyncingAgenda ? "animate-spin [animation-direction:normal] motion-reduce:animate-none" : ""}`} />
               <span>{isSyncingAgenda ? t("calendarUi.syncing") : t("calendarUi.sync")}</span>
             </button>
             <button
