@@ -18,7 +18,7 @@ import {
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
 import {
-  ContractError, activateStudentContract, createCurrentStudentContract, deleteContractDocument, getContractDocumentSignedUrl,
+  ContractError, activateStudentContract, createStudentContract, deleteContractDocument, getContractDocumentSignedUrl,
   listContractDocuments, listStudentContracts, setStudentContractStatus, updateStudentContract, uploadContractDocument,
 } from "@/lib/student-contracts";
 import { ContractDocumentInput } from "@/components/bloom/ContractDocumentInput";
@@ -158,7 +158,7 @@ function ContractDialog({ studentId, contract, pkg, onClose, onSaved }: {
     try {
       const saved = workingContract
         ? await updateStudentContract(workingContract.id, formToPatch(form, pkg, workingContract.student_package_id))
-        : await createCurrentStudentContract(formToCreateInput(studentId, form, pkg));
+        : await createStudentContract(formToCreateInput(studentId, form, pkg));
       setWorkingContract(saved);
       const current = activateOnSave && saved.status !== "active"
         ? await activateStudentContract(saved.id)

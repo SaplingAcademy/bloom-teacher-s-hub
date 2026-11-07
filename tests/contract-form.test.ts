@@ -5,7 +5,7 @@ const pkg = { id: "sp1", startDate: "2026-01-10", endDate: "2026-12-10" };
 
 describe("contract form", () => {
   test("new contracts start as draft for the current student with reminders on", () => {
-    const input = formToCreateInput("s1", { ...emptyContractForm(), startDate: "2026-02-01" }, null);
+    const input = formToCreateInput("s1", { ...emptyContractForm(), startDate: "2026-02-01", endDate: "2027-02-01" }, null);
     expect(input.status).toBe("draft");
     expect(input.student_id).toBe("s1");
     expect(input.reminders_enabled).toBe(true);
@@ -25,9 +25,16 @@ describe("contract form", () => {
     expect(formToPatch(filled, pkg).student_package_id).toBeNull();
   });
 
-  test("validation", () => {
-    expect(validateContractForm(emptyContractForm())).toBe("requiredStart");
-    expect(validateContractForm({ ...emptyContractForm(), startDate: "2026-05-01", endDate: "2026-04-01" })).toBe("invalidDates");
+  test("new contracts require both dates and a strictly later end", () => {
+    expect(validateContractForm(emptyContractForm(), true)).toBe("requiredStart");
+    expect(validateContractForm({ ...emptyContractForm(), startDate: "2026-05-01" }, true)).toBe("requiredEnd");
+    expect(validateContractForm({ ...emptyContractForm(), startDate: "2026-05-01", endDate: "2026-05-01" }, true)).toBe("invalidDates");
+    expect(validateContractForm({ ...emptyContractForm(), startDate: "2026-05-01", endDate: "2026-04-01" }, true)).toBe("invalidDates");
+    expect(validateContractForm({ ...emptyContractForm(), startDate: "2026-05-01", endDate: "2026-05-02" }, true)).toBeNull();
+  });
+
+  test("legacy open-ended contracts remain editable", () => {
+    expect(validateContractForm({ ...emptyContractForm(), startDate: "2026-05-01", indefinite: true })).toBeNull();
   });
 
   test("active is current, everything else is kept as history", () => {
