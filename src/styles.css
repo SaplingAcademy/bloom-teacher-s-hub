@@ -331,6 +331,12 @@ main::-webkit-scrollbar-thumb:hover {
  * Skeleton shimmer — soft, transform-based (cheap), disabled under
  * prefers-reduced-motion so loading placeholders stay static.
  */
+/* Calendar sync only: explicit negative rotation preserves a seamless loop. */
+@keyframes calendar-sync-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
 @keyframes skeleton-shimmer {
   from {
     transform: translateX(-100%);
