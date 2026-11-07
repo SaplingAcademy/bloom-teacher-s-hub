@@ -100,6 +100,7 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { calendarEventsQueryKey, calendarEventsRootKey, calendarEventsWindow } from "@/lib/calendar-events-window";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
 import { calendarGridHours } from "@/lib/calendar-grid";
+import { useCalendarGridScroll } from "@/hooks/use-calendar-grid-scroll";
 import { LessonStudentsSelect, LessonTagsSelect } from "@/components/bloom/LessonSchedulingSelections";
 import { lessonDuration, saveManualLessons, manualLessonErrorKey, ManualLessonPlanError, LESSON_QUICK_TAGS, type ManualLessonInput, type SavedManualEvent } from "@/lib/manual-lesson-scheduling";
 
@@ -416,6 +417,12 @@ function CalendarPage() {
   });
   const isLoadingEvents = eventsQuery.isLoading;
   const isEventsError = eventsQuery.isError && !eventsQuery.data;
+  const { scrollRef: calendarScrollRef, onScroll: handleCalendarScroll } = useCalendarGridScroll({
+    teacherId: user?.id,
+    view: viewMode,
+    ready: availabilitySnapshot?.teacherId === user?.id && availabilitySnapshot !== null && !(isLoadingEvents && events.length === 0),
+    days: availability,
+  });
 
   useEffect(() => {
     if (eventsQuery.data) setEvents(eventsQuery.data);
@@ -1038,7 +1045,7 @@ function CalendarPage() {
 
   const currentTranslation = calendarTranslations[lang];
 
-  // Week/day display runs through 23:59 independently of working availability.
+  // Week/day display covers 00:00 through 23:59 independently of availability.
   // Grid shading source: teacher availability snapshot (single source of truth)
   const isHourAvailable = useCallback(
     (dateStr: string, hour: string) => {
@@ -1049,7 +1056,7 @@ function CalendarPage() {
     [availabilitySnapshot]
   );
 
-  const gridHours = calendarGridHours(events);
+  const gridHours = calendarGridHours();
 
   const openNewEvent = (date: string, startTime = "") => {
     setNewEventDefaults(customEventDefaults(date, startTime, availabilitySnapshot?.defaultDuration));
@@ -1341,12 +1348,12 @@ function CalendarPage() {
 
         {/* RIGHT COLUMN: CALENDAR RENDER CONTAINER */}
         <div className="min-w-0 self-start rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
-          <div data-calendar-scroll-area="" className={viewMode === "month" ? "" : "max-h-[min(70dvh,900px)] overflow-auto"}>
+          <div ref={calendarScrollRef} onScroll={handleCalendarScroll} data-calendar-scroll-area="" className={viewMode === "month" ? "" : "max-h-[min(70dvh,900px)] overflow-auto"}>
           {/* WEEK VIEW (DEFAULT) */}
           {viewMode === "week" && (
             <div className="min-w-[700px]">
               {/* Day column headers */}
-              <div className="sticky top-0 z-10 grid grid-cols-[80px_repeat(7,1fr)] border-b border-border text-center bg-card">
+              <div data-calendar-grid-header="" className="sticky top-0 z-10 grid grid-cols-[80px_repeat(7,1fr)] border-b border-border text-center bg-card">
                 <div className="p-3 text-[10px] uppercase font-bold text-muted-foreground border-r border-border">
                   Time
                 </div>
