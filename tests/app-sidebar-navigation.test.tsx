@@ -20,7 +20,7 @@ vi.mock("@/hooks/use-plan", () => ({ usePlan: () => ({ isSuperAdmin: false }) })
 const PT: Record<string, string> = {
   "nav.workspace": "Workspace",
   "nav.communitySection": "Comunidade",
-  "nav.today": "Hoje",
+  "nav.today": "Visão Geral",
   "nav.students": "Alunos",
   "nav.leads": "Leads",
   "nav.calendar": "Agenda",
@@ -89,7 +89,7 @@ describe("AppSidebar without the Aulas entry", () => {
     const text = c.textContent ?? "";
     expect(text).not.toContain("Aulas");
     expect(text).not.toContain("Lessons");
-    for (const label of ["Hoje", "Alunos", "Leads", "Agenda", "Biblioteca", "Financeiro", "Crescimento", "Bloom Academy", "Comunidade", "Feed", "Perfil", "Configurações"]) {
+    for (const label of ["Visão Geral", "Alunos", "Leads", "Agenda", "Biblioteca", "Financeiro", "Crescimento", "Bloom Academy", "Comunidade", "Feed", "Perfil", "Configurações"]) {
       expect(text, `missing ${label}`).toContain(label);
     }
   });
@@ -100,7 +100,7 @@ describe("AppSidebar without the Aulas entry", () => {
     const text = c.textContent ?? "";
     expect(text).not.toContain("Lessons");
     expect(text).not.toContain("Aulas");
-    for (const label of ["Today", "Students", "Leads", "Calendar", "Resources", "Finance", "Growth", "Bloom Academy", "Community", "Feed", "Profile", "Settings"]) {
+    for (const label of ["Overview", "Students", "Leads", "Calendar", "Resources", "Finance", "Growth", "Bloom Academy", "Community", "Feed", "Profile", "Settings"]) {
       expect(text, `missing ${label}`).toContain(label);
     }
   });

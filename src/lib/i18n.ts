@@ -70,7 +70,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     nav: {
       workspace: "Espaço de Trabalho",
       communitySection: "Comunidade",
-      today: "Hoje",
+      today: "Visão Geral",
       todayDesc: "Sua central de operações do dia",
       students: "Alunos",
       studentsDesc: "Perfis, progresso e histórico",
@@ -1019,7 +1019,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     nav: {
       workspace: "Workspace",
       communitySection: "Community",
-      today: "Today",
+      today: "Overview",
       todayDesc: "Your launchpad for the day",
       students: "Students",
       studentsDesc: "Profiles, progress and history",

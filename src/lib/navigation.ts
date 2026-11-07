@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard,
+  PanelsTopLeft,
   Users,
   UserPlus,
   CalendarDays,
@@ -38,7 +38,7 @@ export const navSections: NavSection[] = [
     id: "workspace",
     label: "Workspace",
     items: [
-      { id: "today", label: "Today", to: "/", icon: LayoutDashboard, description: "Your launchpad for the day" },
+      { id: "today", label: "Overview", to: "/", icon: PanelsTopLeft, description: "Your launchpad for the day" },
       {
         id: "students",
         label: "Students",
