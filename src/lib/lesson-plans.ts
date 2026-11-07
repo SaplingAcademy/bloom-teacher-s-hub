@@ -8,6 +8,8 @@ import {
 } from "./time-off-engine";
 import { TeacherAvailabilitySnapshot, isSlotAvailable } from "./teacher-availability";
 import { syncEventAttendanceRecorded } from "./attendance-recorded";
+import { uniqueLessonSlots, validateLessonPeriod } from "./lesson-plan-quantity";
+import { persistGeneratedLessonPlan } from "./lesson-plan-generation";
 
 /* =============================================================================
    Unified lesson plans & attendance (individual, pair and group)
@@ -95,12 +97,14 @@ export function generateOccurrences(
   slots: OccurrenceSlot[],
   totalOccurrences: number,
   timeOffList: TeacherTimeOff[] = [],
-  availability?: TeacherAvailabilitySnapshot | null
+  availability?: TeacherAvailabilitySnapshot | null,
+  endDateStr?: string
 ): GeneratedOccurrence[] {
+  if (endDateStr) validateLessonPeriod(startDateStr, endDateStr);
   if (!slots || slots.length === 0 || totalOccurrences <= 0) return [];
 
   const start = new Date((startDateStr || formatLocalDateStr(new Date())) + "T00:00:00");
-  const ordered = slots
+  const ordered = uniqueLessonSlots(slots, (s) => `${getDayIndex(s.weekday)}|${(s.startTime || "09:00").slice(0, 5)}`)
     .map((s) => ({ ...s, dayIdx: getDayIndex(s.weekday), startTime: s.startTime || "09:00" }))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
@@ -108,11 +112,11 @@ export function generateOccurrences(
   const curr = new Date(start);
   let scanned = 0;
 
-  while (out.length < totalOccurrences && scanned < 365 * 2) {
+  while (endDateStr ? formatLocalDateStr(curr) <= endDateStr : out.length < totalOccurrences && scanned < 365 * 2) {
     const dateStr = formatLocalDateStr(curr);
     if (!checkDateIsNonWorking(dateStr, timeOffList)) {
       for (const slot of ordered.filter((s) => s.dayIdx === curr.getDay())) {
-        if (out.length >= totalOccurrences) break;
+        if (!endDateStr && out.length >= totalOccurrences) break;
         const duration = slot.duration || 60;
         const startHHMM = slot.startTime;
         const endHHMM = calculateEndTime(startHHMM, duration);
@@ -198,115 +202,24 @@ export async function generateClassLessonPlan(
   cls: { id: string; name: string; level?: string },
   params: {
     startDate: string;
+    endDate?: string;
     slots: OccurrenceSlot[];
     totalOccurrences: number;
     timeOff?: TeacherTimeOff[];
     availability?: TeacherAvailabilitySnapshot | null;
   }
 ): Promise<LessonPlan[]> {
-  const { data: currentClass, error: classError } = await supabase.from("classes").select("status")
-    .eq("teacher_id", teacherId).eq("id", cls.id).single();
-  if (classError) throw classError;
-  if (currentClass?.status === "archived") throw new Error("Archived classes cannot generate lessons");
-  // Time off is always loaded right before generating (never rely on an async UI snapshot).
-  const loadedTimeOff = await fetchTeacherTimeOff(teacherId);
-  const timeOff = [...loadedTimeOff, ...(params.timeOff || [])];
-  const occurrences = generateOccurrences(
-    params.startDate,
-    params.slots,
-    params.totalOccurrences,
-    timeOff,
-    params.availability
-  );
-
-  if (occurrences.length === 0) {
-    throw new Error(
-      "Nenhuma aula pôde ser gerada. Revise os dias/horários e a sua disponibilidade."
-    );
-  }
-
-  const rows = occurrences.map((o) => ({
-    teacher_id: teacherId,
-    class_id: cls.id,
-    class_schedule_id: o.schedule_id,
-    event_type: "class",
-    student_name: cls.name,
-    level: cls.level || "B1",
-    focus: "General",
-    date: o.date,
-    start_time: o.start_time,
-    end_time: o.end_time,
-    duration: o.duration,
-    type: "Group",
-    delivery_mode: o.delivery_mode,
-    location_link: o.location_link || "",
-    status: "Scheduled",
-  }));
-
-  const insertResult = await insertClassEvents(teacherId, cls.id, rows);
-  if (insertResult.error) {
-    throw new Error(`Não foi possível criar as aulas no calendário: ${insertResult.error}`);
-  }
-
-  const { data: events } = await supabase
-    .from("calendar_events")
-    .select("id, date, start_time, end_time, duration, status, class_schedule_id, original_date, original_start_time, rescheduled_at")
-    .eq("teacher_id", teacherId)
-    .eq("class_id", cls.id);
-
-  // Link only the occurrences computed for this generation.
-  const matched = matchOccurrencesToEvents(occurrences, events || []);
-
-  // Pre-existing matching events missing their schedule identity get it filled in.
-  await Promise.all(
-    matched
-      .filter(({ event, occurrence }) => !event.class_schedule_id && occurrence.schedule_id)
-      .map(({ event, occurrence }) =>
-        supabase
-          .from("calendar_events")
-          .update({ class_schedule_id: occurrence.schedule_id })
-          .eq("id", event.id)
-          .eq("teacher_id", teacherId)
-          .is("class_schedule_id", null)
-      )
-  );
-
-  const existing = await fetchLessonPlans({ classId: cls.id });
-  const byEvent = new Map(existing.map((p) => [p.event_id, p]));
-  const missing = matched.filter(({ event }) => !byEvent.has(event.id));
-
-  if (missing.length > 0) {
-    let nextNumber = existing.reduce((max, p) => Math.max(max, p.lesson_number || 0), 0);
-    const saveResult = await saveLessonPlans(
-      teacherId,
-      missing.map(({ event: e, occurrence: o }) => ({
-        teacher_id: teacherId,
-        event_id: e.id,
-        class_id: cls.id,
-        student_id: null,
-        lesson_number: ++nextNumber,
-        scheduled_date: e.date,
-        start_time: e.start_time || o.start_time,
-        end_time: e.end_time || o.end_time,
-        duration: e.duration || o.duration,
-        content: "",
-        homework: "",
-        homework_posted: null,
-        notes: "",
-        attachments: [],
-        completed: false,
-      }))
-    );
-    if (!saveResult.success) {
-      throw new Error(`Não foi possível salvar o plano de aulas: ${saveResult.error || ""}`);
-    }
-  }
-
-  const plans = await fetchLessonPlans({ classId: cls.id });
-  if (plans.length === 0) {
-    throw new Error("O plano de aulas não pôde ser salvo. Tente novamente.");
-  }
-  return plans.map((p, idx) => ({ ...p, lesson_number: p.lesson_number || idx + 1 }));
+  const slots = params.slots.map((slot) => ({ ...slot }));
+  const saved = await persistGeneratedLessonPlan({
+    teacherId, entityId: cls.id, kind: "class", name: cls.name, level: cls.level,
+    startDate: params.startDate, endDate: params.endDate, requested: params.totalOccurrences,
+    compute: (timeOff) => generateOccurrences(params.startDate, slots, params.totalOccurrences, timeOff,
+      params.availability ? { ...params.availability, timeOff } : null, params.endDate),
+  });
+  const active = await fetchLessonPlans({ classId: cls.id });
+  const byEvent = new Map(active.map((p) => [p.event_id, p]));
+  saved.forEach((p) => byEvent.set(p.event_id, p));
+  return [...byEvent.values()].sort((a, b) => `${a.scheduled_date}|${a.start_time}`.localeCompare(`${b.scheduled_date}|${b.start_time}`));
 }
 
 /**

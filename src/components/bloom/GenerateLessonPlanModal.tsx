@@ -34,9 +34,8 @@ import {
 import {
   LessonScheduleInput,
   generateLessonPlanOccurrences,
-  calculateExpectedEndDate,
   StudentLesson,
-  saveStudentLessons,
+  generateStudentLessonPlan,
   fetchStudentScheduleInputs,
 } from "@/lib/lesson-plan-sync";
 import { fetchTeacherTimeOff, TeacherTimeOff } from "@/lib/time-off-engine";
@@ -44,7 +43,10 @@ import { CEFRLevel, CourseFocus } from "@/lib/calendar-sync";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/use-language";
 import { LessonCountPresetPicker, type LessonCountSelection } from "@/components/bloom/LessonCountPresetPicker";
-import { initialLessonPlanPeriod, clipToPeriod } from "@/lib/lesson-plan-period";
+import { initialLessonPlanPeriod } from "@/lib/lesson-plan-period";
+
+import { InsufficientLessonPeriodError, validateLessonPeriod, type LessonPlanQuantity } from "@/lib/lesson-plan-quantity";
+import { LessonPlanQuantityDialog } from "./LessonPlanQuantityDialog";
 
 interface Props {
   isOpen: boolean;
@@ -78,6 +80,19 @@ export function GenerateLessonPlanModal({
   onSuccess,
 }: Props) {
   const { t } = useLanguage();
+  const [shortage, setShortage] = useState<LessonPlanQuantity | null>(null);
+  const [resetVersion, setResetVersion] = useState(0);
+  const periodRef = React.useRef<HTMLInputElement>(null);
+  const countRef = React.useRef<HTMLDivElement>(null);
+  const submitting = React.useRef(false);
+  const focusPeriod = () => requestAnimationFrame(() => periodRef.current?.focus());
+  const edit = () => { setShortage(null); focusPeriod(); };
+  const restart = () => {
+    setResetVersion((version) => version + 1);
+    setShortage(null); setQuantityType("custom"); setCustomQuantity(0); setCustomCountInvalid(true);
+    setStartDate(""); setEndDate(""); setSchedules([]); setScheduleSource("empty"); setErrorMessage(null);
+    requestAnimationFrame(() => { countRef.current?.scrollIntoView({ block: "nearest" }); countRef.current?.querySelector<HTMLInputElement>("input")?.focus(); });
+  };
   // Form State
   const [quantityType, setQuantityType] = useState<LessonCountSelection>(20);
   const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 20);
@@ -102,9 +117,10 @@ export function GenerateLessonPlanModal({
     setEndDate(period.endDate);
 
     if (teacherId) {
+      setTimeOffList([]);
       fetchTeacherTimeOff(teacherId).then((list) => {
         if (!cancelled) setTimeOffList(list);
-      });
+      }).catch(() => { if (!cancelled) setErrorMessage(t("lessonPlanGeneration.loadError")); });
     }
 
     const normalize = (list: LessonScheduleInput[]) =>
@@ -131,6 +147,7 @@ export function GenerateLessonPlanModal({
           setScheduleSource("empty");
         }
       })
+      .catch(() => { if (!cancelled) setErrorMessage(t("lessonPlanGeneration.loadError")); })
       .finally(() => {
         if (!cancelled) setIsLoadingSchedules(false);
       });
@@ -151,8 +168,11 @@ export function GenerateLessonPlanModal({
   // Expected Final Lesson Date (Live calculation preview respecting time off)
   const expectedEndDate = React.useMemo(() => {
     if (!startDate || schedules.length === 0 || targetCount <= 0) return "";
-    return calculateExpectedEndDate(startDate, schedules, targetCount, timeOffList);
-  }, [startDate, schedules, targetCount, timeOffList]);
+    try {
+      const eligible = generateLessonPlanOccurrences(startDate, schedules, targetCount, studentId, teacherId, timeOffList, endDate);
+      return eligible.slice(0, targetCount).at(-1)?.scheduled_date || "";
+    } catch { return ""; }
+  }, [startDate, endDate, schedules, targetCount, timeOffList, studentId, teacherId]);
 
   // Schedule row actions
   const handleAddScheduleRow = () => {
@@ -188,85 +208,33 @@ export function GenerateLessonPlanModal({
     });
   };
 
-  // Submit Generation
+  // The operation revalidates with fresh persisted exclusions before any write.
   const handleConfirmGenerate = async () => {
+    if (submitting.current) return;
     setErrorMessage(null);
-
-    // Validation
-    if (!startDate || isNaN(Date.parse(startDate))) {
-      const err = "Please select a valid start date.";
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
+    try { validateLessonPeriod(startDate, endDate); }
+    catch { setErrorMessage(t("lessonPlanGeneration.invalidPeriod")); focusPeriod(); return; }
+    if (!schedules.length) { setErrorMessage(t("lessonPlanGeneration.emptySchedule")); return; }
+    if ((quantityType === "custom" && customCountInvalid) || !Number.isSafeInteger(targetCount) || targetCount <= 0) {
+      setErrorMessage(t("lessonPlanGeneration.quantityRequired")); return;
     }
-
-    if (!schedules || schedules.length === 0) {
-      const err = "Please specify at least one weekly schedule time slot.";
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
-    }
-
-    if (quantityType === "custom" && customCountInvalid) {
-      const err = t("students.modalInvalidLessonCount");
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
-    }
-
-    if (targetCount <= 0) {
-      const err = "Please select a positive number of lessons to generate.";
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
-    }
-
+    submitting.current = true;
+    setIsGenerating(true);
     try {
-      setIsGenerating(true);
-
-      const generated = clipToPeriod(generateLessonPlanOccurrences(
-        startDate,
-        schedules,
-        targetCount,
-        studentId,
-        teacherId,
-        timeOffList
-      ), endDate);
-
-      if (generated.length === 0) {
-        throw new Error("Generation produced 0 lesson occurrences. Please check your selected weekdays and start date.");
-      }
-
-      // Save generated lessons
-      const saveRes = await saveStudentLessons(
-        studentId,
-        teacherId,
-        studentName,
-        level,
-        focus,
-        generated
-      );
-
-      if (!saveRes.success) {
-        console.warn("[GenerateLessonPlanModal] Supabase save deferred (saved locally):", saveRes.error);
-      }
-
-      toast.success(`Successfully generated ${generated.length} lessons for ${studentName}!`);
-      onSuccess(saveRes.data || generated);
-      onClose();
-    } catch (err: any) {
-      console.error("[GenerateLessonPlanModal] Exception during generation:", err);
-      const msg = err.message || "Failed to generate lesson plan.";
-      setErrorMessage(msg);
-      toast.error(msg);
-    } finally {
-      setIsGenerating(false);
-    }
+      const saved = await generateStudentLessonPlan({ studentId, teacherId, studentName, level, focus,
+        startDate, endDate, schedules, requested: targetCount });
+      toast.success(t("lessonPlanGeneration.success").replace("{count}", String(saved.length)).replace("{name}", studentName));
+      onSuccess(saved); onClose();
+    } catch (error) {
+      if (error instanceof InsufficientLessonPeriodError) setShortage(error.quantity);
+      else { setErrorMessage(t("lessonPlanGeneration.saveError")); toast.error(t("lessonPlanGeneration.saveError")); }
+    } finally { submitting.current = false; setIsGenerating(false); }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 bg-card border-border shadow-lg">
+    <>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !submitting.current && !shortage) onClose(); }}>
+      <DialogContent closeLabel={t("common.close")} onInteractOutside={(e) => { if (isGenerating || shortage) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isGenerating || shortage) e.preventDefault(); }} className="w-[calc(100%-1rem)] max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 bg-card border-border shadow-lg">
         <DialogHeader className="space-y-2 pb-3 border-b border-border/60">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
@@ -293,15 +261,16 @@ export function GenerateLessonPlanModal({
           </div>
         )}
 
-        <div className="space-y-6 py-2">
+        <fieldset disabled={isGenerating || isLoadingSchedules} className="space-y-6 py-2 min-w-0">
           {/* STEP 1: NUMBER OF LESSONS */}
-          <div className="space-y-3">
+          <div ref={countRef} className="space-y-3">
             <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
               <span>{t("students.modalStepLessons")}</span>
               <span className="text-muted-foreground font-normal">{t("students.modalTargetLessons").replace("{count}", String(targetCount))}</span>
             </Label>
 
             <LessonCountPresetPicker
+              key={resetVersion}
               selected={quantityType}
               onSelect={setQuantityType}
               customQuantity={customQuantity}
@@ -319,6 +288,7 @@ export function GenerateLessonPlanModal({
               <span className="text-muted-foreground font-normal text-[11px]">{t("students.modalFirstLessonDate")}</span>
             </Label>
             <Input
+              ref={periodRef}
               id="start-date"
               type="date"
               value={startDate}
@@ -348,7 +318,7 @@ export function GenerateLessonPlanModal({
                 {scheduleSource === "student" && schedules.length > 0 && (
                   <Badge variant="secondary" className="text-[10px] font-semibold gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Horários do aluno
+                    {t("lessonPlanGeneration.scheduleSource")}
                   </Badge>
                 )}
               </div>
@@ -376,8 +346,7 @@ export function GenerateLessonPlanModal({
                 <div className="flex items-start gap-2 text-xs text-muted-foreground px-1 py-2">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>
-                    Este aluno ainda não tem horários recorrentes salvos. Adicione ao menos um bloco
-                    para gerar o plano.
+                    {t("lessonPlanGeneration.emptySchedule")}
                   </span>
                 </div>
               )}
@@ -385,14 +354,14 @@ export function GenerateLessonPlanModal({
               {schedules.map((row, idx) => (
                 <div
                   key={`sched-row-${idx}`}
-                  className="flex items-center gap-2 bg-card p-2 rounded-lg border border-border/60 shadow-2xs"
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:flex items-center gap-2 bg-card p-2 rounded-lg border border-border/60 shadow-2xs"
                 >
                   {/* Weekday */}
                   <Select
                     value={row.weekday}
                     onValueChange={(val) => handleUpdateScheduleRow(idx, "weekday", val)}
                   >
-                    <SelectTrigger className="h-9 text-xs flex-1 bg-background border-border">
+                    <SelectTrigger className="h-9 text-xs flex-1 col-span-3 min-w-0 bg-background border-border">
                       <SelectValue placeholder={t("students.modalWeekday")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -407,9 +376,10 @@ export function GenerateLessonPlanModal({
                   </Select>
 
                   {/* Start Time */}
-                  <div className="w-28">
+                  <div className="w-full sm:w-28 min-w-0">
                     <Input
                       type="time"
+                      aria-label={t("lessonPlanGeneration.slotStart").replace("{number}", String(idx + 1))}
                       value={row.startTime}
                       onChange={(e) => handleUpdateScheduleRow(idx, "startTime", e.target.value)}
                       className="h-9 text-xs font-mono bg-background border-border"
@@ -418,9 +388,10 @@ export function GenerateLessonPlanModal({
                   </div>
 
                   {/* End Time */}
-                  <div className="w-28">
+                  <div className="w-full sm:w-28 min-w-0">
                     <Input
                       type="time"
+                      aria-label={t("lessonPlanGeneration.slotEnd").replace("{number}", String(idx + 1))}
                       value={row.endTime || "11:00"}
                       onChange={(e) => handleUpdateScheduleRow(idx, "endTime", e.target.value)}
                       className="h-9 text-xs font-mono bg-background border-border"
@@ -429,14 +400,15 @@ export function GenerateLessonPlanModal({
                   </div>
 
                   {/* Remove Row Button */}
-                  <button
-                    type="button"
+                  <Button
+                    type="button" variant="ghost" size="icon"
+                    aria-label={t("students.modalRemoveRow")}
                     onClick={() => handleRemoveScheduleRow(idx)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     title={t("students.modalRemoveRow")}
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -464,14 +436,14 @@ export function GenerateLessonPlanModal({
               </div>
             </div>
           </div>
-        </div>
+        </fieldset>
 
         <DialogFooter className="gap-2 pt-3 border-t border-border/60">
           <Button
             type="button"
             variant="outline"
-            onClick={onClose}
-            disabled={isGenerating}
+            onClick={() => { if (!submitting.current && !shortage) onClose(); }}
+            disabled={isGenerating || Boolean(shortage)}
             className="h-10 text-xs"
           >
             {t("common.cancel")}
@@ -479,7 +451,7 @@ export function GenerateLessonPlanModal({
           <Button
             type="button"
             onClick={handleConfirmGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || isLoadingSchedules}
             className="h-10 text-xs font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {isGenerating ? (
@@ -497,5 +469,7 @@ export function GenerateLessonPlanModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <LessonPlanQuantityDialog quantity={shortage} onEdit={edit} onRestart={restart} />
+    </>
   );
 }

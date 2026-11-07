@@ -1,4 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import { uniqueLessonSlots, validateLessonPeriod } from "./lesson-plan-quantity";
+import { persistGeneratedLessonPlan } from "./lesson-plan-generation";
+import { setUserItem } from "./user-storage";
 import { formatTimeHHMMSS, calculateEndTime, CEFRLevel, CourseFocus } from "./calendar-sync";
 import {
   fetchLessonPlans,
@@ -91,8 +94,10 @@ export function generateLessonPlanOccurrences(
   totalLessons: number = 23,
   studentId: string,
   teacherId: string,
-  timeOffList: TeacherTimeOff[] = []
+  timeOffList: TeacherTimeOff[] = [],
+  endDateStr?: string
 ): StudentLesson[] {
+  if (endDateStr) validateLessonPeriod(startDateStr, endDateStr);
   if (!schedules || schedules.length === 0 || totalLessons <= 0) {
     return [];
   }
@@ -101,7 +106,7 @@ export function generateLessonPlanOccurrences(
   const lessons: StudentLesson[] = [];
 
   // Map schedules to weekday index & sort by startTime
-  const scheduleSlots = schedules.map((sch) => ({
+  const scheduleSlots = uniqueLessonSlots(schedules, (s) => `${getDayIndex(s.weekday)}|${(s.startTime || "09:00").slice(0, 5)}`).map((sch) => ({
     ...sch,
     dayIdx: getDayIndex(sch.weekday),
     startTimeStr: sch.startTime || "09:00",
@@ -114,7 +119,7 @@ export function generateLessonPlanOccurrences(
   const maxDaysToScan = 365 * 2;
   let scannedDays = 0;
 
-  while (lessonCounter <= totalLessons && scannedDays < maxDaysToScan) {
+  while (endDateStr ? formatLocalDateStr(currDate) <= endDateStr : lessonCounter <= totalLessons && scannedDays < maxDaysToScan) {
     const currentDayIdx = currDate.getDay();
     const dateStr = formatLocalDateStr(currDate);
     const isNonWorking = checkDateIsNonWorking(dateStr, timeOffList);
@@ -125,7 +130,7 @@ export function generateLessonPlanOccurrences(
 
       // If matches one or more slots on this weekday, add lessons for each slot in chronological order
       for (const slot of matchingSlots) {
-        if (lessonCounter > totalLessons) break;
+        if (!endDateStr && lessonCounter > totalLessons) break;
 
         const rawStart = slot.startTime || "09:00";
         const dur = slot.duration || 60;
@@ -157,6 +162,36 @@ export function generateLessonPlanOccurrences(
     scannedDays++;
   }
 
+  return lessons;
+}
+
+/** New-plan generation never delegates to the legacy edit/local-success path. */
+export async function generateStudentLessonPlan(params: {
+  studentId: string; teacherId: string; studentName: string; level?: string; focus?: string;
+  startDate: string; endDate?: string; schedules: LessonScheduleInput[]; requested: number;
+}): Promise<StudentLesson[]> {
+  const input = { ...params, schedules: params.schedules.map((s) => ({ ...s })) };
+  const plans = await persistGeneratedLessonPlan({
+    teacherId: input.teacherId, entityId: input.studentId, kind: "student", name: input.studentName,
+    level: input.level, focus: input.focus, startDate: input.startDate, endDate: input.endDate,
+    requested: input.requested,
+    compute: (timeOff) => generateLessonPlanOccurrences(input.startDate, input.schedules, input.requested,
+      input.studentId, input.teacherId, timeOff, input.endDate).map((l) => ({
+        date: l.scheduled_date, start_time: l.start_time, end_time: l.end_time, duration: l.duration,
+        schedule_id: l.schedule_id, delivery_mode: "Online" as const,
+      })),
+  });
+  const lessons: StudentLesson[] = plans.map((p) => ({
+    id: p.id, event_id: p.event_id, teacher_id: p.teacher_id, student_id: input.studentId,
+    lesson_number: p.lesson_number, scheduled_date: p.scheduled_date,
+    start_time: p.start_time, end_time: p.end_time, duration: p.duration,
+    content: p.content || "", homework: p.homework || "", homework_posted: p.homework_posted,
+    notes: p.notes || "", attachments: p.attachments || [], completed: p.completed,
+    original_date: p.original_date, original_start_time: p.original_start_time,
+    attendance_status: p.event_status === "Cancelled" ? "Cancelled" : p.event_status === "Rescheduled" ? "Rescheduled" : null,
+  }));
+  try { setUserItem(`bloom.student_lessons.${input.studentId}`, JSON.stringify(lessons), input.teacherId); }
+  catch (error) { console.warn("[lesson-plan] confirmed cache unavailable", error); }
   return lessons;
 }
 

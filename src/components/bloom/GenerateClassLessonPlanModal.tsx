@@ -25,7 +25,7 @@ import { ClassWithDetails } from "@/lib/class-sync";
 import {
   LessonPlan,
   OccurrenceSlot,
-  calculateClassExpectedEndDate,
+  generateOccurrences,
   generateClassLessonPlan,
   getScheduleAdvisoryWarnings,
 } from "@/lib/lesson-plans";
@@ -36,6 +36,10 @@ import {
 } from "@/lib/teacher-availability";
 import { LessonCountPresetPicker, type LessonCountSelection } from "@/components/bloom/LessonCountPresetPicker";
 import { calculateEndTime } from "@/lib/calendar-sync";
+
+import { useLanguage } from "@/hooks/use-language";
+import { InsufficientLessonPeriodError, validateLessonPeriod, type LessonPlanQuantity } from "@/lib/lesson-plan-quantity";
+import { LessonPlanQuantityDialog } from "./LessonPlanQuantityDialog";
 
 interface Props {
   isOpen: boolean;
@@ -81,6 +85,21 @@ export function GenerateClassLessonPlanModal({
   packageLessonCount,
   onSuccess,
 }: Props) {
+  const { t } = useLanguage();
+  const [endDate, setEndDate] = useState("");
+  const [shortage, setShortage] = useState<LessonPlanQuantity | null>(null);
+  const [resetVersion, setResetVersion] = useState(0);
+  const periodRef = React.useRef<HTMLInputElement>(null);
+  const countRef = React.useRef<HTMLDivElement>(null);
+  const submitting = React.useRef(false);
+  const focusPeriod = () => requestAnimationFrame(() => periodRef.current?.focus());
+  const edit = () => { setShortage(null); focusPeriod(); };
+  const restart = () => {
+    setResetVersion((version) => version + 1);
+    setShortage(null); setQuantityType("custom"); setCustomQuantity(0); setCustomCountInvalid(true);
+    setStartDate(""); setEndDate(""); setRows([]); setErrorMessage(null);
+    requestAnimationFrame(() => { countRef.current?.scrollIntoView({ block: "nearest" }); countRef.current?.querySelector<HTMLInputElement>("input")?.focus(); });
+  };
   const [quantityType, setQuantityType] = useState<LessonCountSelection>(20);
   const [customQuantity, setCustomQuantity] = useState<number>(packageLessonCount || 20);
   const [customCountInvalid, setCustomCountInvalid] = useState(false);
@@ -95,7 +114,9 @@ export function GenerateClassLessonPlanModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    let cancelled = false;
     setErrorMessage(null);
+    setEndDate("");
     setStartDate(cls.start_date || new Date().toISOString().split("T")[0]);
 
     // class_schedules is canonical: start_time + duration, end derived.
@@ -111,7 +132,10 @@ export function GenerateClassLessonPlanModal({
         : [{ weekday: "Monday", startTime: "19:00", endTime: "20:00", duration: 60 }]
     );
 
-    if (teacherId) getTeacherAvailability(teacherId, { force: true }).then(setAvailability);
+    setAvailability(null);
+    if (teacherId) getTeacherAvailability(teacherId, { force: true }).then((value) => { if (!cancelled) setAvailability(value); })
+      .catch(() => { if (!cancelled) setErrorMessage(t("lessonPlanGeneration.loadError")); });
+    return () => { cancelled = true; };
   }, [isOpen, cls.id, cls.schedules, cls.start_date, teacherId]);
 
   const targetCount = useMemo(() => {
@@ -132,14 +156,11 @@ export function GenerateClassLessonPlanModal({
 
   const expectedEndDate = useMemo(() => {
     if (!startDate || slots.length === 0 || targetCount <= 0) return "";
-    return calculateClassExpectedEndDate(
-      startDate,
-      slots,
-      targetCount,
-      availability?.timeOff || [],
-      availability
-    );
-  }, [startDate, slots, targetCount, availability]);
+    try {
+      return generateOccurrences(startDate, slots, targetCount, availability?.timeOff || [], availability, endDate)
+        .slice(0, targetCount).at(-1)?.date || "";
+    } catch { return ""; }
+  }, [startDate, endDate, slots, targetCount, availability]);
 
   const advisoryWarnings = useMemo(
     () => getScheduleAdvisoryWarnings(startDate, slots, availability),
@@ -176,7 +197,7 @@ export function GenerateClassLessonPlanModal({
 
   const removeRow = (index: number) => {
     if (rows.length <= 1) {
-      toast.error(isPt ? "É necessário ao menos um horário semanal." : "At least one weekly slot is required.");
+      toast.error(t("lessonPlanGeneration.emptySchedule"));
       return;
     }
     setRows((prev) => prev.filter((_, i) => i !== index));
@@ -194,62 +215,32 @@ export function GenerateClassLessonPlanModal({
     );
 
   const handleGenerate = async () => {
+    if (submitting.current) return;
     setErrorMessage(null);
-
-    if (!startDate || isNaN(Date.parse(startDate))) {
-      const err = isPt ? "Selecione uma data de início válida." : "Select a valid start date.";
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
+    try { validateLessonPeriod(startDate, endDate); }
+    catch { setErrorMessage(t("lessonPlanGeneration.invalidPeriod")); focusPeriod(); return; }
+    if (!slots.length) { setErrorMessage(t("lessonPlanGeneration.emptySchedule")); return; }
+    if ((quantityType === "custom" && customCountInvalid) || !Number.isSafeInteger(targetCount) || targetCount <= 0) {
+      setErrorMessage(t("lessonPlanGeneration.quantityRequired")); return;
     }
-    if (quantityType === "custom" && customCountInvalid) {
-      const err = isPt ? "Informe um número de aulas válido (mínimo 1)." : "Enter a valid number of lessons (minimum 1).";
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
-    }
-    if (slots.length === 0) {
-      const err = isPt ? "Informe ao menos um horário semanal." : "Add at least one weekly slot.";
-      setErrorMessage(err);
-      toast.error(toUserMessage(err, i18nT("errors.lessonPlan", currentLanguage())));
-      return;
-    }
-
+    submitting.current = true; setIsGenerating(true);
     try {
-      setIsGenerating(true);
-      const plans = await generateClassLessonPlan(
-        teacherId,
-        { id: cls.id, name: cls.name, level: cls.level },
-        {
-          startDate,
-          slots,
-          totalOccurrences: targetCount,
-          timeOff: availability?.timeOff || [],
-          availability,
-        }
-      );
-      toast.success(
-        isPt
-          ? `Plano de aulas gerado para ${cls.name}!`
-          : `Lesson plan generated for ${cls.name}!`
-      );
-      onSuccess(plans);
-      onClose();
-    } catch (err: any) {
-      const msg = err?.message || (isPt ? "Falha ao gerar o plano de aulas." : "Failed to generate lesson plan.");
-      setErrorMessage(msg);
-      toast.error(msg);
-    } finally {
-      setIsGenerating(false);
-    }
+      const plans = await generateClassLessonPlan(teacherId, { id: cls.id, name: cls.name, level: cls.level },
+        { startDate, endDate, slots, totalOccurrences: targetCount, availability });
+      toast.success(t("lessonPlanGeneration.success").replace("{count}", String(targetCount)).replace("{name}", cls.name));
+      onSuccess(plans); onClose();
+    } catch (error) {
+      if (error instanceof InsufficientLessonPeriodError) setShortage(error.quantity);
+      else { setErrorMessage(t("lessonPlanGeneration.saveError")); toast.error(t("lessonPlanGeneration.saveError")); }
+    } finally { submitting.current = false; setIsGenerating(false); }
   };
 
-
-  const lessonsLabel = (n: number | string) => (isPt ? `${n} aulas` : `${n} lessons`);
+  const lessonsLabel = (n: number | string) => t("students.lessonsCountPlural").replace("{count}", String(n));
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 bg-card border-border shadow-lg">
+    <>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !submitting.current && !shortage) onClose(); }}>
+      <DialogContent closeLabel={t("common.close")} onInteractOutside={(e) => { if (isGenerating || shortage) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isGenerating || shortage) e.preventDefault(); }} className="w-[calc(100%-1rem)] max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 bg-card border-border shadow-lg">
         <DialogHeader className="space-y-2 pb-3 border-b border-border/60">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
@@ -257,12 +248,10 @@ export function GenerateClassLessonPlanModal({
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground">
-                {isPt ? "Gerar Plano de Aulas da Turma" : "Generate Class Lesson Plan"}
+                {t("lessonPlanGeneration.classTitle")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                {isPt
-                  ? `Crie automaticamente a sequência de aulas de ${cls.name}.`
-                  : `Automatically create the lesson sequence for ${cls.name}.`}
+                {t("lessonPlanGeneration.classSubtitle").replace("{name}", cls.name)}
               </DialogDescription>
             </div>
           </div>
@@ -272,40 +261,42 @@ export function GenerateClassLessonPlanModal({
           <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">{isPt ? "Erro na geração" : "Generation error"}</p>
+              <p className="font-semibold">{t("students.generationErrorTitle")}</p>
               <p>{errorMessage}</p>
             </div>
           </div>
         )}
 
-        <div className="space-y-6 py-2">
+        <fieldset disabled={isGenerating} className="space-y-6 py-2 min-w-0">
           {/* STEP 1 — NUMBER OF LESSONS */}
-          <div className="space-y-3">
+          <div ref={countRef} className="space-y-3">
             <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
-              <span>{isPt ? "1. Número de aulas" : "1. Number of lessons"}</span>
+              <span>{t("students.modalStepLessons")}</span>
               <span className="text-muted-foreground font-normal">{lessonsLabel(targetCount)}</span>
             </Label>
 
             <LessonCountPresetPicker
+              key={resetVersion}
               selected={quantityType}
               onSelect={setQuantityType}
               customQuantity={customQuantity}
               onCustomQuantityChange={setCustomQuantity}
               onCustomValidityChange={setCustomCountInvalid}
               inputId="class-custom-qty"
-              customLabel={isPt ? "Informe a quantidade de aulas" : "Enter the number of lessons"}
+              customLabel={t("students.modalEnterCustomQty")}
             />
           </div>
 
           {/* STEP 2 — START DATE */}
           <div className="space-y-2">
             <Label htmlFor="class-start-date" className="text-xs font-semibold text-foreground flex items-center justify-between">
-              <span>{isPt ? "2. Data de início do curso" : "2. Course start date"}</span>
+              <span>{t("students.modalStepStartDate")}</span>
               <span className="text-muted-foreground font-normal text-[11px]">
-                {isPt ? "Data da primeira aula" : "First lesson date"}
+                {t("students.modalFirstLessonDate")}
               </span>
             </Label>
             <Input
+              ref={periodRef}
               id="class-start-date"
               type="date"
               value={startDate}
@@ -314,11 +305,15 @@ export function GenerateClassLessonPlanModal({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="class-end-date">{t("lessonPlanGeneration.endDate")}</Label>
+            <Input id="class-end-date" type="date" value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
           {/* STEP 3 — WEEKLY SCHEDULE */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold text-foreground">
-                {isPt ? "3. Horário semanal da turma" : "3. Class weekly schedule"}
+                {t("lessonPlanGeneration.classSchedule")}
               </Label>
               <Button
                 type="button"
@@ -328,7 +323,7 @@ export function GenerateClassLessonPlanModal({
                 className="h-7 text-xs text-primary hover:bg-primary/10 gap-1"
               >
                 <Plus className="w-3 h-3" />
-                {isPt ? "Adicionar Horário" : "Add Schedule"}
+                {t("students.modalAddScheduleRow")}
               </Button>
             </div>
 
@@ -336,46 +331,48 @@ export function GenerateClassLessonPlanModal({
               {rows.map((row, idx) => (
                 <div
                   key={`class-sched-${idx}`}
-                  className="flex items-center gap-2 bg-card p-2 rounded-lg border border-border/60 shadow-2xs"
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:flex items-center gap-2 bg-card p-2 rounded-lg border border-border/60 shadow-2xs"
                 >
                   <Select value={row.weekday} onValueChange={(val) => updateRow(idx, "weekday", val)}>
-                    <SelectTrigger className="h-9 text-xs flex-1 bg-background border-border">
+                    <SelectTrigger className="h-9 text-xs flex-1 col-span-3 min-w-0 bg-background border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {WEEKDAYS.map((d) => (
                         <SelectItem key={d.value} value={d.value}>
-                          {isPt ? d.pt : d.en}
+                          {t(`weekdays.${d.value}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  <div className="w-28">
+                  <div className="w-full sm:w-28 min-w-0">
                     <Input
                       type="time"
+                      aria-label={t("lessonPlanGeneration.slotStart").replace("{number}", String(idx + 1))}
                       value={row.startTime}
                       onChange={(e) => updateRow(idx, "startTime", e.target.value)}
                       className="h-9 text-xs font-mono bg-background border-border"
                     />
                   </div>
-                  <div className="w-28">
+                  <div className="w-full sm:w-28 min-w-0">
                     <Input
                       type="time"
+                      aria-label={t("lessonPlanGeneration.slotEnd").replace("{number}", String(idx + 1))}
                       value={row.endTime}
                       onChange={(e) => updateRow(idx, "endTime", e.target.value)}
                       className="h-9 text-xs font-mono bg-background border-border"
                     />
                   </div>
 
-                  <button
-                    type="button"
+                  <Button
+                    type="button" variant="ghost" size="icon" aria-label={t("students.modalRemoveRow")}
                     onClick={() => removeRow(idx)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title={isPt ? "Remover horário" : "Remove slot"}
+                    title={t("students.modalRemoveRow")}
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -383,9 +380,7 @@ export function GenerateClassLessonPlanModal({
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                {isPt
-                  ? "Folgas, férias e feriados bloqueiam datas: elas são puladas sem consumir número de aula. Seu horário habitual e pausas recorrentes servem apenas como orientação — você pode abrir a turma em qualquer dia e horário."
-                  : "Time off, vacations and holidays block dates: they are skipped without consuming a lesson number. Your usual working hours and recurring breaks are only guidance — you can schedule the class on any day or time."}
+                {t("lessonPlanGeneration.advisory")}
               </span>
             </div>
 
@@ -393,7 +388,7 @@ export function GenerateClassLessonPlanModal({
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] space-y-1.5">
                 <div className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
                   <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{isPt ? "Avisos (não impedem a geração)" : "Warnings (generation is still allowed)"}</span>
+                  <span>{t("lessonPlanGeneration.warnings")}</span>
                 </div>
                 <ul className="list-disc pl-5 space-y-0.5 text-amber-800/90 dark:text-amber-300/90">
                   {advisoryWarnings.map((w, i) => (
@@ -401,7 +396,7 @@ export function GenerateClassLessonPlanModal({
                   ))}
                   {conflictWarnings.map((w, i) => (
                     <li key={`conf-${i}`}>
-                      {isPt ? "Conflito com " : "Conflict with "}
+                      {t("lessonPlanGeneration.conflictWith") + " "}
                       {w}
                     </li>
                   ))}
@@ -414,38 +409,38 @@ export function GenerateClassLessonPlanModal({
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2 text-xs">
             <div className="flex items-center gap-2 font-semibold text-primary">
               <CheckCircle2 className="w-4 h-4" />
-              <span>{isPt ? "Revise antes de gerar" : "Review before generating"}</span>
+              <span>{t("students.modalReviewTitle")}</span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-foreground/90 pt-1">
               <div>
-                <span className="text-muted-foreground">{isPt ? "Turma:" : "Class:"}</span>{" "}
+                <span className="text-muted-foreground">{t("lessonPlanGeneration.classLabel")}</span>{" "}
                 <span className="font-semibold">{cls.name}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">{isPt ? "Total:" : "Total:"}</span>{" "}
+                <span className="text-muted-foreground">{t("students.modalReviewTotal")}</span>{" "}
                 <span className="font-semibold">{lessonsLabel(targetCount)}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">{isPt ? "Início:" : "Start:"}</span>{" "}
+                <span className="text-muted-foreground">{t("students.modalReviewStartDate")}</span>{" "}
                 <span className="font-mono font-semibold">{startDate}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">{isPt ? "Término previsto:" : "Expected end:"}</span>{" "}
+                <span className="text-muted-foreground">{t("students.modalReviewEndDate")}</span>{" "}
                 <span className="font-mono font-semibold text-primary">
-                  {expectedEndDate || (isPt ? "Calculando..." : "Calculating...")}
+                  {expectedEndDate || (t("students.modalCalculating"))}
                 </span>
               </div>
               <div className="col-span-2">
-                <span className="text-muted-foreground">{isPt ? "Fuso horário:" : "Timezone:"}</span>{" "}
+                <span className="text-muted-foreground">{t("lessonPlanGeneration.timezone")}</span>{" "}
                 <span className="font-semibold">{availability?.timezone || "—"}</span>
               </div>
             </div>
           </div>
-        </div>
+        </fieldset>
 
         <DialogFooter className="gap-2 pt-3 border-t border-border/60">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isGenerating} className="h-10 text-xs">
-            {isPt ? "Cancelar" : "Cancel"}
+          <Button type="button" variant="outline" onClick={() => { if (!submitting.current && !shortage) onClose(); }} disabled={isGenerating || Boolean(shortage)} className="h-10 text-xs">
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -455,11 +450,13 @@ export function GenerateClassLessonPlanModal({
           >
             <BookOpen className={`w-4 h-4 ${isGenerating ? "animate-spin" : ""}`} />
             {isGenerating
-              ? isPt ? "Gerando..." : "Generating..."
-              : isPt ? `Gerar ${targetCount} aulas` : `Generate ${targetCount} lessons`}
+              ? t("students.modalGenerating")
+              : t("students.modalGenerateBtn").replace("{count}", String(targetCount))}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <LessonPlanQuantityDialog quantity={shortage} onEdit={edit} onRestart={restart} />
+    </>
   );
 }

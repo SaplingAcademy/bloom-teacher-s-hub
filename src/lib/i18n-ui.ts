@@ -1,6 +1,18 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "lessonPlanGeneration": {
+      "shortageTitle": "Período insuficiente", "shortageBody": "Você solicitou {requested} aulas, mas o período selecionado permite apenas {possible} aulas, considerando a frequência e as datas indisponíveis.",
+      "requested": "Aulas solicitadas", "possible": "Aulas possíveis", "missing": "Aulas faltantes",
+      "edit": "Editar planejamento", "restart": "Reiniciar planejamento", "restartTitle": "Reiniciar planejamento?",
+      "restartBody": "Os dados preenchidos neste planejamento serão descartados. As aulas existentes e os contratos não serão alterados.", "confirmRestart": "Confirmar reinício",
+      "invalidPeriod": "Informe um período válido. A data final não pode ser anterior à inicial.", "loadError": "Não foi possível carregar os horários ou as datas indisponíveis. Tente novamente.",
+      "saveError": "Não foi possível confirmar o planejamento completo. Seus dados foram preservados; tente novamente.", "success": "{count} aulas confirmadas para {name}.",
+      "scheduleSource": "Horários do aluno", "emptySchedule": "Adicione ao menos um horário semanal para gerar o plano.", "slotStart": "Início do horário {number}", "slotEnd": "Fim do horário {number}",
+      "classTitle": "Gerar Plano de Aulas da Turma", "classSubtitle": "Crie a sequência de aulas de {name}.", "endDate": "Data de término (opcional)",
+      "classSchedule": "3. Horário semanal da turma", "advisory": "Folgas, férias e feriados registrados bloqueiam datas. Horários habituais e pausas recorrentes continuam sendo orientações.",
+      "warnings": "Avisos (não impedem a geração)", "conflictWith": "Conflito com", "classLabel": "Turma:", "timezone": "Fuso horário:", "quantityRequired": "Informe uma quantidade inteira de aulas maior que zero."
+    },
     "checklist": {
       "title": "Checklist", "pending": "{count} pendentes", "pendingOne": "1 pendente", "completed": "Concluídas",
       "add": "Adicionar tarefa", "titleLabel": "Tarefa", "placeholder": "Nova tarefa…", "edit": "Editar tarefa", "delete": "Excluir tarefa",
@@ -1554,6 +1566,18 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "lessonPlanGeneration": {
+      "shortageTitle": "Insufficient period", "shortageBody": "You requested {requested} lessons, but the selected period allows only {possible} lessons, considering the weekly schedule and unavailable dates.",
+      "requested": "Lessons requested", "possible": "Lessons possible", "missing": "Lessons missing",
+      "edit": "Edit planning", "restart": "Restart planning", "restartTitle": "Restart planning?",
+      "restartBody": "The information entered in this planning will be discarded. Existing lessons and contracts will not change.", "confirmRestart": "Confirm restart",
+      "invalidPeriod": "Enter a valid period. The end date cannot be before the start date.", "loadError": "Could not load schedules or unavailable dates. Please try again.",
+      "saveError": "Could not confirm the complete lesson plan. Your information has been preserved; please try again.", "success": "{count} lessons confirmed for {name}.",
+      "scheduleSource": "Student schedule", "emptySchedule": "Add at least one weekly slot to generate the plan.", "slotStart": "Slot {number} start", "slotEnd": "Slot {number} end",
+      "classTitle": "Generate Class Lesson Plan", "classSubtitle": "Create the lesson sequence for {name}.", "endDate": "End date (optional)",
+      "classSchedule": "3. Class weekly schedule", "advisory": "Registered time off, vacations and holidays block dates. Usual working hours and recurring breaks remain advisory.",
+      "warnings": "Warnings (generation is still allowed)", "conflictWith": "Conflict with", "classLabel": "Class:", "timezone": "Timezone:", "quantityRequired": "Enter a positive whole number of lessons."
+    },
     "checklist": {
       "title": "Checklist", "pending": "{count} pending", "pendingOne": "1 pending", "completed": "Completed",
       "add": "Add task", "titleLabel": "Task", "placeholder": "New task…", "edit": "Edit task", "delete": "Delete task",
