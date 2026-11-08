@@ -57,6 +57,26 @@ export function AppSidebar({
     }
   }, [isExpanded, onExpandChange]);
 
+  // Tooltips are fully controlled: at most one open, only while collapsed.
+  // Mixing `open={false}` with `undefined` let Radix keep stale internal
+  // "open" state that resurfaced when the sidebar collapsed again.
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOpenTooltipId(null);
+  }, [isExpanded]);
+
+  const tooltipProps = (id: string) => ({
+    open: !isExpanded && openTooltipId === id,
+    onOpenChange: (open: boolean) => {
+      if (open) {
+        if (!isExpanded) setOpenTooltipId(id);
+      } else {
+        setOpenTooltipId((current) => (current === id ? null : current));
+      }
+    },
+  });
+
   // Clean up timer on unmount
   useEffect(() => {
     return () => {
@@ -236,7 +256,7 @@ export function AppSidebar({
 
                   return (
                     <li key={item.id}>
-                        <Tooltip open={isExpanded ? false : undefined}>
+                        <Tooltip {...tooltipProps(`nav:${item.id}`)}>
                           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                           <TooltipContent side="right" sideOffset={10}>
                             <p className="text-xs font-semibold">{itemLabel}</p>
@@ -254,7 +274,7 @@ export function AppSidebar({
         {/* ── Bottom Section: Ask Bloom AI + Utility Links ────────── */}
         <div className="shrink-0 border-t border-sidebar-border px-3 py-3 space-y-1.5">
           {/* Ask Bloom AI CTA */}
-            <Tooltip open={isExpanded ? false : undefined}>
+            <Tooltip {...tooltipProps("ask-bloom-ai")}>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
@@ -301,7 +321,7 @@ export function AppSidebar({
             );
 
             return (
-              <Tooltip key={item.id} open={isExpanded ? false : undefined}>
+              <Tooltip key={item.id} {...tooltipProps(`bottom:${item.id}`)}>
                 <TooltipTrigger asChild>{navLink}</TooltipTrigger>
                 <TooltipContent side="right" sideOffset={10}>
                   <p className="text-xs font-semibold">{itemLabel}</p>
