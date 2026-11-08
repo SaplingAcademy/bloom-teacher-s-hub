@@ -11,6 +11,15 @@
 
 <!-- LOVABLE:END -->
 
+## Development workflow (owner-approved)
+- Small, isolated, low-risk UI fixes (visual, copy, layout, single-component behavior; no data, permission or calculation changes) may be implemented, validated and pushed directly to `main` without per-change approval.
+- Changes touching the database, Supabase, migrations/SQL, authentication, contracts, payments, finance, permissions, dependencies, sensitive configuration (env vars, keys, deploy settings) or structural changes always go through a Pull Request and require the owner's approval. Never merge these yourself.
+- When unsure about risk, use a Pull Request.
+- Before every push, sync with the latest `origin/main` (Lovable also commits to it). Never force push or rewrite published history.
+- Run only essential tests proportional to the change; avoid full suites, audits and repetitive checks.
+- After each direct publication, briefly report what changed, the commit and the Vercel deploy result. A publication is not complete until Vercel confirms the production deploy.
+- If a published change breaks something, report it and roll back safely (`git revert` or Vercel rollback), never by rewriting history.
+
 ## Pedagogical catalog
 - Follow Lesson Plan generation rules in src/lib/AGENTS.md to preserve history.
 - Keep catalog normalization/resolution pure in `catalog-options.ts`; separate historical display from active-ID selection to avoid rewriting history.
