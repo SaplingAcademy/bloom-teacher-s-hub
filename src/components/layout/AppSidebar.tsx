@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Pin, PinOff, MessageCircle } from "lucide-react";
+import { Pin, PinOff } from "lucide-react";
 import { navSections, bottomNav, adminNavItem } from "@/lib/navigation";
 import { usePlan } from "@/hooks/use-plan";
 import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
@@ -186,13 +186,15 @@ export function AppSidebar({
         </div>
 
         {/* ── Navigation Items ───────────────────────────────────── */}
-        <nav className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto sidebar-nav px-3 py-4 space-y-5">
+        <nav className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto sidebar-nav px-3 py-3 space-y-5">
           {navSections.map((section) => (
             <div key={section.id}>
-              {/* Section Header */}
+              {/* Section Header (the primary workspace section has none, to save vertical space) */}
+              {section.id !== "workspace" && (
                 <p aria-hidden={!isExpanded} className={cn("mb-1.5 h-[15px] whitespace-nowrap px-2 text-[10px] leading-[15px] font-semibold uppercase tracking-widest text-sidebar-foreground/40", textClasses)}>
-                  {section.id === "workspace" ? t("nav.workspace", section.label) : t("nav.communitySection", section.label)}
+                  {t("nav.communitySection", section.label)}
                 </p>
+              )}
 
               <ul className="space-y-1">
                 {section.items.map((item) => {
@@ -271,26 +273,8 @@ export function AppSidebar({
           ))}
         </nav>
 
-        {/* ── Bottom Section: Ask Bloom AI + Utility Links ────────── */}
-        <div className="shrink-0 border-t border-sidebar-border px-3 py-3 space-y-1.5">
-          {/* Ask Bloom AI CTA */}
-            <Tooltip {...tooltipProps("ask-bloom-ai")}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  aria-label={t("nav.askBloomAi")}
-                  className={cn(rowClasses, "w-full justify-start gap-0 bg-gradient-warm p-0 pr-3 font-semibold text-accent-foreground shadow-sm hover:bg-transparent hover:text-accent-foreground hover:opacity-90 [&_svg]:size-[18px]")}
-                  title={t("nav.askBloomAi")}
-                >
-                  <MessageCircle className="h-[18px] w-[18px] justify-self-center" />
-                  <span aria-hidden={!isExpanded} className={cn("truncate text-left", textClasses)}>{t("nav.askBloomAi")}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={10}>
-                <p className="text-xs font-semibold">{t("nav.askBloomAi")}</p>
-              </TooltipContent>
-            </Tooltip>
-
+        {/* ── Bottom Section: Utility Links ───────────────────────── */}
+        <div className="shrink-0 border-t border-sidebar-border px-3 py-2 space-y-1">
           {/* Bottom Utility Nav (Administração só aparece para super_admin) */}
           {(isSuperAdmin ? [...bottomNav, adminNavItem] : bottomNav).map((item) => {
             const active = isActive(item.to);
