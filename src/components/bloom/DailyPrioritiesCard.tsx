@@ -4,7 +4,7 @@ import {
   AlertTriangle,
   CalendarCheck,
   CheckCircle2,
-  ClipboardList,
+  House,
   CreditCard,
   ExternalLink,
   FileClock,
@@ -47,7 +47,7 @@ const CATEGORY_META: Record<
   },
   task: {
     labelKey: "today.filterTasks",
-    icon: ClipboardList,
+    icon: House,
     badgeClass: "bg-emerald-100 text-emerald-900 border-emerald-200/80",
   },
   lead: {
