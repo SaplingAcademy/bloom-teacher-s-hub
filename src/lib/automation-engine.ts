@@ -623,7 +623,7 @@ export async function processTrialLessonScheduledAutomation(
         {
           activity_type: "follow_up",
           title: `Dar feedback da aula experimental com ${lead.full_name}`,
-          description: `Verificar se a aula experimental ocorreu e enviar proposta.`,
+          description: `Verificar se a aula experimental ocorreu e registrar o próximo passo.`,
           due_date: new Date(`${trialDate}T18:00:00`).toISOString(),
         },
       ], true);

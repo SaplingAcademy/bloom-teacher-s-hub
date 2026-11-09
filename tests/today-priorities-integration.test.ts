@@ -6,6 +6,7 @@ const queries: Query[] = [];
 let taskError = false;
 let leadError = false;
 let taskRows: Record<string, unknown>[] = [];
+let eventRows: Record<string, unknown>[] = [];
 const now = new Date(2026, 9, 20, 12);
 
 const from = (table: string) => {
@@ -15,7 +16,7 @@ const from = (table: string) => {
     select(columns: string) { query.columns = columns; return builder; },
     then(resolve: (result: { data: unknown; error: unknown }) => unknown) {
       if (table === "tasks") {
-        const allowed = ["id", "teacher_id", "title", "description", "status", "due_date", "category_id", "priority_id", "lead_id"];
+        const allowed = ["id", "teacher_id", "title", "description", "status", "due_date", "category_id", "priority_id", "lead_id", "automation_event_id", "activity_type", "leads(stage", "contacted_at", "trial_scheduled_at", "trial_calendar_event_id)"];
         const invalidColumn = query.columns.split(",").map((c) => c.trim()).find((c) => !allowed.includes(c));
         if (invalidColumn || taskError) return Promise.resolve({ data: null, error: { message: invalidColumn ? `column tasks.${invalidColumn} does not exist` : "tasks unavailable" } }).then(resolve);
         const rows = taskRows.filter((row) => query.filters.filter((f) => f.method === "eq").every((f) => row[f.column] === f.value));
@@ -25,6 +26,10 @@ const from = (table: string) => {
         if (leadError) return Promise.resolve({ data: null, error: { message: "leads unavailable" } }).then(resolve);
         const proposal = query.filters.some((f) => f.method === "in" && f.column === "stage");
         return Promise.resolve({ data: [{ id: proposal ? "proposal" : "stale", teacher_id: "teacher", stage: proposal ? "Proposta enviada" : "Em conversa", full_name: "Contact", updated_at: "2026-10-20T10:00:00Z", created_at: "2026-10-01T10:00:00Z", last_interaction_at: "2026-10-01T10:00:00Z" }], error: null }).then(resolve);
+      }
+      if (table === "automation_events") {
+        const ids = query.filters.find((f) => f.method === "in" && f.column === "id")?.value as string[] | undefined;
+        return Promise.resolve({ data: eventRows.filter((e) => !ids || ids.includes(e.id as string)), error: null }).then(resolve);
       }
       if (table === "automation_settings") {
         return Promise.resolve({ data: { id: "settings", teacher_id: "teacher", inactivity_period_days: 10, auto_task_creation_enabled: true, updated_at: "2026-10-01T10:00:00Z" }, error: null }).then(resolve);
@@ -44,7 +49,7 @@ const from = (table: string) => {
 mock.module("@/lib/supabase", () => ({ supabase: { from } }));
 const { fetchDailyPriorities } = await import("../src/lib/daily-priorities");
 
-beforeEach(() => { queries.length = 0; taskError = false; leadError = false; taskRows = []; });
+beforeEach(() => { queries.length = 0; taskError = false; leadError = false; taskRows = []; eventRows = []; });
 
 describe("Today production task and independent lead discovery", () => {
   test("pending commercial tasks are Leads priorities, never Tarefas", async () => {
@@ -66,7 +71,7 @@ describe("Today production task and independent lead discovery", () => {
       ["task:today", "lead", "lead_task_due_today", "today", { taskId: "today", leadId: "mario" }, { route: "/leads", params: { leadId: "mario" } }],
     ]);
     expect(result.items.filter((i) => i.category === "task")).toEqual([]); // no homework → Tarefas counter is zero
-    expect(queries.find((q) => q.table === "tasks")?.columns).toBe("id, title, due_date, lead_id");
+    expect(queries.find((q) => q.table === "tasks")?.columns).toBe("id, title, due_date, lead_id, automation_event_id, activity_type, leads(stage, contacted_at, trial_scheduled_at, trial_calendar_event_id)");
   });
 
   test("a lead with a pending task appears once, through the task", async () => {
@@ -106,5 +111,21 @@ describe("Today production task and independent lead discovery", () => {
     expect(result.items.some((i) => i.reason === "lead_trial_soon")).toBe(false);
     expect(queries.filter((q) => q.table === "calendar_events")).toHaveLength(1);
     expect(queries.some((q) => q.table === "calendar_events" && q.columns.includes("lead_id"))).toBe(false);
+  });
+  test("Mario Maria: trial scheduled → first-contact task hidden, trial tasks and manual tasks kept", async () => {
+    const trialFuture = { stage: "Aula experimental agendada", contacted_at: null, trial_scheduled_at: "2026-10-21T15:00:00Z" };
+    eventRows = [
+      { id: "ev-created", event_type: "lead.created" },
+      { id: "ev-trial", event_type: "lead.trial_scheduled" },
+    ];
+    taskRows = [
+      { id: "contact", teacher_id: "teacher", status: "pending", title: "Entrar em contato com Mario Maria", due_date: "2026-10-15", lead_id: "mario", automation_event_id: "ev-created", activity_type: "follow_up", leads: trialFuture },
+      { id: "confirm", teacher_id: "teacher", status: "pending", title: "Confirmar aula experimental com Mario Maria", due_date: "2026-10-20", lead_id: "mario", automation_event_id: "ev-trial", activity_type: "whatsapp", leads: trialFuture },
+      { id: "manual", teacher_id: "teacher", status: "pending", title: "Enviar material", due_date: "2026-10-19", lead_id: "mario", automation_event_id: null, activity_type: "email", leads: trialFuture },
+    ];
+    const result = await fetchDailyPriorities("teacher", now);
+    const leadTasks = result.items.filter((i) => i.id.startsWith("task:")).map((i) => i.id).sort();
+    expect(leadTasks).toEqual(["task:confirm", "task:manual"]);
+    expect(result.items.filter((i) => i.category === "lead" && i.ref.leadId === "mario")).toHaveLength(2); // counter reflects only pertinent actions
   });
 });
