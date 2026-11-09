@@ -29,6 +29,7 @@ const SUMMARY = {
   billingModel: "monthly" as const,
   billingDurationType: "fixed" as const,
   contractMonths: 6,
+  agreementEndDate: "2027-01-09",
 };
 
 const CATALOG = [
@@ -111,6 +112,8 @@ async function runRenewal(props: { currentSummary?: typeof SUMMARY }, editEnd: b
   await flush();
 
   expect(document.body.textContent).toContain("Plano Intensivo");
+  // Step 1 shows the contract's real end, not the next due date (2026-12-10).
+  expect(document.body.textContent).toContain("09/01/2027");
   clickText("packageRenewal.continue"); // step 1 -> 2 ("Mesmo pacote" is the default)
   clickText("packageRenewal.continue"); // step 2 -> 3
 
