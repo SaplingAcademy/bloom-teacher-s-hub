@@ -15,7 +15,7 @@ const from = (table: string) => {
     select(columns: string) { query.columns = columns; return builder; },
     then(resolve: (result: { data: unknown; error: unknown }) => unknown) {
       if (table === "tasks") {
-        const allowed = ["id", "teacher_id", "title", "description", "status", "due_date", "category_id", "priority_id"];
+        const allowed = ["id", "teacher_id", "title", "description", "status", "due_date", "category_id", "priority_id", "lead_id"];
         const invalidColumn = query.columns.split(",").map((c) => c.trim()).find((c) => !allowed.includes(c));
         if (invalidColumn || taskError) return Promise.resolve({ data: null, error: { message: invalidColumn ? `column tasks.${invalidColumn} does not exist` : "tasks unavailable" } }).then(resolve);
         const rows = taskRows.filter((row) => query.filters.filter((f) => f.method === "eq").every((f) => row[f.column] === f.value));
@@ -47,35 +47,46 @@ const { fetchDailyPriorities } = await import("../src/lib/daily-priorities");
 beforeEach(() => { queries.length = 0; taskError = false; leadError = false; taskRows = []; });
 
 describe("Today production task and independent lead discovery", () => {
-  test("only pending teacher tasks due today or overdue are actionable", async () => {
+  test("pending commercial tasks are Leads priorities, never Tarefas", async () => {
     taskRows = [
-      { id: "overdue", teacher_id: "teacher", status: "pending", title: "Prepare", due_date: "2026-10-19" },
-      { id: "today", teacher_id: "teacher", status: "pending", title: "Send", due_date: "2026-10-20" },
-      { id: "future", teacher_id: "teacher", status: "pending", due_date: "2026-10-21" },
-      { id: "no-date", teacher_id: "teacher", status: "pending", due_date: null },
-      { id: "done", teacher_id: "teacher", status: "completed", due_date: "2026-10-19" },
-      { id: "other", teacher_id: "other", status: "pending", due_date: "2026-10-19" },
+      { id: "overdue", teacher_id: "teacher", status: "pending", title: "Confirmar aula experimental", due_date: "2026-10-19", lead_id: "mario" },
+      { id: "today", teacher_id: "teacher", status: "pending", title: "Pedir feedback da aula experimental", due_date: "2026-10-20", lead_id: "mario" },
+      { id: "future", teacher_id: "teacher", status: "pending", due_date: "2026-10-21", lead_id: "mario" },
+      { id: "no-date", teacher_id: "teacher", status: "pending", due_date: null, lead_id: "mario" },
+      { id: "done", teacher_id: "teacher", status: "completed", due_date: "2026-10-19", lead_id: "mario" },
+      { id: "other", teacher_id: "other", status: "pending", due_date: "2026-10-19", lead_id: "mario" },
+      // No lead relationship: not homework and no identifiable origin, so never "Tarefas".
+      { id: "orphan", teacher_id: "teacher", status: "pending", title: "Tarefa", due_date: "2026-10-19", lead_id: null },
     ];
     const result = await fetchDailyPriorities("teacher", now);
     const tasks = result.items.filter((i) => i.id.startsWith("task:"));
     expect(result.failed).toEqual([]);
     expect(tasks.map((i) => [i.id, i.category, i.reason, i.urgency, i.ref, i.action])).toEqual([
-      ["task:overdue", "task", "task_overdue", "critical", { taskId: "overdue" }, { route: "/" }],
-      ["task:today", "task", "task_due_today", "today", { taskId: "today" }, { route: "/" }],
+      ["task:overdue", "lead", "lead_task_overdue", "critical", { taskId: "overdue", leadId: "mario" }, { route: "/leads", params: { leadId: "mario" } }],
+      ["task:today", "lead", "lead_task_due_today", "today", { taskId: "today", leadId: "mario" }, { route: "/leads", params: { leadId: "mario" } }],
     ]);
-    expect(queries.find((q) => q.table === "tasks")?.columns).toBe("id, title, due_date");
+    expect(result.items.filter((i) => i.category === "task")).toEqual([]); // no homework → Tarefas counter is zero
+    expect(queries.find((q) => q.table === "tasks")?.columns).toBe("id, title, due_date, lead_id");
   });
 
-  test("a Tasks failure does not fail Leads or discard reliable lead actions", async () => {
+  test("a lead with a pending task appears once, through the task", async () => {
+    taskRows = [{ id: "t1", teacher_id: "teacher", status: "pending", title: "Retomar contato", due_date: "2026-10-20", lead_id: "stale" }];
+    const result = await fetchDailyPriorities("teacher", now);
+    const forLead = result.items.filter((i) => i.ref.leadId === "stale");
+    expect(forLead.map((i) => i.id)).toEqual(["task:t1"]);
+    expect(new Set(result.items.map((i) => i.id)).size).toBe(result.items.length);
+  });
+
+  test("a commercial-task read failure is reported on Leads without discarding other lead actions", async () => {
     taskError = true;
     const result = await fetchDailyPriorities("teacher", now);
-    expect(result.failed).toEqual(["task"]);
+    expect(result.failed).toEqual(["lead"]);
     expect(result.items.filter((i) => i.category === "lead").map((i) => i.reason)).toEqual(["lead_proposal_pending", "lead_stale"]);
   });
 
-  test("a Leads failure leaves Tasks available", async () => {
+  test("a Leads failure keeps the commercial tasks available", async () => {
     leadError = true;
-    taskRows = [{ id: "today", teacher_id: "teacher", status: "pending", title: "Prepare", due_date: "2026-10-20" }];
+    taskRows = [{ id: "today", teacher_id: "teacher", status: "pending", title: "Prepare", due_date: "2026-10-20", lead_id: "x" }];
     const result = await fetchDailyPriorities("teacher", now);
     expect(result.failed).toEqual(["lead"]);
     expect(result.items.map((i) => i.id)).toContain("task:today");
@@ -94,6 +105,6 @@ describe("Today production task and independent lead discovery", () => {
     expect(result.failed).toEqual([]);
     expect(result.items.some((i) => i.reason === "lead_trial_soon")).toBe(false);
     expect(queries.filter((q) => q.table === "calendar_events")).toHaveLength(1);
-    expect(queries.some((q) => q.columns.includes("lead_id"))).toBe(false);
+    expect(queries.some((q) => q.table === "calendar_events" && q.columns.includes("lead_id"))).toBe(false);
   });
 });

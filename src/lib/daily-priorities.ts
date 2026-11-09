@@ -284,28 +284,38 @@ async function fetchHomework(teacherId: string, todayStr: string): Promise<Daily
 async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowStartIso: string) {
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, title, due_date")
+    .select("id, title, due_date, lead_id")
     .eq("teacher_id", teacherId)
     .eq("status", "pending");
   if (error) throw error;
-  const rows = (data || []) as any[];
+  return buildPendingTaskItems((data || []) as any[], todayStr, tomorrowStartIso);
+}
+
+/**
+ * Rows in public.tasks are commercial activities (follow-ups, trial confirmation and
+ * feedback, re-contact), linked to their lead by tasks.lead_id. They are classified by
+ * that relationship as Leads — never as "Tarefas", which is reserved for student
+ * homework (lesson_plans). Rows without a lead have no identifiable origin category and
+ * are not shown as homework.
+ */
+export function buildPendingTaskItems(rows: any[], todayStr: string, tomorrowStartIso: string): DailyPriorityItem[] {
   const items: DailyPriorityItem[] = [];
   for (const t of rows) {
-    if (!t.due_date) continue;
+    if (!t.due_date || !t.lead_id) continue;
     const dueDate = new Date(t.due_date);
     if (!Number.isFinite(dueDate.getTime()) || dueDate.getTime() >= new Date(tomorrowStartIso).getTime()) continue;
     const day = formatLocalDateStr(dueDate);
     const overdue = day < todayStr;
     items.push({
       id: `task:${t.id}`,
-      category: "task",
+      category: "lead",
       urgency: overdue ? "critical" : "today",
-      reason: overdue ? "task_overdue" : "task_due_today",
+      reason: overdue ? "lead_task_overdue" : "lead_task_due_today",
       title: t.title || "",
       params: { dueDate: day },
       date: day,
-      ref: { taskId: t.id },
-      action: { route: "/" },
+      ref: { taskId: t.id, leadId: t.lead_id },
+      action: { route: "/leads", params: { leadId: t.lead_id } },
     });
   }
   return items;
@@ -386,10 +396,13 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
   take(attendance, "attendance");
   take(payments, "payment");
   take(contracts, "contract");
+  // Tarefas = student homework only; commercial tasks belong to Leads.
   take(homework, "task");
-
-  take(tasks, "task");
+  take(tasks, "lead");
   take(leads, "lead");
 
-  return { items: sortDailyPriorities(items), failed: [...failed] };
+  // One priority per lead: a pending commercial task represents its lead, so the
+  // lead-level stale/proposal alert for the same lead is not shown twice.
+  const leadsWithPendingTask = new Set(items.filter((i) => i.ref.taskId && i.ref.leadId).map((i) => i.ref.leadId!));
+  return { items: sortDailyPriorities(suppressCoveredLeadItems(items, leadsWithPendingTask)), failed: [...failed] };
 }
