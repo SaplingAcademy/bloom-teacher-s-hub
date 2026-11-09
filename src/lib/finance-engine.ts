@@ -1076,6 +1076,10 @@ export interface StudentFinancialSummary {
   remainingBalanceCents: number;
   remainingBalanceFormatted: string;
   invoices: RealInvoice[];
+  /** Canonical commercial terms of the active agreement (used by renewals). */
+  billingModel?: "monthly" | "installment_total" | "one_time";
+  billingDurationType?: BillingDurationType | null;
+  contractMonths?: number | null;
 }
 
 /**
@@ -1197,6 +1201,11 @@ export async function getStudentFinancialSummary(
       remainingBalanceCents,
       remainingBalanceFormatted: formatCentsToBRL(remainingBalanceCents),
       invoices: studentInvoices,
+      billingModel,
+      billingDurationType: spData.billing_duration_type === "fixed" ? "fixed" : spData.billing_duration_type ? "continuous" : null,
+      contractMonths: spData.billing_duration_type === "fixed"
+        ? spData.contract_duration_months ?? spData.contract_months ?? null
+        : null,
     };
   } catch (err) {
     console.error("[FinanceEngine] Error getting student financial summary:", err);
@@ -1677,6 +1686,8 @@ export interface RenewStudentPackageOptions {
   renewalNotes?: string;
   billingDurationType?: BillingDurationType;
   contractMonths?: number | null;
+  /** Teacher-confirmed contract end; when omitted, the package-duration suggestion is used. */
+  endDate?: string | null;
 }
 
 /**
@@ -2085,6 +2096,7 @@ export async function renewStudentPackage(
     renewalNotes,
     billingDurationType,
     contractMonths,
+    endDate,
   } = options;
 
   if (!teacherId || !studentId || !newPackageId) {
@@ -2187,6 +2199,11 @@ export async function renewStudentPackage(
       },
     );
     const finalTotalCents = terms.totalAmountCents || terms.monthlyAmountCents || 0;
+    // The teacher-confirmed end date wins over the duration-based suggestion.
+    // It does not change the charge schedule, which follows the billing terms above.
+    if (endDate && (!isValidBillingDate(endDate) || endDate <= effectiveStartDate)) {
+      return { success: false, message: "A data de término deve ser posterior à data de início." };
+    }
 
     // 7. Insert NEW active package agreement snapshot
     let { data: insertedSp, error: insertErr } = await supabase
@@ -2202,7 +2219,7 @@ export async function renewStudentPackage(
         installment_amount_cents: terms.installmentAmountCents,
         due_day: canonicalDueDay,
         first_due_date: effectiveStartDate,
-        last_due_date: terms.lastDueDate,
+        last_due_date: endDate || terms.lastDueDate,
         payment_method: paymentMethod,
         snapshot_frequency: terms.billingModel,
         snapshot_package_name: newPkg.name,

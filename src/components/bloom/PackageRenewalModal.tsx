@@ -9,8 +9,10 @@ import {
   calculateInstallmentSchedule,
   calculateLastDueDate,
   renewStudentPackage,
+  getStudentFinancialSummary,
   StudentFinancialSummary,
 } from "@/lib/finance-engine";
+import { isRenewalEndDateValid, resolveRenewalEndDate, samePackageRenewalTerms } from "@/lib/package-renewal";
 import { BillingDurationType, billingModelFromPackage, buildBillingAgreement } from "@/lib/billing-domain";
 import { toast } from "sonner";
 import {
@@ -105,6 +107,39 @@ export function PackageRenewalModal({
   const [contractMonths, setContractMonths] = useState<number>(0);
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [endDateInput, setEndDateInput] = useState<{ value: string; customized: boolean }>({ value: "", customized: false });
+
+  // Every entry point (Urgente, Financeiro, student profile) renews from the same
+  // canonical active-agreement summary; callers that don't pass one get it loaded here.
+  const [loadedSummary, setLoadedSummary] = useState<StudentFinancialSummary | null>(null);
+  const summary = currentSummary ?? loadedSummary;
+
+  useEffect(() => {
+    if (!isOpen || currentSummary || !teacherId || !studentId) return;
+    let cancelled = false;
+    setLoadedSummary(null);
+    getStudentFinancialSummary(teacherId, studentId)
+      .then((result) => { if (!cancelled) setLoadedSummary(result); })
+      .catch((err) => console.error("[PackageRenewalModal] Error loading current agreement:", err));
+    return () => { cancelled = true; };
+  }, [isOpen, currentSummary, teacherId, studentId]);
+
+  const applySamePackageTerms = (packages: CatalogPackage[]) => {
+    const terms = samePackageRenewalTerms(summary);
+    const pkg = terms ? packages.find((p) => p.id === terms.packageId) : undefined;
+    if (!terms || !pkg) {
+      // Never substitute a similar package: the teacher must pick one explicitly.
+      setSelectedPackageId("");
+      setSelectedPackage(null);
+      return;
+    }
+    setSelectedPackageId(pkg.id);
+    setSelectedPackage(pkg);
+    setTotalAmountCents(terms.amountCents);
+    setInstallmentCount(terms.installmentCount);
+    setBillingDurationType(terms.billingDurationType);
+    setContractMonths(terms.contractMonths);
+  };
 
   // Load teacher packages catalog
   useEffect(() => {
@@ -134,26 +169,9 @@ export function PackageRenewalModal({
           }));
           setCatalogPackages(formatted);
 
-          // Preselect current package if available
-          if (currentSummary?.packageId) {
-            const currentCatalogPkg = formatted.find((p) => p.id === currentSummary.packageId);
-            if (currentCatalogPkg) {
-              setSelectedPackageId(currentCatalogPkg.id);
-              setSelectedPackage(currentCatalogPkg);
-              setTotalAmountCents(currentCatalogPkg.price);
-              setInstallmentCount(currentCatalogPkg.defaultInstallmentCount || 0);
-              setBillingDurationType(currentCatalogPkg.billingDurationType || "continuous");
-              setContractMonths(currentCatalogPkg.contractMonths || 0);
-            } else if (formatted.length > 0) {
-              setSelectedPackageId(formatted[0].id);
-              setSelectedPackage(formatted[0]);
-              setTotalAmountCents(formatted[0].price);
-            }
-          } else if (formatted.length > 0) {
-            setSelectedPackageId(formatted[0].id);
-            setSelectedPackage(formatted[0]);
-            setTotalAmountCents(formatted[0].price);
-          }
+          // "Mesmo pacote" preselects the contracted package with its own agreed terms.
+          setRenewalType("same");
+          applySamePackageTerms(formatted);
         }
       } catch (err) {
         console.error("[PackageRenewalModal] Error loading packages:", err);
@@ -163,19 +181,20 @@ export function PackageRenewalModal({
     };
 
     loadCatalog();
-  }, [isOpen, teacherId, currentSummary]);
+  }, [isOpen, teacherId, summary]);
 
   // Set default start date (day after current package end date or current date)
   useEffect(() => {
     if (!isOpen) return;
 
     let defaultStart = new Date().toISOString().split("T")[0];
-    if (currentSummary?.nextDueDate) {
-      defaultStart = currentSummary.nextDueDate;
+    if (summary?.nextDueDate) {
+      defaultStart = summary.nextDueDate;
     }
     setStartDate(defaultStart);
+    setEndDateInput({ value: "", customized: false });
     setDueDay(null);
-  }, [isOpen, currentSummary]);
+  }, [isOpen, summary]);
 
   // When selected package changes
   const handleSelectPackage = (pkgId: string) => {
@@ -191,8 +210,8 @@ export function PackageRenewalModal({
   };
 
   // Derived change classification
-  const currentTotalCents = currentSummary?.totalAmountCents || 0;
-  const currentPkgName = currentSummary?.packageName || "Essencial";
+  const currentTotalCents = summary?.totalAmountCents || 0;
+  const currentPkgName = summary?.packageName || "—";
 
   let changeClassification: "Renovação" | "Upgrade" | "Downgrade" | "Troca de pacote" = "Renovação";
   let changeBadgeVariant: "default" | "secondary" | "outline" = "outline";
@@ -219,12 +238,14 @@ export function PackageRenewalModal({
     && (selectedBillingModel !== "monthly" || billingDurationType !== "fixed" || contractMonths > 0),
   );
   const previewTerms = canBuildPreview && selectedPackage ? buildBillingAgreement(
-    { ...selectedPackage, price: selectedPackage.price / 100 },
+    { ...selectedPackage, price: totalAmountCents / 100 },
     { firstDueDate: startDate, installmentCount, billingDurationType, contractMonths },
   ) : null;
   const safeCount = previewTerms?.installmentCount || 1;
   const { baseAmountCents } = calculateInstallmentSchedule(previewTerms?.totalAmountCents || totalAmountCents, safeCount);
-  const lastDueDateStr = previewTerms?.lastDueDate || (billingDurationType === "continuous" ? null : startDate);
+  const suggestedEndDate = previewTerms?.lastDueDate || (billingDurationType === "continuous" ? null : startDate);
+  const lastDueDateStr = resolveRenewalEndDate(endDateInput, suggestedEndDate) || null;
+  const customEndDateInvalid = endDateInput.customized && !isRenewalEndDateValid(startDate, lastDueDateStr);
 
   // Handle final submission with Idempotency Guard
   const handleConfirmRenewal = async () => {
@@ -239,6 +260,14 @@ export function PackageRenewalModal({
     }
     if (selectedBillingModel === "monthly" && billingDurationType === "fixed" && contractMonths < 1) {
       toast.error(tr("packageRenewal.errMonths"));
+      return;
+    }
+    if (!selectedPackage) {
+      toast.error(tr("packageRenewal.errNoPackage"));
+      return;
+    }
+    if (customEndDateInvalid) {
+      toast.error(tr("packageRenewal.errEndBeforeStart"));
       return;
     }
     setIsSubmitting(true);
@@ -257,6 +286,7 @@ export function PackageRenewalModal({
         renewalNotes,
         billingDurationType,
         contractMonths: billingDurationType === "fixed" ? contractMonths : null,
+        endDate: endDateInput.customized ? lastDueDateStr : null,
       });
 
       if (res.success) {
@@ -274,11 +304,13 @@ export function PackageRenewalModal({
     }
   };
 
-  const currentPkgDisplay = currentSummary?.packageName || "Pacote Ativo";
-  const currentTotalFormatted = formatCentsToBRL(currentSummary?.totalAmountCents || 240000);
-  const currentInstallmentDisplay = currentSummary?.isInstallment
-    ? `${currentSummary.installmentCount}x de ${formatCentsToBRL(currentSummary.installmentAmountCents)}`
-    : `${currentTotalFormatted} / mês`;
+  const currentPkgDisplay = summary?.packageName || "—";
+  const currentTotalFormatted = formatCentsToBRL(summary?.totalAmountCents || 0);
+  const currentInstallmentDisplay = summary?.isInstallment
+    ? `${summary.installmentCount}x de ${formatCentsToBRL(summary.installmentAmountCents)}`
+    : summary?.billingModel === "one_time"
+      ? currentTotalFormatted
+      : `${formatCentsToBRL(summary?.installmentAmountCents || summary?.totalAmountCents || 0)} / mês`;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -345,13 +377,13 @@ export function PackageRenewalModal({
                   <div>
                     <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lPackageEnd")}</span>
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                      {formatAgreementDate(currentSummary?.nextDueDate)}
+                      {formatAgreementDate(summary?.nextDueDate)}
                     </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lProgress")}</span>
                     <span className="font-bold text-stone-700">
-                      {currentSummary?.progressLabel || tr("packageRenewal.inProgress")}
+                      {summary?.progressLabel || tr("packageRenewal.inProgress")}
                     </span>
                   </div>
                 </div>
@@ -383,9 +415,7 @@ export function PackageRenewalModal({
                   type="button"
                   onClick={() => {
                     setRenewalType("same");
-                    if (currentSummary?.packageId) {
-                      handleSelectPackage(currentSummary.packageId);
-                    }
+                    applySamePackageTerms(catalogPackages);
                   }}
                   className={`p-4 rounded-xl border text-left transition-all cursor-pointer space-y-2 ${
                     renewalType === "same"
@@ -487,6 +517,24 @@ export function PackageRenewalModal({
                   />
                   <span className="text-[10px] text-muted-foreground">
                     Padrão: dia após término do contrato anterior.
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lRenewalEndDate")}</Label>
+                  <Input
+                    type="date"
+                    value={lastDueDateStr || ""}
+                    min={startDate || undefined}
+                    aria-invalid={customEndDateInvalid || undefined}
+                    onChange={(e) => setEndDateInput(e.target.value
+                      ? { value: e.target.value, customized: true }
+                      : { value: "", customized: false })}
+                  />
+                  <span className={`text-[10px] ${customEndDateInvalid ? "text-destructive" : "text-muted-foreground"}`}>
+                    {customEndDateInvalid
+                      ? tr("packageRenewal.errEndBeforeStart")
+                      : endDateInput.customized ? tr("packageRenewal.endDateCustomHint") : tr("packageRenewal.endDateHint")}
                   </span>
                 </div>
 
@@ -665,8 +713,16 @@ export function PackageRenewalModal({
               type="button"
               size="sm"
               onClick={() => {
+                if (step === 2 && !selectedPackage) {
+                  toast.error(tr("packageRenewal.errNoPackage"));
+                  return;
+                }
                 if (step === 3 && (!dueDay || !startDate)) {
                   toast.error(tr("packageRenewal.errDueDate"));
+                  return;
+                }
+                if (step === 3 && customEndDateInvalid) {
+                  toast.error(tr("packageRenewal.errEndBeforeStart"));
                   return;
                 }
                 setStep((s) => (s + 1) as any);
