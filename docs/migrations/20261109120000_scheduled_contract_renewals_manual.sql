@@ -15,7 +15,11 @@
 --      (pg_cron/SQL Editor). Chamadas comuns pela API nunca processam outros professores.
 --
 -- 3. public.activate_due_scheduled_contracts_core(p_today, p_teacher_id) — interna
---    - Executável apenas por service_role (e pelo dono); usuários comuns não controlam a data.
+--    - SEM EXECUTE para public, anon, authenticated e service_role: nenhuma chamada pela API
+--      (nem com a chave de serviço) invoca o núcleo com data ou professor arbitrários.
+--      Só a função pública (SECURITY DEFINER, dona postgres) o chama, usando o EXECUTE
+--      implícito da dona. SECURITY INVOKER: chamado pela função pública roda como postgres;
+--      se algum dia for exposto por engano, roda com as permissões e a RLS de quem chamou.
 --    - Para cada contrato programado vencido, bloqueado com FOR UPDATE SKIP LOCKED, só
 --      ativa se a transição for válida:
 --        * possui renewed_from_id (sem órfãos) e o contrato anterior existe;
@@ -31,13 +35,22 @@
 --    - Idempotente: apenas linhas ainda 'scheduled' são processadas.
 --    - Nunca lê nem altera cobranças (invoices/payments).
 --
---    SECURITY DEFINER com escopo explícito por professor: o resultado não depende das
---    políticas RLS de students/student_packages (tabelas do dono, sem FORCE RLS).
---    Conferir com a consulta de verificação de RLS antes de aplicar.
+--    A função pública é SECURITY DEFINER com escopo explícito por professor: o resultado
+--    não depende das políticas RLS de students/student_packages (tabelas da dona postgres,
+--    sem FORCE RLS, postgres com BYPASSRLS — confirmado em produção).
 --
--- Não executar automaticamente. Aplicar manualmente no SQL Editor do Supabase.
+-- Não executar automaticamente. Aplicar manualmente no SQL Editor do Supabase, como postgres.
 
 begin;
+
+-- 0. As funções precisam pertencer a postgres (dona das tabelas, com BYPASSRLS).
+do $guard$
+begin
+  if current_user <> 'postgres' then
+    raise exception 'Aplique esta migration como postgres (current_user = %)', current_user;
+  end if;
+end
+$guard$;
 
 -- 1. Uma renovação programada por contrato anterior e por aluno
 create unique index if not exists idx_student_packages_scheduled_renewal
@@ -55,7 +68,7 @@ drop function if exists public.activate_due_scheduled_contracts(date);
 create or replace function public.activate_due_scheduled_contracts_core(p_today date, p_teacher_id uuid)
 returns integer
 language plpgsql
-security definer
+security invoker
 set search_path = public, pg_temp
 as $$
 declare
@@ -217,8 +230,8 @@ begin
 end;
 $$;
 
-revoke all on function public.activate_due_scheduled_contracts_core(date, uuid) from public, anon, authenticated;
-grant execute on function public.activate_due_scheduled_contracts_core(date, uuid) to service_role;
+-- Núcleo: nenhum papel de API executa (inclui os privilégios padrão aplicados na criação).
+revoke all on function public.activate_due_scheduled_contracts_core(date, uuid) from public, anon, authenticated, service_role;
 
 revoke all on function public.activate_due_scheduled_contracts() from public, anon;
 grant execute on function public.activate_due_scheduled_contracts() to authenticated, service_role;
