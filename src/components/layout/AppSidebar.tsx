@@ -48,7 +48,10 @@ export function AppSidebar({
     "min-w-0 transition-[opacity,visibility] duration-200 motion-reduce:transition-none",
     isExpanded ? "visible opacity-100" : "invisible opacity-0"
   );
-  const rowClasses = "group grid h-10 grid-cols-[47px_minmax(0,1fr)] items-center rounded-xl pr-3 text-sm font-medium transition-colors duration-150";
+  // min-w matches the 47px icon track: the nav reserves a scrollbar gutter that the
+  // bottom section doesn't, so without it nav rows (and their highlight) were narrower
+  // than the icon track and the highlight sat off-center from the icon.
+  const rowClasses = "group grid h-10 min-w-[47px] grid-cols-[47px_minmax(0,1fr)] items-center rounded-xl pr-3 text-sm font-medium transition-colors duration-150";
 
   // Inform parent when expansion state changes
   useEffect(() => {
