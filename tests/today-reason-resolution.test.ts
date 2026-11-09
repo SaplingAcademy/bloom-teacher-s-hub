@@ -9,7 +9,7 @@ const placeholders = {
   contract_ended: ["packageName", "endDate"],
   contract_ending_10d: ["packageName", "daysRemaining"],
   contract_ending_30d: ["packageName", "daysRemaining"],
-  homework_not_posted: ["date"],
+  homework_not_posted: ["date", "lesson"],
   task_overdue: ["dueDate"], task_due_today: [],
   lead_task_overdue: ["dueDate"], lead_task_due_today: [],
   lead_trial_soon: ["date", "time"],

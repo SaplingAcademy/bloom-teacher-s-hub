@@ -256,29 +256,72 @@ export function buildContractItems(rows: any[], todayStr: string): DailyPriority
 }
 
 async function fetchHomework(teacherId: string, todayStr: string): Promise<DailyPriorityItem[]> {
+  // Homework source is lesson_plans (1:1 with a calendar occurrence), never public.tasks.
+  // Only occurrences whose attendance is recorded can prove the lesson took place.
   const { data, error } = await supabase
     .from("lesson_plans")
-    .select("event_id, student_id, class_id, lesson_number, scheduled_date, homework, homework_posted, students(full_name)")
+    .select("event_id, student_id, class_id, lesson_number, scheduled_date, homework, homework_posted, students(full_name), classes(name), calendar_events!inner(date, status, attendance_recorded, attendance_records(status))")
     .eq("teacher_id", teacherId)
-    .eq("homework_posted", false)
+    .not("homework_posted", "is", true)
     .neq("homework", "")
     .not("homework", "is", null)
-    .lte("scheduled_date", todayStr)
-    .order("scheduled_date", { ascending: true });
+    .eq("calendar_events.attendance_recorded", true)
+    .lte("calendar_events.date", todayStr);
   if (error) throw error;
-  return ((data || []) as any[]).filter(homeworkRequiresAction).map((p): DailyPriorityItem => ({
-    id: `homework:${p.event_id}`,
-    category: "task" as const,
-    urgency: p.scheduled_date < todayStr ? "critical" as const : "today" as const,
-    reason: "homework_not_posted" as const,
-    title: p.students?.full_name || "",
-    params: { date: p.scheduled_date },
-    date: p.scheduled_date,
-    ref: { studentId: p.student_id || undefined, classId: p.class_id || undefined, eventId: p.event_id },
-    action: p.class_id
-      ? { route: "/students", params: { classId: p.class_id, eventId: p.event_id } }
-      : { route: "/students", params: { studentId: p.student_id, tab: "Lessons" } },
-  }));
+  return buildHomeworkItems((data || []) as any[], todayStr);
+}
+
+/**
+ * After a held lesson, planned homework is pending until it is marked published
+ * (homework_posted = true). "Unrecorded" (null) counts as not published here, because
+ * the held-lesson proof removes the ambiguity that homeworkRequiresAction guards against.
+ */
+export function homeworkPendingPublication(plan: { homework?: string | null; homework_posted?: boolean | null }): boolean {
+  return plan.homework_posted !== true && Boolean((plan.homework || "").trim());
+}
+
+const CLOSED_OCCURRENCE_STATUSES = new Set(["cancelled", "closed"]);
+const HELD_ATTENDANCE_STATUSES = new Set(["present", "late"]);
+
+/**
+ * A lesson counts as held only with a reliable record: attendance recorded for the
+ * occurrence and at least one student present or late. Past dates alone, cancelled or
+ * archived occurrences, and all-absent/excused lessons never qualify.
+ */
+export function lessonWasHeld(event: any): boolean {
+  if (!event || event.attendance_recorded !== true) return false;
+  if (CLOSED_OCCURRENCE_STATUSES.has(String(event.status || "").toLowerCase())) return false;
+  return (event.attendance_records || []).some((r: any) => HELD_ATTENDANCE_STATUSES.has(r?.status));
+}
+
+/**
+ * Pure: unpublished homework from held lessons of a lesson plan. The occurrence date is
+ * canonical (rescheduling moves it), and one item per occurrence avoids duplicates.
+ */
+export function buildHomeworkItems(rows: any[], todayStr: string): DailyPriorityItem[] {
+  const seen = new Set<string>();
+  const items: DailyPriorityItem[] = [];
+  for (const p of rows) {
+    const event = Array.isArray(p.calendar_events) ? p.calendar_events[0] : p.calendar_events;
+    if (!p.event_id || seen.has(p.event_id) || !homeworkPendingPublication(p) || !lessonWasHeld(event)) continue;
+    const date = String(event.date || p.scheduled_date || "").slice(0, 10);
+    if (!date || date > todayStr) continue;
+    seen.add(p.event_id);
+    items.push({
+      id: `homework:${p.event_id}`,
+      category: "task",
+      urgency: date < todayStr ? "critical" : "today",
+      reason: "homework_not_posted",
+      title: p.class_id ? (p.classes?.name || "") : (p.students?.full_name || ""),
+      params: { date, lesson: p.lesson_number ?? "—" },
+      date,
+      ref: { studentId: p.student_id || undefined, classId: p.class_id || undefined, eventId: p.event_id },
+      action: p.class_id
+        ? { route: "/students", params: { classId: p.class_id, eventId: p.event_id } }
+        : { route: "/students", params: { studentId: p.student_id, tab: "Lessons" } },
+    });
+  }
+  return items;
 }
 
 async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowStartIso: string) {
