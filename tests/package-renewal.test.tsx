@@ -52,7 +52,7 @@ vi.mock("@/lib/supabase", () => ({
       }
       // student_packages for expiration alerts: chainable .eq() that resolves to the rows.
       const result = { data: mocks.agreements, error: null };
-      const chain: any = { select: () => chain, eq: () => chain, then: (r: any) => Promise.resolve(result).then(r) };
+      const chain: any = { select: () => chain, eq: () => chain, in: () => chain, then: (r: any) => Promise.resolve(result).then(r) };
       return chain;
     },
   },
@@ -62,6 +62,7 @@ vi.mock("@/lib/finance-engine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/lib/finance-engine")>()),
   getStudentFinancialSummary: mocks.getSummary,
   renewStudentPackage: mocks.renew,
+  findRenewalChargeConflicts: vi.fn(async () => []),
 }));
 
 vi.mock("@/hooks/use-language", () => ({
@@ -114,22 +115,26 @@ async function runRenewal(props: { currentSummary?: typeof SUMMARY }, editEnd: b
   expect(document.body.textContent).toContain("Plano Intensivo");
   // Step 1 shows the contract's real end, not the next due date (2026-12-10).
   expect(document.body.textContent).toContain("09/01/2027");
-  clickText("packageRenewal.continue"); // step 1 -> 2 ("Mesmo pacote" is the default)
-  clickText("packageRenewal.continue"); // step 2 -> 3
+  clickText("packageRenewal.continue"); // step 1: contract in force → scheduling confirmation
+  clickText("packageRenewal.scheduleConfirm"); // new contract starts the day after the current end
+  clickText("packageRenewal.continue"); // step 2 -> 3 ("Mesmo pacote" is the default)
 
   const amount = document.querySelector<HTMLInputElement>('input[type="number"][step="0.01"]')!;
   expect(amount.value).toBe("350.00"); // contract value, not the catalog's 400
-  const [start, end] = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="date"]'));
-  expect(start.value).toBe("2026-12-10");
-  expect(end.value).toBe("2027-05-10"); // suggested from the 6-month duration
+  setInput(document.querySelector<HTMLInputElement>('input[max="31"]')!, "10");
+  const [start, firstDue, end] = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="date"]'));
+  expect(start.value).toBe("2027-01-10"); // day after the current end (2027-01-09), never a pending due date
+  expect(firstDue.value).toBe("2027-01-10"); // first due day 10 on/after the start
+  expect(end.value).toBe("2027-06-10"); // suggested from the 6-month duration
 
   if (editEnd) {
     setInput(end, "2027-03-31");
-    setInput(start, "2026-12-15"); // must not overwrite the manual end date
+    setInput(start, "2027-01-15"); // must not overwrite the manual end date
     expect(end.value).toBe("2027-03-31");
+    expect(firstDue.value).toBe("2027-02-10"); // suggestion follows the start: next due day 10
   }
-  setInput(document.querySelector<HTMLInputElement>('input[max="31"]')!, "10");
   clickText("packageRenewal.continue"); // step 3 -> 4
+  await flush();
   clickText("packageRenewal.confirm");
   await flush();
   expect(mocks.renew).toHaveBeenCalledTimes(1);
@@ -157,12 +162,12 @@ describe("PackageRenewalModal", () => {
   it("Urgente/Financeiro entry (no summary passed) loads the contracted package and value", async () => {
     const args = await runRenewal({}, false);
     expect(mocks.getSummary).toHaveBeenCalledWith("t-1", "stu-1");
-    expect(args).toMatchObject({ newPackageId: "pkg-intensivo", isSamePackage: true, totalAmountCents: 35000, endDate: null });
+    expect(args).toMatchObject({ newPackageId: "pkg-intensivo", isSamePackage: true, totalAmountCents: 35000, endDate: null, startDate: "2027-01-10", firstDueDate: "2027-01-10" });
   });
 
   it("saves the manually edited end date exactly as confirmed", async () => {
     const args = await runRenewal({}, true);
-    expect(args).toMatchObject({ startDate: "2026-12-15", endDate: "2027-03-31", totalAmountCents: 35000 });
+    expect(args).toMatchObject({ startDate: "2027-01-15", firstDueDate: "2027-02-10", endDate: "2027-03-31", totalAmountCents: 35000 });
   });
 
   it("renews identically whether opened from Urgente/Financeiro or the student profile", async () => {

@@ -2,6 +2,15 @@ import { supabase } from "@/lib/supabase";
 import { invoiceReceiptFields, type ReceivedRevenueInvoice } from "@/lib/finance-cashflow";
 import { renewalAlertStage, teacherSetContinuousEndDate } from "@/lib/package-renewal";
 import {
+  ACTIVATE_SCHEDULED_CONTRACTS_RPC,
+  SCHEDULED_STATUS,
+  agreementEnd,
+  agreementsWithScheduledRenewal,
+  findChargeConflicts,
+  planRenewalTiming,
+  type ChargeConflict,
+} from "@/lib/contract-renewal-schedule";
+import {
   BillingDurationType,
   BillingModel,
   billingModelFromAgreement,
@@ -1083,6 +1092,10 @@ export interface StudentFinancialSummary {
   contractMonths?: number | null;
   /** Contract end (ended_at or last_due_date); null for open-ended plans. */
   agreementEndDate?: string | null;
+  /** student_packages.id of the agreement in force. */
+  agreementId?: string;
+  /** Start of an already scheduled renewal, if any (only one is allowed). */
+  scheduledRenewalStart?: string | null;
 }
 
 /**
@@ -1124,6 +1137,15 @@ export async function getStudentFinancialSummary(
 
     const allInvoices = await fetchTeacherInvoices(teacherId);
     const allStudentInvoices = allInvoices.filter((i) => i.studentId === studentId);
+    const { data: scheduledRows } = await supabase
+      .from("student_packages")
+      .select("started_at")
+      .eq("teacher_id", teacherId)
+      .eq("student_id", studentId)
+      .eq("status", SCHEDULED_STATUS)
+      .order("started_at", { ascending: true })
+      .limit(1);
+    const scheduledRenewalStart = scheduledRows?.[0]?.started_at ?? null;
 
     if (!spData) {
       return {
@@ -1206,6 +1228,8 @@ export async function getStudentFinancialSummary(
       invoices: studentInvoices,
       billingModel,
       agreementEndDate: agreementEnd,
+      agreementId: spData.id,
+      scheduledRenewalStart,
       billingDurationType: spData.billing_duration_type === "fixed" ? "fixed" : spData.billing_duration_type ? "continuous" : null,
       contractMonths: spData.billing_duration_type === "fixed"
         ? spData.contract_duration_months ?? spData.contract_months ?? null
@@ -1692,6 +1716,22 @@ export interface RenewStudentPackageOptions {
   contractMonths?: number | null;
   /** Teacher-confirmed contract end; when omitted, the package-duration suggestion is used. */
   endDate?: string | null;
+  /** First charge date, independent from the validity start (defaults to startDate for legacy callers). */
+  firstDueDate?: string | null;
+  /** Teacher explicitly acknowledged open charges of the current agreement after the new start. */
+  acknowledgeChargeConflicts?: boolean;
+}
+
+export interface RenewStudentPackageResult {
+  success: boolean;
+  message: string;
+  newAgreementId?: string;
+  /** The new agreement was stored as scheduled (a contract is still in force). */
+  scheduled?: boolean;
+  /** A due scheduled agreement was activated right away by the transactional RPC. */
+  activated?: boolean;
+  code?: "already_scheduled" | "charge_conflicts" | "scheduling_unavailable" | "invalid_start";
+  conflicts?: ChargeConflict[];
 }
 
 /**
@@ -2008,7 +2048,7 @@ export async function checkPackageExpirationAlerts(
       .from("student_packages")
       .select("*, student:students(full_name, status), package:packages(name)")
       .eq("teacher_id", teacherId)
-      .eq("status", "active");
+      .in("status", ["active", SCHEDULED_STATUS]);
 
     if (targetStudentId) {
       query = query.eq("student_id", targetStudentId);
@@ -2018,8 +2058,11 @@ export async function checkPackageExpirationAlerts(
     if (error || !data) return [];
 
     const alerts: PackageRenewalAlert[] = [];
+    // A contract with a scheduled renewal is already renewed; scheduled rows never alert.
+    const renewedAhead = agreementsWithScheduledRenewal(data as any[]);
 
     data.forEach((sp: any) => {
+      if (sp.status === SCHEDULED_STATUS || renewedAhead.has(sp.id)) return;
       // Check if student is active
       if (sp.student?.status === "Paused" || sp.student?.status === "Inactive") return;
 
@@ -2089,7 +2132,7 @@ export async function checkPackageExpirationAlerts(
  */
 export async function renewStudentPackage(
   options: RenewStudentPackageOptions
-): Promise<{ success: boolean; message: string; newAgreementId?: string }> {
+): Promise<RenewStudentPackageResult> {
   const {
     teacherId,
     studentId,
@@ -2104,14 +2147,16 @@ export async function renewStudentPackage(
     billingDurationType,
     contractMonths,
     endDate,
+    acknowledgeChargeConflicts = false,
   } = options;
+  const firstDueDate = options.firstDueDate || startDate;
 
   if (!teacherId || !studentId || !newPackageId) {
     return { success: false, message: "Parâmetros obrigatórios ausentes." };
   }
   const canonicalDueDay = normalizeDueDay(dueDay);
-  if (!canonicalDueDay || !isValidBillingDate(startDate)) {
-    return { success: false, message: "Informe o dia e a data do primeiro vencimento." };
+  if (!canonicalDueDay || !isValidBillingDate(startDate) || !isValidBillingDate(firstDueDate)) {
+    return { success: false, message: "Informe o início, o dia e a data do primeiro vencimento." };
   }
 
   try {
@@ -2151,6 +2196,64 @@ export async function renewStudentPackage(
       }
     }
 
+    // Early renewal: with a contract in force the new agreement is only scheduled. The
+    // current contract, its end and its charges are never touched here; the transactional
+    // RPC completes it and activates the new one when the start date arrives.
+    const today = localDateString();
+    const timing = planRenewalTiming({
+      hasCurrent: Boolean(currentSp),
+      currentStart: currentSp?.started_at,
+      currentEnd: agreementEnd(currentSp),
+      startDate: effectiveStartDate,
+      today,
+    });
+    if (timing.error) {
+      return {
+        success: false,
+        code: "invalid_start",
+        message: timing.error === "start_before_current_end"
+          ? "O novo contrato deve começar depois do término do contrato atual."
+          : "O novo contrato deve começar depois do início do contrato atual.",
+      };
+    }
+    if (timing.mode === "scheduled" && currentSp) {
+      const { data: scheduledRows, error: scheduledError } = await supabase
+        .from("student_packages")
+        .select("id, started_at")
+        .eq("teacher_id", teacherId)
+        .eq("student_id", studentId)
+        .eq("status", SCHEDULED_STATUS);
+      if (scheduledError) throw scheduledError;
+      if ((scheduledRows || []).length > 0) {
+        return { success: false, code: "already_scheduled", message: "Já existe uma renovação programada para este aluno." };
+      }
+      const { data: openCharges, error: chargesError } = await supabase
+        .from("invoices")
+        .select("id, due_date, amount_cents, status")
+        .eq("teacher_id", teacherId)
+        .eq("student_package_id", currentSp.id)
+        .in("status", ["pending", "overdue"]);
+      if (chargesError) throw chargesError;
+      const conflicts = findChargeConflicts((openCharges || []) as any[], effectiveStartDate);
+      if (conflicts.length > 0 && !acknowledgeChargeConflicts) {
+        return {
+          success: false,
+          code: "charge_conflicts",
+          conflicts,
+          message: "Há cobranças em aberto do contrato atual a partir do início do novo contrato.",
+        };
+      }
+      // Scheduling depends on the activation RPC; without it a scheduled agreement would never start.
+      const probe = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC, { p_today: "1900-01-01" });
+      if (probe.error) {
+        return {
+          success: false,
+          code: "scheduling_unavailable",
+          message: "A renovação programada ainda não está disponível: a atualização do banco de dados precisa ser aplicada.",
+        };
+      }
+    }
+
     // 3. IDEMPOTENCY CHECK: Prevent duplicate agreements on double-click or refresh
     const { data: existingDup } = await supabase
       .from("student_packages")
@@ -2159,7 +2262,7 @@ export async function renewStudentPackage(
       .eq("student_id", studentId)
       .eq("package_id", newPackageId)
       .eq("started_at", effectiveStartDate)
-      .eq("status", "active")
+      .in("status", ["active", SCHEDULED_STATUS])
       .maybeSingle();
 
     if (existingDup) {
@@ -2199,7 +2302,7 @@ export async function renewStudentPackage(
         defaultInstallmentCount: newPkg.default_installment_count,
       },
       {
-        firstDueDate: effectiveStartDate,
+        firstDueDate,
         installmentCount,
         billingDurationType: billingDurationType || newPkg.billing_duration_type,
         contractMonths: contractMonths ?? newPkg.contract_duration_months,
@@ -2212,7 +2315,8 @@ export async function renewStudentPackage(
       return { success: false, message: "A data de término deve ser posterior à data de início." };
     }
 
-    // 7. Insert NEW active package agreement snapshot
+    // 7. Insert the new agreement: active only when no contract is in force, else scheduled.
+    const isScheduled = timing.mode === "scheduled";
     let { data: insertedSp, error: insertErr } = await supabase
       .from("student_packages")
       .insert({
@@ -2220,12 +2324,12 @@ export async function renewStudentPackage(
         package_id: newPackageId,
         teacher_id: teacherId,
         started_at: effectiveStartDate,
-        status: "active",
+        status: isScheduled ? SCHEDULED_STATUS : "active",
         total_amount_cents: terms.totalAmountCents,
         installment_count: terms.installmentCount,
         installment_amount_cents: terms.installmentAmountCents,
         due_day: canonicalDueDay,
-        first_due_date: effectiveStartDate,
+        first_due_date: firstDueDate,
         last_due_date: endDate || terms.lastDueDate,
         payment_method: paymentMethod,
         snapshot_frequency: terms.billingModel,
@@ -2242,6 +2346,10 @@ export async function renewStudentPackage(
       .select("*")
       .single();
 
+    if (insertErr && insertErr.code === "23505" && isScheduled) {
+      // Concurrent request: the unique scheduled-renewal index already holds one.
+      return { success: false, code: "already_scheduled", message: "Já existe uma renovação programada para este aluno." };
+    }
     if (insertErr || !insertedSp) {
       console.error("[FinanceEngine] Error creating renewed package agreement:", insertErr);
       return { success: false, message: `Erro ao salvar nova renovação: ${insertErr?.message}` };
@@ -2255,21 +2363,27 @@ export async function renewStudentPackage(
       return { success: false, message: receivablesError?.message || "Não foi possível gerar as cobranças do contrato." };
     }
 
-    // Complete the previous agreement only after the replacement exists.
-    if (currentSp) {
-      const prevEndDate = new Date(effectiveStartDate);
-      prevEndDate.setDate(prevEndDate.getDate() - 1);
-      await supabase
-        .from("student_packages")
-        .update({
-          status: "completed",
-          ended_at: prevEndDate.toISOString().split("T")[0],
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", currentSp.id);
+    if (isScheduled) {
+      // A scheduled start that is already due is activated now, through the same RPC as
+      // the automatic schedule; on failure the app-load fallback retries it.
+      let activated = false;
+      if (timing.activateNow) {
+        const { data: count, error: activationError } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC, { p_today: today });
+        if (activationError) console.warn("[FinanceEngine] Scheduled contract activation deferred:", activationError);
+        activated = !activationError && Number(count) > 0;
+      }
+      return {
+        success: true,
+        scheduled: true,
+        activated,
+        newAgreementId: insertedSp.id,
+        message: activated
+          ? "Renovação salva e ativada."
+          : `Renovação programada para ${effectiveStartDate.split("-").reverse().join("/")}. O contrato atual continua vigente até lá.`,
+      };
     }
 
-    // 8. Also update student table reference to new package_id
+    // 8. No contract in force: the new agreement is active now; update the student reference.
     await supabase
       .from("students")
       .update({
@@ -2466,3 +2580,30 @@ export async function deleteTeacherExpenseRemote(teacherId: string, expenseId: s
   return true;
 }
 
+
+/**
+ * Fallback for the automatic schedule: asks the transactional RPC to activate the
+ * teacher's scheduled agreements whose start date has arrived (it completes the
+ * previous agreement and activates the new one atomically; repeated calls do nothing).
+ * Returns how many were activated; a missing RPC (migration not applied) yields 0.
+ */
+export async function activateDueScheduledContracts(today: string = localDateString()): Promise<number> {
+  const { data, error } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC, { p_today: today });
+  if (error) {
+    console.warn("[FinanceEngine] Scheduled contract activation unavailable:", error.message);
+    return 0;
+  }
+  return Number(data) || 0;
+}
+
+/** Open charges of the agreement in force that fall on/after a renewal start (read-only). */
+export async function findRenewalChargeConflicts(teacherId: string, agreementId: string, startDate: string): Promise<ChargeConflict[]> {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, due_date, amount_cents, status")
+    .eq("teacher_id", teacherId)
+    .eq("student_package_id", agreementId)
+    .in("status", ["pending", "overdue"]);
+  if (error) throw error;
+  return findChargeConflicts((data || []) as any[], startDate);
+}

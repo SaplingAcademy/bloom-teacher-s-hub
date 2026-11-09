@@ -114,7 +114,8 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
   let eligible = 0;
   let renewed = 0;
   byStudent.forEach((list) => {
-    const ended = list.filter((sp) => sp.status !== "active" || sp.ended_at);
+    // Scheduled renewals are neither in force nor ended; they still count as a renewal below.
+    const ended = list.filter((sp) => (sp.status !== "active" && sp.status !== "scheduled") || sp.ended_at);
     if (ended.length === 0) return;
     eligible++;
     if (list.length > ended.length) renewed++;

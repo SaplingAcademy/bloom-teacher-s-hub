@@ -9,10 +9,14 @@ import {
   calculateInstallmentSchedule,
   calculateLastDueDate,
   renewStudentPackage,
+  findRenewalChargeConflicts,
   getStudentFinancialSummary,
   StudentFinancialSummary,
 } from "@/lib/finance-engine";
 import { isRenewalEndDateValid, resolveRenewalEndDate, samePackageRenewalTerms } from "@/lib/package-renewal";
+import { addDays, suggestFirstDueDate, suggestedRenewalStart, type ChargeConflict } from "@/lib/contract-renewal-schedule";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BillingDurationType, billingModelFromPackage, buildBillingAgreement } from "@/lib/billing-domain";
 import { toast } from "sonner";
 import {
@@ -108,6 +112,15 @@ export function PackageRenewalModal({
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [endDateInput, setEndDateInput] = useState<{ value: string; customized: boolean }>({ value: "", customized: false });
+  // Early renewal: a contract in force is never shortened; the new one is scheduled.
+  const [scheduleDialog, setScheduleDialog] = useState<"fixed" | "continuous" | null>(null);
+  const [scheduleConfirmed, setScheduleConfirmed] = useState(false);
+  const [transitionDate, setTransitionDate] = useState("");
+  const [transitionAck, setTransitionAck] = useState(false);
+  // started_at and first_due_date are independent; the first due date is only suggested.
+  const [firstDueInput, setFirstDueInput] = useState<{ value: string; customized: boolean }>({ value: "", customized: false });
+  const [conflicts, setConflicts] = useState<ChargeConflict[] | null>(null);
+  const [conflictsAck, setConflictsAck] = useState(false);
 
   // Every entry point (Urgente, Financeiro, student profile) renews from the same
   // canonical active-agreement summary; callers that don't pass one get it loaded here.
@@ -183,18 +196,57 @@ export function PackageRenewalModal({
     loadCatalog();
   }, [isOpen, teacherId, summary]);
 
-  // Set default start date (day after current package end date or current date)
+  // Default start: the day after the current contract ends (never a pending due date);
+  // without a contract in force, today. Continuous contracts get the date the teacher picks.
   useEffect(() => {
     if (!isOpen) return;
 
-    let defaultStart = new Date().toISOString().split("T")[0];
-    if (summary?.nextDueDate) {
-      defaultStart = summary.nextDueDate;
-    }
+    const today = new Date();
+    const todayYmd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const defaultStart = summary?.hasActiveAgreement
+      ? suggestedRenewalStart(summary.agreementEndDate ?? null) || ""
+      : todayYmd;
     setStartDate(defaultStart);
     setEndDateInput({ value: "", customized: false });
+    setFirstDueInput({ value: "", customized: false });
+    setScheduleConfirmed(false);
+    setScheduleDialog(null);
+    setTransitionDate("");
+    setTransitionAck(false);
+    setConflicts(null);
+    setConflictsAck(false);
     setDueDay(null);
   }, [isOpen, summary]);
+
+  const hasContractInForce = Boolean(summary?.hasActiveAgreement);
+  const currentEnd = summary?.agreementEndDate ?? null;
+  const scheduledStart = currentEnd ? suggestedRenewalStart(currentEnd) : null;
+  const suggestedFirstDue = startDate ? suggestFirstDueDate(startDate, dueDay) : null;
+  const firstDueDate = firstDueInput.customized && firstDueInput.value ? firstDueInput.value : suggestedFirstDue || "";
+
+  /** Step 1 → 2: with a contract in force, the teacher confirms the scheduling first. */
+  const continueFromCurrentContract = () => {
+    if (!hasContractInForce || scheduleConfirmed) { setStep(2); return; }
+    if (summary?.scheduledRenewalStart) {
+      toast.error(fmt(tr("packageRenewal.alreadyScheduled"), formatAgreementDate(summary.scheduledRenewalStart)));
+      return;
+    }
+    setScheduleDialog(currentEnd ? "fixed" : "continuous");
+  };
+
+  /** Step 3 → 4: read the open charges of the current contract that could overlap. */
+  const loadConflicts = async (): Promise<boolean> => {
+    if (!hasContractInForce || !summary?.agreementId) { setConflicts([]); return true; }
+    try {
+      const found = await findRenewalChargeConflicts(teacherId, summary.agreementId, startDate);
+      setConflicts(found);
+      setConflictsAck(false);
+      return true;
+    } catch (err) {
+      toast.error(reportUserError(err, i18nT("errors.renewPackage", currentLanguage())));
+      return false;
+    }
+  };
 
   // When selected package changes
   const handleSelectPackage = (pkgId: string) => {
@@ -239,7 +291,7 @@ export function PackageRenewalModal({
   );
   const previewTerms = canBuildPreview && selectedPackage ? buildBillingAgreement(
     { ...selectedPackage, price: totalAmountCents / 100 },
-    { firstDueDate: startDate, installmentCount, billingDurationType, contractMonths },
+    { firstDueDate: firstDueDate || startDate, installmentCount, billingDurationType, contractMonths },
   ) : null;
   const safeCount = previewTerms?.installmentCount || 1;
   const { baseAmountCents } = calculateInstallmentSchedule(previewTerms?.totalAmountCents || totalAmountCents, safeCount);
@@ -270,6 +322,14 @@ export function PackageRenewalModal({
       toast.error(tr("packageRenewal.errEndBeforeStart"));
       return;
     }
+    if (!firstDueDate) {
+      toast.error(tr("packageRenewal.errFirstDue"));
+      return;
+    }
+    if (conflicts && conflicts.length > 0 && !conflictsAck) {
+      toast.error(tr("packageRenewal.errConflictsAck"));
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -287,9 +347,16 @@ export function PackageRenewalModal({
         billingDurationType,
         contractMonths: billingDurationType === "fixed" ? contractMonths : null,
         endDate: endDateInput.customized ? lastDueDateStr : null,
+        firstDueDate,
+        acknowledgeChargeConflicts: conflictsAck,
       });
 
-      if (res.success) {
+      if (!res.success && res.code === "charge_conflicts") {
+        // The server re-checked and found open charges: show them and ask for a decision.
+        setConflicts(res.conflicts || []);
+        setConflictsAck(false);
+        toast.error(tr("packageRenewal.errConflictsAck"));
+      } else if (res.success) {
         toast.success(res.message);
         if (onRenewalCompleted) onRenewalCompleted();
         onClose();
@@ -515,8 +582,24 @@ export function PackageRenewalModal({
                     onChange={(e) => setStartDate(e.target.value)}
                     required
                   />
+                  {hasContractInForce && currentEnd && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {fmt(tr("packageRenewal.startAfterEndHint"), formatAgreementDate(currentEnd))}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">{tr("packageRenewal.lFirstDueDate")}</Label>
+                  <Input
+                    type="date"
+                    value={firstDueDate}
+                    onChange={(e) => setFirstDueInput(e.target.value
+                      ? { value: e.target.value, customized: true }
+                      : { value: "", customized: false })}
+                  />
                   <span className="text-[10px] text-muted-foreground">
-                    Padrão: dia após término do contrato anterior.
+                    {firstDueInput.customized ? tr("packageRenewal.firstDueCustomHint") : tr("packageRenewal.firstDueHint")}
                   </span>
                 </div>
 
@@ -664,6 +747,10 @@ export function PackageRenewalModal({
                     <span className="font-bold text-foreground">{formatAgreementDate(startDate)}</span>
                   </div>
                   <div>
+                    <span className="text-muted-foreground block">{tr("packageRenewal.lFirstDueDate")}</span>
+                    <span className="font-bold text-foreground">{formatAgreementDate(firstDueDate)}</span>
+                  </div>
+                  <div>
                     <span className="text-muted-foreground block">{selectedBillingModel === "installment_total" ? tr("packageRenewal.lastInstallmentEnd") : tr("packageRenewal.end")}</span>
                     <span className="font-bold text-foreground">{lastDueDateStr ? formatAgreementDate(lastDueDateStr) : tr("packageRenewal.noEnd")}</span>
                   </div>
@@ -680,6 +767,27 @@ export function PackageRenewalModal({
                   </div>
                 </div>
               </div>
+              {hasContractInForce && startDate && (
+                <p className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 p-3 text-xs text-emerald-900">
+                  {fmt(tr("packageRenewal.scheduledNote"), formatAgreementDate(addDays(startDate, -1)), formatAgreementDate(startDate))}
+                </p>
+              )}
+
+              {conflicts && conflicts.length > 0 && (
+                <div role="alert" className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                  <p className="font-bold">{tr("packageRenewal.conflictsTitle")}</p>
+                  <p>{tr("packageRenewal.conflictsBody")}</p>
+                  <ul className="list-disc pl-5">
+                    {conflicts.map((c) => (
+                      <li key={c.id}>{formatAgreementDate(c.dueDate)} · {formatCentsToBRL(c.amountCents)} · {formatStatus(c.status)}</li>
+                    ))}
+                  </ul>
+                  <label className="flex items-start gap-2 font-semibold">
+                    <Checkbox checked={conflictsAck} onCheckedChange={(v) => setConflictsAck(v === true)} aria-label={tr("packageRenewal.conflictsAck")} />
+                    <span>{tr("packageRenewal.conflictsAck")}</span>
+                  </label>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -712,7 +820,11 @@ export function PackageRenewalModal({
             <Button
               type="button"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
+                if (step === 1) {
+                  continueFromCurrentContract();
+                  return;
+                }
                 if (step === 2 && !selectedPackage) {
                   toast.error(tr("packageRenewal.errNoPackage"));
                   return;
@@ -725,6 +837,11 @@ export function PackageRenewalModal({
                   toast.error(tr("packageRenewal.errEndBeforeStart"));
                   return;
                 }
+                if (step === 3 && !firstDueDate) {
+                  toast.error(tr("packageRenewal.errFirstDue"));
+                  return;
+                }
+                if (step === 3 && !(await loadConflicts())) return;
                 setStep((s) => (s + 1) as any);
               }}
               className="bg-[#163020] text-[#F4EBE1] hover:bg-[#163020]/90 text-xs font-bold gap-1 cursor-pointer"
@@ -735,7 +852,7 @@ export function PackageRenewalModal({
             <Button
               type="button"
               size="sm"
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(conflicts && conflicts.length > 0 && !conflictsAck)}
               onClick={handleConfirmRenewal}
               className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 cursor-pointer shadow-md"
             >
@@ -752,6 +869,67 @@ export function PackageRenewalModal({
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Contract in force with an end date: schedule the renewal for the day after it ends. */}
+      <AlertDialog open={scheduleDialog === "fixed"} onOpenChange={(open) => !open && setScheduleDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr("packageRenewal.scheduleTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {fmt(tr("packageRenewal.scheduleBody"), formatAgreementDate(currentEnd), formatAgreementDate(scheduledStart))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tr("packageRenewal.lCancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (scheduledStart) setStartDate(scheduledStart);
+                setScheduleConfirmed(true);
+                setScheduleDialog(null);
+                setStep(2);
+              }}
+            >
+              {tr("packageRenewal.scheduleConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Continuous contract (no end): the teacher picks the transition date and confirms the end. */}
+      <AlertDialog open={scheduleDialog === "continuous"} onOpenChange={(open) => !open && setScheduleDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr("packageRenewal.transitionTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{tr("packageRenewal.transitionBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="renewal-transition-date" className="text-xs font-bold">{tr("packageRenewal.transitionDate")}</Label>
+              <Input id="renewal-transition-date" type="date" value={transitionDate} onChange={(e) => { setTransitionDate(e.target.value); setTransitionAck(false); }} />
+            </div>
+            {transitionDate && (
+              <label className="flex items-start gap-2 text-xs font-semibold">
+                <Checkbox checked={transitionAck} onCheckedChange={(v) => setTransitionAck(v === true)} aria-label={tr("packageRenewal.transitionAck")} />
+                <span>{fmt(tr("packageRenewal.transitionAck"), formatAgreementDate(addDays(transitionDate, -1)))}</span>
+              </label>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tr("packageRenewal.lCancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!transitionDate || !transitionAck}
+              onClick={() => {
+                setStartDate(transitionDate);
+                setScheduleConfirmed(true);
+                setScheduleDialog(null);
+                setStep(2);
+              }}
+            >
+              {tr("packageRenewal.transitionConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

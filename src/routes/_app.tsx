@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useScheduledContractActivation } from "@/hooks/use-scheduled-contract-activation";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -11,6 +12,8 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { user, loading, profile, error, retryProfileSync, signOut } = useAuth();
+  // Scheduled contract renewals: activation fallback when the app opens (same RPC as the schedule).
+  useScheduledContractActivation(user?.id);
 
   // Desktop Pinning State (persisted in localStorage)
   const [isPinned, setIsPinned] = useState(false);

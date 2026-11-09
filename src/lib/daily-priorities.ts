@@ -3,6 +3,7 @@ import { formatLocalDateStr } from "@/lib/time-off-engine";
 import { calculateLastDueDate } from "@/lib/finance-engine";
 import { billingModelFromAgreement } from "@/lib/billing-domain";
 import { renewalAlertStage, teacherSetContinuousEndDate } from "@/lib/package-renewal";
+import { agreementsWithScheduledRenewal } from "@/lib/contract-renewal-schedule";
 import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
 import { inactivityReference } from "@/lib/lead-inactivity";
 import { filterRelevantLeadTasks, LEAD_TASK_RELEVANCE_COLUMNS } from "@/lib/lead-task-relevance";
@@ -226,13 +227,16 @@ async function fetchContracts(teacherId: string, todayStr: string): Promise<Dail
     .from("student_packages")
     .select("*, student:students(full_name, status), package:packages(name)")
     .eq("teacher_id", teacherId)
-    .eq("status", "active");
+    .in("status", ["active", "scheduled"]);
   if (error) throw error;
   return buildContractItems((data || []) as any[], todayStr);
 }
 
 export function buildContractItems(rows: any[], todayStr: string): DailyPriorityItem[] {
+  // A contract whose renewal is already scheduled needs no renewal alert; scheduled rows never alert.
+  const renewedAhead = agreementsWithScheduledRenewal(rows);
   return rows.flatMap((sp): DailyPriorityItem[] => {
+    if (sp.status === "scheduled" || renewedAhead.has(sp.id)) return [];
     if (sp.student?.status === "Paused" || sp.student?.status === "Inactive") return [];
     const endDate = contractEndDate(sp);
     if (!endDate) return [];
