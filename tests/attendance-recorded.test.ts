@@ -29,9 +29,12 @@ describe("contract priorities", () => {
   test("successful empty query yields an empty category", () => {
     expect(buildContractItems([], "2026-10-20")).toEqual([]);
   });
-  test("ended fixed contract is critical", () => {
-    const items = buildContractItems([{ id: "sp1", student_id: "s1", ended_at: "2026-10-19", student: { full_name: "Ana", status: "Active" } }], "2026-10-20");
-    expect(items[0].urgency).toBe("critical");
-    expect(items[0].reason).toBe("contract_ended");
+  test("ended contract moves to Urgente, not Prioridades", () => {
+    expect(buildContractItems([{ id: "sp1", student_id: "s1", ended_at: "2026-10-19", student: { full_name: "Ana", status: "Active" } }], "2026-10-20")).toEqual([]);
+  });
+  test("contract ending within 30 days (beyond 10) is an upcoming priority", () => {
+    const items = buildContractItems([{ id: "sp1", student_id: "s1", ended_at: "2026-11-09", student: { full_name: "Ana", status: "Active" } }], "2026-10-20");
+    expect(items[0].urgency).toBe("upcoming");
+    expect(items[0].reason).toBe("contract_ending_30d");
   });
 });

@@ -19,9 +19,10 @@ describe("daily priorities rules", () => {
     expect(paymentReason("2026-10-25", "2026-10-20")).toBe("payment_reminder");
     expect(paymentReason("2026-10-26", "2026-10-20")).toBeNull();
   });
-  test("contracts: ended, 15 and 30 day windows", () => {
+  test("contracts: ended, 10 and 30 day windows", () => {
     expect(contractReason(0)).toBe("contract_ended");
-    expect(contractReason(15)).toBe("contract_ending_15d");
+    expect(contractReason(10)).toBe("contract_ending_10d");
+    expect(contractReason(11)).toBe("contract_ending_30d");
     expect(contractReason(30)).toBe("contract_ending_30d");
     expect(contractReason(31)).toBeNull();
   });

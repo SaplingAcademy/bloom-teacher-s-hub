@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { formatLocalDateStr } from "@/lib/time-off-engine";
 import { calculateLastDueDate } from "@/lib/finance-engine";
 import { billingModelFromAgreement } from "@/lib/billing-domain";
+import { renewalAlertStage, teacherSetContinuousEndDate } from "@/lib/package-renewal";
 import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
 import { inactivityReference } from "@/lib/lead-inactivity";
 
@@ -20,7 +21,7 @@ export type DailyPriorityReason =
   | "payment_due_today"
   | "payment_reminder"
   | "contract_ended"
-  | "contract_ending_15d"
+  | "contract_ending_10d"
   | "contract_ending_30d"
   | "homework_not_posted"
   | "task_overdue"
@@ -101,11 +102,12 @@ export function paymentUrgency(reason: DailyPriorityReason): DailyPriorityUrgenc
   return reason === "payment_overdue" ? "critical" : reason === "payment_due_today" ? "today" : "upcoming";
 }
 
-/** Mirrors checkPackageExpirationAlerts thresholds: ended, ≤15 days, ≤30 days. */
+/** Shared renewal windows (package-renewal.ts): ended, ≤10 days, ≤30 days. */
 export function contractReason(daysRemaining: number): DailyPriorityReason | null {
-  if (daysRemaining <= 0) return "contract_ended";
-  if (daysRemaining <= 15) return "contract_ending_15d";
-  if (daysRemaining <= 30) return "contract_ending_30d";
+  const stage = renewalAlertStage(daysRemaining);
+  if (stage === "expired") return "contract_ended";
+  if (stage === "urgent") return "contract_ending_10d";
+  if (stage === "priority") return "contract_ending_30d";
   return null;
 }
 
@@ -211,7 +213,7 @@ async function fetchPayments(teacherId: string, todayStr: string, reminderEndStr
 /** Same end-date semantics as checkPackageExpirationAlerts; null = open-ended/unknown. */
 export function contractEndDate(sp: any): string | null {
   if (sp.ended_at) return String(sp.ended_at).slice(0, 10);
-  if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type !== "fixed") return null;
+  if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type !== "fixed") return teacherSetContinuousEndDate(sp);
   if (sp.last_due_date) return sp.last_due_date;
   if (sp.first_due_date && sp.installment_count) return calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day);
   return null;
@@ -234,6 +236,9 @@ export function buildContractItems(rows: any[], todayStr: string): DailyPriority
     const endDate = contractEndDate(sp);
     if (!endDate) return [];
     const days = daysBetween(todayStr, endDate);
+    // Prioridades holds the 30→11 day window; from 10 days (and after the end) the
+    // contract moves to Urgente, so it never appears in both lists.
+    if (renewalAlertStage(days) !== "priority") return [];
     const reason = contractReason(days);
     if (!reason) return [];
     return [{
