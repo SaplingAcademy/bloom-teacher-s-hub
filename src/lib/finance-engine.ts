@@ -2244,7 +2244,8 @@ export async function renewStudentPackage(
         };
       }
       // Scheduling depends on the activation RPC; without it a scheduled agreement would never start.
-      const probe = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC, { p_today: "1900-01-01" });
+      // Calling it only activates this teacher's already-due renewals (server date, America/Sao_Paulo).
+      const probe = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC);
       if (probe.error) {
         return {
           success: false,
@@ -2368,7 +2369,7 @@ export async function renewStudentPackage(
       // the automatic schedule; on failure the app-load fallback retries it.
       let activated = false;
       if (timing.activateNow) {
-        const { data: count, error: activationError } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC, { p_today: today });
+        const { data: count, error: activationError } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC);
         if (activationError) console.warn("[FinanceEngine] Scheduled contract activation deferred:", activationError);
         activated = !activationError && Number(count) > 0;
       }
@@ -2587,8 +2588,9 @@ export async function deleteTeacherExpenseRemote(teacherId: string, expenseId: s
  * previous agreement and activates the new one atomically; repeated calls do nothing).
  * Returns how many were activated; a missing RPC (migration not applied) yields 0.
  */
-export async function activateDueScheduledContracts(today: string = localDateString()): Promise<number> {
-  const { data, error } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC, { p_today: today });
+export async function activateDueScheduledContracts(): Promise<number> {
+  // No client date: the RPC uses the server date in America/Sao_Paulo and the caller's teacher scope.
+  const { data, error } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC);
   if (error) {
     console.warn("[FinanceEngine] Scheduled contract activation unavailable:", error.message);
     return 0;

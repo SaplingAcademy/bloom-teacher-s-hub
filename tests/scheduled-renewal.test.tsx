@@ -54,7 +54,7 @@ vi.mock("@/lib/supabase", () => {
   return {
     supabase: {
       from: (t: string) => new Q(t),
-      rpc: async (name: string, args: any) => { db.rpcCalls.push({ name, args }); return db.rpcError ? { data: null, error: db.rpcError } : { data: args.p_today === "1900-01-01" ? 0 : db.rpcResult, error: null }; },
+      rpc: async (name: string, args?: any) => { db.rpcCalls.push({ name, args }); return db.rpcError ? { data: null, error: db.rpcError } : { data: db.rpcCalls.length > 1 ? db.rpcResult : 0, error: null }; },
     },
   };
 });
@@ -168,7 +168,11 @@ describe("renewStudentPackage with a continuous contract", () => {
   it("a transition date already due is activated right away through the same RPC", async () => {
     const res = await renew({ startDate: ymd(0), firstDueDate: ymd(5) });
     expect(res).toMatchObject({ success: true, scheduled: true, activated: true });
-    expect(db.rpcCalls.map((c) => c.args.p_today)).toEqual(["1900-01-01", ymd(0)]);
+    // Availability check + activation: both without a client-controlled date.
+    expect(db.rpcCalls).toEqual([
+      { name: "activate_due_scheduled_contracts", args: undefined },
+      { name: "activate_due_scheduled_contracts", args: undefined },
+    ]);
   });
 });
 

@@ -9,7 +9,7 @@ import { billingDateForMonth, isValidBillingDate, normalizeDueDay } from "@/lib/
  *   first due date is only suggested from the start and the chosen due day.
  */
 
-/** RPC that atomically activates due scheduled agreements (docs/migrations). */
+/** RPC that atomically activates due scheduled agreements (docs/migrations); no parameters, server date. */
 export const ACTIVATE_SCHEDULED_CONTRACTS_RPC = "activate_due_scheduled_contracts";
 
 export const SCHEDULED_STATUS = "scheduled";
