@@ -16,7 +16,7 @@ const from = (table: string) => {
     select(columns: string) { query.columns = columns; return builder; },
     then(resolve: (result: { data: unknown; error: unknown }) => unknown) {
       if (table === "tasks") {
-        const allowed = ["id", "teacher_id", "title", "description", "status", "due_date", "category_id", "priority_id", "lead_id", "automation_event_id", "activity_type", "leads(stage", "contacted_at", "trial_scheduled_at)"];
+        const allowed = ["id", "teacher_id", "title", "description", "status", "due_date", "category_id", "priority_id", "lead_id", "automation_event_id", "activity_type", "leads(stage", "contacted_at", "trial_scheduled_at", "trial_calendar_event_id)"];
         const invalidColumn = query.columns.split(",").map((c) => c.trim()).find((c) => !allowed.includes(c));
         if (invalidColumn || taskError) return Promise.resolve({ data: null, error: { message: invalidColumn ? `column tasks.${invalidColumn} does not exist` : "tasks unavailable" } }).then(resolve);
         const rows = taskRows.filter((row) => query.filters.filter((f) => f.method === "eq").every((f) => row[f.column] === f.value));
@@ -71,7 +71,7 @@ describe("Today production task and independent lead discovery", () => {
       ["task:today", "lead", "lead_task_due_today", "today", { taskId: "today", leadId: "mario" }, { route: "/leads", params: { leadId: "mario" } }],
     ]);
     expect(result.items.filter((i) => i.category === "task")).toEqual([]); // no homework → Tarefas counter is zero
-    expect(queries.find((q) => q.table === "tasks")?.columns).toBe("id, title, due_date, lead_id, automation_event_id, activity_type, leads(stage, contacted_at, trial_scheduled_at)");
+    expect(queries.find((q) => q.table === "tasks")?.columns).toBe("id, title, due_date, lead_id, automation_event_id, activity_type, leads(stage, contacted_at, trial_scheduled_at, trial_calendar_event_id)");
   });
 
   test("a lead with a pending task appears once, through the task", async () => {
