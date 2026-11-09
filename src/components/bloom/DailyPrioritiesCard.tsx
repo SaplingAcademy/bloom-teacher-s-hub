@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
 import { PriorityResolutionPanel, isInlineResolvable } from "@/components/bloom/PriorityResolutionPanel";
+import { PriorityModuleActions, moduleActionFor, type PriorityModuleAction } from "@/components/bloom/PriorityModuleActions";
+import { useInvalidateFinanceData } from "@/hooks/use-finance-query";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
@@ -86,6 +88,13 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   // whose condition is really resolved disappear, and counters follow automatically.
   const refreshPriorities = () =>
     queryClient.invalidateQueries({ queryKey: ["daily-priorities", teacherId] });
+  // Leads, Contracts and Payments open their module's existing component in place.
+  const [moduleAction, setModuleAction] = useState<PriorityModuleAction | null>(null);
+  const invalidateFinanceData = useInvalidateFinanceData(teacherId);
+  const handleModuleSaved = (kind: PriorityModuleAction["kind"]) => {
+    if (kind !== "lead") invalidateFinanceData();
+    void refreshPriorities();
+  };
   const { data, isLoading: loading, isError } = useDailyPrioritiesQuery(teacherId);
   const items = data?.items ?? [];
   const failed = isError ? CATEGORY_ORDER : (data?.failed ?? []);
@@ -157,18 +166,23 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     const Icon = meta.icon;
     const resolvable = isInlineResolvable(item);
     const expanded = resolvable && expandedId === item.id;
+    const moduleTarget = resolvable ? null : moduleActionFor(item);
+    const activate = () => {
+      if (resolvable) setExpandedId(expanded ? null : item.id);
+      else if (moduleTarget) setModuleAction(moduleTarget);
+      else handleItemClick(item);
+    };
     return (
       <li key={item.id} className="py-0.5">
       <div
         role="button"
         tabIndex={0}
         aria-expanded={resolvable ? expanded : undefined}
-        onClick={() => (resolvable ? setExpandedId(expanded ? null : item.id) : handleItemClick(item))}
+        onClick={activate}
         onKeyDown={(e) => {
           if (e.key !== "Enter" && e.key !== " ") return;
           e.preventDefault();
-          if (resolvable) setExpandedId(expanded ? null : item.id);
-          else handleItemClick(item);
+          activate();
         }}
         className="group flex items-start gap-3.5 py-3 px-3 rounded-xl hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none"
       >
@@ -200,6 +214,19 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             <span className="flex items-center gap-1 text-[11px] font-semibold">
               <span className="hidden sm:inline">{expanded ? t("today.resolve.collapse") : t("today.resolve.expand")}</span>
               <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </span>
+          ) : moduleTarget ? (
+            <span className="flex items-center gap-2 text-[11px] font-semibold">
+              <span>{t("today.resolve.expand")}</span>
+              <button
+                type="button"
+                title={t("today.resolve.openModule")}
+                aria-label={t("today.resolve.openModule")}
+                onClick={(e) => { e.stopPropagation(); handleItemClick(item); }}
+                className="rounded p-0.5 hover:bg-stone-200"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </button>
             </span>
           ) : (
             <ExternalLink className="h-4 w-4" />
@@ -385,6 +412,15 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
         </p>
       )}
       </div>
+      {moduleAction && (
+        <PriorityModuleActions
+          key={JSON.stringify(moduleAction)}
+          teacherId={teacherId}
+          action={moduleAction}
+          onClose={() => setModuleAction(null)}
+          onSaved={handleModuleSaved}
+        />
+      )}
     </div>
   );
 }
