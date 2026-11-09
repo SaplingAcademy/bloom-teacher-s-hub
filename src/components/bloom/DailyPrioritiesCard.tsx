@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
   House,
   CreditCard,
   ExternalLink,
@@ -18,7 +19,9 @@ import type {
 } from "@/lib/daily-priorities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
+import { PriorityResolutionPanel, isInlineResolvable } from "@/components/bloom/PriorityResolutionPanel";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
@@ -77,6 +80,12 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
   const [filter, setFilter] = useState<CategoryFilter>("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  // After a successful inline save, re-read priorities from their sources; only items
+  // whose condition is really resolved disappear, and counters follow automatically.
+  const refreshPriorities = () =>
+    queryClient.invalidateQueries({ queryKey: ["daily-priorities", teacherId] });
   const { data, isLoading: loading, isError } = useDailyPrioritiesQuery(teacherId);
   const items = data?.items ?? [];
   const failed = isError ? CATEGORY_ORDER : (data?.failed ?? []);
@@ -146,10 +155,21 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const renderRow = (item: DailyPriorityItem) => {
     const meta = CATEGORY_META[item.category];
     const Icon = meta.icon;
+    const resolvable = isInlineResolvable(item);
+    const expanded = resolvable && expandedId === item.id;
     return (
-      <li
-        key={item.id}
-        onClick={() => handleItemClick(item)}
+      <li key={item.id} className="py-0.5">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={resolvable ? expanded : undefined}
+        onClick={() => (resolvable ? setExpandedId(expanded ? null : item.id) : handleItemClick(item))}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          if (resolvable) setExpandedId(expanded ? null : item.id);
+          else handleItemClick(item);
+        }}
         className="group flex items-start gap-3.5 py-3 px-3 rounded-xl hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none"
       >
         <div className="min-w-0 flex-1 space-y-1">
@@ -176,8 +196,34 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           </p>
         </div>
         <div className="shrink-0 text-stone-400 group-hover:text-stone-700 transition-colors pt-1">
-          <ExternalLink className="h-4 w-4" />
+          {resolvable ? (
+            <span className="flex items-center gap-1 text-[11px] font-semibold">
+              <span className="hidden sm:inline">{expanded ? t("today.resolve.collapse") : t("today.resolve.expand")}</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </span>
+          ) : (
+            <ExternalLink className="h-4 w-4" />
+          )}
         </div>
+      </div>
+      {expanded && (
+        <div className="mx-3 mb-3 space-y-3 rounded-xl border border-stone-200 bg-white p-3">
+          <PriorityResolutionPanel
+            teacherId={teacherId}
+            item={item}
+            onSaved={async () => {
+              await refreshPriorities();
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => handleItemClick(item)}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-stone-500 hover:text-stone-800"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> {t("today.resolve.openModule")}
+          </button>
+        </div>
+      )}
       </li>
     );
   };
