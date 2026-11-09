@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveRenewalEndDate, isRenewalEndDateValid, samePackageRenewalTerms } from "../src/lib/package-renewal";
 import { buildContractItems } from "../src/lib/daily-priorities";
+import { renewalAlertStage } from "../src/lib/package-renewal";
+import { checkPackageExpirationAlerts } from "../src/lib/finance-engine";
 
 // Active agreement: "Plano Intensivo" contracted at R$ 350/month, while the catalog now says R$ 400.
 const SUMMARY = {
@@ -38,13 +40,20 @@ const CATALOG = [
 const mocks = vi.hoisted(() => ({
   getSummary: vi.fn(),
   renew: vi.fn(),
+  agreements: [] as any[],
 }));
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
-    from: () => ({
-      select: () => ({ eq: () => ({ order: async () => ({ data: CATALOG, error: null }) }) }),
-    }),
+    from: (table: string) => {
+      if (table === "packages") {
+        return { select: () => ({ eq: () => ({ order: async () => ({ data: CATALOG, error: null }) }) }) };
+      }
+      // student_packages for expiration alerts: chainable .eq() that resolves to the rows.
+      const result = { data: mocks.agreements, error: null };
+      const chain: any = { select: () => chain, eq: () => chain, then: (r: any) => Promise.resolve(result).then(r) };
+      return chain;
+    },
   },
 }));
 
@@ -164,16 +173,43 @@ describe("PackageRenewalModal", () => {
   });
 });
 
-describe("renewal alerts for continuous monthly plans", () => {
+describe("renewal alert windows (30 → Prioridades, 10 → Urgente)", () => {
   const base = { id: "sp1", student_id: "s1", billing_model: "monthly", billing_duration_type: "continuous", student: { full_name: "Ana", status: "Active" } };
+  const today = "2026-11-09";
+  const plusDays = (n: number) => {
+    const d = new Date(Date.now() + n * 86400000);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
 
-  it("alerts when the teacher set an end date", () => {
-    expect(buildContractItems([{ ...base, last_due_date: "2026-12-05" }], "2026-11-09")[0]).toMatchObject({ reason: "contract_ending_30d", date: "2026-12-05" });
-    expect(buildContractItems([{ ...base, last_due_date: "2026-11-19" }], "2026-11-09")[0]).toMatchObject({ reason: "contract_ending_15d" });
+  it("uses one stage rule for every surface", () => {
+    expect(renewalAlertStage(31)).toBeNull();
+    expect(renewalAlertStage(30)).toBe("priority");
+    expect(renewalAlertStage(11)).toBe("priority");
+    expect(renewalAlertStage(10)).toBe("urgent");
+    expect(renewalAlertStage(0)).toBe("expired");
+    expect(renewalAlertStage(-5)).toBe("expired");
   });
 
-  it("keeps continuous plans without an end date (and legacy rows) silent", () => {
-    expect(buildContractItems([{ ...base, last_due_date: null }], "2026-11-09")).toEqual([]);
-    expect(buildContractItems([{ ...base, billing_model: null, snapshot_frequency: "Monthly", last_due_date: "2026-11-19" }], "2026-11-09")).toEqual([]);
+  it("Prioridades shows 30→11 days only, including teacher-set ends on continuous plans", () => {
+    expect(buildContractItems([{ ...base, last_due_date: "2026-12-05" }], today)[0]).toMatchObject({ reason: "contract_ending_30d", date: "2026-12-05" });
+    expect(buildContractItems([{ ...base, last_due_date: "2026-11-19" }], today)).toEqual([]); // 10 days → Urgente
+    expect(buildContractItems([{ ...base, last_due_date: "2026-11-01" }], today)).toEqual([]); // ended → Urgente
+  });
+
+  it("continuous plans without an end date (and legacy rows) never alert", () => {
+    expect(buildContractItems([{ ...base, last_due_date: null }], today)).toEqual([]);
+    expect(buildContractItems([{ ...base, billing_model: null, snapshot_frequency: "Monthly", last_due_date: "2026-11-25" }], today)).toEqual([]);
+  });
+
+  it("Urgente/Financeiro alerts escalate at 10 days and stay after the end", async () => {
+    mocks.agreements = [
+      { ...base, student_id: "a", last_due_date: plusDays(20) },
+      { ...base, student_id: "b", last_due_date: plusDays(10) },
+      { ...base, student_id: "c", last_due_date: plusDays(-3) },
+      { ...base, student_id: "d", last_due_date: null },
+    ];
+    const alerts = await checkPackageExpirationAlerts("t-1");
+    const level = Object.fromEntries(alerts.map((a) => [a.studentId, a.alertLevel]));
+    expect(level).toEqual({ a: "subtle", b: "warning", c: "expired" });
   });
 });

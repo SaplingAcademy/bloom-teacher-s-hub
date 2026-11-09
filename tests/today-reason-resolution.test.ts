@@ -7,7 +7,7 @@ const placeholders = {
   payment_due_today: ["amount"],
   payment_reminder: ["amount", "dueDate"],
   contract_ended: ["packageName", "endDate"],
-  contract_ending_15d: ["packageName", "daysRemaining"],
+  contract_ending_10d: ["packageName", "daysRemaining"],
   contract_ending_30d: ["packageName", "daysRemaining"],
   homework_not_posted: ["date"],
   task_overdue: ["dueDate"], task_due_today: [],

@@ -70,3 +70,21 @@ export function teacherSetContinuousEndDate(sp: {
   if (sp.billing_model !== "monthly" || sp.billing_duration_type === "fixed") return null;
   return sp.last_due_date ? String(sp.last_due_date).slice(0, 10) : null;
 }
+
+/**
+ * Single source for Bloom's contract renewal alert windows, shared by Prioridades
+ * (daily-priorities), Urgente (attention-queue) and Financeiro (expiration alerts):
+ * 30 days before the end → Prioridades; 10 days before → Urgente; after the end →
+ * stays in Urgente until a new agreement replaces it or the student is closed.
+ */
+export const RENEWAL_PRIORITY_DAYS = 30;
+export const RENEWAL_URGENT_DAYS = 10;
+
+export type RenewalAlertStage = "priority" | "urgent" | "expired";
+
+export function renewalAlertStage(daysRemaining: number): RenewalAlertStage | null {
+  if (daysRemaining <= 0) return "expired";
+  if (daysRemaining <= RENEWAL_URGENT_DAYS) return "urgent";
+  if (daysRemaining <= RENEWAL_PRIORITY_DAYS) return "priority";
+  return null;
+}

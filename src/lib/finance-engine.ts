@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { invoiceReceiptFields, type ReceivedRevenueInvoice } from "@/lib/finance-cashflow";
-import { teacherSetContinuousEndDate } from "@/lib/package-renewal";
+import { renewalAlertStage, teacherSetContinuousEndDate } from "@/lib/package-renewal";
 import {
   BillingDurationType,
   BillingModel,
@@ -2046,15 +2046,16 @@ export async function checkPackageExpirationAlerts(
       const diffTime = endObj.getTime() - today.getTime();
       const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // 30-day threshold logic
-      if (daysRemaining <= 30) {
+      // Shared renewal windows: ≤30 days alert, ≤10 days urgent, ≤0 expired.
+      const stage = renewalAlertStage(daysRemaining);
+      if (stage) {
         let alertLevel: PackageRenewalAlert["alertLevel"] = "subtle";
         let alertMessage = `Renovação próxima — ${packageName} termina em ${daysRemaining} dias (${endDateStr.split("-").reverse().join("/")})`;
 
-        if (daysRemaining <= 0) {
+        if (stage === "expired") {
           alertLevel = "expired";
           alertMessage = `Pacote encerrado — renovar ${packageName} de ${studentName}`;
-        } else if (daysRemaining <= 15) {
+        } else if (stage === "urgent") {
           alertLevel = "warning";
           alertMessage = `Atenção: Pacote de ${studentName} termina em ${daysRemaining} dias (${endDateStr.split("-").reverse().join("/")})`;
         }
