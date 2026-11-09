@@ -20,6 +20,7 @@ const db = vi.hoisted(() => ({
   rpcError: null as any,
   rpcResult: 1,
   failInsertWith: null as any,
+  activationFails: false,
 }));
 
 vi.mock("@/lib/supabase", () => {
@@ -54,7 +55,15 @@ vi.mock("@/lib/supabase", () => {
   return {
     supabase: {
       from: (t: string) => new Q(t),
-      rpc: async (name: string, args?: any) => { db.rpcCalls.push({ name, args }); return db.rpcError ? { data: null, error: db.rpcError } : { data: db.rpcCalls.length > 1 ? db.rpcResult : 0, error: null }; },
+      rpc: async (name: string, args?: any) => {
+        db.rpcCalls.push({ name, args });
+        if (db.rpcError) return { data: null, error: db.rpcError };
+        // Simulates the server: activates due scheduled rows unless told the transition fails.
+        if (db.rpcCalls.length > 1 && !db.activationFails) {
+          db.tables.student_packages.filter((r) => r.status === "scheduled").forEach((r) => { r.status = "active"; });
+        }
+        return { data: db.rpcCalls.length > 1 ? db.rpcResult : 0, error: null };
+      },
     },
   };
 });
@@ -72,7 +81,7 @@ function seed(current: Record<string, any> | null, invoices: any[] = []) {
     student_packages: current ? [{ id: "cur", teacher_id: "t", student_id: "s1", package_id: "pkg", status: "active", started_at: ymd(-150), ...current }] : [],
     invoices,
   };
-  db.writes = []; db.rpcCalls = []; db.rpcError = null; db.rpcResult = 1; db.failInsertWith = null;
+  db.writes = []; db.rpcCalls = []; db.rpcError = null; db.rpcResult = 1; db.failInsertWith = null; db.activationFails = false;
 }
 const renew = (over: Record<string, any> = {}) => renewStudentPackage({
   teacherId: "t", studentId: "s1", newPackageId: "pkg", isSamePackage: true, startDate: ymd(17), firstDueDate: ymd(30),
@@ -168,11 +177,24 @@ describe("renewStudentPackage with a continuous contract", () => {
   it("a transition date already due is activated right away through the same RPC", async () => {
     const res = await renew({ startDate: ymd(0), firstDueDate: ymd(5) });
     expect(res).toMatchObject({ success: true, scheduled: true, activated: true });
+    expect(db.tables.student_packages.find((r) => r.id !== "cur")).toMatchObject({ status: "active" });
     // Availability check + activation: both without a client-controlled date.
     expect(db.rpcCalls).toEqual([
       { name: "activate_due_scheduled_contracts", args: undefined },
       { name: "activate_due_scheduled_contracts", args: undefined },
     ]);
+  });
+});
+
+describe("activation result reflects the persisted contract", () => {
+  it("does not report activation when the RPC counts another renewal but this one stays scheduled", async () => {
+    seed({ last_due_date: null, ended_at: null, billing_model: "monthly", billing_duration_type: "continuous" });
+    db.activationFails = true;
+    db.rpcResult = 1; // e.g. another due renewal of the same teacher was activated
+    const res = await renew({ startDate: ymd(0), firstDueDate: ymd(5) });
+    expect(res).toMatchObject({ success: true, scheduled: true, activated: false });
+    expect(db.tables.student_packages.find((r) => r.id !== "cur")).toMatchObject({ status: "scheduled" });
+    expect(res.message).not.toContain("ativada");
   });
 });
 

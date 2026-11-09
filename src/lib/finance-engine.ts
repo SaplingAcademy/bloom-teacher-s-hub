@@ -2369,9 +2369,19 @@ export async function renewStudentPackage(
       // the automatic schedule; on failure the app-load fallback retries it.
       let activated = false;
       if (timing.activateNow) {
-        const { data: count, error: activationError } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC);
+        const { error: activationError } = await supabase.rpc(ACTIVATE_SCHEDULED_CONTRACTS_RPC);
         if (activationError) console.warn("[FinanceEngine] Scheduled contract activation deferred:", activationError);
-        activated = !activationError && Number(count) > 0;
+        // The RPC count covers all of the teacher's due renewals; only this agreement's
+        // persisted status proves that *it* was activated.
+        if (!activationError) {
+          const { data: saved } = await supabase
+            .from("student_packages")
+            .select("status")
+            .eq("id", insertedSp.id)
+            .eq("teacher_id", teacherId)
+            .maybeSingle();
+          activated = saved?.status === "active";
+        }
       }
       return {
         success: true,
