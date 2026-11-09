@@ -3,6 +3,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveRenewalEndDate, isRenewalEndDateValid, samePackageRenewalTerms } from "../src/lib/package-renewal";
+import { buildContractItems } from "../src/lib/daily-priorities";
 
 // Active agreement: "Plano Intensivo" contracted at R$ 350/month, while the catalog now says R$ 400.
 const SUMMARY = {
@@ -160,5 +161,19 @@ describe("PackageRenewalModal", () => {
     const fromProfile = await runRenewal({ currentSummary: SUMMARY }, true);
     expect(mocks.getSummary).not.toHaveBeenCalled();
     expect(fromProfile).toEqual(fromFinance);
+  });
+});
+
+describe("renewal alerts for continuous monthly plans", () => {
+  const base = { id: "sp1", student_id: "s1", billing_model: "monthly", billing_duration_type: "continuous", student: { full_name: "Ana", status: "Active" } };
+
+  it("alerts when the teacher set an end date", () => {
+    expect(buildContractItems([{ ...base, last_due_date: "2026-12-05" }], "2026-11-09")[0]).toMatchObject({ reason: "contract_ending_30d", date: "2026-12-05" });
+    expect(buildContractItems([{ ...base, last_due_date: "2026-11-19" }], "2026-11-09")[0]).toMatchObject({ reason: "contract_ending_15d" });
+  });
+
+  it("keeps continuous plans without an end date (and legacy rows) silent", () => {
+    expect(buildContractItems([{ ...base, last_due_date: null }], "2026-11-09")).toEqual([]);
+    expect(buildContractItems([{ ...base, billing_model: null, snapshot_frequency: "Monthly", last_due_date: "2026-11-19" }], "2026-11-09")).toEqual([]);
   });
 });

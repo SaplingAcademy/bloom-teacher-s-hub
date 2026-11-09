@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { formatLocalDateStr } from "@/lib/time-off-engine";
 import { calculateLastDueDate } from "@/lib/finance-engine";
 import { billingModelFromAgreement } from "@/lib/billing-domain";
+import { teacherSetContinuousEndDate } from "@/lib/package-renewal";
 import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
 import { inactivityReference } from "@/lib/lead-inactivity";
 
@@ -211,7 +212,7 @@ async function fetchPayments(teacherId: string, todayStr: string, reminderEndStr
 /** Same end-date semantics as checkPackageExpirationAlerts; null = open-ended/unknown. */
 export function contractEndDate(sp: any): string | null {
   if (sp.ended_at) return String(sp.ended_at).slice(0, 10);
-  if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type !== "fixed") return null;
+  if (billingModelFromAgreement(sp) === "monthly" && sp.billing_duration_type !== "fixed") return teacherSetContinuousEndDate(sp);
   if (sp.last_due_date) return sp.last_due_date;
   if (sp.first_due_date && sp.installment_count) return calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day);
   return null;

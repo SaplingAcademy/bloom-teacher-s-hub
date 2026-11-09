@@ -55,3 +55,18 @@ export function isRenewalEndDateValid(startDate: string, endDate: string | null 
   if (!endDate) return true;
   return Boolean(startDate) && endDate > startDate;
 }
+
+/**
+ * Continuous monthly plans have no end, so renewal alerts skip them — unless the
+ * teacher explicitly set an end date. Only canonical agreements (explicit
+ * billing_model) qualify; their continuous terms never derive last_due_date, so a
+ * value there is teacher-entered. Legacy rows keep their previous behavior.
+ */
+export function teacherSetContinuousEndDate(sp: {
+  billing_model?: string | null;
+  billing_duration_type?: string | null;
+  last_due_date?: string | null;
+}): string | null {
+  if (sp.billing_model !== "monthly" || sp.billing_duration_type === "fixed") return null;
+  return sp.last_due_date ? String(sp.last_due_date).slice(0, 10) : null;
+}

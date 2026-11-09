@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { invoiceReceiptFields, type ReceivedRevenueInvoice } from "@/lib/finance-cashflow";
+import { teacherSetContinuousEndDate } from "@/lib/package-renewal";
 import {
   BillingDurationType,
   BillingModel,
@@ -2026,8 +2027,10 @@ export async function checkPackageExpirationAlerts(
       let endDateStr = sp.ended_at;
       if (!endDateStr) {
         const billingModel = billingModelFromAgreement(sp);
-        if (billingModel === "monthly" && sp.billing_duration_type !== "fixed") return;
-        if (sp.last_due_date) {
+        if (billingModel === "monthly" && sp.billing_duration_type !== "fixed") {
+          endDateStr = teacherSetContinuousEndDate(sp);
+          if (!endDateStr) return;
+        } else if (sp.last_due_date) {
           endDateStr = sp.last_due_date;
         } else if (sp.first_due_date && sp.installment_count) {
           endDateStr = calculateLastDueDate(sp.first_due_date, sp.installment_count, sp.due_day);
