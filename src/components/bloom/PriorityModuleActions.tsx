@@ -26,6 +26,8 @@ export type PriorityModuleAction =
 
 export function moduleActionFor(item: DailyPriorityItem): PriorityModuleAction | null {
   if (item.category === "lead" && item.ref.leadId) return { kind: "lead", leadId: item.ref.leadId };
+  // A renewal that was not activated is reviewed in the student's Finance tab (navigation), not renewed again.
+  if (item.reason === "contract_renewal_not_activated") return null;
   if (item.category === "contract" && item.ref.studentId) return { kind: "contract", studentId: item.ref.studentId, studentName: item.title };
   if (item.category === "payment" && item.ref.invoiceId) return { kind: "payment", invoiceId: item.ref.invoiceId };
   return null;

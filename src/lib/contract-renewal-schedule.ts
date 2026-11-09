@@ -48,7 +48,7 @@ export interface RenewalTiming {
   mode: "immediate" | "scheduled";
   /** Scheduled renewal whose start is already due (activated right after saving). */
   activateNow: boolean;
-  error: "start_before_current_end" | "start_not_after_current_start" | null;
+  error: "start_before_current_end" | "start_not_after_current_start" | "start_in_past" | null;
 }
 
 export function planRenewalTiming(input: {
@@ -65,6 +65,11 @@ export function planRenewalTiming(input: {
   }
   if (input.currentStart && input.startDate <= String(input.currentStart).slice(0, 10)) {
     return { mode: "scheduled", activateNow: false, error: "start_not_after_current_start" };
+  }
+  // Continuous (open-ended) contract: the transition can never be retroactive, which would
+  // shorten past contract history and generate charges for elapsed periods.
+  if (!input.currentEnd && input.startDate < input.today) {
+    return { mode: "scheduled", activateNow: false, error: "start_in_past" };
   }
   return { mode: "scheduled", activateNow: input.startDate <= input.today, error: null };
 }

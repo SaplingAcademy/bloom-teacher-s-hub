@@ -75,6 +75,11 @@ interface PackageRenewalModalProps {
   onRenewalCompleted?: () => void;
 }
 
+function todayYmdLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function formatAgreementDate(value?: string | null): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
@@ -905,7 +910,10 @@ export function PackageRenewalModal({
           <div className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="renewal-transition-date" className="text-xs font-bold">{tr("packageRenewal.transitionDate")}</Label>
-              <Input id="renewal-transition-date" type="date" value={transitionDate} onChange={(e) => { setTransitionDate(e.target.value); setTransitionAck(false); }} />
+              <Input id="renewal-transition-date" type="date" min={todayYmdLocal()} value={transitionDate} onChange={(e) => { setTransitionDate(e.target.value); setTransitionAck(false); }} />
+              {transitionDate && transitionDate < todayYmdLocal() && (
+                <p role="alert" className="text-[11px] text-destructive">{tr("packageRenewal.errTransitionPast")}</p>
+              )}
             </div>
             {transitionDate && (
               <label className="flex items-start gap-2 text-xs font-semibold">
@@ -917,7 +925,7 @@ export function PackageRenewalModal({
           <AlertDialogFooter>
             <AlertDialogCancel>{tr("packageRenewal.lCancel")}</AlertDialogCancel>
             <AlertDialogAction
-              disabled={!transitionDate || !transitionAck}
+              disabled={!transitionDate || !transitionAck || transitionDate < todayYmdLocal()}
               onClick={() => {
                 setStartDate(transitionDate);
                 setScheduleConfirmed(true);

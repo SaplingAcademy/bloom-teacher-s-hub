@@ -25,6 +25,7 @@ export type DailyPriorityReason =
   | "contract_ended"
   | "contract_ending_10d"
   | "contract_ending_30d"
+  | "contract_renewal_not_activated"
   | "homework_not_posted"
   | "task_overdue"
   | "task_due_today"
@@ -236,7 +237,25 @@ export function buildContractItems(rows: any[], todayStr: string): DailyPriority
   // A contract whose renewal is already scheduled needs no renewal alert; scheduled rows never alert.
   const renewedAhead = agreementsWithScheduledRenewal(rows);
   return rows.flatMap((sp): DailyPriorityItem[] => {
-    if (sp.status === "scheduled" || renewedAhead.has(sp.id)) return [];
+    if (sp.status === "scheduled") {
+      // A scheduled renewal whose start already passed was not activated (invalid transition,
+      // failed activation or schedule off): warn the teacher; the student's Finance tab resolves it.
+      const start = sp.started_at ? String(sp.started_at).slice(0, 10) : null;
+      if (!start || start >= todayStr) return [];
+      if (sp.student?.status === "Paused" || sp.student?.status === "Inactive") return [];
+      return [{
+        id: `contract-not-activated:${sp.id}`,
+        category: "contract",
+        urgency: "critical",
+        reason: "contract_renewal_not_activated",
+        title: sp.student?.full_name || "",
+        params: { date: start },
+        date: start,
+        ref: { studentId: sp.student_id, studentPackageId: sp.id },
+        action: { route: "/students", params: { studentId: sp.student_id, tab: "Finance" } },
+      }];
+    }
+    if (renewedAhead.has(sp.id)) return [];
     if (sp.student?.status === "Paused" || sp.student?.status === "Inactive") return [];
     const endDate = contractEndDate(sp);
     if (!endDate) return [];

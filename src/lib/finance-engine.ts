@@ -2213,7 +2213,9 @@ export async function renewStudentPackage(
         code: "invalid_start",
         message: timing.error === "start_before_current_end"
           ? "O novo contrato deve começar depois do término do contrato atual."
-          : "O novo contrato deve começar depois do início do contrato atual.",
+          : timing.error === "start_in_past"
+            ? "Para contratos contínuos, a data de início do novo contrato não pode ser anterior a hoje."
+            : "O novo contrato deve começar depois do início do contrato atual.",
       };
     }
     if (timing.mode === "scheduled" && currentSp) {

@@ -8,9 +8,11 @@
 --
 -- 2. public.activate_due_scheduled_contracts()  — chamada pelo app e pelo agendador
 --    - Sem parâmetros: a data efetiva é SEMPRE a do servidor em America/Sao_Paulo.
---    - Usuário autenticado: processa apenas os contratos do próprio professor (auth.uid()).
---    - Sem usuário: somente service_role ou sessão direta do banco (pg_cron/SQL Editor
---      como postgres) processa todos os professores; qualquer outro chamador é recusado.
+--    - Usuário autenticado (claim E papel de banco 'authenticated'): processa apenas os
+--      contratos do próprio professor (auth.uid()).
+--    - Processamento global somente com a chave de serviço (claim E papel de banco
+--      'service_role') ou numa sessão direta do banco como postgres, sem JWT e sem SET ROLE
+--      (pg_cron/SQL Editor). Chamadas comuns pela API nunca processam outros professores.
 --
 -- 3. public.activate_due_scheduled_contracts_core(p_today, p_teacher_id) — interna
 --    - Executável apenas por service_role (e pelo dono); usuários comuns não controlam a data.
@@ -20,6 +22,7 @@
 --        * o anterior está 'active' (não ativa sobre contrato encerrado inesperadamente);
 --        * anterior e novo pertencem ao mesmo aluno e professor, e o aluno pertence ao professor;
 --        * o novo começa depois do início e do término do anterior (sem sobreposição);
+--        * contrato contínuo: o início não é anterior à data em que a renovação foi programada;
 --        * não há outro contrato ativo para o aluno (respeita idx_student_packages_active_student).
 --    - Transição atômica em sub-transação: conclui o anterior com o PRÓPRIO término
 --      (ended_at/last_due_date; contínuo = véspera do novo início), ativa o novo e atualiza
@@ -119,6 +122,14 @@ begin
         continue;
       end if;
 
+      -- Contrato contínuo (sem término): a transição nunca é retroativa. Um início anterior
+      -- à data em que a renovação foi programada encurtaria o histórico do contrato anterior.
+      if v_prev_end is null
+         and v_new.started_at < (v_new.created_at at time zone 'America/Sao_Paulo')::date then
+        raise warning 'contrato % não ativado: transição retroativa de contrato contínuo', v_new.id;
+        continue;
+      end if;
+
       -- Índice único de ativo: nenhum outro contrato ativo além do anterior.
       if exists (
         select 1 from public.student_packages
@@ -180,15 +191,28 @@ as $$
 declare
   v_today date := (now() at time zone 'America/Sao_Paulo')::date;
   v_uid uuid := auth.uid();
-  v_role text := auth.role();
+  v_claim_role text := auth.role();
+  -- Papel de banco ativo de quem chamou (SET ROLE do PostgREST), preservado dentro do
+  -- SECURITY DEFINER; 'none' numa sessão direta sem SET ROLE (ex.: pg_cron, SQL Editor).
+  v_db_role text := coalesce(nullif(current_setting('role', true), ''), 'none');
 begin
-  if v_uid is not null then
+  -- Professor autenticado: claim e papel de banco precisam coincidir; escopo = auth.uid().
+  if v_uid is not null and v_claim_role = 'authenticated' and v_db_role = 'authenticated' then
     return public.activate_due_scheduled_contracts_core(v_today, v_uid);
   end if;
-  -- Sem usuário: somente serviço ou sessão direta do banco (ex.: pg_cron como postgres).
-  if v_role = 'service_role' or (v_role is null and session_user in ('postgres', 'supabase_admin')) then
+
+  -- Processamento global (todos os professores), somente:
+  --   a) chave de serviço: claim E papel de banco 'service_role', sem usuário; ou
+  --   b) sessão direta do banco como postgres/supabase_admin, sem JWT e sem SET ROLE
+  --      (chamadas pela API usam session_user = 'authenticator' e nunca entram aqui).
+  if v_uid is null and v_claim_role = 'service_role' and v_db_role = 'service_role' then
     return public.activate_due_scheduled_contracts_core(v_today, null);
   end if;
+  if v_uid is null and v_claim_role is null and v_db_role = 'none'
+     and session_user in ('postgres', 'supabase_admin') then
+    return public.activate_due_scheduled_contracts_core(v_today, null);
+  end if;
+
   raise exception 'activate_due_scheduled_contracts: não autorizado' using errcode = '42501';
 end;
 $$;

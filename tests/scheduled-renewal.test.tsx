@@ -105,6 +105,8 @@ describe("scheduled renewal rules (pure)", () => {
     expect(planRenewalTiming({ hasCurrent: true, currentEnd: "2026-11-25", startDate: "2026-11-26", today: "2026-11-09" })).toEqual({ mode: "scheduled", activateNow: false, error: null });
     expect(planRenewalTiming({ hasCurrent: true, currentEnd: "2026-11-25", startDate: "2026-11-25", today: "2026-11-09" }).error).toBe("start_before_current_end");
     expect(planRenewalTiming({ hasCurrent: true, currentStart: "2026-06-01", startDate: "2026-11-09", today: "2026-11-09" })).toEqual({ mode: "scheduled", activateNow: true, error: null });
+    // Continuous contract: a retroactive transition date is never accepted.
+    expect(planRenewalTiming({ hasCurrent: true, currentStart: "2026-06-01", startDate: "2026-11-08", today: "2026-11-09" }).error).toBe("start_in_past");
   });
 
   it("flags only open charges of the current contract on/after the new start", () => {
@@ -174,6 +176,12 @@ describe("renewStudentPackage with a continuous contract", () => {
     expect(db.tables.student_packages.find((r) => r.id === "cur")).toMatchObject({ status: "active" });
   });
 
+  it("refuses a retroactive transition date without touching contracts or charges", async () => {
+    expect(await renew({ startDate: ymd(-3), firstDueDate: ymd(5) })).toMatchObject({ success: false, code: "invalid_start" });
+    expect(db.writes).toEqual([]);
+    expect(db.rpcCalls).toEqual([]);
+  });
+
   it("a transition date already due is activated right away through the same RPC", async () => {
     const res = await renew({ startDate: ymd(0), firstDueDate: ymd(5) });
     expect(res).toMatchObject({ success: true, scheduled: true, activated: true });
@@ -208,6 +216,30 @@ describe("renewal alerts recognize scheduled renewals", () => {
       { id: "other", student_id: "s2", status: "active", ended_at: ymd(20), student },
     ];
     expect(buildContractItems(rows, today).map((i) => i.ref.studentPackageId)).toEqual(["other"]);
+  });
+});
+
+describe("Dashboard notice for scheduled renewals that were not activated", () => {
+  const student = { full_name: "Ana", status: "Active" };
+  it("warns only when the start already passed and the renewal is still scheduled, linking to the student's Finance", () => {
+    const today = ymd(0);
+    const items = buildContractItems([
+      { id: "cur", student_id: "s1", status: "active", ended_at: ymd(-3), student },
+      { id: "late", student_id: "s1", status: "scheduled", renewed_from_id: "cur", started_at: ymd(-2), student },
+      { id: "due-today", student_id: "s2", status: "scheduled", renewed_from_id: "x", started_at: today, student },
+      { id: "future", student_id: "s3", status: "scheduled", renewed_from_id: "y", started_at: ymd(5), student },
+    ], today);
+    expect(items).toEqual([{
+      id: "contract-not-activated:late", category: "contract", urgency: "critical", reason: "contract_renewal_not_activated",
+      title: "Ana", params: { date: ymd(-2) }, date: ymd(-2), ref: { studentId: "s1", studentPackageId: "late" },
+      action: { route: "/students", params: { studentId: "s1", tab: "Finance" } },
+    }]);
+  });
+
+  it("the notice opens the Finance tab (navigation), never a second renewal", async () => {
+    const { moduleActionFor } = await import("../src/components/bloom/PriorityModuleActions");
+    expect(moduleActionFor({ category: "contract", reason: "contract_renewal_not_activated", title: "Ana", ref: { studentId: "s1" } } as any)).toBeNull();
+    expect(moduleActionFor({ category: "contract", reason: "contract_ending_30d", title: "Ana", ref: { studentId: "s1" } } as any)).toMatchObject({ kind: "contract" });
   });
 });
 
