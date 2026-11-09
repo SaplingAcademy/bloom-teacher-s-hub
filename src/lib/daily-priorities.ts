@@ -5,6 +5,7 @@ import { billingModelFromAgreement } from "@/lib/billing-domain";
 import { renewalAlertStage, teacherSetContinuousEndDate } from "@/lib/package-renewal";
 import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
 import { inactivityReference } from "@/lib/lead-inactivity";
+import { filterRelevantLeadTasks, LEAD_TASK_RELEVANCE_COLUMNS } from "@/lib/lead-task-relevance";
 
 /**
  * Unified, categorized Today priorities data layer (Phase 1).
@@ -281,14 +282,16 @@ async function fetchHomework(teacherId: string, todayStr: string): Promise<Daily
   }));
 }
 
-async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowStartIso: string) {
+async function fetchPendingTasks(teacherId: string, todayStr: string, tomorrowStartIso: string, now: Date) {
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, title, due_date, lead_id")
+    .select(`id, title, due_date, lead_id, ${LEAD_TASK_RELEVANCE_COLUMNS}`)
     .eq("teacher_id", teacherId)
     .eq("status", "pending");
   if (error) throw error;
-  return buildPendingTaskItems((data || []) as any[], todayStr, tomorrowStartIso);
+  // Automatic tasks superseded by the lead's progress are not priorities (records untouched).
+  const relevant = await filterRelevantLeadTasks(teacherId, (data || []) as any[], now);
+  return buildPendingTaskItems(relevant, todayStr, tomorrowStartIso);
 }
 
 /**
@@ -383,7 +386,7 @@ export async function fetchDailyPriorities(teacherId: string, now: Date = new Da
     fetchPayments(teacherId, todayStr, reminderEndStr),
     fetchContracts(teacherId, todayStr),
     fetchHomework(teacherId, todayStr),
-    fetchPendingTasks(teacherId, todayStr, tomorrowStartIso),
+    fetchPendingTasks(teacherId, todayStr, tomorrowStartIso, now),
     fetchLeads(teacherId, todayStr, now),
   ]);
 

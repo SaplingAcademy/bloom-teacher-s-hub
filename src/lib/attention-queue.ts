@@ -3,6 +3,7 @@ import { formatDateString } from "@/lib/calendar-sync";
 import { fetchAttendancePriorityCandidates } from "@/lib/attendance-priorities";
 import { fetchInactiveLeadCandidates } from "@/lib/lead-inactivity-data";
 import { t } from "@/lib/i18n";
+import { filterRelevantLeadTasks, LEAD_TASK_RELEVANCE_COLUMNS } from "@/lib/lead-task-relevance";
 
 export type AttentionCategory =
   | "overdue_followup"
@@ -90,14 +91,24 @@ export async function fetchAttentionQueue(teacherId: string, language: "pt" | "e
     }
 
     // 1. Overdue lead follow-ups & pending tasks
-    const { data: overdueTasks } = await supabase
+    const { data: overdueRows } = await supabase
       .from("tasks")
-      .select("id, title, due_date, description, lead_id, student_id")
+      .select(`id, title, due_date, description, lead_id, student_id, ${LEAD_TASK_RELEVANCE_COLUMNS}`)
       .eq("teacher_id", teacherId)
       .eq("status", "pending")
       .lt("due_date", nowIso)
       .order("due_date", { ascending: true })
       .limit(10);
+    // Same pertinence rule as Today: automatic tasks superseded by the lead's progress are
+    // not urgent. On a lookup failure, keep the previous behavior (show them).
+    let overdueTasks = overdueRows as any[] | null;
+    if (overdueTasks) {
+      try {
+        overdueTasks = await filterRelevantLeadTasks(teacherId, overdueTasks, now);
+      } catch (relevanceError) {
+        console.warn("[attention-queue] Lead task relevance check failed:", relevanceError);
+      }
+    }
 
     if (overdueTasks) {
       for (const t of overdueTasks) {
