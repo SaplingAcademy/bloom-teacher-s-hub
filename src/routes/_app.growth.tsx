@@ -578,14 +578,12 @@ function GrowthPage() {
   }).format(value));
 
   return (
-    // No scroll anchoring here: opening/closing the capacity times panel must not make the
-    // browser shift the main scroll (the content jumped next to the fixed sidebar).
-    <div className="space-y-6 [overflow-anchor:none]">
+    <div className="space-y-6">
       {/* HEADER SECTION */}
       <PageHeader title={t.title} description={t.description} actions={<FinancialPrivacyToggle />} />
 
-      {/* Meta Mensal & Capacidade Grid */}
-      <div className="grid gap-5 lg:grid-cols-2">
+      {/* Meta Mensal & Capacidade Grid — items-start: expanding the capacity times must not stretch the goal card */}
+      <div className="grid gap-5 lg:grid-cols-2 items-start">
         {/* MONTHLY GOAL CARD */}
         {loadingGrowth ? (
           <PanelSkeleton label={t.title} />
