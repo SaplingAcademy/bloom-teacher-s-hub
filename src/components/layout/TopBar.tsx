@@ -1,9 +1,8 @@
 import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
-import { Menu, Search, Command, Globe, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { Menu, Search, Command, Globe, ChevronDown, LogOut } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 
 type TopBarProps = {
@@ -141,35 +140,8 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
           </button>
 
           {profileDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-card p-1.5 shadow-[var(--shadow-lg)] z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-figtree">
-              {/* User details */}
-              <div className="px-3 py-2 border-b border-border/40 mb-1.5">
-                <p className="text-xs font-bold text-foreground truncate">
-                  {teacherName || t("common.defaultTeacherName")}
-                </p>
-                <p className="text-[10px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
-              </div>
-
-              {/* Actions */}
-              <Link
-                to="/profile"
-                onClick={() => setProfileDropdownOpen(false)}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
-              >
-                <User size={14} strokeWidth={2} className="text-muted-foreground shrink-0" aria-hidden="true" />
-                <span>{t("nav.profile")}</span>
-              </Link>
-              <Link
-                to="/settings"
-                onClick={() => setProfileDropdownOpen(false)}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
-              >
-                <Settings size={14} strokeWidth={2} className="text-muted-foreground shrink-0" aria-hidden="true" />
-                <span>{t("nav.settings")}</span>
-              </Link>
-
-              <div className="border-t border-border/40 my-1"></div>
-
+            <div className="absolute right-0 mt-2 w-40 rounded-xl border border-border bg-card p-1.5 shadow-[var(--shadow-lg)] z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-figtree">
+              {/* "Meu perfil" and "Configurações" live only in the sidebar account block. */}
               <button
                 onClick={async () => {
                   setProfileDropdownOpen(false);

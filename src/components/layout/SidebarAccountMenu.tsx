@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { accountNav } from "@/lib/navigation";
-import { resolveTeacherName, teacherInitials } from "@/lib/teacher-name";
+import { resolveAccountDisplayName, teacherInitials } from "@/lib/teacher-name";
 import { cn } from "@/lib/utils";
 
 const MENU_LABEL_KEYS: Record<string, string> = { profile: "sidebarAccount.myProfile", settings: "sidebarAccount.settings" };
 
 /**
  * Teacher block fixed in the sidebar footer (avatar, name, e-mail) that opens a small menu above
- * it with "Meu perfil" and "Configurações". Uses the authenticated teacher's real data: name via
- * resolveTeacherName (never derived from the e-mail; without a name the e-mail is the only line),
- * photo from public.profiles.avatar_url with the same initials fallback as the top bar, auth e-mail.
+ * it with "Meu perfil" and "Configurações". Uses the authenticated teacher's real data: the name
+ * saved in the profile (resolveAccountDisplayName; without a valid name the e-mail is the only line),
+ * photo from public.profiles.avatar_url, else the real name's initials, else a neutral user icon.
  */
 export function SidebarAccountMenu({
   isExpanded,
@@ -32,7 +32,7 @@ export function SidebarAccountMenu({
 }) {
   const { t, lang } = useLanguage();
   const { user, profile } = useAuth();
-  const teacherName = resolveTeacherName(profile, user);
+  const teacherName = resolveAccountDisplayName(profile, user);
   const email = (user?.email as string | undefined) || "";
   const primary = teacherName || email;
   const avatarUrl = (profile?.avatar_url as string | null | undefined) || null;
@@ -55,7 +55,7 @@ export function SidebarAccountMenu({
             {avatarUrl && !avatarFailed ? (
               <img key={avatarUrl} src={avatarUrl} alt="" className="h-full w-full object-cover" onError={() => setAvatarFailed(true)} />
             ) : (
-              teacherInitials(teacherName, lang)
+              teacherName ? teacherInitials(teacherName, lang) : <User className="h-4 w-4" aria-hidden="true" />
             )}
           </span>
           <span aria-hidden={!isExpanded} className={cn("flex items-center gap-2 overflow-hidden", textClasses)}>
