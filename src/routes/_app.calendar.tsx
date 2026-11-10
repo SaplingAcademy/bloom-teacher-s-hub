@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Plus,
   Settings,
-  Filter,
   X,
   Check,
   ExternalLink,
@@ -1205,7 +1204,8 @@ function CalendarPage() {
       })()}
 
       {/* CALENDAR CONTROLS BANNER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-sm)]">
+      <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-sm)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Navigation */}
         <div className="flex items-center gap-2">
           <button
@@ -1255,97 +1255,73 @@ function CalendarPage() {
         </div>
       </div>
 
-      {/* MAIN CONTAINER: SIDEBAR + GRID */}
-      <div className="grid gap-4 lg:grid-cols-[190px_1fr]">
-        {/* LEFT COLUMN: FILTERS & INFOS */}
-        <div className="space-y-4">
-          {/* Filters card */}
-          <div className="rounded-2xl border border-border bg-card px-3.5 py-4 shadow-sm space-y-3.5">
-            <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
-              <Filter className="h-4 w-4 text-primary" />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                {currentTranslation.filters}
-              </h4>
-            </div>
-
-            {/* Filter by Type */}
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-muted-foreground">
-                {currentTranslation.classType}
-              </Label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="h-9 rounded-lg text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">{currentTranslation.all}</SelectItem>
-                  <SelectItem value="Private">{currentTranslation.private}</SelectItem>
-                  <SelectItem value="Group">{currentTranslation.group}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filter by Format */}
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-muted-foreground">
-                {currentTranslation.classFormat}
-              </Label>
-              <Select value={filterFormat} onValueChange={setFilterFormat}>
-                <SelectTrigger className="h-9 rounded-lg text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">{currentTranslation.all}</SelectItem>
-                  <SelectItem value="Online">{currentTranslation.online}</SelectItem>
-                  <SelectItem value="In person">{currentTranslation.inPerson}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filter by Status */}
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-muted-foreground">
-                {currentTranslation.statusFilter}
-              </Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="h-9 rounded-lg text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">{currentTranslation.all}</SelectItem>
-                  <SelectItem value="Scheduled">{currentTranslation.statusScheduled}</SelectItem>
-                  <SelectItem value="Needs Preparation">{currentTranslation.statusPrep}</SelectItem>
-                  <SelectItem value="Lesson Ready">{currentTranslation.statusReady}</SelectItem>
-                  <SelectItem value="Completed">{currentTranslation.statusCompleted}</SelectItem>
-                  <SelectItem value="Homework Pending">
-                    {currentTranslation.statusPendingHw}
-                  </SelectItem>
-                  <SelectItem value="Homework Sent">{currentTranslation.statusSentHw}</SelectItem>
-                  <SelectItem value="Feedback Pending">
-                    {currentTranslation.statusPendingFb}
-                  </SelectItem>
-                  <SelectItem value="Closed">{currentTranslation.statusClosed}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Filters (moved from the former sidebar), below period and view controls */}
+        <div className="flex flex-col gap-3 border-t border-border/60 pt-3 sm:flex-row sm:flex-wrap sm:items-end">
+          {/* Filter by Type */}
+          <div className="w-full space-y-1.5 sm:w-48">
+            <Label className="text-[11px] font-semibold text-muted-foreground">
+              {currentTranslation.classType}
+            </Label>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="h-9 rounded-lg text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">{currentTranslation.all}</SelectItem>
+                <SelectItem value="Private">{currentTranslation.private}</SelectItem>
+                <SelectItem value="Group">{currentTranslation.group}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Quick working hours summary */}
-          <div className="rounded-2xl border border-border bg-card px-3.5 py-4 shadow-sm space-y-2.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-              {currentTranslation.workingHours}
-            </h4>
-            <ul className="space-y-2 text-xs font-medium text-muted-foreground">
-              {availability.map((av) => (
-                <li key={av.day} className="flex justify-between border-b border-border/40 pb-1.5">
-                  <span className="text-foreground/80">{av.day.substring(0, 3)}</span>
-                  <span>{av.enabled ? `${fmtTime(av.startTime)} – ${fmtTime(av.endTime)}` : "Closed"}</span>
-                </li>
-              ))}
-            </ul>
+          {/* Filter by Format */}
+          <div className="w-full space-y-1.5 sm:w-48">
+            <Label className="text-[11px] font-semibold text-muted-foreground">
+              {currentTranslation.classFormat}
+            </Label>
+            <Select value={filterFormat} onValueChange={setFilterFormat}>
+              <SelectTrigger className="h-9 rounded-lg text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">{currentTranslation.all}</SelectItem>
+                <SelectItem value="Online">{currentTranslation.online}</SelectItem>
+                <SelectItem value="In person">{currentTranslation.inPerson}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filter by Status */}
+          <div className="w-full space-y-1.5 sm:w-48">
+            <Label className="text-[11px] font-semibold text-muted-foreground">
+              {currentTranslation.statusFilter}
+            </Label>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-9 rounded-lg text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">{currentTranslation.all}</SelectItem>
+                <SelectItem value="Scheduled">{currentTranslation.statusScheduled}</SelectItem>
+                <SelectItem value="Needs Preparation">{currentTranslation.statusPrep}</SelectItem>
+                <SelectItem value="Lesson Ready">{currentTranslation.statusReady}</SelectItem>
+                <SelectItem value="Completed">{currentTranslation.statusCompleted}</SelectItem>
+                <SelectItem value="Homework Pending">
+                  {currentTranslation.statusPendingHw}
+                </SelectItem>
+                <SelectItem value="Homework Sent">{currentTranslation.statusSentHw}</SelectItem>
+                <SelectItem value="Feedback Pending">
+                  {currentTranslation.statusPendingFb}
+                </SelectItem>
+                <SelectItem value="Closed">{currentTranslation.statusClosed}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
+      </div>
 
+      {/* MAIN CONTAINER: GRID (full width) */}
+      <div className="grid gap-4">
         {/* RIGHT COLUMN: CALENDAR RENDER CONTAINER */}
         <div className="min-w-0 self-start rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
           <div ref={calendarScrollRef} onScroll={handleCalendarScroll} data-calendar-scroll-area="" className={viewMode === "month" ? "" : "max-h-[min(70dvh,900px)] overflow-auto"}>
