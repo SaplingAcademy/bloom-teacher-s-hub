@@ -377,7 +377,7 @@ export function PackageRenewalModal({
                   <div>
                     <span className="text-muted-foreground font-medium block">{tr("packageRenewal.lPackageEnd")}</span>
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                      {formatAgreementDate(summary?.nextDueDate)}
+                      {summary?.agreementEndDate ? formatAgreementDate(summary.agreementEndDate) : tr("packageRenewal.noEnd")}
                     </span>
                   </div>
                   <div>

@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { advanceLeadStageAfterInteraction, shouldAdvanceStageOnInteraction, type LeadInteraction } from "@/lib/lead-interactions";
+import { saveLeadProfile } from "@/lib/priority-resolution";
 import {
   UserPlus,
   Search,
@@ -96,6 +97,9 @@ import {
 } from "@/lib/automation-engine";
 
 export const Route = createFileRoute("/_app/leads")({
+  // ?leadId opens that lead's panel (deep links from Today priorities and Urgente).
+  validateSearch: (search: Record<string, unknown>): { leadId?: string } =>
+    typeof search.leadId === "string" && search.leadId ? { leadId: search.leadId } : {},
   head: () => ({
     meta: [
       { title: "Leads · Bloom" },
@@ -136,6 +140,15 @@ function LeadsPage() {
   const [duplicateAckKey, setDuplicateAckKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const { leadId: requestedLeadId } = Route.useSearch();
+  const openedRequestedLead = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requestedLeadId || openedRequestedLead.current === requestedLeadId) return;
+    const target = leads.find((lead) => lead.id === requestedLeadId);
+    if (!target) return;
+    openedRequestedLead.current = requestedLeadId;
+    setSelectedLead(target);
+  }, [leads, requestedLeadId]);
   const [interactionLead, setInteractionLead] = useState<Lead | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
@@ -348,18 +361,8 @@ function LeadsPage() {
   // Profile edit: owner-scoped update of only the changed columns, then read-back.
   const handleSaveLeadProfile = async (lead: Lead, patch: Record<string, unknown>): Promise<boolean> => {
     if (!teacherId) return false;
-    const { data, error } = await supabase
-      .from("leads")
-      .update(patch)
-      .eq("id", lead.id)
-      .eq("teacher_id", teacherId)
-      .select("*")
-      .maybeSingle();
-    if (error || !data) {
-      console.error("Failed to save lead profile:", error);
-      return false;
-    }
-    const saved = { ...(data as Lead), stage: normalizeLeadStage((data as Lead).stage) };
+    const saved = await saveLeadProfile(teacherId, lead.id, patch);
+    if (!saved) return false;
     setLeads((prev) => prev.map((l) => (l.id === saved.id ? saved : l)));
     setSelectedLead((prev) => (prev && prev.id === saved.id ? saved : prev));
     toast.success(t("leadPanel.saved"));

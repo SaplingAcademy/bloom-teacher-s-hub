@@ -1081,6 +1081,8 @@ export interface StudentFinancialSummary {
   billingModel?: "monthly" | "installment_total" | "one_time";
   billingDurationType?: BillingDurationType | null;
   contractMonths?: number | null;
+  /** Contract end (ended_at or last_due_date); null for open-ended plans. */
+  agreementEndDate?: string | null;
 }
 
 /**
@@ -1203,6 +1205,7 @@ export async function getStudentFinancialSummary(
       remainingBalanceFormatted: formatCentsToBRL(remainingBalanceCents),
       invoices: studentInvoices,
       billingModel,
+      agreementEndDate: agreementEnd,
       billingDurationType: spData.billing_duration_type === "fixed" ? "fixed" : spData.billing_duration_type ? "continuous" : null,
       contractMonths: spData.billing_duration_type === "fixed"
         ? spData.contract_duration_months ?? spData.contract_months ?? null
