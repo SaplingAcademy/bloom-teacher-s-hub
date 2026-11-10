@@ -17,7 +17,7 @@ import {
   DEFAULT_UNUSUAL_HOUR_PREFERENCES,
   fetchUnusualHourPreferences,
   saveUnusualHourPreference,
-  unusualHourGroup,
+  unusualHourGroupsFor,
   type UnusualHourGroup,
 } from "@/lib/unusual-hour-reminders";
 
@@ -34,9 +34,10 @@ export function useUnusualHourPreferences(teacherId: string | undefined) {
 
 /**
  * Wellbeing reminder before saving a new lesson or a time change at an unusual hour.
- * `confirm(startTime)` resolves true to proceed (no reminder needed, or "Confirmar horário")
- * and false for "Alterar horário" / closing. It never blocks scheduling rules; "Não mostrar
- * novamente" is saved only when the teacher confirms, and only for that group.
+ * `confirm(startTime)` / `confirmMany(startTimes)` resolve true to proceed (no reminder needed,
+ * or "Confirmar horário") and false for "Alterar horário" / closing. With several times, at
+ * most one reminder per applicable group is shown. It never blocks scheduling rules; "Não
+ * mostrar novamente" is saved only when the teacher confirms, and only for that group.
  */
 export function useUnusualHourReminder(teacherId: string | undefined) {
   const { t } = useLanguage();
@@ -47,15 +48,30 @@ export function useUnusualHourReminder(teacherId: string | undefined) {
   const answer = useRef<((confirmed: boolean) => void) | null>(null);
   useEffect(() => () => { answer.current?.(false); }, []);
 
-  const confirm = (startTime: string): Promise<boolean> => {
-    const target = unusualHourGroup(startTime);
-    const prefs = preferences ?? DEFAULT_UNUSUAL_HOUR_PREFERENCES;
-    if (!target || !prefs[target]) return Promise.resolve(true);
-    if (answer.current) return Promise.resolve(false); // one reminder per attempt
+  const busy = useRef(false);
+  const ask = (target: UnusualHourGroup): Promise<boolean> => {
     setDontShowAgain(false);
     setGroup(target);
     return new Promise<boolean>((resolve) => { answer.current = resolve; });
   };
+
+  const confirmMany = async (startTimes: readonly string[]): Promise<boolean> => {
+    const prefs = preferences ?? DEFAULT_UNUSUAL_HOUR_PREFERENCES;
+    const groups = unusualHourGroupsFor(startTimes).filter((g) => prefs[g]);
+    if (groups.length === 0) return true;
+    if (busy.current) return false; // one reminder flow per attempt
+    busy.current = true;
+    try {
+      for (const target of groups) {
+        if (!(await ask(target))) return false;
+      }
+      return true;
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  const confirm = (startTime: string): Promise<boolean> => confirmMany([startTime]);
 
   const respond = (confirmed: boolean) => {
     const resolve = answer.current;
@@ -104,5 +120,5 @@ export function useUnusualHourReminder(teacherId: string | undefined) {
     </AlertDialog>
   );
 
-  return { confirm, dialog };
+  return { confirm, confirmMany, dialog };
 }

@@ -4,6 +4,8 @@ import { t as i18nT } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnusualHourReminder } from "@/hooks/use-unusual-hour-reminder";
+import { changedRecurringStartTimes } from "@/lib/unusual-hour-reminders";
 import { ClassWeeklySchedules } from "@/components/bloom/ClassWeeklySchedules";
 import type { ClassScheduleInput } from "@/lib/class-schedules";
 import { supabase } from "@/lib/supabase";
@@ -184,6 +186,7 @@ export function ClassFormModal({
   onSuccess,
 }: ClassFormModalProps) {
   const { user } = useAuth();
+  const unusualHourReminder = useUnusualHourReminder(user?.id);
   const { lang, t } = useLanguage();
   const isPt = lang === "pt";
 
@@ -286,6 +289,11 @@ export function ClassFormModal({
       toast.error(t("classMgmt.duplicateSchedule"));
       return;
     }
+    // Recurring slots are only persisted for active classes; remind once per unusual-hour group.
+    if (status === "active") {
+      const original = (existingClass?.schedules || []).map((s) => ({ id: s.id, weekday: s.weekday, startTime: (s.start_time || "").substring(0, 5) }));
+      if (!(await unusualHourReminder.confirmMany(changedRecurringStartTimes(original, schedulesList)))) return;
+    }
     setIsSaving(true);
     try {
       await saveClassAndRelations(
@@ -314,6 +322,8 @@ export function ClassFormModal({
   };
 
   return (
+    <>
+    {unusualHourReminder.dialog}
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg rounded-3xl p-0 bg-[#FAF7F2] border border-stone-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-none font-figtree">
         <DialogHeader className="p-6 pb-4 border-b border-stone-200 bg-white shrink-0">
@@ -484,6 +494,7 @@ export function ClassFormModal({
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 

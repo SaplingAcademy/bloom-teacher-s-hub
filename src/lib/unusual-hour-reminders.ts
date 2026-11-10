@@ -83,3 +83,35 @@ export async function saveUnusualHourPreference(teacherId: string, group: Unusua
   }
   throw new Error("changed");
 }
+
+/** Distinct reminder groups for a set of start times, in a stable order (at most one each). */
+export function unusualHourGroupsFor(startTimes: readonly string[]): UnusualHourGroup[] {
+  const found = new Set(startTimes.map(unusualHourGroup).filter((g): g is UnusualHourGroup => g !== null));
+  return (["early_morning", "late_night"] as const).filter((g) => found.has(g));
+}
+
+/**
+ * Start times of recurring slots that are new or whose day/time changed (matched by id), so
+ * editing other fields of a student/class with an existing late slot does not remind again.
+ */
+export function changedRecurringStartTimes(
+  original: readonly { id?: string | null; weekday: string; startTime: string }[],
+  next: readonly { id?: string | null; weekday: string; startTime: string }[],
+): string[] {
+  const byId = new Map(original.filter((s) => s.id).map((s) => [s.id as string, s]));
+  return next
+    .filter((slot) => {
+      const before = slot.id ? byId.get(slot.id) : undefined;
+      return !before || before.weekday !== slot.weekday || before.startTime.slice(0, 5) !== slot.startTime.slice(0, 5);
+    })
+    .map((slot) => slot.startTime);
+}
+
+/**
+ * Onboarding writes its own notification preferences (payment_methods, contracts) on top of
+ * the stored ones, so keys saved elsewhere (e.g. wellbeing_reminders) are preserved.
+ */
+export function mergeOnboardingNotificationPreferences(existing: unknown, onboarding: Record<string, unknown>): Record<string, unknown> {
+  const base = existing && typeof existing === "object" && !Array.isArray(existing) ? (existing as Record<string, unknown>) : {};
+  return { ...base, ...onboarding };
+}
