@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { calculateReceivedCentsForMonth, invoiceReceiptFields, receivedMonthOf } from "@/lib/finance-cashflow";
+import { calculateReceivedCentsForMonth, invoiceReceiptFields, monthKeyOf as calendarMonthKey, receivedMonthOf } from "@/lib/finance-cashflow";
 
 /**
  * Real growth metrics for the authenticated teacher.
@@ -31,6 +31,11 @@ export const GROWTH_HISTORY_MONTHS = 6;
 
 export interface RealGrowthMetrics {
   history: GrowthMetricsHistory;
+  /**
+   * New students are dated by the real start of lessons (students.course_start_date), never by the
+   * Bloom registration date. Students without that date are not counted in any month; this is how many.
+   */
+  newStudentsWithoutStartDate: number;
   newStudentsThisMonth: GrowthMetricValue;
   retentionRate: GrowthMetricValue;
   renewalRate: GrowthMetricValue;
@@ -43,6 +48,7 @@ const EMPTY_METRIC: GrowthMetricValue = { value: null, change: null };
 
 export const EMPTY_GROWTH_METRICS: RealGrowthMetrics = {
   history: { months: [], newStudents: [], avgRevenuePerStudent: [], monthlyGrowthRate: [] },
+  newStudentsWithoutStartDate: 0,
   newStudentsThisMonth: EMPTY_METRIC,
   retentionRate: EMPTY_METRIC,
   renewalRate: EMPTY_METRIC,
@@ -56,12 +62,6 @@ function monthBounds(now: Date) {
   const nextStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   return { start, nextStart, prevStart };
-}
-
-function within(iso: string | null | undefined, from: Date, to: Date): boolean {
-  if (!iso) return false;
-  const d = new Date(iso);
-  return d >= from && d < to;
 }
 
 function pctChange(current: number, previous: number): number | null {
@@ -78,7 +78,7 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
   const [studentsRes, packagesRes, invoicesRes] = await Promise.all([
     supabase
       .from("students")
-      .select("id, status, created_at")
+      .select("id, status, created_at, course_start_date")
       .eq("teacher_id", teacherId),
     supabase
       .from("student_packages")
@@ -105,11 +105,18 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
     ...invoiceReceiptFields(inv),
   }));
 
-  // --- 1. New students this month (vs. previous month) ---
-  const newThisMonth = students.filter((s: any) => within(s.created_at, start, nextStart)).length;
-  const newPrevMonth = students.filter((s: any) => within(s.created_at, prevStart, start)).length;
+  // --- 1. New students this month (vs. previous month), by the real start of lessons ---
+  // course_start_date is a calendar date ("YYYY-MM-DD"): compared by local month key, never via UTC
+  // Date parsing. Students without it are left out (no fallback to the registration date).
+  const startMonthOf = (s: any): string | null => calendarMonthKey(s.course_start_date);
+  const datedStudents = students.filter((s: any) => startMonthOf(s) !== null);
+  const newStudentsWithoutStartDate = students.length - datedStudents.length;
+  const keyOfDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const newInMonth = (key: string) => datedStudents.filter((s: any) => startMonthOf(s) === key).length;
+  const newThisMonth = newInMonth(keyOfDate(start));
+  const newPrevMonth = newInMonth(keyOfDate(prevStart));
   const newStudentsThisMonth: GrowthMetricValue = {
-    value: students.length > 0 || newThisMonth > 0 ? newThisMonth : null,
+    value: datedStudents.length > 0 ? newThisMonth : null,
     change: pctChange(newThisMonth, newPrevMonth),
   };
 
@@ -188,10 +195,9 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
 
   // --- Monthly history: the same formulas evaluated for each of the last months ---
   const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  const firstStudentKey = students.reduce<string | null>((min, s: any) => {
-    if (!s.created_at) return min;
-    const key = monthKeyOf(new Date(s.created_at));
-    return min === null || key < min ? key : min;
+  const firstStudentKey = datedStudents.reduce<string | null>((min, s: any) => {
+    const key = startMonthOf(s);
+    return key !== null && (min === null || key < min) ? key : min;
   }, null);
   const firstRevenueKey = paidInvoices.reduce<string | null>((min, inv) => {
     const key = receivedMonthOf(inv);
@@ -200,15 +206,12 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
   const history: GrowthMetricsHistory = { months: [], newStudents: [], avgRevenuePerStudent: [], monthlyGrowthRate: [] };
   for (let offset = GROWTH_HISTORY_MONTHS - 1; offset >= 0; offset--) {
     const monthStart = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - offset - 1, 1);
     const key = monthKeyOf(monthStart);
     const prevKeyOfMonth = monthKeyOf(prevMonthStart);
     history.months.push(key);
-    // Before the first registered student there is no data (not "0 new students").
-    history.newStudents.push(firstStudentKey !== null && key >= firstStudentKey
-      ? students.filter((st: any) => within(st.created_at, monthStart, monthEnd)).length
-      : null);
+    // Before the first student's start there is no data (not "0 new students").
+    history.newStudents.push(firstStudentKey !== null && key >= firstStudentKey ? newInMonth(key) : null);
     const paying = payingStudentsOf(key);
     history.avgRevenuePerStudent.push(paying > 0 ? Math.round((revenueOf(key) / paying) * 100) / 100 : null);
     history.monthlyGrowthRate.push(firstRevenueKey !== null && key >= firstRevenueKey
@@ -218,6 +221,7 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
 
   return {
     history,
+    newStudentsWithoutStartDate,
     newStudentsThisMonth,
     retentionRate,
     renewalRate,
