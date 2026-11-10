@@ -54,6 +54,7 @@ import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggl
 import { PremiumBenefitsDialog, PremiumCardLock } from "@/components/bloom/PremiumGate";
 import { useFeatureAccess } from "@/hooks/use-plan";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
+import { GrowthMetricsChart } from "@/components/bloom/GrowthMetricsChart";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelSkeleton } from "@/components/bloom/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,7 +74,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { StatCard } from "@/components/bloom/StatCard";
 import { Badge } from "@/components/ui/badge";
 
 interface SafeNumberInputProps {
@@ -205,6 +205,11 @@ const translations = {
     metricAvgPackage: "Avg Revenue per Student",
     metricAvgRevenue: "Received per Student (month)",
     metricGrowthRate: "Monthly Growth Rate",
+    metricsCurrentValue: "Current value",
+    metricsNoHistory: "History for this indicator will be available soon.",
+    metricsInsufficient: "There is not enough data yet to chart this indicator.",
+    metricsUnitStudents: "students",
+    metricsUnitStudent: "student",
   },
   pt: {
     langToggle: "EN",
@@ -246,11 +251,16 @@ const translations = {
     metricAvgPackage: "Receita Média por Aluno",
     metricAvgRevenue: "Recebido por Aluno (mês)",
     metricGrowthRate: "Taxa de Crescimento Mensal",
+    metricsCurrentValue: "Valor atual",
+    metricsNoHistory: "O histórico deste indicador estará disponível em breve.",
+    metricsInsufficient: "Ainda não há dados suficientes para montar o gráfico deste indicador.",
+    metricsUnitStudents: "alunos",
+    metricsUnitStudent: "aluno",
   },
 };
 
 function GrowthPage() {
-  const { money } = useFinancialPrivacy();
+  const { money, financialValuesHidden } = useFinancialPrivacy();
   const formatBRL = (v: number) => money(rawFormatBRL(v));
   const { lang, t: tr, formatWeekday } = useLanguage();
   const { user } = useAuth();
@@ -581,15 +591,20 @@ function GrowthPage() {
   const NO_DATA = "—";
   const metricCount = (v: number | null) =>
     loadingMetrics || v === null ? NO_DATA : String(v);
+  // Percentages with the locale decimal separator (pt-BR "46,2%"); values are unchanged.
+  const formatPercent = (v: number) => `${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 })}%`;
+  const formatGrowthPercent = (v: number) => `${v > 0 ? "+" : ""}${formatPercent(v)}`;
   const metricPercent = (v: number | null) =>
-    loadingMetrics || v === null ? NO_DATA : `${v}%`;
+    loadingMetrics || v === null ? NO_DATA : formatPercent(v);
   const metricSignedPercent = (v: number | null) =>
-    loadingMetrics || v === null ? NO_DATA : `${v > 0 ? "+" : ""}${v}%`;
+    loadingMetrics || v === null ? NO_DATA : formatGrowthPercent(v);
   const metricMoney = (v: number | null) =>
     loadingMetrics || v === null ? NO_DATA : formatBRL(v);
+  const formatBRLCompact = (v: number) =>
+    new Intl.NumberFormat(lang === "pt" ? "pt-BR" : "en-US", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 }).format(v);
   const metricTrend = (change: number | null) =>
     !loadingMetrics && change !== null
-      ? { value: `${change > 0 ? "+" : ""}${change}%`, positive: change >= 0 }
+      ? { value: formatGrowthPercent(change), positive: change >= 0 }
       : undefined;
 
   const radius = 50;
@@ -985,49 +1000,74 @@ function GrowthPage() {
       {/* METRICS DASHBOARD SECTION — 100% real, teacher-scoped data */}
       <section className="space-y-4">
         <h3 className="font-display text-lg font-bold text-foreground">{t.metricsTitle}</h3>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <StatCard
-            label={t.metricNewStudents}
-            value={metricCount(growthMetrics.newStudentsThisMonth.value)}
-            icon={Users}
-            tone="primary"
-            trend={metricTrend(growthMetrics.newStudentsThisMonth.change)}
-          />
-          <StatCard
-            label={t.metricRetention}
-            value={metricPercent(growthMetrics.retentionRate.value)}
-            icon={Percent}
-            tone="lilac"
-            trend={metricTrend(growthMetrics.retentionRate.change)}
-          />
-          <StatCard
-            label={t.metricRenewal}
-            value={metricPercent(growthMetrics.renewalRate.value)}
-            icon={Target}
-            tone="accent"
-            trend={metricTrend(growthMetrics.renewalRate.change)}
-          />
-          <StatCard
-            label={t.metricAvgPackage}
-            value={metricMoney(avgRevenuePerPayingStudent)}
-            icon={Briefcase}
-            tone="warning"
-          />
-          <StatCard
-            label={t.metricAvgRevenue}
-            value={metricMoney(growthMetrics.avgRevenuePerStudent.value)}
-            icon={DollarSign}
-            tone="primary"
-            trend={metricTrend(growthMetrics.avgRevenuePerStudent.change)}
-          />
-          <StatCard
-            label={t.metricGrowthRate}
-            value={metricSignedPercent(growthMetrics.monthlyGrowthRate.value)}
-            icon={TrendingUp}
-            tone="accent"
-            trend={metricTrend(growthMetrics.monthlyGrowthRate.change)}
-          />
-        </div>
+        <GrowthMetricsChart
+          months={growthMetrics.history.months}
+          locale={lang === "pt" ? "pt-BR" : "en-US"}
+          loading={loadingMetrics}
+          texts={{ noHistory: t.metricsNoHistory, insufficient: t.metricsInsufficient, current: t.metricsCurrentValue }}
+          options={[
+            {
+              key: "newStudents",
+              label: t.metricNewStudents,
+              currentText: metricCount(growthMetrics.newStudentsThisMonth.value),
+              trend: metricTrend(growthMetrics.newStudentsThisMonth.change),
+              series: growthMetrics.history.newStudents,
+              formatValue: (v) => `${v} ${v === 1 ? t.metricsUnitStudent : t.metricsUnitStudents}`,
+              formatTick: (v) => String(v),
+              unit: t.metricsUnitStudents,
+              integer: true,
+            },
+            {
+              key: "retention",
+              label: t.metricRetention,
+              currentText: metricPercent(growthMetrics.retentionRate.value),
+              trend: metricTrend(growthMetrics.retentionRate.change),
+              series: null, // current snapshot only: no stored status history
+              formatValue: (v) => formatPercent(v),
+              formatTick: (v) => formatPercent(v),
+              unit: "%",
+            },
+            {
+              key: "renewal",
+              label: t.metricRenewal,
+              currentText: metricPercent(growthMetrics.renewalRate.value),
+              trend: metricTrend(growthMetrics.renewalRate.change),
+              series: null, // current snapshot only
+              formatValue: (v) => formatPercent(v),
+              formatTick: (v) => formatPercent(v),
+              unit: "%",
+            },
+            {
+              key: "avgPackage",
+              label: t.metricAvgPackage,
+              currentText: metricMoney(avgRevenuePerPayingStudent),
+              series: null, // current contracted revenue snapshot only
+              formatValue: (v) => formatBRL(v),
+              formatTick: (v) => (financialValuesHidden ? "" : formatBRLCompact(v)),
+              unit: "R$",
+            },
+            {
+              key: "avgRevenue",
+              label: t.metricAvgRevenue,
+              currentText: metricMoney(growthMetrics.avgRevenuePerStudent.value),
+              trend: metricTrend(growthMetrics.avgRevenuePerStudent.change),
+              series: growthMetrics.history.avgRevenuePerStudent,
+              formatValue: (v) => formatBRL(v),
+              formatTick: (v) => (financialValuesHidden ? "" : formatBRLCompact(v)),
+              unit: "R$",
+            },
+            {
+              key: "growthRate",
+              label: t.metricGrowthRate,
+              currentText: metricSignedPercent(growthMetrics.monthlyGrowthRate.value),
+              trend: metricTrend(growthMetrics.monthlyGrowthRate.change),
+              series: growthMetrics.history.monthlyGrowthRate,
+              formatValue: (v) => formatGrowthPercent(v),
+              formatTick: (v) => formatPercent(v),
+              unit: "%",
+            },
+          ]}
+        />
       </section>
 
       {/* HOURLY RATE SIMULATOR SECTION */}
