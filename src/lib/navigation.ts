@@ -111,18 +111,19 @@ export const navSections: NavSection[] = [
         badge: "Soon",
         disabled: true,
       },
-      {
-        id: "profile",
-        label: "Profile",
-        to: "/profile",
-        icon: UserCircle,
-        description: "Your teacher reputation",
-      },
     ],
   },
 ];
 
-export const bottomNav: NavItem[] = [
+/** Utility links in the sidebar footer (above the account block). */
+export const bottomNav: NavItem[] = [];
+
+/**
+ * Account entries: not sidebar rows anymore; opened from the teacher block in the sidebar footer
+ * (SidebarAccountMenu). Same routes as before.
+ */
+export const accountNav: NavItem[] = [
+  { id: "profile", label: "Profile", to: "/profile", icon: UserCircle, description: "Your teacher reputation" },
   { id: "settings", label: "Settings", to: "/settings", icon: Settings, description: "Workspace preferences" },
 ];
 
@@ -143,4 +144,4 @@ export const aiNav: NavItem = {
   description: "Your teaching assistant",
 };
 
-export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav];
+export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav, ...accountNav];

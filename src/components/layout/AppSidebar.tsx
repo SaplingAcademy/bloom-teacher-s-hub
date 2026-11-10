@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Pin, PinOff } from "lucide-react";
 import { navSections, bottomNav, adminNavItem } from "@/lib/navigation";
+import { SidebarAccountMenu } from "@/components/layout/SidebarAccountMenu";
 import { usePlan } from "@/hooks/use-plan";
 import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
 import { BloomMark } from "@/components/bloom/Logo";
@@ -39,9 +40,11 @@ export function AppSidebar({
   const [isHovered, setIsHovered] = useState(false);
   const [isFocusWithin, setIsFocusWithin] = useState(false);
   const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Account menu (footer block): keeps the sidebar expanded while its floating menu is open.
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
-  // Derived expansion state: Mobile drawer OR Pinned OR Mouse Hovered OR Keyboard Focus-Within
-  const isExpanded = isMobile || isPinned || isHovered || isFocusWithin;
+  // Derived expansion state: Mobile drawer OR Pinned OR Mouse Hovered OR Keyboard Focus-Within OR account menu open
+  const isExpanded = isMobile || isPinned || isHovered || isFocusWithin || accountMenuOpen;
 
   // Text stays mounted in a reserved track; expansion never changes row geometry.
   const textClasses = cn(
@@ -276,7 +279,7 @@ export function AppSidebar({
           ))}
         </nav>
 
-        {/* ── Bottom Section: Utility Links ───────────────────────── */}
+        {/* ── Bottom Section: Utility Links + teacher account block ─────────── */}
         <div className="shrink-0 border-t border-sidebar-border px-3 py-2 space-y-1">
           {/* Bottom Utility Nav (Administração só aparece para super_admin) */}
           {(isSuperAdmin ? [...bottomNav, adminNavItem] : bottomNav).map((item) => {
@@ -316,6 +319,17 @@ export function AppSidebar({
               </Tooltip>
             );
           })}
+
+          <SidebarAccountMenu
+            isExpanded={isExpanded}
+            textClasses={textClasses}
+            open={accountMenuOpen}
+            onOpenChange={setAccountMenuOpen}
+            onNavigate={() => {
+              setIsFocusWithin(false);
+              if (onNavigate) onNavigate();
+            }}
+          />
         </div>
       </aside>
     </TooltipProvider>
