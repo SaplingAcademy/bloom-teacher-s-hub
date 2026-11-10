@@ -20,6 +20,8 @@ export interface GrowthMetricOption {
   unit: string;
   /** Integer ticks only (counts). */
   integer?: boolean;
+  /** Optional discreet note about data the indicator leaves out. */
+  note?: string;
 }
 
 interface GrowthMetricsChartProps {
@@ -90,12 +92,16 @@ export function GrowthMetricsChart({ options, months, locale, loading, texts }: 
           {loading ? (
             <div className="h-full animate-pulse rounded-xl bg-secondary/40" role="status" aria-label={selected.label} />
           ) : emptyText ? (
-            <div className="flex h-full items-center justify-center px-6 text-center">
+            <div className="flex h-full flex-col items-center justify-center gap-1 px-6 text-center">
               <p className="max-w-sm text-xs text-muted-foreground">{emptyText}</p>
+              {selected.note && <p className="max-w-sm text-[11px] text-muted-foreground/80">{selected.note}</p>}
             </div>
           ) : (
             <>
-              <p className="mb-1 h-4 text-[11px] font-semibold leading-4 text-muted-foreground">{selected.unit}</p>
+              <div className="mb-1 flex h-4 items-center justify-between gap-3 text-[11px] leading-4 text-muted-foreground">
+                <span className="font-semibold">{selected.unit}</span>
+                {selected.note && <span className="truncate">{selected.note}</span>}
+              </div>
               <ChartContainer config={chartConfig} className="aspect-auto h-56 w-full">
                 <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />

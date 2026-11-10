@@ -210,6 +210,7 @@ const translations = {
     metricsInsufficient: "There is not enough data yet to chart this indicator.",
     metricsUnitStudents: "students",
     metricsUnitStudent: "student",
+    metricsNoStartDate: "{n} student(s) without a start date are not counted.",
   },
   pt: {
     langToggle: "EN",
@@ -256,6 +257,7 @@ const translations = {
     metricsInsufficient: "Ainda não há dados suficientes para montar o gráfico deste indicador.",
     metricsUnitStudents: "alunos",
     metricsUnitStudent: "aluno",
+    metricsNoStartDate: "{n} aluno(s) sem data de início não entram neste indicador.",
   },
 };
 
@@ -1016,6 +1018,9 @@ function GrowthPage() {
               formatTick: (v) => String(v),
               unit: t.metricsUnitStudents,
               integer: true,
+              note: growthMetrics.newStudentsWithoutStartDate > 0
+                ? t.metricsNoStartDate.replace("{n}", String(growthMetrics.newStudentsWithoutStartDate))
+                : undefined,
             },
             {
               key: "retention",
