@@ -1504,7 +1504,7 @@ export const uiTranslations = {
       "viewProfileOf": "Abrir perfil de {0}",
       "viewProfilePrivateNotes": "Ver perfil & notas privadas"
     },
-    "sidebarAccount": { "menu": "Menu da conta", "myProfile": "Meu perfil", "settings": "Configurações" },
+    "sidebarAccount": { "menu": "Menu da conta", "myProfile": "Meu perfil", "settings": "Configurações", "adminTag": "ADMIN" },
     "studentStart": {
       "label": "Início das aulas", "hint": "Pode ser anterior ao cadastro no Bloom.", "today": "Hoje",
       "required": "Informe o início das aulas.",
@@ -3118,7 +3118,7 @@ export const uiTranslations = {
       "viewProfileOf": "View profile of {0}",
       "viewProfilePrivateNotes": "View profile & private notes"
     },
-    "sidebarAccount": { "menu": "Account menu", "myProfile": "My profile", "settings": "Settings" },
+    "sidebarAccount": { "menu": "Account menu", "myProfile": "My profile", "settings": "Settings", "adminTag": "ADMIN" },
     "studentStart": {
       "label": "Lessons start", "hint": "It can be earlier than the Bloom registration.", "today": "Today",
       "required": "Enter when the lessons started.",
