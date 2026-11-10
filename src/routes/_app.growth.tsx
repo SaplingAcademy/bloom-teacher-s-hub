@@ -593,8 +593,11 @@ function GrowthPage() {
     loadingMetrics || v === null ? NO_DATA : String(v);
   const metricPercent = (v: number | null) =>
     loadingMetrics || v === null ? NO_DATA : `${v}%`;
+  // Growth rate: locale decimal separator (pt-BR "-46,2%"); the value itself is unchanged.
+  const formatGrowthPercent = (v: number) =>
+    `${v > 0 ? "+" : ""}${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 })}%`;
   const metricSignedPercent = (v: number | null) =>
-    loadingMetrics || v === null ? NO_DATA : `${v > 0 ? "+" : ""}${v}%`;
+    loadingMetrics || v === null ? NO_DATA : formatGrowthPercent(v);
   const metricMoney = (v: number | null) =>
     loadingMetrics || v === null ? NO_DATA : formatBRL(v);
   const formatBRLCompact = (v: number) =>
@@ -1059,8 +1062,8 @@ function GrowthPage() {
               currentText: metricSignedPercent(growthMetrics.monthlyGrowthRate.value),
               trend: metricTrend(growthMetrics.monthlyGrowthRate.change),
               series: growthMetrics.history.monthlyGrowthRate,
-              formatValue: (v) => `${v > 0 ? "+" : ""}${v}%`,
-              formatTick: (v) => `${v}%`,
+              formatValue: (v) => formatGrowthPercent(v),
+              formatTick: (v) => `${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 })}%`,
               unit: "%",
             },
           ]}
