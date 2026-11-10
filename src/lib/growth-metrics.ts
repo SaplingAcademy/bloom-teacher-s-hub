@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { calculateReceivedCentsForMonth, invoiceReceiptFields, monthKeyOf as calendarMonthKey, receivedMonthOf } from "@/lib/finance-cashflow";
+import { calculateReceivedCentsForMonth, invoiceReceiptFields, receivedMonthOf } from "@/lib/finance-cashflow";
+import { localMonthKey, studentStartMonth } from "@/lib/student-start-date";
 
 /**
  * Real growth metrics for the authenticated teacher.
@@ -106,15 +107,14 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
   }));
 
   // --- 1. New students this month (vs. previous month), by the real start of lessons ---
-  // course_start_date is a calendar date ("YYYY-MM-DD"): compared by local month key, never via UTC
-  // Date parsing. Students without it are left out (no fallback to the registration date).
-  const startMonthOf = (s: any): string | null => calendarMonthKey(s.course_start_date);
+  // Shared interpretation of course_start_date (local calendar month, no UTC shift). Students without
+  // it are left out (no fallback to the registration date). Counts every student, whatever the status.
+  const startMonthOf = (s: any): string | null => studentStartMonth(s.course_start_date);
   const datedStudents = students.filter((s: any) => startMonthOf(s) !== null);
   const newStudentsWithoutStartDate = students.length - datedStudents.length;
-  const keyOfDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   const newInMonth = (key: string) => datedStudents.filter((s: any) => startMonthOf(s) === key).length;
-  const newThisMonth = newInMonth(keyOfDate(start));
-  const newPrevMonth = newInMonth(keyOfDate(prevStart));
+  const newThisMonth = newInMonth(localMonthKey(start));
+  const newPrevMonth = newInMonth(localMonthKey(prevStart));
   const newStudentsThisMonth: GrowthMetricValue = {
     value: datedStudents.length > 0 ? newThisMonth : null,
     change: pctChange(newThisMonth, newPrevMonth),

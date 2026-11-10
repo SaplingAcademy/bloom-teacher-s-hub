@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
@@ -42,6 +42,9 @@ import { useLeadStageConfirmation } from "@/hooks/use-lead-stage-confirmation";
 import { LeadProfileFields } from "@/components/bloom/LeadProfileFields";
 import { CatalogOptionSelect } from "@/components/bloom/CatalogOptionSelect";
 import { conversionLanguageOptions, leadToConversionDraft } from "@/lib/lead-conversion";
+import { studentStartDate } from "@/lib/student-start-date";
+import { saveConvertedStudentStartDate } from "@/lib/converted-student-start-date";
+import { StudentStartDateField } from "@/components/bloom/StudentStartDateField";
 import { LeadFiltersBar, PendingContactBadge } from "@/components/bloom/LeadFiltersBar";
 import {
   applyLeadFilters,
@@ -186,7 +189,9 @@ function LeadsPage() {
     schedule_weekday: "Monday",
     schedule_start_time: "10:00",
     notes: "",
+    course_start_date: "",
   });
+  const navigate = useNavigate();
 
   const teacherId = user?.id;
   const stageConfirmation = useLeadStageConfirmation(teacherId, (fresh) => {
@@ -446,6 +451,11 @@ function LeadsPage() {
   const handleConvertLead = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLead || !teacherId) return;
+    const startDate = studentStartDate(convertForm.course_start_date);
+    if (!startDate) {
+      toast.error(t("studentStart.required"));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -474,7 +484,20 @@ function LeadsPage() {
       });
 
       if (res.success) {
-        toast.success(t("leads.toastConvertSuccess"));
+        // The conversion is done; store the start date on the created student (never re-run the conversion).
+        const startSaved = res.studentId ? await saveConvertedStudentStartDate(teacherId, res.studentId, startDate) : false;
+        if (startSaved) {
+          toast.success(t("leads.toastConvertSuccess"));
+        } else {
+          const studentId = res.studentId;
+          toast.warning(t("studentStart.convertedNotSaved"), {
+            duration: 15000,
+            action: {
+              label: t("studentStart.openStudent"),
+              onClick: () => navigate(studentId ? { to: "/students", search: { studentId } } : { to: "/students" }),
+            },
+          });
+        }
         setIsConvertOpen(false);
         setSelectedLead(null);
         loadData();
@@ -1021,6 +1044,13 @@ function LeadsPage() {
                 noneLabel={t("leadPanel.none")}
               />
             </div>
+
+            <StudentStartDateField
+              id="convert_start_date"
+              value={convertForm.course_start_date}
+              onChange={(value) => setConvertForm({ ...convertForm, course_start_date: value })}
+              labelClassName="text-sm font-medium"
+            />
 
             <div className="space-y-1.5">
               <Label>{t("leadsUi.studentPackage")}</Label>

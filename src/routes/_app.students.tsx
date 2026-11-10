@@ -10,6 +10,8 @@ import { canAddActiveStudent, countActiveStudents, isFreePlanLimitError } from "
 import { useAuth } from "@/hooks/use-auth";
 import { useUnusualHourReminder } from "@/hooks/use-unusual-hour-reminder";
 import { changedRecurringStartTimes } from "@/lib/unusual-hour-reminders";
+import { studentStartDate } from "@/lib/student-start-date";
+import { StudentStartDateField } from "@/components/bloom/StudentStartDateField";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import {
@@ -787,7 +789,8 @@ function StudentsPage() {
   const [formDuration, setFormDuration] = useState(60);
   const [formFrequency, setFormFrequency] = useState<"Weekly" | "Bi-weekly" | "Monthly">("Weekly");
   const initialStartDateRef = useRef<string | null>(null);
-  const [formStartDate, setFormStartDate] = useState(() => new Date().toISOString().split("T")[0]);
+  // "Início das aulas": no automatic value; the teacher states the real start (may predate the registration).
+  const [formStartDate, setFormStartDate] = useState("");
   const [formEndDate, setFormEndDate] = useState("");
   const [formTimezone, setFormTimezone] = useState("America/Sao_Paulo");
   const [formDeliveryMode, setFormDeliveryMode] = useState<"Online" | "In person">("Online");
@@ -1606,7 +1609,7 @@ function StudentsPage() {
     setFormStartTime("09:00");
     setFormDuration(60);
     setFormFrequency("Weekly");
-    setFormStartDate(new Date().toISOString().split("T")[0]);
+    setFormStartDate("");
     setFormEndDate("");
     setFormTimezone("America/Sao_Paulo");
     setFormDeliveryMode("Online");
@@ -1787,6 +1790,11 @@ function StudentsPage() {
 
     if (!formWhatsApp.trim()) {
       toast.error(i18nT("classes.toastPhoneRequired", lang));
+      return;
+    }
+
+    if (!studentStartDate(formStartDate)) {
+      toast.error(tr("studentStart.required"));
       return;
     }
 
@@ -3528,6 +3536,18 @@ function StudentsPage() {
                   </div>
                 )}
 
+                {/* Linked-group students skip the schedule block below; they still state the real start. */}
+                {!(!formLinkedGroupId || formType === "Private") && (
+                  <StudentStartDateField
+                    id="std-startdate"
+                    value={formStartDate}
+                    onChange={setFormStartDate}
+                    labelClassName="text-xs font-semibold text-sidebar-foreground"
+                    inputClassName="h-11 rounded-xl border-border bg-white text-sm"
+                    todayClassName="text-sidebar-foreground"
+                  />
+                )}
+
                 {(!formLinkedGroupId || formType === "Private") && (
                   <div className="space-y-4">
 
@@ -3587,19 +3607,14 @@ function StudentsPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label htmlFor="std-startdate" className="text-xs font-semibold text-sidebar-foreground flex items-center gap-1 select-none">
-                          {tr("auditUi.startDate")} <span className="text-[#ED7034] font-bold">*</span>
-                        </Label>
-                        <Input
-                          id="std-startdate"
-                          type="date"
-                          value={formStartDate}
-                          onChange={(e) => setFormStartDate(e.target.value)}
-                          required
-                          className="h-11 rounded-xl border-border bg-white text-sm"
-                        />
-                      </div>
+                      <StudentStartDateField
+                        id="std-startdate"
+                        value={formStartDate}
+                        onChange={setFormStartDate}
+                        labelClassName="text-xs font-semibold text-sidebar-foreground"
+                        inputClassName="h-11 rounded-xl border-border bg-white text-sm"
+                        todayClassName="text-sidebar-foreground"
+                      />
 
                       <div className="space-y-1">
                         <Label htmlFor="std-enddate" className="text-xs font-semibold text-sidebar-foreground select-none">
