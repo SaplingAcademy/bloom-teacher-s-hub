@@ -1335,7 +1335,7 @@ function CalendarPage() {
       <div className="grid gap-4">
         {/* RIGHT COLUMN: CALENDAR RENDER CONTAINER */}
         <div className="min-w-0 self-start rounded-2xl border border-border bg-card shadow-[var(--shadow-md)] overflow-hidden">
-          <div ref={calendarScrollRef} onScroll={handleCalendarScroll} data-calendar-scroll-area="" className={viewMode === "month" ? "" : "max-h-[min(70dvh,900px)] overflow-auto"}>
+          <div ref={calendarScrollRef} onScroll={handleCalendarScroll} data-calendar-scroll-area="" className={viewMode === "month" ? "" : "max-h-[min(82dvh,1060px)] overflow-auto"}>
           {/* WEEK VIEW (DEFAULT) */}
           {viewMode === "week" && (
             <div className="min-w-[700px]">
