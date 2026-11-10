@@ -12,7 +12,25 @@ export interface GrowthMetricValue {
   change: number | null;
 }
 
+/**
+ * Monthly history (oldest → current month) for the metrics whose values can be rebuilt
+ * from dated records with the SAME definition as the current value. `null` = no data for
+ * that month (before the first record, or the formula has no value) — never zero-filled.
+ * Retention, renewal and contracted revenue per student are current snapshots only: their
+ * past values cannot be rebuilt from the stored data, so they have no history here.
+ */
+export interface GrowthMetricsHistory {
+  /** "YYYY-MM" keys. */
+  months: string[];
+  newStudents: (number | null)[];
+  avgRevenuePerStudent: (number | null)[];
+  monthlyGrowthRate: (number | null)[];
+}
+
+export const GROWTH_HISTORY_MONTHS = 6;
+
 export interface RealGrowthMetrics {
+  history: GrowthMetricsHistory;
   newStudentsThisMonth: GrowthMetricValue;
   retentionRate: GrowthMetricValue;
   renewalRate: GrowthMetricValue;
@@ -24,6 +42,7 @@ export interface RealGrowthMetrics {
 const EMPTY_METRIC: GrowthMetricValue = { value: null, change: null };
 
 export const EMPTY_GROWTH_METRICS: RealGrowthMetrics = {
+  history: { months: [], newStudents: [], avgRevenuePerStudent: [], monthlyGrowthRate: [] },
   newStudentsThisMonth: EMPTY_METRIC,
   retentionRate: EMPTY_METRIC,
   renewalRate: EMPTY_METRIC,
@@ -167,7 +186,38 @@ export async function fetchGrowthMetrics(teacherId: string): Promise<RealGrowthM
     change: null,
   };
 
+  // --- Monthly history: the same formulas evaluated for each of the last months ---
+  const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const firstStudentKey = students.reduce<string | null>((min, s: any) => {
+    if (!s.created_at) return min;
+    const key = monthKeyOf(new Date(s.created_at));
+    return min === null || key < min ? key : min;
+  }, null);
+  const firstRevenueKey = paidInvoices.reduce<string | null>((min, inv) => {
+    const key = receivedMonthOf(inv);
+    return key && (min === null || key < min) ? key : min;
+  }, null);
+  const history: GrowthMetricsHistory = { months: [], newStudents: [], avgRevenuePerStudent: [], monthlyGrowthRate: [] };
+  for (let offset = GROWTH_HISTORY_MONTHS - 1; offset >= 0; offset--) {
+    const monthStart = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - offset - 1, 1);
+    const key = monthKeyOf(monthStart);
+    const prevKeyOfMonth = monthKeyOf(prevMonthStart);
+    history.months.push(key);
+    // Before the first registered student there is no data (not "0 new students").
+    history.newStudents.push(firstStudentKey !== null && key >= firstStudentKey
+      ? students.filter((st: any) => within(st.created_at, monthStart, monthEnd)).length
+      : null);
+    const paying = payingStudentsOf(key);
+    history.avgRevenuePerStudent.push(paying > 0 ? Math.round((revenueOf(key) / paying) * 100) / 100 : null);
+    history.monthlyGrowthRate.push(firstRevenueKey !== null && key >= firstRevenueKey
+      ? pctChange(revenueOf(key), revenueOf(prevKeyOfMonth))
+      : null);
+  }
+
   return {
+    history,
     newStudentsThisMonth,
     retentionRate,
     renewalRate,
