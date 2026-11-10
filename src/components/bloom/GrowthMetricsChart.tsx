@@ -50,7 +50,7 @@ export function GrowthMetricsChart({ options, months, locale, loading, texts }: 
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-      <div role="tablist" aria-label={texts.current} className="-mx-1 flex gap-1 overflow-x-auto pb-1">
+      <div role="tablist" aria-label={texts.current} className="-mx-6 flex overflow-x-auto border-b border-border/70 px-6 [scrollbar-width:thin]">
         {options.map((option) => {
           const active = option.key === selected.key;
           return (
@@ -61,8 +61,8 @@ export function GrowthMetricsChart({ options, months, locale, loading, texts }: 
               aria-selected={active}
               aria-controls="growth-metrics-panel"
               onClick={() => setSelectedKey(option.key)}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                active ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 pb-2.5 pt-1 text-xs font-semibold transition-colors outline-none cursor-pointer focus-visible:text-foreground ${
+                active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               {option.label}
@@ -72,24 +72,30 @@ export function GrowthMetricsChart({ options, months, locale, loading, texts }: 
       </div>
 
       <div id="growth-metrics-panel" role="tabpanel" aria-label={selected.label} className="mt-5">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-display text-3xl font-extrabold text-foreground tabular-nums">{selected.currentText}</span>
-          {selected.trend && (
-            <span className={`text-xs font-bold ${selected.trend.positive ? "text-success" : "text-destructive"}`}>{selected.trend.value}</span>
-          )}
+        <div className="flex items-start justify-between gap-4">
+          <h4 className="min-w-0 pt-1 text-sm font-semibold text-foreground">{selected.label}</h4>
+          <div className="shrink-0 text-right">
+            <div className="flex items-baseline justify-end gap-2">
+              {selected.trend && (
+                <span className={`text-xs font-bold ${selected.trend.positive ? "text-success" : "text-destructive"}`}>{selected.trend.value}</span>
+              )}
+              <span className="font-display text-3xl font-extrabold leading-none text-foreground tabular-nums">{selected.currentText}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">{texts.current}</p>
+          </div>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{texts.current}</p>
 
-        <div className="mt-4">
+        {/* Fixed-height body (unit line + chart) for every state, so switching indicators never jumps. */}
+        <div className="mt-4 h-[244px]">
           {loading ? (
-            <div className="h-56 animate-pulse rounded-xl bg-secondary/40" role="status" aria-label={selected.label} />
+            <div className="h-full animate-pulse rounded-xl bg-secondary/40" role="status" aria-label={selected.label} />
           ) : emptyText ? (
-            <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-border px-6 text-center">
-              <p className="max-w-sm text-sm text-muted-foreground">{emptyText}</p>
+            <div className="flex h-full items-center justify-center px-6 text-center">
+              <p className="max-w-sm text-xs text-muted-foreground">{emptyText}</p>
             </div>
           ) : (
             <>
-              <p className="mb-1 text-[11px] font-semibold text-muted-foreground">{selected.unit}</p>
+              <p className="mb-1 h-4 text-[11px] font-semibold leading-4 text-muted-foreground">{selected.unit}</p>
               <ChartContainer config={chartConfig} className="aspect-auto h-56 w-full">
                 <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />

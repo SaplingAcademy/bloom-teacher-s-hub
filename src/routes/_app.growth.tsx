@@ -206,7 +206,7 @@ const translations = {
     metricAvgRevenue: "Received per Student (month)",
     metricGrowthRate: "Monthly Growth Rate",
     metricsCurrentValue: "Current value",
-    metricsNoHistory: "Monthly history is not available for this indicator yet. Only the current value is shown.",
+    metricsNoHistory: "History for this indicator will be available soon.",
     metricsInsufficient: "There is not enough data yet to chart this indicator.",
     metricsUnitStudents: "students",
     metricsUnitStudent: "student",
@@ -252,7 +252,7 @@ const translations = {
     metricAvgRevenue: "Recebido por Aluno (mês)",
     metricGrowthRate: "Taxa de Crescimento Mensal",
     metricsCurrentValue: "Valor atual",
-    metricsNoHistory: "O histórico mensal deste indicador ainda não está disponível. Exibimos apenas o valor atual.",
+    metricsNoHistory: "O histórico deste indicador estará disponível em breve.",
     metricsInsufficient: "Ainda não há dados suficientes para montar o gráfico deste indicador.",
     metricsUnitStudents: "alunos",
     metricsUnitStudent: "aluno",
@@ -591,11 +591,11 @@ function GrowthPage() {
   const NO_DATA = "—";
   const metricCount = (v: number | null) =>
     loadingMetrics || v === null ? NO_DATA : String(v);
+  // Percentages with the locale decimal separator (pt-BR "46,2%"); values are unchanged.
+  const formatPercent = (v: number) => `${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 })}%`;
+  const formatGrowthPercent = (v: number) => `${v > 0 ? "+" : ""}${formatPercent(v)}`;
   const metricPercent = (v: number | null) =>
-    loadingMetrics || v === null ? NO_DATA : `${v}%`;
-  // Growth rate: locale decimal separator (pt-BR "-46,2%"); the value itself is unchanged.
-  const formatGrowthPercent = (v: number) =>
-    `${v > 0 ? "+" : ""}${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 })}%`;
+    loadingMetrics || v === null ? NO_DATA : formatPercent(v);
   const metricSignedPercent = (v: number | null) =>
     loadingMetrics || v === null ? NO_DATA : formatGrowthPercent(v);
   const metricMoney = (v: number | null) =>
@@ -604,7 +604,7 @@ function GrowthPage() {
     new Intl.NumberFormat(lang === "pt" ? "pt-BR" : "en-US", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 }).format(v);
   const metricTrend = (change: number | null) =>
     !loadingMetrics && change !== null
-      ? { value: `${change > 0 ? "+" : ""}${change}%`, positive: change >= 0 }
+      ? { value: formatGrowthPercent(change), positive: change >= 0 }
       : undefined;
 
   const radius = 50;
@@ -1023,8 +1023,8 @@ function GrowthPage() {
               currentText: metricPercent(growthMetrics.retentionRate.value),
               trend: metricTrend(growthMetrics.retentionRate.change),
               series: null, // current snapshot only: no stored status history
-              formatValue: (v) => `${v}%`,
-              formatTick: (v) => `${v}%`,
+              formatValue: (v) => formatPercent(v),
+              formatTick: (v) => formatPercent(v),
               unit: "%",
             },
             {
@@ -1033,8 +1033,8 @@ function GrowthPage() {
               currentText: metricPercent(growthMetrics.renewalRate.value),
               trend: metricTrend(growthMetrics.renewalRate.change),
               series: null, // current snapshot only
-              formatValue: (v) => `${v}%`,
-              formatTick: (v) => `${v}%`,
+              formatValue: (v) => formatPercent(v),
+              formatTick: (v) => formatPercent(v),
               unit: "%",
             },
             {
@@ -1063,7 +1063,7 @@ function GrowthPage() {
               trend: metricTrend(growthMetrics.monthlyGrowthRate.change),
               series: growthMetrics.history.monthlyGrowthRate,
               formatValue: (v) => formatGrowthPercent(v),
-              formatTick: (v) => `${v.toLocaleString(lang === "pt" ? "pt-BR" : "en-US", { maximumFractionDigits: 1 })}%`,
+              formatTick: (v) => formatPercent(v),
               unit: "%",
             },
           ]}
