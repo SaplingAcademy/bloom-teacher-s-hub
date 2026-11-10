@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { allNavItems, navSections } from "../src/lib/navigation";
+import { accountNav, allNavItems, bottomNav, navSections } from "../src/lib/navigation";
 
 const workspaceItems = navSections.find((s) => s.id === "workspace")!.items;
 const workspaceIds = workspaceItems.map((i) => i.id);
@@ -55,5 +55,13 @@ describe("sidebar navigation after the Aulas tab was removed", () => {
 
   it("keeps the old Aulas page reachable for internal links", () => {
     expect(existsSync(resolve("src/routes", "_app.lessons.tsx"))).toBe(true);
+  });
+
+  it("moves Profile and Settings from the sidebar rows to the account block, keeping their routes", () => {
+    const sidebarRows = [...navSections.flatMap((s) => s.items), ...bottomNav].map((i) => i.to);
+    expect(sidebarRows).not.toContain("/profile");
+    expect(sidebarRows).not.toContain("/settings");
+    expect(accountNav.map((i) => [i.id, i.to])).toEqual([["profile", "/profile"], ["settings", "/settings"]]);
+    expect(allNavItems.map((i) => i.to)).toEqual(expect.arrayContaining(["/profile", "/settings"]));
   });
 });

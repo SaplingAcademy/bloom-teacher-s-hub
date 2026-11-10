@@ -67,6 +67,27 @@ export function resolveTeacherName(profile: any, user: any): string | null {
   );
 }
 
+/**
+ * Name the teacher saved in public.profiles, kept even when it resembles the e-mail address
+ * (e.g. "Mariana Albuquerque" for mariana.albuquerque@…): a saved name is the teacher's choice.
+ * Only empty, placeholder or e-mail-like ("@") values are rejected.
+ */
+export function profileDisplayName(profile: any): string | null {
+  for (const candidate of [profile?.full_name, profile?.name, profile?.display_name]) {
+    const name = normalize(candidate);
+    if (name && !PLACEHOLDER_NAMES.has(name.toLowerCase()) && !name.includes("@")) return name;
+  }
+  return null;
+}
+
+/**
+ * Sidebar account block: the saved profile name first; otherwise the existing resolution
+ * (Auth metadata, still filtered against e-mail-derived values). null → neutral fallback.
+ */
+export function resolveAccountDisplayName(profile: any, user: any): string | null {
+  return profileDisplayName(profile) || resolveTeacherName(profile, user);
+}
+
 export function resolveTeacherFirstName(profile: any, user: any): string | null {
   const full = resolveTeacherName(profile, user);
   return full ? full.split(/\s+/)[0] || null : null;
