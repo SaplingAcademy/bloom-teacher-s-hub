@@ -302,10 +302,8 @@ function GrowthPage() {
   const [editGoalInputValue, setEditGoalInputValue] = useState("");
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
-  const [selectedCapacityDay, setSelectedCapacityDay] = useState<string | null>(null);
-  const showAvailableTimes = (day: string) => {
-    setSelectedCapacityDay((current) => (current === day ? null : day));
-  };
+  // Capacity card: day whose available times are shown (mouse hover or keyboard focus); display only.
+  const [hoveredCapacityDay, setHoveredCapacityDay] = useState<string | null>(null);
 
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
   // Simulator Input States (Data-driven defaults)
@@ -541,7 +539,6 @@ function GrowthPage() {
     : null;
 
   const capacityDays = capacityData.days.filter((day) => day.enabled);
-  const currentCapacityDay = capacityDays.find((day) => day.day === selectedCapacityDay);
 
   // Real Growth Metrics calculations
   const metrics = computeGrowthMetrics(monthlyGoal || 0, mrrData);
@@ -788,12 +785,97 @@ function GrowthPage() {
           </div>
         ) : (
           /* REAL CAPACITY CARD */
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-accent" />
-                <h3 className="font-display text-lg font-bold text-foreground">{t.capacityTitle}</h3>
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
+            <h3 className="font-display text-lg font-bold text-foreground">{t.capacityTitle}</h3>
+
+            {/* Weekly hours + occupancy ring (existing values) */}
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <span className="font-display text-3xl font-extrabold text-foreground">
+                  {fmtH(realTeachWeeklyH)}h / {fmtH(realAvailWeeklyH)}h
+                </span>
+                <div className="mt-1 text-xs font-bold text-accent">
+                  {realTeachWeeklyH > 0
+                    ? `${fmtH(realFreeWeeklyH)}h ${t.capacityFreeHours}`
+                    : t.capacityNoSchedule}
+                </div>
               </div>
+              <div
+                className="relative h-16 w-16 shrink-0"
+                role="img"
+                aria-label={`${realOccupancyPct ?? 0}% ${t.capacityOccupied}`}
+              >
+                <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
+                  <circle cx="32" cy="32" r="26" className="fill-none stroke-secondary" strokeWidth="6" />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="26"
+                    pathLength={100}
+                    className="fill-none stroke-accent transition-[stroke-dasharray] duration-500 ease-out"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${Math.min(100, realOccupancyPct ?? 0)} 100`}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground tabular-nums">
+                  {realOccupancyPct ?? 0}%
+                </span>
+              </div>
+            </div>
+
+            {/* Days (one per row) + reserved area on the right for the hovered/focused day's times */}
+            <div className="mt-5 grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-6">
+              <ul className="divide-y divide-border/40">
+                {capacityDays.map((day) => (
+                  <li
+                    key={day.day}
+                    tabIndex={0}
+                    onMouseEnter={() => setHoveredCapacityDay(day.day)}
+                    onMouseLeave={() => setHoveredCapacityDay((current) => (current === day.day ? null : current))}
+                    onFocus={() => setHoveredCapacityDay(day.day)}
+                    onBlur={() => setHoveredCapacityDay((current) => (current === day.day ? null : current))}
+                    aria-describedby={`capacity-times-${day.day}`}
+                    className="flex h-11 cursor-default flex-col justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <span className="text-sm font-semibold leading-tight text-foreground">{formatWeekday(day.day)}</span>
+                    <span className="text-[11px] leading-tight text-muted-foreground">
+                      {day.remainingSlots === 0 ? t.full : `${day.remainingSlots} ${t.available}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {/* Absolute lists: showing them never changes the card height. Upper rows grow downward, lower rows upward. */}
+              <div className="relative min-h-40 overflow-hidden">
+                {capacityDays.map((day, index) => {
+                  // Rows are h-11 (2.75rem, divider included): align to the row's top, or to its bottom for lower rows.
+                  const lowerHalf = index >= capacityDays.length / 2;
+                  const rowEdge = `${(lowerHalf ? index + 1 : index) * 2.75}rem`;
+                  const visible = hoveredCapacityDay === day.day;
+                  return (
+                    <div
+                      key={day.day}
+                      id={`capacity-times-${day.day}`}
+                      aria-hidden={!visible}
+                      style={lowerHalf ? { bottom: `calc(100% - ${rowEdge})` } : { top: rowEdge }}
+                      className={`pointer-events-none absolute inset-x-0 flex max-h-full min-h-11 items-center transition-opacity duration-200 ease-out ${visible ? "opacity-100" : "opacity-0"}`}
+                    >
+                      {day.availableSlots.length > 0 ? (
+                        <ul className="w-full list-disc columns-[6.5rem] gap-x-4 pl-4 text-xs leading-5 text-foreground/60 tabular-nums marker:text-foreground/30">
+                          {day.availableSlots.map((slot) => (
+                            <li key={slot.startTime} className="break-inside-avoid">{slot.startTime} – {slot.endTime}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-foreground/60">{tr("growthAvailability.empty")}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setIsAvailabilityModalOpen(true)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 cursor-pointer"
@@ -802,79 +884,6 @@ function GrowthPage() {
                 <ArrowRight className="h-3 w-3" />
               </button>
             </div>
-
-            <div className="mt-4 flex items-baseline gap-2">
-              <span className="font-display text-3xl font-extrabold text-foreground">
-                {fmtH(realTeachWeeklyH)}h / {fmtH(realAvailWeeklyH)}h
-              </span>
-              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                {t.capacitySubtitle}
-                {realOccupancyPct !== null ? ` (${realOccupancyPct}% ${t.capacityOccupied})` : ""}
-              </span>
-            </div>
-
-            <div className="mt-2 text-xs font-bold text-accent">
-              {realTeachWeeklyH > 0
-                ? `${fmtH(realFreeWeeklyH)}h ${t.capacityFreeHours}`
-                : t.capacityNoSchedule}
-            </div>
-
-            {/* Slots Availability Breakdown for working days only */}
-            <div className="mt-4 space-y-2">
-              <p className="text-xs font-bold text-foreground/80">{t.capacityBreakdown}: <span className="font-normal text-muted-foreground">{tr("growthAvailability.period")}</span></p>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs">
-                {capacityData.days
-                  .filter((day) => day.enabled)
-                  .map((day) => (
-                    <Button
-                      key={day.day}
-                      variant="ghost"
-                      onClick={() => showAvailableTimes(day.day)}
-                      aria-controls="capacity-times-panel"
-                      aria-expanded={currentCapacityDay?.day === day.day}
-                      className={`h-auto min-w-0 flex-col items-start gap-0 whitespace-normal rounded-lg p-2 border text-left ${
-                        currentCapacityDay?.day === day.day
-                          ? "border-accent ring-1 ring-accent/40 bg-accent-soft/60"
-                          : day.remainingSlots === 0
-                          ? "bg-secondary/40 border-border/40"
-                          : "bg-accent-soft/40 border-accent/10"
-                      }`}
-                    >
-                      <span className="block font-semibold text-foreground/70">{formatWeekday(day.day, true)}</span>
-                      <span
-                        className={`text-[10px] font-bold ${
-                          day.remainingSlots === 0 ? "text-success uppercase" : "text-accent"
-                        }`}
-                      >
-                        {day.remainingSlots === 0
-                          ? t.full
-                          : `${day.remainingSlots} ${t.available}`}
-                      </span>
-                    </Button>
-                  ))}
-              </div>
-            </div>
-
-            {currentCapacityDay && (
-              <div id="capacity-times-panel" role="region" aria-label={tr("growthAvailability.title")} className="mt-3 rounded-xl border border-border bg-secondary/30 p-4 space-y-3 animate-in fade-in-0 slide-in-from-top-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-accent" />
-                    {formatWeekday(currentCapacityDay.day)} · {new Date(`${currentCapacityDay.date}T12:00:00`).toLocaleDateString(lang === "pt" ? "pt-BR" : "en-US", { day: "numeric", month: "short" })}
-                  </p>
-                  <span className="text-[11px] text-muted-foreground">{tr("growthAvailability.period")}</span>
-                </div>
-                {currentCapacityDay.availableSlots.length > 0 ? (
-                  <ul className="flex flex-wrap gap-1.5" aria-label={formatWeekday(currentCapacityDay.day)}>
-                    {currentCapacityDay.availableSlots.map((slot) => (
-                      <li key={slot.startTime} className="rounded-md border border-accent/15 bg-card px-2.5 py-1 text-xs font-medium text-foreground tabular-nums">
-                        {slot.startTime} – {slot.endTime}
-                      </li>
-                    ))}
-                  </ul>
-                ) : <p className="text-xs text-muted-foreground">{tr("growthAvailability.empty")}</p>}
-              </div>
-            )}
           </div>
         )}
       </div>
