@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { StudentStartDateField } from "@/components/bloom/StudentStartDateField";
+import { studentStartDate } from "@/lib/student-start-date";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -205,6 +207,7 @@ export function ClassFormModal({
   const [showInlineStudent, setShowInlineStudent] = useState(false);
   const [inlineName, setInlineName] = useState("");
   const [inlineWhatsApp, setInlineWhatsApp] = useState("");
+  const [inlineStartDate, setInlineStartDate] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -253,6 +256,11 @@ export function ClassFormModal({
 
   const handleInlineStudentCreate = async () => {
     if (!inlineName.trim() || !user) return;
+    const startDate = studentStartDate(inlineStartDate);
+    if (!startDate) {
+      toast.error(t("studentStart.required"));
+      return;
+    }
     try {
       const { data: newStudent, error } = await supabase
         .from("students")
@@ -264,6 +272,7 @@ export function ClassFormModal({
           level: level,
           type: "Private",
           status: "Active",
+          course_start_date: startDate,
         })
         .select()
         .single();
@@ -275,6 +284,7 @@ export function ClassFormModal({
       availableStudents.push({ id: newStudent.id, name: newStudent.full_name });
       setInlineName("");
       setInlineWhatsApp("");
+      setInlineStartDate("");
       setShowInlineStudent(false);
     } catch (err: any) {
       toast.error(reportUserError(err, i18nT("errors.saveStudent", currentLanguage())));
@@ -426,6 +436,14 @@ export function ClassFormModal({
                       className="h-9 text-xs bg-white"
                     />
                   </div>
+                  <StudentStartDateField
+                    id="class-inline-start-date"
+                    value={inlineStartDate}
+                    onChange={setInlineStartDate}
+                    compact
+                    nativeRequired={false}
+                    labelClassName="text-xs font-semibold text-emerald-900"
+                  />
                   <button
                     type="button"
                     onClick={handleInlineStudentCreate}

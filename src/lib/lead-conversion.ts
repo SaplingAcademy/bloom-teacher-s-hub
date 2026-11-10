@@ -16,6 +16,8 @@ export function leadToConversionDraft(lead: Lead) {
     notes: profile.notes,
     schedule_weekday: "Monday",
     schedule_start_time: "10:00",
+    // "Início das aulas": required and never prefilled (no registration-date fallback).
+    course_start_date: "",
   };
 }
 

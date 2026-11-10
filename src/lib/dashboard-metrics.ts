@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { fetchTeacherReceivedInvoices } from "@/lib/finance-engine";
 import { calculateReceivedCentsForMonth, monthKeyOf } from "@/lib/finance-cashflow";
 import { formatDateString } from "@/lib/calendar-sync";
+import { localMonthKey, studentStartMonth } from "@/lib/student-start-date";
 import type { CalendarEvent, CEFRLevel, CourseFocus, StudentType, TimelineStatus } from "@/lib/calendar-sync";
 
 export interface MetricTrend {
@@ -104,7 +105,7 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
       .order("start_time", { ascending: true }),
     supabase
       .from("students")
-      .select("id, status, created_at")
+      .select("id, status, created_at, course_start_date")
       .eq("teacher_id", teacherId),
     supabase
       .from("leads")
@@ -129,12 +130,16 @@ export async function fetchDashboardMetrics(teacherId: string): Promise<Dashboar
   const isActive = (s: any) => s.status === "Active" || s.status === "Trial";
   const activeStudents = students.filter(isActive).length;
 
+  // New students = currently active students whose real start of lessons (course_start_date, shared
+  // interpretation with Growth & Scale) is this month; no fallback to the registration date.
+  const currentMonth = localMonthKey(start);
   const activeCreatedThisMonth = students.filter(
-    (s: any) => isActive(s) && s.created_at && new Date(s.created_at) >= start && new Date(s.created_at) < nextStart,
+    (s: any) => isActive(s) && studentStartMonth(s.course_start_date) === currentMonth,
   ).length;
-  const hadStudentsBefore = students.some(
-    (s: any) => s.created_at && new Date(s.created_at) < start,
-  );
+  const hadStudentsBefore = students.some((s: any) => {
+    const month = studentStartMonth(s.course_start_date);
+    return month !== null && month < currentMonth;
+  });
   const activeStudentsTrend =
     hadStudentsBefore && activeCreatedThisMonth > 0
       ? { value: `+${activeCreatedThisMonth}`, positive: true }

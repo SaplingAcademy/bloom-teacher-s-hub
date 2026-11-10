@@ -1504,6 +1504,12 @@ export const uiTranslations = {
       "viewProfileOf": "Abrir perfil de {0}",
       "viewProfilePrivateNotes": "Ver perfil & notas privadas"
     },
+    "studentStart": {
+      "label": "Início das aulas", "hint": "Pode ser anterior ao cadastro no Bloom.", "today": "Hoje",
+      "required": "Informe o início das aulas.",
+      "convertedNotSaved": "O lead foi convertido em aluno, mas o início das aulas não foi salvo.",
+      "openStudent": "Corrigir cadastro"
+    },
     "unusualHours": {
       "earlyTitle": "O sol nem acordou, teacher!",
       "earlyBody": "Você já vai começar a trabalhar? A gente admira sua dedicação, mas não esqueça de reservar um tempinho para descansar! 💚",
@@ -3110,6 +3116,12 @@ export const uiTranslations = {
       "clickToViewIndividualProfile": "Click to view individual profile",
       "viewProfileOf": "View profile of {0}",
       "viewProfilePrivateNotes": "View profile & private notes"
+    },
+    "studentStart": {
+      "label": "Lessons start", "hint": "It can be earlier than the Bloom registration.", "today": "Today",
+      "required": "Enter when the lessons started.",
+      "convertedNotSaved": "The lead was converted into a student, but the lessons start date was not saved.",
+      "openStudent": "Fix student record"
     },
     "unusualHours": {
       "earlyTitle": "The sun isn't even up yet, teacher!",
