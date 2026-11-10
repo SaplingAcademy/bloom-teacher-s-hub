@@ -1,4 +1,4 @@
-import { resolveTeacherName, teacherInitials, neutralTeacherName } from "@/lib/teacher-name";
+import { TeacherAvatarContent } from "@/components/layout/TeacherAvatar";
 import { Menu, Search, Command, Globe, ChevronDown, LogOut } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { useLanguage } from "@/hooks/use-language";
@@ -11,7 +11,7 @@ type TopBarProps = {
 
 export function TopBar({ onOpenMobileNav }: TopBarProps) {
   const { lang, setLang, t } = useLanguage();
-  const { user, profile, signOut } = useAuth();
+  const { signOut } = useAuth();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -35,13 +35,6 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const teacherName = resolveTeacherName(profile, user);
-  // Same canonical source Community uses: public.profiles.avatar_url.
-  const avatarUrl = (profile?.avatar_url as string | null | undefined) || null;
-  const [avatarFailed, setAvatarFailed] = useState(false);
-  useEffect(() => setAvatarFailed(false), [avatarUrl]);
-
-  const getInitials = () => teacherInitials(teacherName, lang);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-header-border bg-header-bg/95 px-4 shadow-[0_2px_8px_rgba(34,28,24,0.035)] dark:shadow-none backdrop-blur-md sm:px-6">
@@ -126,17 +119,8 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
             className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-gradient-lilac text-sm font-semibold text-lilac-foreground cursor-pointer transition-transform hover:scale-105"
             aria-label={t("globalUi.accountMenu")}
           >
-            {avatarUrl && !avatarFailed ? (
-              <img
-                key={avatarUrl}
-                src={avatarUrl}
-                alt={teacherName || ""}
-                className="h-full w-full object-cover"
-                onError={() => setAvatarFailed(true)}
-              />
-            ) : (
-              getInitials()
-            )}
+            {/* Same identity rule as the sidebar account block (shared TeacherAvatar module). */}
+            <TeacherAvatarContent iconClassName="h-5 w-5" />
           </button>
 
           {profileDropdownOpen && (

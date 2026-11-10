@@ -1,20 +1,17 @@
-import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronsUpDown, User } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { accountNav } from "@/lib/navigation";
-import { resolveAccountDisplayName, teacherInitials } from "@/lib/teacher-name";
+import { TeacherAvatarContent, useTeacherIdentity } from "@/components/layout/TeacherAvatar";
 import { cn } from "@/lib/utils";
 
 const MENU_LABEL_KEYS: Record<string, string> = { profile: "sidebarAccount.myProfile", settings: "sidebarAccount.settings" };
 
 /**
  * Teacher block fixed in the sidebar footer (avatar, name, e-mail) that opens a small menu above
- * it with "Meu perfil" and "Configurações". Uses the authenticated teacher's real data: the name
- * saved in the profile (resolveAccountDisplayName; without a valid name the e-mail is the only line),
- * photo from public.profiles.avatar_url, else the real name's initials, else a neutral user icon.
+ * it with "Meu perfil" and "Configurações". Identity and avatar come from the shared TeacherAvatar
+ * module (same rule as the top bar); without a valid name the e-mail is the only line.
  */
 export function SidebarAccountMenu({
   isExpanded,
@@ -30,14 +27,9 @@ export function SidebarAccountMenu({
   onOpenChange: (open: boolean) => void;
   onNavigate: () => void;
 }) {
-  const { t, lang } = useLanguage();
-  const { user, profile } = useAuth();
-  const teacherName = resolveAccountDisplayName(profile, user);
-  const email = (user?.email as string | undefined) || "";
+  const { t } = useLanguage();
+  const { name: teacherName, email } = useTeacherIdentity();
   const primary = teacherName || email;
-  const avatarUrl = (profile?.avatar_url as string | null | undefined) || null;
-  const [avatarFailed, setAvatarFailed] = useState(false);
-  useEffect(() => setAvatarFailed(false), [avatarUrl]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -52,11 +44,7 @@ export function SidebarAccountMenu({
           )}
         >
           <span className="grid h-8 w-8 place-items-center justify-self-center overflow-hidden rounded-full bg-gradient-lilac text-xs font-semibold text-lilac-foreground">
-            {avatarUrl && !avatarFailed ? (
-              <img key={avatarUrl} src={avatarUrl} alt="" className="h-full w-full object-cover" onError={() => setAvatarFailed(true)} />
-            ) : (
-              teacherName ? teacherInitials(teacherName, lang) : <User className="h-4 w-4" aria-hidden="true" />
-            )}
+            <TeacherAvatarContent />
           </span>
           <span aria-hidden={!isExpanded} className={cn("flex items-center gap-2 overflow-hidden", textClasses)}>
             <span className="min-w-0 flex-1">
