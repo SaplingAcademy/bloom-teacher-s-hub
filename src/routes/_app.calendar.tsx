@@ -1140,57 +1140,6 @@ function CalendarPage() {
         </div>
       )}
 
-      {/* CALENDAR CONTROLS BANNER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-sm)]">
-        {/* Navigation */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleToday}
-            className="h-9 rounded-lg border border-border bg-card px-3.5 text-xs font-bold text-foreground transition-all hover:bg-secondary cursor-pointer"
-          >
-            {currentTranslation.today}
-          </button>
-          <div className="flex items-center rounded-lg border border-border">
-            <button
-              onClick={handlePrev}
-              className="p-2 hover:bg-secondary cursor-pointer border-r border-border rounded-l-lg"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="p-2 hover:bg-secondary cursor-pointer rounded-r-lg"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-          <span className="font-display font-bold text-foreground text-sm ml-2">
-            {viewMode === "day" && getDayRange()}
-            {viewMode === "week" && getWeekRange()}
-            {viewMode === "month" && getMonthRange()}
-          </span>
-        </div>
-
-        {/* View toggles */}
-        <div className="flex rounded-lg border border-border bg-secondary/30 p-1 self-start sm:self-auto">
-          {(["day", "week", "month"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                viewMode === mode
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {mode === "day" && currentTranslation.viewDay}
-              {mode === "week" && currentTranslation.viewWeek}
-              {mode === "month" && currentTranslation.viewMonth}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* AVAILABILITY SUMMARY / UNCONFIGURED STATE BANNER */}
       {(() => {
         const enabledDays = availability.filter((a) => a.enabled);
@@ -1254,6 +1203,57 @@ function CalendarPage() {
           </div>
         );
       })()}
+
+      {/* CALENDAR CONTROLS BANNER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-sm)]">
+        {/* Navigation */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleToday}
+            className="h-9 rounded-lg border border-border bg-card px-3.5 text-xs font-bold text-foreground transition-all hover:bg-secondary cursor-pointer"
+          >
+            {currentTranslation.today}
+          </button>
+          <div className="flex items-center rounded-lg border border-border">
+            <button
+              onClick={handlePrev}
+              className="p-2 hover:bg-secondary cursor-pointer border-r border-border rounded-l-lg"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="p-2 hover:bg-secondary cursor-pointer rounded-r-lg"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <span className="font-display font-bold text-foreground text-sm ml-2">
+            {viewMode === "day" && getDayRange()}
+            {viewMode === "week" && getWeekRange()}
+            {viewMode === "month" && getMonthRange()}
+          </span>
+        </div>
+
+        {/* View toggles */}
+        <div className="flex rounded-lg border border-border bg-secondary/30 p-1 self-start sm:self-auto">
+          {(["day", "week", "month"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                viewMode === mode
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {mode === "day" && currentTranslation.viewDay}
+              {mode === "week" && currentTranslation.viewWeek}
+              {mode === "month" && currentTranslation.viewMonth}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* MAIN CONTAINER: SIDEBAR + GRID */}
       <div className="grid gap-4 lg:grid-cols-[190px_1fr]">
