@@ -82,6 +82,7 @@ import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailability
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { getWorkingSegments } from "@/lib/capacity-engine";
 import { useUnusualHourReminder } from "@/hooks/use-unusual-hour-reminder";
+import { unusualHourGroup, type UnusualHourGroup } from "@/lib/unusual-hour-reminders";
 import { fetchTeacherWorkingAvailability, WEEKDAYS_MAP } from "@/lib/availability-engine";
 import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictDialog";
 import { resolveEventColorMeta, type BrandColorMeta } from "@/lib/brand-colors";
@@ -270,6 +271,8 @@ function CalendarPage() {
   const rescheduleConfirmation = useRescheduleConfirmation();
   // Wellbeing reminder for unusual hours, shown before the existing reschedule validation.
   const unusualHourReminder = useUnusualHourReminder(user?.id);
+  // Group already confirmed when the lesson slot was picked in the grid, so saving does not repeat it.
+  const [slotReminderGroup, setSlotReminderGroup] = useState<UnusualHourGroup | null>(null);
   const requestRescheduleWithReminder = async (eventId: string, date: string, startTime: string) =>
     (await unusualHourReminder.confirm(startTime)) ? rescheduleConfirmation.request(eventId, date, startTime) : null;
 
@@ -737,7 +740,9 @@ function CalendarPage() {
       return;
     }
     // Wellbeing reminder (unusual hours): "Alterar horário" returns to the form without saving.
-    if (!(await unusualHourReminder.confirm(addTime))) return;
+    // Skipped when the same reminder was already confirmed on picking the grid slot.
+    const alreadyReminded = slotReminderGroup !== null && unusualHourGroup(addTime) === slotReminderGroup;
+    if (!alreadyReminded && !(await unusualHourReminder.confirm(addTime))) return;
     // Preserve the existing availability warning and time-off confirmation.
     if (availabilitySnapshot) {
       const check = isSlotAvailable(availabilitySnapshot, addDate, addTime, addEndTime);
@@ -1077,16 +1082,20 @@ function CalendarPage() {
     setIsScheduleChoiceOpen(true);
   };
 
-  const chooseLesson = () => {
+  const chooseLesson = async () => {
+    setIsScheduleChoiceOpen(false);
     if (!pendingLessonPlans) {
       let duration = 60;
       try { duration = lessonDuration(addTime, addEndTime); } catch { /* Retain the form's normal initial duration. */ }
       const defaults = lessonSlotDefaults(schedulingContext, formatDateString(new Date()), duration);
+      // Time picked in the grid: wellbeing reminder before the lesson form. "Alterar horário" returns to the Agenda.
+      const slotTime = schedulingContext?.startTime;
+      if (slotTime && !(await unusualHourReminder.confirm(slotTime))) return;
+      setSlotReminderGroup(slotTime ? unusualHourGroup(slotTime) : null);
       setAddDate(defaults.date);
       setAddTime(defaults.startTime);
       setAddEndTime(defaults.endTime);
     }
-    setIsScheduleChoiceOpen(false);
     setIsAddClassOpen(true);
   };
 
@@ -1652,7 +1661,7 @@ function CalendarPage() {
             <Button
               variant="outline"
               className="h-auto justify-start gap-3 whitespace-normal px-4 py-4 text-left"
-              onClick={chooseLesson}
+              onClick={() => void chooseLesson()}
             >
               <BookOpen className="h-5 w-5 shrink-0 text-primary" />
               <span className="min-w-0">
