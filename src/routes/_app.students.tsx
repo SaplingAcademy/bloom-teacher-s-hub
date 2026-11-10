@@ -97,8 +97,13 @@ export const Route = createFileRoute("/_app/students")({
     studentId?: string;
     classId?: string;
     eventId?: string;
+    tab?: string;
   } => ({
     ...(typeof search.studentId === "string" ? { studentId: search.studentId } : {}),
+    // Deep links (e.g. Today priorities) may open a specific student hub tab.
+    ...(typeof search.tab === "string" && ["Overview", "Lessons", "Finance", "Contracts", "Settings"].includes(search.tab)
+      ? { tab: search.tab }
+      : {}),
     ...(typeof search.classId === "string" ? { classId: search.classId } : {}),
     ...(typeof search.eventId === "string" ? { eventId: search.eventId } : {}),
   }),
@@ -592,6 +597,7 @@ function StudentsPage() {
     studentId: requestedStudentId,
     classId: requestedClassId,
     eventId: requestedEventId,
+    tab: requestedTab,
   } = Route.useSearch();
   const navigate = useNavigate();
   const { lang, t: tr, formatStatus } = useLanguage();
@@ -807,6 +813,10 @@ function StudentsPage() {
 
   // Hub Active Tab State & Financial Engine States
   const [hubTab, setHubTab] = useState<string>("Overview");
+  // A deep-linked tab applies once the requested student is open.
+  useEffect(() => {
+    if (requestedTab && requestedStudentId && selectedStudentId === requestedStudentId) setHubTab(requestedTab);
+  }, [requestedTab, requestedStudentId, selectedStudentId]);
   const [currentStudentLessons, setCurrentStudentLessons] = useState<StudentLesson[]>([]);
   const [financialSummary, setFinancialSummary] = useState<StudentFinancialSummary | null>(null);
   const [studentRenewalAlert, setStudentRenewalAlert] = useState<PackageRenewalAlert | null>(null);
