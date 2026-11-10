@@ -616,169 +616,229 @@ function GrowthPage() {
 
       {/* Meta Mensal & Capacidade Grid — items-start: expanding the capacity times must not stretch the goal card */}
       <div className="grid gap-5 lg:grid-cols-2 items-start">
-        {/* MONTHLY GOAL CARD */}
-        {loadingGrowth ? (
-          <PanelSkeleton label={t.title} />
-        ) : monthlyGoal === null || monthlyGoal <= 0 ? (
-          /* EMPTY STATE CARD: No Goal Set */
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-            <div className="flex items-center justify-between">
+        {/* LEFT COLUMN: Monthly Goal + Revenue Potential (each keeps its own height) */}
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* MONTHLY GOAL CARD */}
+          {loadingGrowth ? (
+            <PanelSkeleton label={t.title} />
+          ) : monthlyGoal === null || monthlyGoal <= 0 ? (
+            /* EMPTY STATE CARD: No Goal Set */
+            <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  <h3 className="font-display text-lg font-bold text-foreground">{t.monthlyGoalTitle}</h3>
+                </div>
+              </div>
+
+              <div className="my-4 flex flex-col items-center justify-center text-center p-4 space-y-3">
+                <div className="h-14 w-14 rounded-full bg-primary-soft flex items-center justify-center text-primary">
+                  <Target className="h-7 w-7" />
+                </div>
+                <div className="space-y-1 max-w-sm">
+                  <h4 className="font-display text-base font-bold text-foreground">
+                    {tr("auditUi.setYourMonthlyGoal")}
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {tr("auditUi.addYourMonthlyTargetToTrackRevenue")}
+                  </p>
+                </div>
+                <Button
+                  onClick={handleOpenEditGoal}
+                  className="mt-1 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95"
+                >
+                  <PlusCircle className="mr-1.5 h-4 w-4" />
+                  {tr("auditUi.setGoal")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* REAL GOAL SET CARD */
+            <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  <h3 className="font-display text-lg font-bold text-foreground">{t.monthlyGoalTitle}</h3>
+                </div>
+                <button
+                  onClick={handleOpenEditGoal}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer bg-primary-soft/50 hover:bg-primary-soft px-2.5 py-1 rounded-lg transition-colors"
+                  title="Editar meta mensal"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>{tr("auditUi.editGoal")}</span>
+                </button>
+              </div>
+
+              <div className="my-6 flex flex-col items-center justify-center gap-5 sm:flex-row">
+                {/* Progress Circular Ring */}
+                <div className="relative h-32 w-32 shrink-0">
+                  <svg className="h-full w-full -rotate-90">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r={radius}
+                      className="stroke-secondary fill-none"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r={radius}
+                      className="stroke-primary fill-none transition-all duration-500 ease-out"
+                      strokeWidth="8"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="font-display text-2xl font-extrabold text-foreground">
+                      {metrics.progressPct}%
+                    </span>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      {tr("auditUi.goal")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Goal Text Values */}
+                <div className="text-center sm:text-left space-y-2 flex-1">
+                  <div className="text-2xl font-extrabold text-foreground flex items-baseline justify-center sm:justify-start gap-1 flex-wrap">
+                    <button
+                      onClick={() => navigate({ to: "/finance" })}
+                      className="hover:text-primary transition-colors cursor-pointer text-left"
+                      title={tr("auditUi.clickToViewDetailedRevenueInFinance")}
+                    >
+                      {formatBRL(mrrData.totalMRR)}
+                    </button>
+                    <span className="text-muted-foreground font-semibold text-lg">
+                      {" "}/ {formatBRL(monthlyGoal)}
+                    </span>
+                  </div>
+
+                  {metrics.goalReached ? (
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-center sm:justify-start">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>{tr("auditUi.goalReached")}</span>
+                      </p>
+                      {metrics.overage > 0 && (
+                        <p className="text-[11px] font-semibold text-muted-foreground">
+                          {formatBRL(metrics.overage)} {tr("auditUi.aboveTarget")}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {t.remaining}{" "}
+                      <span className="font-bold text-foreground">{formatBRL(metrics.remaining)}</span>
+                    </p>
+                  )}
+
+                  {/* Student Gap Recommendation Box */}
+                  {!metrics.goalReached && (
+                    <div className="mt-3 rounded-xl bg-primary-soft/60 p-3 text-xs text-primary leading-snug space-y-2">
+                      {metrics.hasEnoughDataForGap ? (
+                        <>
+                          <p className="font-medium">
+                            {lang === "pt"
+                              ? `Para atingir sua meta, faltam aproximadamente `
+                              : `To reach your goal, you need approximately `}
+                            <strong className="font-extrabold text-foreground">
+                              {metrics.studentGap} {metrics.studentGap === 1 ? (tr("auditUi.student")) : (tr("auditUi.students"))}
+                            </strong>
+                            {lang === "pt"
+                              ? ` com ticket semelhante ao atual (${formatBRL(metrics.avgTicket)}/mês).`
+                              : ` with a similar ticket as current average (${formatBRL(metrics.avgTicket)}/mo).`}
+                          </p>
+
+                          {/* Schedule Capacity Limitation Bottleneck */}
+                          {capacityData.hasWorkingHours && metrics.studentGap > capacityData.totalRemainingSlots && (
+                            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed space-y-1">
+                              <p className="font-bold flex items-center gap-1">
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                <span>
+                                  {lang === "pt"
+                                    ? `Pelo seu horário atual, você tem capacidade para aproximadamente ${capacityData.totalRemainingSlots} novos alunos.`
+                                    : `Based on your current schedule, you have capacity for approximately ${capacityData.totalRemainingSlots} new students.`}
+                                </span>
+                              </p>
+                              <p className="text-[10px] opacity-90 font-normal">
+                                {tr("auditUi.toReachYourGoalWithNewStudents")}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="font-medium opacity-90 text-[11px]">
+                          {tr("auditUi.addYourActiveStudentsAndPackageContracts")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* REVENUE POTENTIAL CARD */}
+          <div className="rounded-2xl border border-border bg-sidebar text-sidebar-accent-foreground p-6 shadow-[var(--shadow-sm)] flex flex-col justify-between h-full">
+            <div>
               <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h3 className="font-display text-lg font-bold text-foreground">{t.monthlyGoalTitle}</h3>
+                <Zap className="h-5 w-5 text-sidebar-primary" />
+                <h3 className="font-display text-lg font-bold">{tr("growthRevenue.title")}</h3>
               </div>
             </div>
 
-            <div className="my-4 flex flex-col items-center justify-center text-center p-4 space-y-3">
-              <div className="h-14 w-14 rounded-full bg-primary-soft flex items-center justify-center text-primary">
-                <Target className="h-7 w-7" />
+            {growthInsights.isLoading ? (
+              <div className="mt-6 flex-1 space-y-4" role="status" aria-label={tr("growthRevenue.title")}>
+                <Skeleton className="h-4 w-2/3 bg-sidebar-accent-foreground/15" />
+                <Skeleton className="h-4 w-1/2 bg-sidebar-accent-foreground/15" />
+                <Skeleton className="h-8 w-4/5 bg-sidebar-accent-foreground/15" />
               </div>
-              <div className="space-y-1 max-w-sm">
-                <h4 className="font-display text-base font-bold text-foreground">
-                  {tr("auditUi.setYourMonthlyGoal")}
-                </h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {tr("auditUi.addYourMonthlyTargetToTrackRevenue")}
+            ) : !growthInsights.allowed ? (
+              <PremiumCardLock tone="dark" onLearnMore={() => setIsPremiumDialogOpen(true)} />
+            ) : (
+            <div className="mt-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
+                <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.projectedRevenue")}</span>
+                <span className="font-display font-bold">{hasRevenueCardMRR && revenueCardMRR ? revenueCardMoney(revenueCardMRR.totalMRR) : NO_DATA}</span>
+              </div>
+
+              <div className="border-b border-sidebar-accent-foreground/15 pb-2 space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.freeHours")}</span>
+                  <span className="font-display font-bold">{revenueCardFreeHours !== null ? tr("growthRevenue.weeklyHours").replace("{hours}", fmtH(revenueCardFreeHours)) : NO_DATA}</span>
+                </div>
+                <p className="text-[11px] text-sidebar-foreground">{tr("growthRevenue.capacityPeriod")}</p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
+                <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.revenuePerHour")}</span>
+                <span className="font-display font-bold">{revenuePotential ? tr("growthRevenue.hourlyAmount").replace("{amount}", revenueCardMoney(revenuePotential.effectiveRevenuePerHour)) : NO_DATA}</span>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <p className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.estimatedPotential")}</p>
+                <p className="font-display text-2xl font-extrabold break-words">
+                  {revenuePotential ? tr("growthRevenue.monthlyAmount").replace("{amount}", revenueCardMoney(revenuePotential.estimatedRevenuePotential)) : NO_DATA}
+                </p>
+                {revenuePotential && revenuePotential.weeklyFreeHours > 0 ? (
+                  <p className="text-xs text-sidebar-foreground">{tr("growthRevenue.additionalPotential").replace("{amount}", revenueCardMoney(revenuePotential.additionalMonthlyPotential))}</p>
+                ) : null}
+                <p className="text-xs text-sidebar-foreground leading-relaxed">
+                  {revenuePotential
+                    ? revenuePotential.weeklyFreeHours === 0
+                      ? tr("growthRevenue.fullyOccupied")
+                      : tr("growthRevenue.estimate").replace("{amount}", revenueCardMoney(revenuePotential.estimatedRevenuePotential))
+                    : tr("growthRevenue.insufficientData")}
                 </p>
               </div>
-              <Button
-                onClick={handleOpenEditGoal}
-                className="mt-1 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95"
-              >
-                <PlusCircle className="mr-1.5 h-4 w-4" />
-                {tr("auditUi.setGoal")}
-              </Button>
             </div>
+            )}
           </div>
-        ) : (
-          /* REAL GOAL SET CARD */
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h3 className="font-display text-lg font-bold text-foreground">{t.monthlyGoalTitle}</h3>
-              </div>
-              <button
-                onClick={handleOpenEditGoal}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer bg-primary-soft/50 hover:bg-primary-soft px-2.5 py-1 rounded-lg transition-colors"
-                title="Editar meta mensal"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                <span>{tr("auditUi.editGoal")}</span>
-              </button>
-            </div>
-
-            <div className="my-6 flex flex-col items-center justify-center gap-5 sm:flex-row">
-              {/* Progress Circular Ring */}
-              <div className="relative h-32 w-32 shrink-0">
-                <svg className="h-full w-full -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={radius}
-                    className="stroke-secondary fill-none"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={radius}
-                    className="stroke-primary fill-none transition-all duration-500 ease-out"
-                    strokeWidth="8"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-display text-2xl font-extrabold text-foreground">
-                    {metrics.progressPct}%
-                  </span>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                    {tr("auditUi.goal")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Goal Text Values */}
-              <div className="text-center sm:text-left space-y-2 flex-1">
-                <div className="text-2xl font-extrabold text-foreground flex items-baseline justify-center sm:justify-start gap-1 flex-wrap">
-                  <button
-                    onClick={() => navigate({ to: "/finance" })}
-                    className="hover:text-primary transition-colors cursor-pointer text-left"
-                    title={tr("auditUi.clickToViewDetailedRevenueInFinance")}
-                  >
-                    {formatBRL(mrrData.totalMRR)}
-                  </button>
-                  <span className="text-muted-foreground font-semibold text-lg">
-                    {" "}/ {formatBRL(monthlyGoal)}
-                  </span>
-                </div>
-
-                {metrics.goalReached ? (
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-center sm:justify-start">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>{tr("auditUi.goalReached")}</span>
-                    </p>
-                    {metrics.overage > 0 && (
-                      <p className="text-[11px] font-semibold text-muted-foreground">
-                        {formatBRL(metrics.overage)} {tr("auditUi.aboveTarget")}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {t.remaining}{" "}
-                    <span className="font-bold text-foreground">{formatBRL(metrics.remaining)}</span>
-                  </p>
-                )}
-
-                {/* Student Gap Recommendation Box */}
-                {!metrics.goalReached && (
-                  <div className="mt-3 rounded-xl bg-primary-soft/60 p-3 text-xs text-primary leading-snug space-y-2">
-                    {metrics.hasEnoughDataForGap ? (
-                      <>
-                        <p className="font-medium">
-                          {lang === "pt"
-                            ? `Para atingir sua meta, faltam aproximadamente `
-                            : `To reach your goal, you need approximately `}
-                          <strong className="font-extrabold text-foreground">
-                            {metrics.studentGap} {metrics.studentGap === 1 ? (tr("auditUi.student")) : (tr("auditUi.students"))}
-                          </strong>
-                          {lang === "pt"
-                            ? ` com ticket semelhante ao atual (${formatBRL(metrics.avgTicket)}/mês).`
-                            : ` with a similar ticket as current average (${formatBRL(metrics.avgTicket)}/mo).`}
-                        </p>
-
-                        {/* Schedule Capacity Limitation Bottleneck */}
-                        {capacityData.hasWorkingHours && metrics.studentGap > capacityData.totalRemainingSlots && (
-                          <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed space-y-1">
-                            <p className="font-bold flex items-center gap-1">
-                              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                              <span>
-                                {lang === "pt"
-                                  ? `Pelo seu horário atual, você tem capacidade para aproximadamente ${capacityData.totalRemainingSlots} novos alunos.`
-                                  : `Based on your current schedule, you have capacity for approximately ${capacityData.totalRemainingSlots} new students.`}
-                              </span>
-                            </p>
-                            <p className="text-[10px] opacity-90 font-normal">
-                              {tr("auditUi.toReachYourGoalWithNewStudents")}
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <p className="font-medium opacity-90 text-[11px]">
-                        {tr("auditUi.addYourActiveStudentsAndPackageContracts")}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* TEACHING CAPACITY CARD */}
         {growthQuery.isError ? (
@@ -1630,65 +1690,6 @@ function GrowthPage() {
         })()}
       </section>
 
-      {/* REVENUE POTENTIAL & AI INSIGHTS OPPORTUNITIES */}
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.5fr] items-stretch">
-        {/* REVENUE POTENTIAL CARD */}
-        <div className="rounded-2xl border border-border bg-sidebar text-sidebar-accent-foreground p-6 shadow-[var(--shadow-sm)] flex flex-col justify-between h-full">
-          <div>
-            <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-sidebar-primary" />
-              <h3 className="font-display text-lg font-bold">{tr("growthRevenue.title")}</h3>
-            </div>
-          </div>
-
-          {growthInsights.isLoading ? (
-            <div className="mt-6 flex-1 space-y-4" role="status" aria-label={tr("growthRevenue.title")}>
-              <Skeleton className="h-4 w-2/3 bg-sidebar-accent-foreground/15" />
-              <Skeleton className="h-4 w-1/2 bg-sidebar-accent-foreground/15" />
-              <Skeleton className="h-8 w-4/5 bg-sidebar-accent-foreground/15" />
-            </div>
-          ) : !growthInsights.allowed ? (
-            <PremiumCardLock tone="dark" onLearnMore={() => setIsPremiumDialogOpen(true)} />
-          ) : (
-          <div className="mt-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
-              <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.projectedRevenue")}</span>
-              <span className="font-display font-bold">{hasRevenueCardMRR && revenueCardMRR ? revenueCardMoney(revenueCardMRR.totalMRR) : NO_DATA}</span>
-            </div>
-
-            <div className="border-b border-sidebar-accent-foreground/15 pb-2 space-y-1">
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.freeHours")}</span>
-                <span className="font-display font-bold">{revenueCardFreeHours !== null ? tr("growthRevenue.weeklyHours").replace("{hours}", fmtH(revenueCardFreeHours)) : NO_DATA}</span>
-              </div>
-              <p className="text-[11px] text-sidebar-foreground">{tr("growthRevenue.capacityPeriod")}</p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sidebar-accent-foreground/15 pb-2">
-              <span className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.revenuePerHour")}</span>
-              <span className="font-display font-bold">{revenuePotential ? tr("growthRevenue.hourlyAmount").replace("{amount}", revenueCardMoney(revenuePotential.effectiveRevenuePerHour)) : NO_DATA}</span>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <p className="text-xs font-semibold text-sidebar-foreground">{tr("growthRevenue.estimatedPotential")}</p>
-              <p className="font-display text-2xl font-extrabold break-words">
-                {revenuePotential ? tr("growthRevenue.monthlyAmount").replace("{amount}", revenueCardMoney(revenuePotential.estimatedRevenuePotential)) : NO_DATA}
-              </p>
-              {revenuePotential && revenuePotential.weeklyFreeHours > 0 ? (
-                <p className="text-xs text-sidebar-foreground">{tr("growthRevenue.additionalPotential").replace("{amount}", revenueCardMoney(revenuePotential.additionalMonthlyPotential))}</p>
-              ) : null}
-              <p className="text-xs text-sidebar-foreground leading-relaxed">
-                {revenuePotential
-                  ? revenuePotential.weeklyFreeHours === 0
-                    ? tr("growthRevenue.fullyOccupied")
-                    : tr("growthRevenue.estimate").replace("{amount}", revenueCardMoney(revenuePotential.estimatedRevenuePotential))
-                  : tr("growthRevenue.insufficientData")}
-              </p>
-            </div>
-          </div>
-          )}
-        </div>
-
         {/* GROWTH OPPORTUNITIES SECTION */}
         <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] h-full flex flex-col">
           <div className="flex items-center gap-2">
@@ -1718,7 +1719,6 @@ function GrowthPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* SALES FUNNEL CARD */}
       <section className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
