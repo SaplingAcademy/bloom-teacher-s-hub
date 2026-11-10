@@ -302,8 +302,11 @@ function GrowthPage() {
   const [editGoalInputValue, setEditGoalInputValue] = useState("");
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
-  // Capacity card: day whose available times are shown (mouse hover or keyboard focus); display only.
+  // Capacity card: day whose available times are shown (display only). Mouse hover wins; otherwise the
+  // day focused by keyboard or tapped on touch devices (touch fires synthetic mouse leaves, so hover is mouse-only).
   const [hoveredCapacityDay, setHoveredCapacityDay] = useState<string | null>(null);
+  const [focusedCapacityDay, setFocusedCapacityDay] = useState<string | null>(null);
+  const shownCapacityDay = hoveredCapacityDay ?? focusedCapacityDay;
 
   const [availability, setAvailability] = useState<WorkingAvailability[]>([]);
   // Simulator Input States (Data-driven defaults)
@@ -539,6 +542,38 @@ function GrowthPage() {
     : null;
 
   const capacityDays = capacityData.days.filter((day) => day.enabled);
+
+  // Capacity card times area (display only): sized to fit the longest day's list at the current width,
+  // so no time is ever clipped and hover/focus never changes the card height. Each list sits next to its
+  // day row (lower rows end at their row) and is clamped inside the area.
+  const capacityRowsRef = useRef<HTMLUListElement>(null);
+  const capacityTimesRef = useRef<HTMLDivElement>(null);
+  const [capacityTimesLayout, setCapacityTimesLayout] = useState<{ height: number; tops: number[] }>({ height: 0, tops: [] });
+  const capacityLayoutKey = capacityDays.map((day) => `${day.day}:${day.availableSlots.length}`).join("|");
+  useEffect(() => {
+    const rowsEl = capacityRowsRef.current;
+    const area = capacityTimesRef.current;
+    if (!rowsEl || !area || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const rows = Array.from(rowsEl.children) as HTMLElement[];
+      const lists = Array.from(area.children) as HTMLElement[];
+      const areaTop = area.getBoundingClientRect().top;
+      const heights = lists.map((list) => list.offsetHeight);
+      const height = Math.max(rowsEl.offsetHeight, ...heights);
+      const tops = lists.map((_, index) => {
+        const row = rows[index]?.getBoundingClientRect();
+        if (!row) return 0;
+        const desired = index >= lists.length / 2 ? row.bottom - areaTop - heights[index] : row.top - areaTop;
+        return Math.max(0, Math.min(Math.round(desired), height - heights[index]));
+      });
+      setCapacityTimesLayout((prev) => (prev.height === height && prev.tops.join() === tops.join() ? prev : { height, tops }));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rowsEl);
+    Array.from(area.children).forEach((list) => observer.observe(list));
+    return () => observer.disconnect();
+  }, [capacityLayoutKey, capacityData.hasWorkingHours, growthQuery.isError]);
 
   // Real Growth Metrics calculations
   const metrics = computeGrowthMetrics(monthlyGoal || 0, mrrData);
@@ -826,15 +861,16 @@ function GrowthPage() {
 
             {/* Days (one per row) + reserved area on the right for the hovered/focused day's times */}
             <div className="mt-5 grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-6">
-              <ul className="divide-y divide-border/40">
+              <ul ref={capacityRowsRef} className="divide-y divide-border/40">
                 {capacityDays.map((day) => (
                   <li
                     key={day.day}
                     tabIndex={0}
-                    onMouseEnter={() => setHoveredCapacityDay(day.day)}
-                    onMouseLeave={() => setHoveredCapacityDay((current) => (current === day.day ? null : current))}
-                    onFocus={() => setHoveredCapacityDay(day.day)}
-                    onBlur={() => setHoveredCapacityDay((current) => (current === day.day ? null : current))}
+                    onPointerEnter={(event) => { if (event.pointerType === "mouse") setHoveredCapacityDay(day.day); }}
+                    onPointerLeave={(event) => { if (event.pointerType === "mouse") setHoveredCapacityDay((current) => (current === day.day ? null : current)); }}
+                    onFocus={() => setFocusedCapacityDay(day.day)}
+                    onBlur={() => setFocusedCapacityDay((current) => (current === day.day ? null : current))}
+                    onClick={(event) => event.currentTarget.focus()} // touch: tapping a day reveals its times
                     aria-describedby={`capacity-times-${day.day}`}
                     className="flex h-11 cursor-default flex-col justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
@@ -845,20 +881,17 @@ function GrowthPage() {
                   </li>
                 ))}
               </ul>
-              {/* Absolute lists: showing them never changes the card height. Upper rows grow downward, lower rows upward. */}
-              <div className="relative min-h-40 overflow-hidden">
+              {/* Absolute lists in an area sized to the longest list: showing one never changes the card height. */}
+              <div ref={capacityTimesRef} className="relative" style={capacityTimesLayout.height ? { height: capacityTimesLayout.height } : undefined}>
                 {capacityDays.map((day, index) => {
-                  // Rows are h-11 (2.75rem, divider included): align to the row's top, or to its bottom for lower rows.
-                  const lowerHalf = index >= capacityDays.length / 2;
-                  const rowEdge = `${(lowerHalf ? index + 1 : index) * 2.75}rem`;
-                  const visible = hoveredCapacityDay === day.day;
+                  const visible = shownCapacityDay === day.day;
                   return (
                     <div
                       key={day.day}
                       id={`capacity-times-${day.day}`}
                       aria-hidden={!visible}
-                      style={lowerHalf ? { bottom: `calc(100% - ${rowEdge})` } : { top: rowEdge }}
-                      className={`pointer-events-none absolute inset-x-0 flex max-h-full min-h-11 items-center transition-opacity duration-200 ease-out ${visible ? "opacity-100" : "opacity-0"}`}
+                      style={{ top: capacityTimesLayout.tops[index] ?? 0 }}
+                      className={`pointer-events-none absolute inset-x-0 flex min-h-11 items-center transition-opacity duration-200 ease-out ${visible ? "opacity-100" : "opacity-0"}`}
                     >
                       {day.availableSlots.length > 0 ? (
                         <ul className="w-full list-disc columns-[6.5rem] gap-x-4 pl-4 text-xs leading-5 text-foreground/60 tabular-nums marker:text-foreground/30">
