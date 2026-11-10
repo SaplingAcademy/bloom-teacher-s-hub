@@ -79,6 +79,8 @@ import {
 import { FirstTimeCalendarSetupModal } from "@/components/bloom/FirstTimeCalendarSetupModal";
 import { NonWorkingDaysModal } from "@/components/bloom/NonWorkingDaysModal";
 import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailabilityModal";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { getWorkingSegments } from "@/lib/capacity-engine";
 import { fetchTeacherWorkingAvailability, WEEKDAYS_MAP } from "@/lib/availability-engine";
 import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictDialog";
 import { resolveEventColorMeta, type BrandColorMeta } from "@/lib/brand-colors";
@@ -1104,16 +1106,50 @@ function CalendarPage() {
               <RotateCcw className={`h-4 w-4 ${isSyncingAgenda ? "animate-[calendar-sync-spin_1s_linear_infinite] motion-reduce:animate-none" : ""}`} />
               <span>{isSyncingAgenda ? t("calendarUi.syncing") : t("calendarUi.sync")}</span>
             </button>
-            <button
-              onClick={() => {
-                setCentralAvailTab("working_hours");
-                setIsCentralAvailOpen(true);
-              }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
-            >
-              <Settings className="h-4 w-4 text-muted-foreground" />
-              <span>{currentTranslation.settingsAvailability}</span>
-            </button>
+            {/* Hover/focus preview of the loaded weekly availability; click keeps opening the settings. */}
+            <HoverCard openDelay={150} closeDelay={150}>
+              <HoverCardTrigger asChild>
+                <button
+                  onClick={() => {
+                    setCentralAvailTab("working_hours");
+                    setIsCentralAvailOpen(true);
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
+                >
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                  <span>{currentTranslation.settingsAvailability}</span>
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent align="end" className="w-64 p-3">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {t("calendarUi.availability")}
+                </p>
+                <table className="w-full text-xs">
+                  <tbody>
+                    {availability.map((a) => {
+                      const segments = a.enabled
+                        ? getWorkingSegments(
+                            a.startTime,
+                            a.endTime,
+                            (availabilitySnapshot?.restBlocks || []).filter((b) => b.day.toLowerCase() === a.day.toLowerCase()),
+                          )
+                        : [];
+                      const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+                      return (
+                        <tr key={a.day} className="border-b border-border/40 last:border-0 align-top">
+                          <td className="py-1 pr-3 font-semibold text-foreground">{formatWeekday(a.day, true)}</td>
+                          <td className="py-1 text-right text-muted-foreground">
+                            {segments.length === 0
+                              ? t("auditUi.unavailable")
+                              : segments.map((seg) => <div key={seg.start}>{hhmm(seg.start)}–{hhmm(seg.end)}</div>)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </HoverCardContent>
+            </HoverCard>
           </div>
         }
       />
@@ -1139,7 +1175,7 @@ function CalendarPage() {
         </div>
       )}
 
-      {/* AVAILABILITY SUMMARY / UNCONFIGURED STATE BANNER */}
+      {/* UNCONFIGURED AVAILABILITY BANNER */}
       {(() => {
         const enabledDays = availability.filter((a) => a.enabled);
         if (enabledDays.length === 0) {
@@ -1173,34 +1209,8 @@ function CalendarPage() {
           );
         }
 
-        return (
-          <div className="p-3 rounded-2xl border border-border bg-card flex flex-wrap items-center justify-between gap-2 text-xs shadow-[var(--shadow-sm)]">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-muted-foreground text-[11px] uppercase tracking-wider">
-                {t("calendarUi.availability")}:
-              </span>
-              {enabledDays.map((a) => {
-                const label = formatWeekday(a.day, true);
-                return (
-                  <Badge key={a.day} variant="secondary" className="text-[11px] font-bold gap-1 bg-muted px-2 py-0.5">
-                    <span>{label}</span>
-                    <span className="text-muted-foreground font-semibold">{fmtTime(a.startTime)}–{fmtTime(a.endTime)}</span>
-                  </Badge>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => {
-                setCentralAvailTab("working_hours");
-                setIsCentralAvailOpen(true);
-              }}
-              className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline cursor-pointer"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>{t("globalUi.edit")}</span>
-            </button>
-          </div>
-        );
+        // Configured: the weekly summary lives in the "Configurar Disponibilidade" hover preview.
+        return null;
       })()}
 
       {/* CALENDAR CONTROLS BANNER */}
