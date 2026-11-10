@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelCard } from "@/components/bloom/PanelCard";
+import { WellbeingRemindersSettings } from "@/components/bloom/WellbeingRemindersSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -281,6 +282,7 @@ function SettingsPage() {
         <TabsContent value="profile" className="space-y-6">
           <PlatformLanguageManager />
           <TeachingLanguagesManager />
+          <WellbeingRemindersSettings teacherId={user?.id} />
 
           <PanelCard title={t("settingsUi.teacherProfile")} description={t("settingsUi.teacherProfileDescription")}>
             <div className="space-y-4 text-sm text-muted-foreground">

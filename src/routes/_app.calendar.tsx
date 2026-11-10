@@ -81,6 +81,7 @@ import { NonWorkingDaysModal } from "@/components/bloom/NonWorkingDaysModal";
 import { CentralAvailabilityModal } from "@/components/bloom/CentralAvailabilityModal";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { getWorkingSegments } from "@/lib/capacity-engine";
+import { useUnusualHourReminder } from "@/hooks/use-unusual-hour-reminder";
 import { fetchTeacherWorkingAvailability, WEEKDAYS_MAP } from "@/lib/availability-engine";
 import { SchedulingConflictDialog } from "@/components/bloom/SchedulingConflictDialog";
 import { resolveEventColorMeta, type BrandColorMeta } from "@/lib/brand-colors";
@@ -267,6 +268,10 @@ function CalendarPage() {
   const pendingMoves = useRef(new Set<string>());
   const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
   const rescheduleConfirmation = useRescheduleConfirmation();
+  // Wellbeing reminder for unusual hours, shown before the existing reschedule validation.
+  const unusualHourReminder = useUnusualHourReminder(user?.id);
+  const requestRescheduleWithReminder = async (eventId: string, date: string, startTime: string) =>
+    (await unusualHourReminder.confirm(startTime)) ? rescheduleConfirmation.request(eventId, date, startTime) : null;
 
   // Supabase Data State & Error Resilience
   const [studentsList, setStudentsList] = useState<Array<{ id: string; full_name: string; level?: string; language_studied?: string; type?: string }>>([]);
@@ -616,7 +621,7 @@ function CalendarPage() {
         await fetchEvents();
         return true;
       }
-      const result = await rescheduleConfirmation.request(eventId, position.date, position.startTime);
+      const result = await requestRescheduleWithReminder(eventId, position.date, position.startTime);
       if (!result) return false;
       if (!result.ok) {
         const known = ["conflict", "outside_working_hours", "non_working_day", "locked", "crosses_midnight"];
@@ -731,6 +736,8 @@ function CalendarPage() {
       setLessonSaveError(t("manualLesson.invalidInterval"));
       return;
     }
+    // Wellbeing reminder (unusual hours): "Alterar horário" returns to the form without saving.
+    if (!(await unusualHourReminder.confirm(addTime))) return;
     // Preserve the existing availability warning and time-off confirmation.
     if (availabilitySnapshot) {
       const check = isSlotAvailable(availabilitySnapshot, addDate, addTime, addEndTime);
@@ -1668,12 +1675,13 @@ function CalendarPage() {
         </DialogContent>
       </Dialog>
 
+      {unusualHourReminder.dialog}
       <RescheduleLessonDialog
         lesson={rescheduleTarget}
         open={rescheduleTarget !== null}
         onOpenChange={(o) => !o && setRescheduleTarget(null)}
         onRescheduled={() => fetchEvents()}
-        onRequestReschedule={rescheduleConfirmation.request}
+        onRequestReschedule={requestRescheduleWithReminder}
       />
       <RescheduleWarningDialog warnings={rescheduleConfirmation.warnings} onAnswer={rescheduleConfirmation.respond} />
       <WeekLessonDragPreview
