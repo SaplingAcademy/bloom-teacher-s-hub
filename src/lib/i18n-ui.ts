@@ -1504,6 +1504,22 @@ export const uiTranslations = {
       "viewProfileOf": "Abrir perfil de {0}",
       "viewProfilePrivateNotes": "Ver perfil & notas privadas"
     },
+    "unusualHours": {
+      "earlyTitle": "O sol nem acordou, teacher!",
+      "earlyBody": "Você já vai começar a trabalhar? A gente admira sua dedicação, mas não esqueça de reservar um tempinho para descansar! 💚",
+      "lateTitle": "Teacher, até a lua está com sono!",
+      "lateBody": "Tem certeza desse horário? Sua dedicação é incrível, mas seu descanso também merece um espaço na agenda!",
+      "changeTime": "Alterar horário",
+      "confirmTime": "Confirmar horário",
+      "dontShowAgain": "Não mostrar novamente",
+      "saveError": "Não foi possível salvar a preferência de aviso. O agendamento seguiu normalmente.",
+      "settingsTitle": "Lembretes de bem-estar",
+      "settingsDescription": "Avisos amigáveis ao agendar aulas em horários incomuns. São apenas lembretes.",
+      "earlyLabel": "Aulas de madrugada (00h às 06h)",
+      "lateLabel": "Aulas à noite (22h às 23h59)",
+      "settingsSaveError": "Não foi possível salvar. Tente novamente.",
+      "loadError": "Não foi possível carregar os lembretes."
+    },
     "packageRenewal": {
       "errDueDate": "Informe o dia e a data do primeiro vencimento.",
       "errInstallments": "Informe o número de parcelas.",
@@ -3094,6 +3110,22 @@ export const uiTranslations = {
       "clickToViewIndividualProfile": "Click to view individual profile",
       "viewProfileOf": "View profile of {0}",
       "viewProfilePrivateNotes": "View profile & private notes"
+    },
+    "unusualHours": {
+      "earlyTitle": "The sun isn't even up yet, teacher!",
+      "earlyBody": "Starting work already? We admire your dedication, but don't forget to save some time to rest! 💚",
+      "lateTitle": "Teacher, even the moon is sleepy!",
+      "lateBody": "Are you sure about this time? Your dedication is amazing, but your rest deserves a spot in the schedule too!",
+      "changeTime": "Change time",
+      "confirmTime": "Confirm time",
+      "dontShowAgain": "Don't show again",
+      "saveError": "Could not save the reminder preference. The scheduling went ahead normally.",
+      "settingsTitle": "Wellbeing reminders",
+      "settingsDescription": "Friendly notices when scheduling lessons at unusual hours. Reminders only.",
+      "earlyLabel": "Early-morning lessons (00:00–06:00)",
+      "lateLabel": "Late-night lessons (22:00–23:59)",
+      "settingsSaveError": "Could not save. Please try again.",
+      "loadError": "Could not load the reminders."
     },
     "packageRenewal": {
       "errDueDate": "Enter the due day and the first due date.",

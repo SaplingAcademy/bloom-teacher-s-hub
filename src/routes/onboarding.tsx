@@ -1,4 +1,5 @@
 import { fmt } from "@/lib/i18n";
+import { mergeOnboardingNotificationPreferences } from "@/lib/unusual-hour-reminders";
 import { focusFirstOnboardingError } from "@/lib/onboarding-validation-feedback";
 import { getUserItem, setUserItem, removeUserItem } from "@/lib/user-storage";
 import {
@@ -614,16 +615,30 @@ export function OnboardingPage() {
         }
       }
 
-      // 5. Update settings table & initialize working_availability from onboarding schedule
+      // 5. Update settings table & initialize working_availability from onboarding schedule.
+      // notification_preferences is merged with what is stored (e.g. wellbeing_reminders) instead
+      // of replaced; if the current value cannot be read, the column is left untouched.
+      const { data: storedSettings, error: storedSettingsError } = await supabase
+        .from("settings")
+        .select("notification_preferences")
+        .eq("teacher_id", userId)
+        .maybeSingle();
+      if (storedSettingsError) {
+        console.warn("[Onboarding] Could not read notification preferences; keeping them unchanged:", storedSettingsError.message);
+      }
       const { error: settingsError } = await supabase.from("settings").upsert(
         {
           teacher_id: userId,
           currency: "BRL",
           default_class_duration: 60,
-          notification_preferences: {
-            payment_methods: data.paymentMethods,
-            contracts: data.contractsPreference,
-          },
+          ...(storedSettingsError
+            ? {}
+            : {
+                notification_preferences: mergeOnboardingNotificationPreferences(storedSettings?.notification_preferences, {
+                  payment_methods: data.paymentMethods,
+                  contracts: data.contractsPreference,
+                }),
+              }),
         },
         { onConflict: "teacher_id" }
       );

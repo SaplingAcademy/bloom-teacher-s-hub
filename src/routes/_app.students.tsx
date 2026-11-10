@@ -8,6 +8,8 @@ import { t as i18nT } from "@/lib/i18n";
 import { usePlan } from "@/hooks/use-plan";
 import { canAddActiveStudent, countActiveStudents, isFreePlanLimitError } from "@/lib/plans";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnusualHourReminder } from "@/hooks/use-unusual-hour-reminder";
+import { changedRecurringStartTimes } from "@/lib/unusual-hour-reminders";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
 import { useCatalogOptions } from "@/hooks/use-catalog-options";
 import {
@@ -603,6 +605,8 @@ function StudentsPage() {
   const { lang, t: tr, formatStatus } = useLanguage();
   const studentSave = useSaveFeedback();
   const { user } = useAuth();
+  // Wellbeing reminder for new/changed recurring slots at unusual hours (one per group).
+  const unusualHourReminder = useUnusualHourReminder(user?.id);
   const {
     languages: teacherLanguages,
     hasConfiguredLanguages,
@@ -1185,6 +1189,11 @@ function StudentsPage() {
         tr("auditUi.pleaseSelectADueDay")
       );
       return;
+    }
+
+    if (!editLinkedGroupId) {
+      const original = students.find((s) => s.id === selectedStudentId)?.schedules || [];
+      if (!(await unusualHourReminder.confirmMany(changedRecurringStartTimes(original, editSchedulesList)))) return;
     }
 
     const scheduleString = editLinkedGroupId 
@@ -1808,6 +1817,11 @@ function StudentsPage() {
         tr("auditUi.pleaseSelectADueDay")
       );
       return;
+    }
+
+    if (!formLinkedGroupId) {
+      const original = editingStudentIdForModal ? students.find((s) => s.id === editingStudentIdForModal)?.schedules || [] : [];
+      if (!(await unusualHourReminder.confirmMany(changedRecurringStartTimes(original, formSchedulesList)))) return;
     }
 
     // Free-plan pre-flight: the database trigger remains the authority; this
@@ -3999,6 +4013,7 @@ function StudentsPage() {
           }}
         />
       )}
+      {unusualHourReminder.dialog}
       {/* INACTIVATE STUDENT MODAL */}
       {user && studentToInactivate && (
         <InactivateStudentModal
