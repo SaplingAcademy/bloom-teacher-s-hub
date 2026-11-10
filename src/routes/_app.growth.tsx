@@ -578,7 +578,9 @@ function GrowthPage() {
   }).format(value));
 
   return (
-    <div className="space-y-6">
+    // No scroll anchoring here: opening/closing the capacity times panel must not make the
+    // browser shift the main scroll (the content jumped next to the fixed sidebar).
+    <div className="space-y-6 [overflow-anchor:none]">
       {/* HEADER SECTION */}
       <PageHeader title={t.title} description={t.description} actions={<FinancialPrivacyToggle />} />
 
