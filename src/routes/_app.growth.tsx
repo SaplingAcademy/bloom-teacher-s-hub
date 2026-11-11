@@ -897,47 +897,61 @@ function GrowthPage() {
           </div>
         ) : (
           /* REAL CAPACITY CARD */
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-            <h3 className="font-display text-lg font-bold text-foreground">{t.capacityTitle}</h3>
-
-            {/* Weekly hours + occupancy ring (existing values) */}
-            <div className="mt-4 flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <span className="font-display text-3xl font-extrabold text-foreground">
-                  {fmtH(realTeachWeeklyH)}h / {fmtH(realAvailWeeklyH)}h
-                </span>
-                <div className="mt-1 text-xs font-bold text-accent">
-                  {realTeachWeeklyH > 0
-                    ? `${fmtH(realFreeWeeklyH)}h ${t.capacityFreeHours}`
-                    : t.capacityNoSchedule}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] sm:p-6">
+            {/* Title + free hours on the left, occupancy ring with the weekly hours and % on the right */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 flex-col items-start justify-between gap-3 pt-1 sm:min-h-36">
+                <div className="min-w-0">
+                  <h3 className="font-display text-xl font-bold text-foreground">{t.capacityTitle}</h3>
+                  <div className="mt-1.5 text-xs font-bold text-accent">
+                    {realTeachWeeklyH > 0
+                      ? `${fmtH(realFreeWeeklyH)}h ${t.capacityFreeHours}`
+                      : t.capacityNoSchedule}
+                  </div>
                 </div>
+                {/* sm+: beside the ring; on phones the column is too narrow, so it stays at the card bottom */}
+                <button
+                  onClick={() => setIsAvailabilityModalOpen(true)}
+                  className="hidden h-8 items-center gap-1.5 whitespace-nowrap rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 cursor-pointer sm:inline-flex"
+                >
+                  <span>{tr("auditUi.configureAvailability")}</span>
+                  <ArrowRight className="h-3 w-3" />
+                </button>
               </div>
               <div
-                className="relative h-16 w-16 shrink-0"
+                className="relative h-36 w-36 shrink-0"
                 role="img"
-                aria-label={`${realOccupancyPct ?? 0}% ${t.capacityOccupied}`}
+                aria-label={`${fmtH(realTeachWeeklyH)}h / ${fmtH(realAvailWeeklyH)}h · ${realOccupancyPct ?? 0}% ${t.capacityOccupied}`}
               >
-                <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
-                  <circle cx="32" cy="32" r="26" className="fill-none stroke-secondary" strokeWidth="6" />
+                <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
+                  <circle cx="60" cy="60" r="54" className="fill-none stroke-secondary" strokeWidth="8" />
                   <circle
-                    cx="32"
-                    cy="32"
-                    r="26"
+                    cx="60"
+                    cy="60"
+                    r="54"
                     pathLength={100}
                     className="fill-none stroke-accent transition-[stroke-dasharray] duration-500 ease-out"
-                    strokeWidth="6"
+                    strokeWidth="8"
                     strokeLinecap="round"
                     strokeDasharray={`${Math.min(100, realOccupancyPct ?? 0)} 100`}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground tabular-nums">
-                  {realOccupancyPct ?? 0}%
-                </span>
+                {(() => {
+                  const hoursLabel = `${fmtH(realTeachWeeklyH)}h / ${fmtH(realAvailWeeklyH)}h`;
+                  return (
+                    <span aria-hidden="true" className="absolute inset-[18px] flex flex-col items-center justify-center text-center tabular-nums">
+                      <span className={`whitespace-nowrap font-display font-extrabold leading-tight text-foreground ${hoursLabel.length > 9 ? "text-base" : "text-lg"}`}>
+                        {hoursLabel}
+                      </span>
+                      <span className="mt-0.5 text-xs font-semibold text-muted-foreground/80">{realOccupancyPct ?? 0}%</span>
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 
             {/* Days (one per row) + reserved area on the right for the hovered/focused day's times */}
-            <div className="mt-5 grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-6">
+            <div className="mt-2 grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-6 sm:mt-3">
               <ul ref={capacityRowsRef} className="divide-y divide-border/40">
                 {capacityDays.map((day) => (
                   <li
@@ -985,7 +999,7 @@ function GrowthPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-3 flex justify-end sm:hidden">
               <button
                 onClick={() => setIsAvailabilityModalOpen(true)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 cursor-pointer"
