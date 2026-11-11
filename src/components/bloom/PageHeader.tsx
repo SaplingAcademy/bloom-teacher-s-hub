@@ -7,9 +7,12 @@ type PageHeaderProps = {
   actions?: ReactNode;
   eyebrow?: string;
   className?: string;
+  /** Optional overrides (defaults unchanged for every other page). */
+  titleClassName?: string;
+  eyebrowClassName?: string;
 };
 
-export function PageHeader({ title, description, actions, eyebrow, className }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, eyebrow, className, titleClassName, eyebrowClassName }: PageHeaderProps) {
   return (
     <header
       className={cn(
@@ -19,11 +22,11 @@ export function PageHeader({ title, description, actions, eyebrow, className }: 
     >
       <div className="min-w-0">
         {eyebrow && (
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">
+          <p className={cn("mb-1 text-xs font-semibold uppercase tracking-wide text-accent", eyebrowClassName)}>
             {eyebrow}
           </p>
         )}
-        <h1 className="truncate font-display text-2xl font-bold text-foreground sm:text-[28px]">
+        <h1 className={cn("truncate font-display text-2xl font-bold text-foreground sm:text-[28px]", titleClassName)}>
           {title}
         </h1>
         {description && (

@@ -32,7 +32,6 @@ import { formatCentsToBRL } from "@/lib/finance-engine";
 import {
   Users,
   Wallet,
-  UserPlus,
   CalendarClock,
   Clock,
   Video,
@@ -826,6 +825,8 @@ function TodayPage() {
       <PageHeader
         eyebrow={today}
         title={greetingTitle}
+        titleClassName="text-[26px] sm:text-[32px]"
+        eyebrowClassName="text-accent/65"
         description={t.subtitle}
         actions={
           <>
@@ -841,7 +842,51 @@ function TodayPage() {
       />
 
       {/* DAILY PRIORITIES AND CHECKLIST (right after the greeting, before the indicators) */}
-      {user?.id && <DashboardPrioritiesSection teacherId={user.id} refreshKey={refreshKey} />}
+      {/* Indicators (Aulas hoje + Receita deste mês) sit under the Checklist, in the right column. */}
+      {user?.id && (
+        <DashboardPrioritiesSection
+          teacherId={user.id}
+          refreshKey={refreshKey}
+          aside={
+          <div className="grid min-w-0 grid-cols-2 gap-4">
+            <TodayLessonsCard
+              compact
+              events={todayEvents}
+              loading={metricsLoading}
+              error={Boolean(metricsError)}
+              label={t.classesToday}
+              title={tr("today.classesPopoverTitle")}
+              hint={
+                !metricsError && todayEvents.length > 0
+                  ? t.nextAt.replace("{time}", todayEvents[0].startTime)
+                  : undefined
+              }
+              emptyLabel={tr("today.noClassesToday")}
+              errorLabel={tr("errors.loadAgenda")}
+              calendarLabel={tr("today.openCalendar")}
+              onOpenLesson={(eventId) => navigate({ to: "/calendar", search: { eventId } })}
+              onOpenCalendar={() => navigate({ to: "/calendar", search: {} })}
+            />
+            <StatCard
+              compact
+              label={t.thisMonth}
+              value={
+                metricsLoading
+                  ? <Skeleton className="mt-1 h-7 w-24" />
+                  : !metrics.hasRevenueSource
+                    ? "—"
+                    : money(formatCentsToBRL(metrics.monthRevenueCents))
+              }
+              icon={Wallet}
+              tone="warning"
+              appearance="forest"
+              trend={metrics.monthRevenueTrend ?? undefined}
+              onClick={() => navigate({ to: "/finance" })}
+            />
+          </div>
+          }
+        />
+      )}
 
       {/* Skipped Onboarding Completion Card */}
       {(!profile?.onboarding_completed || profile?.onboarding_status === "skipped") && (
@@ -868,58 +913,6 @@ function TodayPage() {
           </button>
         </div>
       )}
-
-      {/* STATS CARDS */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <TodayLessonsCard
-          events={todayEvents}
-          loading={metricsLoading}
-          error={Boolean(metricsError)}
-          label={t.classesToday}
-          title={tr("today.classesPopoverTitle")}
-          hint={
-            !metricsError && todayEvents.length > 0
-              ? t.nextAt.replace("{time}", todayEvents[0].startTime)
-              : undefined
-          }
-          emptyLabel={tr("today.noClassesToday")}
-          errorLabel={tr("errors.loadAgenda")}
-          calendarLabel={tr("today.openCalendar")}
-          onOpenLesson={(eventId) => navigate({ to: "/calendar", search: { eventId } })}
-          onOpenCalendar={() => navigate({ to: "/calendar", search: {} })}
-        />
-        <StatCard
-          label={t.activeStudents}
-          value={metricsLoading ? <Skeleton className="mt-1 h-7 w-14" /> : String(metrics.activeStudents)}
-          icon={Users}
-          tone="lilac"
-          trend={metrics.activeStudentsTrend ?? undefined}
-          onClick={() => navigate({ to: "/students" })}
-        />
-        <StatCard
-          label={t.newLeads}
-          value={metricsLoading ? <Skeleton className="mt-1 h-7 w-14" /> : String(metrics.newLeads)}
-          icon={UserPlus}
-          tone="accent"
-          trend={metrics.newLeadsTrend ?? undefined}
-          onClick={() => navigate({ to: "/leads" })}
-        />
-        <StatCard
-          label={t.thisMonth}
-          value={
-            metricsLoading
-              ? <Skeleton className="mt-1 h-7 w-24" />
-              : !metrics.hasRevenueSource
-                ? "—"
-                : money(formatCentsToBRL(metrics.monthRevenueCents))
-          }
-          icon={Wallet}
-          tone="warning"
-          appearance="forest"
-          trend={metrics.monthRevenueTrend ?? undefined}
-          onClick={() => navigate({ to: "/finance" })}
-        />
-      </div>
 
       {/* URGENT SECTION */}
       {user?.id && <DashboardUrgentSection teacherId={user.id} refreshKey={refreshKey} />}

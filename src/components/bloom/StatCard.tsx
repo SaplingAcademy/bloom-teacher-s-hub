@@ -20,6 +20,8 @@ type StatCardProps = {
   trend?: { value: string; positive?: boolean };
   hint?: string;
   appearance?: "light" | "forest";
+  /** Smaller padding and a value that grows with the card width (narrow two-up layouts). */
+  compact?: boolean;
   onClick?: () => void;
 };
 
@@ -31,11 +33,13 @@ export function StatCard({
   trend,
   hint,
   appearance = "light",
+  compact = false,
   onClick,
 }: StatCardProps) {
   const forest = appearance === "forest";
   const shell = cn(
-    "flex flex-col gap-3 rounded-2xl border p-5 shadow-[var(--shadow-sm)] text-left w-full",
+    "flex flex-col gap-3 rounded-2xl border shadow-[var(--shadow-sm)] text-left w-full",
+    compact ? "@container h-full p-4" : "p-5",
     forest ? "border-sidebar-border bg-sidebar text-sidebar-accent-foreground" : "border-border bg-card",
     onClick && "group cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
   );
@@ -62,7 +66,7 @@ export function StatCard({
         )}
       </div>
       <div>
-        <p className={cn("font-display text-2xl font-bold", forest ? cn("text-sidebar-accent-foreground", onClick && "group-hover:text-foreground") : "text-card-foreground")}>{value}</p>
+        <p className={cn("font-display font-bold", compact ? "whitespace-nowrap text-xl tabular-nums @[10rem]:text-2xl" : "text-2xl", forest ? cn("text-sidebar-accent-foreground", onClick && "group-hover:text-foreground") : "text-card-foreground")}>{value}</p>
         <p className={cn("text-sm", forest ? cn("text-sidebar-foreground", onClick && "group-hover:text-muted-foreground") : "text-muted-foreground")}>{label}</p>
         {hint && <p className={cn("mt-1 text-xs", forest ? cn("text-sidebar-foreground/80", onClick && "group-hover:text-muted-foreground") : "text-muted-foreground/80")}>{hint}</p>}
       </div>
