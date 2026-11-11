@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Menu } from "lucide-react";
+import { useLanguage } from "@/hooks/use-language";
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { TopBar } from "@/components/layout/TopBar";
+import { BloomMark } from "@/components/bloom/Logo";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useScheduledContractActivation } from "@/hooks/use-scheduled-contract-activation";
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { user, loading, profile, error, retryProfileSync, signOut } = useAuth();
+  const { t } = useLanguage();
   // Scheduled contract renewals: activation fallback when the app opens (same RPC as the schedule).
   useScheduledContractActivation(user?.id);
 
@@ -148,8 +151,20 @@ function AppLayout() {
 
       {/* Main Content Region — No layout jump when sidebar expands on hover */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden relative z-10">
-        <TopBar onOpenMobileNav={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto scroll-smooth px-4 py-6 sm:px-6 lg:px-8">
+        {/* Mobile-only navigation trigger: no top bar on desktop, the sidebar holds all navigation. */}
+        <div className="flex h-14 shrink-0 items-center gap-2 px-2 sm:px-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            aria-label={t("globalUi.openNavigation")}
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <BloomMark className="text-primary" />
+          <span className="font-display text-lg font-bold text-foreground">Bloom</span>
+        </div>
+        <main className="flex-1 overflow-y-auto scroll-smooth px-4 pb-6 pt-2 sm:px-6 lg:px-8 lg:pt-6">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>

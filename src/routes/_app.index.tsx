@@ -62,6 +62,7 @@ import { PageHeader } from "@/components/bloom/PageHeader";
 import { StatCard } from "@/components/bloom/StatCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TodayLessonsCard } from "@/components/bloom/TodayLessonsCard";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { FinancialPrivacyToggle } from "@/components/bloom/FinancialPrivacyToggle";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import {
@@ -828,6 +829,7 @@ function TodayPage() {
         description={t.subtitle}
         actions={
           <>
+            <NotificationBell className="h-9 w-9" />
             <FinancialPrivacyToggle className="h-9 w-9" />
             {showAiDayPlanner && (
               <button className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-warm px-4 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-sm)] transition-transform hover:-translate-y-0.5 cursor-pointer">

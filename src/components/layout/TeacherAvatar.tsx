@@ -5,8 +5,8 @@ import { useLanguage } from "@/hooks/use-language";
 import { resolveAccountDisplayName, teacherInitials } from "@/lib/teacher-name";
 
 /**
- * Single source of the authenticated teacher's identity for the app chrome (top bar avatar and
- * sidebar account block), so both always agree: the name saved in the profile (kept even when it
+ * Single source of the authenticated teacher's identity for the app chrome (sidebar account block),
+ * so every place agrees: the name saved in the profile (kept even when it
  * resembles the e-mail, see resolveAccountDisplayName), the auth e-mail and the profile photo.
  */
 export function useTeacherIdentity() {
