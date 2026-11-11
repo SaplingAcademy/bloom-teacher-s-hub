@@ -210,27 +210,12 @@ function Hero() {
             </span>
           </span>
         </h1>
-        <div className="relative z-10 mt-8 flex flex-col gap-8 lg:mt-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
-          <p className="landing-rise max-w-[34rem] text-lg leading-relaxed text-foreground/70 sm:text-xl" style={{ "--rise-delay": "160ms" } as CSSProperties}>
-            {t("landing.hero.subtitle")}
-          </p>
-          <div className="landing-rise shrink-0" style={{ "--rise-delay": "240ms" } as CSSProperties}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link to="/auth" className={cn(btnPrimary, "h-[52px] px-7 text-base")}>
-                {t("landing.hero.ctaPrimary")}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-              <a href="#solucao" className="group inline-flex h-[52px] items-center justify-center gap-2 rounded-full px-5 text-base font-semibold text-foreground transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                {t("landing.hero.ctaSecondary")}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </a>
-            </div>
-            <p className="mt-4 text-center text-sm text-foreground/55 sm:text-left">{t("landing.hero.note")}</p>
-          </div>
-        </div>
+        <p className="landing-rise relative z-10 mx-auto mt-8 max-w-[36rem] text-balance text-center text-lg leading-relaxed text-foreground/70 sm:text-xl lg:mt-10" style={{ "--rise-delay": "160ms" } as CSSProperties}>
+          {t("landing.hero.subtitle")}
+        </p>
 
         {/* Product: the real Overview screen, large, with the phone view overlapping its corner */}
-        <div className="landing-rise relative mt-14 sm:mt-16 lg:mt-20" style={{ "--rise-delay": "320ms" } as CSSProperties}>
+        <div className="landing-rise relative mt-12 sm:mt-14 lg:mt-16" style={{ "--rise-delay": "240ms" } as CSSProperties}>
           {/* Warm brand field: from the top of the page down to the middle of the product screen */}
           <div aria-hidden="true" className="pointer-events-none absolute bottom-[42%] left-1/2 -z-20 h-[300vh] w-screen -translate-x-1/2 bg-header-bg" />
           {/* Phones: the real mobile screen is the main visual (the desktop screen would be too small to read) */}
