@@ -822,9 +822,6 @@ function TodayPage() {
 
   return (
     <div className="space-y-6">
-      {/* DAILY PRIORITIES AND CHECKLIST (first block of the Overview) */}
-      {user?.id && <DashboardPrioritiesSection teacherId={user.id} refreshKey={refreshKey} />}
-
       {/* Page Header */}
       <PageHeader
         eyebrow={today}
@@ -842,6 +839,9 @@ function TodayPage() {
           </>
         }
       />
+
+      {/* DAILY PRIORITIES AND CHECKLIST (right after the greeting, before the indicators) */}
+      {user?.id && <DashboardPrioritiesSection teacherId={user.id} refreshKey={refreshKey} />}
 
       {/* Skipped Onboarding Completion Card */}
       {(!profile?.onboarding_completed || profile?.onboarding_status === "skipped") && (
