@@ -216,18 +216,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
               <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </span>
           ) : moduleTarget ? (
-            <span className="flex items-center gap-2 text-[11px] font-semibold">
-              <span>{t("today.resolve.expand")}</span>
-              <button
-                type="button"
-                title={t("today.resolve.openModule")}
-                aria-label={t("today.resolve.openModule")}
-                onClick={(e) => { e.stopPropagation(); handleItemClick(item); }}
-                className="rounded p-0.5 hover:bg-stone-200"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </button>
-            </span>
+            <span className="flex items-center text-[11px] font-semibold">{t("today.resolve.expand")}</span>
           ) : (
             <ExternalLink className="h-4 w-4" />
           )}
@@ -258,7 +247,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const isEmpty = !loading && items.length === 0;
 
   return (
-    <div className="min-w-0 rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all xl:h-full">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all xl:h-full">
       {/* Forest header + filters area; priority content stays on the white card surface */}
       <div className="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 rounded-t-2xl border-b border-sidebar-border bg-sidebar px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
       {/* Header */}
@@ -268,13 +257,6 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-sidebar-accent-foreground">
               {t("today.prioritiesTitle")}
             </h2>
-            {!loading && items.length > 0 && (
-              <Badge className="border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                {items.length === 1
-                  ? t("today.priorityCountSingular").replace("{count}", "1")
-                  : t("today.priorityCount").replace("{count}", String(items.length))}
-              </Badge>
-            )}
           </div>
           <p className="text-xs text-sidebar-foreground/80 font-medium mt-0.5">
             {t("today.prioritiesSubtitle")}
@@ -360,6 +342,12 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
         </div>
       )}
 
+      {/* Scrollable list area: grows with the content up to a fixed height, then scrolls inside the
+          card while the forest header, filters and card borders stay in place. */}
+      <div
+        data-testid="priorities-scroll"
+        className="-mx-1.5 max-h-[26rem] min-h-0 space-y-4 overflow-y-auto overscroll-contain px-1.5"
+      >
       {/* Loading */}
       {loading && (
         <div className="space-y-2.5">
@@ -411,6 +399,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           {t("today.noCategoryItems")}
         </p>
       )}
+      </div>
       </div>
       {moduleAction && (
         <PriorityModuleActions

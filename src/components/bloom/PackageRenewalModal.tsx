@@ -73,6 +73,8 @@ interface PackageRenewalModalProps {
   studentName: string;
   currentSummary?: StudentFinancialSummary | null;
   onRenewalCompleted?: () => void;
+  /** Optional discreet link shown next to the footer's left button (e.g. Today's "Ver contrato"). */
+  secondaryAction?: React.ReactNode;
 }
 
 function todayYmdLocal(): string {
@@ -93,6 +95,7 @@ export function PackageRenewalModal({
   studentName,
   currentSummary,
   onRenewalCompleted,
+  secondaryAction,
 }: PackageRenewalModalProps) {
   const { t, formatStatus, lang } = useLanguage();
   const tr = t;
@@ -799,6 +802,7 @@ export function PackageRenewalModal({
 
         {/* Footer Controls */}
         <DialogFooter className="p-4 bg-muted/30 border-t border-border flex items-center justify-between sm:justify-between">
+          <div className="flex items-center gap-3">
           {step > 1 ? (
             <Button
               type="button"
@@ -820,6 +824,8 @@ export function PackageRenewalModal({
               {tr("packageRenewal.lCancel")}
             </Button>
           )}
+          {secondaryAction}
+          </div>
 
           {step < 4 ? (
             <Button
