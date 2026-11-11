@@ -391,7 +391,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       noTasks: "Nenhuma prioridade pendente para hoje.",
       draftPlan: "Criar plano",
       resolve: {
-        expand: "Resolver aqui",
+        expand: "Resolver",
         collapse: "Fechar",
         openModule: "Abrir na origem",
         loading: "Carregando…",
@@ -1382,7 +1382,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       noTasks: "No pending priorities for today.",
       draftPlan: "Draft plan",
       resolve: {
-        expand: "Resolve here",
+        expand: "Resolve",
         collapse: "Close",
         openModule: "Open source",
         loading: "Loading…",
