@@ -7,6 +7,7 @@ import { LIBRARY_CATALOG, librarySourceId, type LibraryResource, type ResourceTe
 import { accessLibraryResource } from "@/lib/library-content.functions";
 import { isLibraryPremiumError, LIBRARY_ACCESS_QUERY_KEY, type LibraryClassification } from "@/lib/library-access";
 import { PremiumBenefitsDialog } from "@/components/bloom/PremiumGate";
+import { ReceiptGenerator } from "@/components/resources/ReceiptGenerator";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/use-language";
 import { toast } from "sonner";
@@ -188,6 +189,9 @@ function ResourcesPage() {
   const [previewTemplate, setPreviewTemplate] = useState<ResourceTemplate | null>(null);
   const [builderTemplate, setBuilderTemplate] = useState<ResourceTemplate | null>(null);
   const [builderForm, setBuilderForm] = useState<Record<string, string>>({});
+  // Finance → Receipts opens the receipt generator (same library authorization as any template).
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const RECEIPT_RESOURCE_ID = "admin-receipt";
 
   useEffect(() => {
     // Load states
@@ -263,11 +267,19 @@ function ResourcesPage() {
     }
   }, [library.data, library.isError, library.fullAccess, previewTemplate, builderTemplate, loadedLevel]);
 
+  // Same revocation rule for the receipt generator.
+  useEffect(() => {
+    if (!receiptOpen) return;
+    const level = library.level(RECEIPT_RESOURCE_ID);
+    if (!library.fullAccess && (level === "pro" || (level === null && loadedLevel !== "free"))) setReceiptOpen(false);
+  }, [library.data, library.isError, library.fullAccess, receiptOpen, loadedLevel]);
+
   useEffect(() => {
     accessAttempt.current += 1;
     setPreviewTemplate(null);
     setBuilderTemplate(null);
     setBuilderForm({});
+    setReceiptOpen(false);
   }, [user?.id]);
 
   const accessBadge = (id: string) => {
@@ -303,6 +315,12 @@ function ResourcesPage() {
     }
     const authorized = await loadTemplate(template);
     if (!authorized) return;
+    if (template.id === RECEIPT_RESOURCE_ID) {
+      setPreviewTemplate(null);
+      setReceiptOpen(true);
+      recordRecentOpened(template.id);
+      return;
+    }
     setPreviewTemplate(null);
     setBuilderTemplate(authorized);
     recordRecentOpened(template.id);
@@ -318,6 +336,12 @@ function ResourcesPage() {
   const handleOpenPreview = async (template: LibraryResource) => {
     const authorized = await loadTemplate(template);
     if (!authorized) return;
+    if (template.id === RECEIPT_RESOURCE_ID) {
+      setBuilderTemplate(null);
+      setReceiptOpen(true);
+      recordRecentOpened(template.id);
+      return;
+    }
     setBuilderTemplate(null);
     setPreviewTemplate(authorized);
     recordRecentOpened(template.id);
@@ -878,6 +902,7 @@ function ResourcesPage() {
         </div>
       )}
       <PremiumBenefitsDialog open={premiumOpen} onOpenChange={setPremiumOpen} />
+      <ReceiptGenerator open={receiptOpen} onOpenChange={setReceiptOpen} />
 
       {/* TEMPLATE PREVIEW MODAL */}
       <Dialog
