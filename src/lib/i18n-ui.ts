@@ -672,6 +672,31 @@ export const uiTranslations = {
       "meetingLinkLocation": "Link da reunião / Local",
       "scheduleClass": "Agendar aula"
     },
+    "receiptDoc": {
+      "title": "Recibo", "number": "Nº", "payer": "Pagador", "document": "CPF/CNPJ", "description": "Descrição",
+      "period": "Período de referência", "date": "Data do pagamento", "method": "Forma de pagamento", "amount": "Valor",
+      "statement": "Recebi de {payer}{doc} a importância de {amount} ({words}), referente a {description}{period}.",
+      "statementDoc": ", inscrito(a) no CPF/CNPJ {doc},",
+      "statementPeriod": ", período de referência {period}",
+      "disclaimer": "Este recibo comprova o pagamento descrito acima. Não é nota fiscal. Gerado com Bloom.",
+      "methods": { "pix": "Pix", "cash": "Dinheiro", "bankTransfer": "Transferência bancária", "creditCard": "Cartão de crédito", "debitCard": "Cartão de débito", "boleto": "Boleto", "other": "Outro" }
+    },
+    "receipts": {
+      "title": "Gerador de recibos", "subtitle": "Preencha os dados de um pagamento já recebido e baixe o recibo em PDF (A4).",
+      "notInvoice": "O recibo comprova um pagamento recebido. Ele não é nota fiscal e não altera o Financeiro.",
+      "student": "Aluno", "manual": "Preencher manualmente", "studentPlaceholder": "Selecione um aluno",
+      "studentsError": "Não foi possível carregar os alunos. Preencha os dados manualmente.",
+      "contractError": "Não foi possível carregar o CPF/CNPJ do contrato do aluno; preencha se necessário.",
+      "sectionPayment": "Pagamento", "sectionPayer": "Pagador", "sectionIssuer": "Emitente",
+      "number": "Número do recibo", "payerName": "Nome do pagador", "payerDocument": "CPF/CNPJ do pagador (opcional)",
+      "amount": "Valor (R$)", "amountPlaceholder": "Ex.: 640,00", "description": "Descrição", "descriptionPlaceholder": "Ex.: aulas de inglês do mês",
+      "period": "Período de referência", "paymentDate": "Data do pagamento", "paymentMethod": "Forma de pagamento", "paymentMethodOther": "Qual forma?",
+      "issuerName": "Nome do emitente", "issuerDocument": "CPF/CNPJ do emitente", "issuerEmail": "E-mail", "issuerPhone": "Telefone", "issuerCity": "Cidade/UF",
+      "preview": "Prévia", "download": "Baixar PDF", "generating": "Gerando PDF…", "close": "Fechar", "edit": "Editar dados", "showPreview": "Ver prévia",
+      "fixErrors": "Revise os campos destacados antes de gerar o PDF.", "downloaded": "Recibo gerado.", "pdfError": "Não foi possível gerar o PDF.",
+      "required": "Campo obrigatório.", "invalidAmount": "Informe um valor maior que zero, com até duas casas decimais.", "tooLong": "Texto muito longo.",
+      "counter": "{count}/{max}"
+    },
     "leadFilters": {
       "filters": "Filtros",
       "onlyPending": "Sem primeiro contato",
@@ -2292,6 +2317,31 @@ export const uiTranslations = {
       "format": "Format",
       "meetingLinkLocation": "Meeting link / Location",
       "scheduleClass": "Schedule class"
+    },
+    "receiptDoc": {
+      "title": "Receipt", "number": "No.", "payer": "Payer", "document": "Tax ID (CPF/CNPJ)", "description": "Description",
+      "period": "Reference period", "date": "Payment date", "method": "Payment method", "amount": "Amount",
+      "statement": "I received from {payer}{doc} the amount of {amount} ({words}), for {description}{period}.",
+      "statementDoc": " (tax ID {doc})",
+      "statementPeriod": ", reference period {period}",
+      "disclaimer": "This receipt confirms the payment described above. It is not a tax invoice. Generated with Bloom.",
+      "methods": { "pix": "Pix", "cash": "Cash", "bankTransfer": "Bank transfer", "creditCard": "Credit card", "debitCard": "Debit card", "boleto": "Boleto", "other": "Other" }
+    },
+    "receipts": {
+      "title": "Receipt generator", "subtitle": "Fill in a payment you already received and download the receipt as an A4 PDF.",
+      "notInvoice": "A receipt confirms a payment received. It is not a tax invoice and does not change Finance.",
+      "student": "Student", "manual": "Fill in manually", "studentPlaceholder": "Select a student",
+      "studentsError": "Could not load students. Fill in the details manually.",
+      "contractError": "Could not load the tax ID from the student's contract; fill it in if needed.",
+      "sectionPayment": "Payment", "sectionPayer": "Payer", "sectionIssuer": "Issuer",
+      "number": "Receipt number", "payerName": "Payer name", "payerDocument": "Payer tax ID (optional)",
+      "amount": "Amount (R$)", "amountPlaceholder": "e.g. 640.00", "description": "Description", "descriptionPlaceholder": "e.g. English lessons for the month",
+      "period": "Reference period", "paymentDate": "Payment date", "paymentMethod": "Payment method", "paymentMethodOther": "Which method?",
+      "issuerName": "Issuer name", "issuerDocument": "Issuer tax ID", "issuerEmail": "E-mail", "issuerPhone": "Phone", "issuerCity": "City/State",
+      "preview": "Preview", "download": "Download PDF", "generating": "Generating PDF…", "close": "Close", "edit": "Edit details", "showPreview": "Show preview",
+      "fixErrors": "Check the highlighted fields before generating the PDF.", "downloaded": "Receipt generated.", "pdfError": "Could not generate the PDF.",
+      "required": "Required field.", "invalidAmount": "Enter an amount above zero with up to two decimals.", "tooLong": "Text is too long.",
+      "counter": "{count}/{max}"
     },
     "leadFilters": {
       "filters": "Filters",
