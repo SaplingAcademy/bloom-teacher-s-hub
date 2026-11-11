@@ -675,9 +675,10 @@ export const uiTranslations = {
     "receiptDoc": {
       "title": "Recibo", "number": "Nº", "payer": "Pagador", "document": "CPF/CNPJ", "description": "Descrição",
       "period": "Período de referência", "date": "Data do pagamento", "method": "Forma de pagamento", "amount": "Valor",
-      "statement": "Recebi de {payer}{doc} a importância de {amount} ({words}), referente a {description}{period}.",
-      "statementDoc": ", inscrito(a) no CPF/CNPJ {doc},",
-      "statementPeriod": ", período de referência {period}",
+      "statement": "Recebi de {payer}{doc} a importância de {amount} ({words}) como pagamento de {description}{period}.",
+      "statementDoc": ", {docLabel} {doc},",
+      "statementPeriod": ", referente ao período de {period}",
+      "cpf": "CPF", "cnpj": "CNPJ", "docGeneric": "CPF/CNPJ",
       "disclaimer": "Este recibo comprova o pagamento descrito acima. Não é nota fiscal. Gerado com Bloom.",
       "methods": { "pix": "Pix", "cash": "Dinheiro", "bankTransfer": "Transferência bancária", "creditCard": "Cartão de crédito", "debitCard": "Cartão de débito", "boleto": "Boleto", "other": "Outro" }
     },
@@ -2321,9 +2322,10 @@ export const uiTranslations = {
     "receiptDoc": {
       "title": "Receipt", "number": "No.", "payer": "Payer", "document": "Tax ID (CPF/CNPJ)", "description": "Description",
       "period": "Reference period", "date": "Payment date", "method": "Payment method", "amount": "Amount",
-      "statement": "I received from {payer}{doc} the amount of {amount} ({words}), for {description}{period}.",
-      "statementDoc": " (tax ID {doc})",
-      "statementPeriod": ", reference period {period}",
+      "statement": "I received from {payer}{doc} the amount of {amount} ({words}) as payment for {description}{period}.",
+      "statementDoc": " ({docLabel} {doc})",
+      "statementPeriod": ", covering {period}",
+      "cpf": "CPF", "cnpj": "CNPJ", "docGeneric": "tax ID",
       "disclaimer": "This receipt confirms the payment described above. It is not a tax invoice. Generated with Bloom.",
       "methods": { "pix": "Pix", "cash": "Cash", "bankTransfer": "Bank transfer", "creditCard": "Credit card", "debitCard": "Debit card", "boleto": "Boleto", "other": "Other" }
     },

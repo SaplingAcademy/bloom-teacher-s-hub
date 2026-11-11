@@ -4,6 +4,8 @@ import { RECEIPT_LAYOUT as L } from "@/lib/receipt-pdf";
 
 const MM_PX = 96 / 25.4;
 const C = L.colors;
+/** Distance from the top of the 5 mm place/date line box to its text baseline (10.5pt). */
+const PLACE_BASELINE = 3.8;
 
 /**
  * On-screen A4 preview of the receipt. It is laid out in millimetres with the same coordinates and
@@ -81,17 +83,24 @@ export function ReceiptDocument({ model }: { model: ReceiptModel }) {
           </div>
 
           {model.placeAndDate && (
-            <p className="m-0 text-right" style={{ marginTop: mm(L.placeGap - 4), fontSize: `${L.valueSize}pt` }}>{model.placeAndDate}</p>
+            <p className="m-0 text-right" style={{ marginTop: mm(L.placeGap - PLACE_BASELINE), fontSize: `${L.valueSize}pt`, lineHeight: mm(L.placeLine) }}>{model.placeAndDate}</p>
           )}
+
+          {/* Signature follows the content, at the same distances as the PDF. */}
+          <div
+            className="mx-auto text-center"
+            style={{
+              width: mm(120),
+              marginTop: mm(model.placeAndDate ? L.signatureAfterPlace - (L.placeLine - PLACE_BASELINE) : L.signatureAfterTable),
+            }}
+          >
+            <div className="mx-auto" style={{ width: mm(L.signatureWidth), borderTop: `0.35mm solid ${C.forest}` }} />
+            <p className="m-0 font-bold [overflow-wrap:anywhere] line-clamp-2" style={{ marginTop: mm(1.6), fontSize: "11pt", lineHeight: mm(5) }}>{model.signatureName}</p>
+            {model.signatureDocument && <p className="m-0 truncate" style={{ fontSize: "9pt", lineHeight: mm(5), color: C.muted }}>{model.signatureDocument}</p>}
+          </div>
         </div>
 
-        <div className="absolute text-center" style={{ left: mm((L.page.width - 120) / 2), width: mm(120), top: mm(L.signatureMinY) }}>
-          <div className="mx-auto" style={{ width: mm(L.signatureWidth), borderTop: `0.35mm solid ${C.forest}` }} />
-          <p className="m-0 font-bold [overflow-wrap:anywhere] line-clamp-2" style={{ marginTop: mm(1.6), fontSize: "11pt", lineHeight: mm(5) }}>{model.signatureName}</p>
-          {model.signatureDocument && <p className="m-0 truncate" style={{ fontSize: "9pt", lineHeight: mm(5), color: C.muted }}>{model.signatureDocument}</p>}
-        </div>
-
-        <footer className="absolute inset-x-0 bottom-0 text-center" style={{ top: mm(L.footerY), background: C.forest, color: C.cream, padding: `${mm(5)} ${mm(L.margin)} 0` }}>
+        <footer className="absolute inset-x-0 bottom-0 text-center" style={{ top: mm(L.footerY), background: C.forest, color: C.cream, padding: `${mm(7)} ${mm(L.margin)} 0` }}>
           {model.footerLines.map((line) => (
             <p key={line} className="m-0 truncate" style={{ fontSize: "9pt", lineHeight: mm(5) }}>{line}</p>
           ))}

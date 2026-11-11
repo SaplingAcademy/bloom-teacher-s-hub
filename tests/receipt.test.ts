@@ -61,12 +61,14 @@ describe("receipt validation and model", () => {
     expect(model.title).toBe("Recibo");
     expect(model.amountText).toContain("640,00");
     expect(model.statement).toBe(
-      "Recebi de Ana Lima, inscrito(a) no CPF/CNPJ 123.456.789-00, a importância de R$ 640,00 (seiscentos e quarenta reais), referente a aulas de inglês de novembro, período de referência novembro de 2026.",
+      "Recebi de Ana Lima, CPF 123.456.789-00, a importância de R$\u00a0640,00 (seiscentos e quarenta reais) como pagamento de aulas de inglês de novembro, referente ao período de novembro de 2026.",
     );
     expect(model.rows.map((r) => r.label)).toEqual(["Pagador", "CPF/CNPJ", "Descrição", "Período de referência", "Data do pagamento", "Forma de pagamento", "Valor"]);
     expect(model.placeAndDate).toBe("São Paulo/SP, 11 de novembro de 2026");
     expect(buildReceiptModel(filled({ period: "" }), "pt", pt).rows.map((r) => r.label)).not.toContain("Período de referência");
-    expect(buildReceiptModel(filled(), "en", en).statement.startsWith("I received from Ana Lima the amount of")).toBe(true);
+    expect(buildReceiptModel(filled({ period: "November 2026" }), "en", en).statement).toBe(
+      "I received from Ana Lima the amount of R$640.00 (six hundred forty reais) as payment for aulas de inglês de novembro, covering November 2026.",
+    );
     expect(model.disclaimer).toContain("Não é nota fiscal");
   });
 
@@ -98,8 +100,29 @@ describe("receipt PDF", () => {
 describe("receipt statement punctuation", () => {
   it("does not double the punctuation when the description ends with a period", () => {
     const model = buildReceiptModel(filled({ description: "aulas de novembro." }), "pt", pt);
-    expect(model.statement).toContain("referente a aulas de novembro, período de referência");
+    expect(model.statement).toContain("como pagamento de aulas de novembro, referente ao período de");
     expect(model.rows.find((r) => r.label === "Descrição")?.value).toBe("aulas de novembro.");
-    expect(buildReceiptModel(filled({ description: "aulas.", period: "" }), "pt", pt).statement.endsWith("referente a aulas.")).toBe(true);
+    expect(buildReceiptModel(filled({ description: "aulas.", period: "" }), "pt", pt).statement.endsWith("como pagamento de aulas.")).toBe(true);
+  });
+});
+
+describe("receipt statement wording", () => {
+  it("names the document kind and integrates the description into the sentence", () => {
+    const cnpj = buildReceiptModel(filled({ payerName: "Acme Idiomas Ltda", payerDocument: "12.345.678/0001-90", description: "Aulas in company" }), "pt", pt);
+    expect(cnpj.statement).toContain("Recebi de Acme Idiomas Ltda, CNPJ 12.345.678/0001-90, a importância de");
+    expect(cnpj.statement).toContain("como pagamento de aulas in company,");
+    expect(buildReceiptModel(filled({ payerDocument: "12345" }), "pt", pt).statement).toContain("Ana Lima, CPF/CNPJ 12345, a importância");
+    expect(buildReceiptModel(filled({ description: "TOEFL preparatório" }), "pt", pt).statement).toContain("como pagamento de TOEFL preparatório");
+    expect(buildReceiptModel(filled({ payerDocument: "123.456.789-00" }), "en", en).statement).toContain("Ana Lima (CPF 123.456.789-00) the amount");
+    expect(buildReceiptModel(filled({ payerDocument: "12345" }), "en", en).statement).toContain("Ana Lima (tax ID 12345) the amount");
+    expect(buildReceiptModel(filled({ description: "English lessons" }), "en", en).statement).toContain("as payment for English lessons");
+  });
+
+  it("keeps only contacts and city in the footer (name and document stay under the signature)", () => {
+    const model = buildReceiptModel(filled({ issuerDocument: "123.456.789-09", issuerPhone: "(31) 99876-5432" }), "pt", pt);
+    expect(model.footerLines).toEqual(["mariana@escola.com · (31) 99876-5432 · São Paulo/SP"]);
+    expect(model.signatureName).toBe("Mariana Albuquerque");
+    expect(model.signatureDocument).toBe("CPF/CNPJ: 123.456.789-09");
+    expect(buildReceiptModel(filled({ issuerEmail: "", issuerCity: "" }), "pt", pt).footerLines).toEqual([]);
   });
 });

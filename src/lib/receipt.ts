@@ -223,6 +223,25 @@ export function formatLongDate(ymd: string, lang: ReceiptLang): string {
  * Builds what the receipt shows. Missing values render as a neutral dash in the preview so the
  * layout is stable while typing; the PDF is only exported once validateReceipt passes.
  */
+/** "CPF" for 11 digits, "CNPJ" for 14, otherwise a generic label ("CPF/CNPJ" / "tax ID"). */
+export function documentKindLabel(document: string, T: (key: string) => string): string {
+  const digits = document.replace(/\D/g, "").length;
+  return digits === 11 ? T("cpf") : digits === 14 ? T("cnpj") : T("docGeneric");
+}
+
+/**
+ * The description as it reads inside the sentence: trailing punctuation removed (the sentence adds
+ * its own) and, in Portuguese, a lowercase first letter ("como pagamento de aulas…") unless the first
+ * word is an acronym such as "TOEFL" or "IELTS".
+ */
+export function statementDescription(description: string, lang: ReceiptLang): string {
+  const text = description.trim().replace(/[\s.;,]+$/, "");
+  if (lang !== "pt" || !text) return text;
+  const firstWord = text.split(/\s/)[0];
+  const isAcronym = firstWord.length > 1 && firstWord === firstWord.toLocaleUpperCase("pt-BR") && /\p{L}{2}/u.test(firstWord);
+  return isAcronym ? text : text.charAt(0).toLocaleLowerCase("pt-BR") + text.slice(1);
+}
+
 export function buildReceiptModel(d: ReceiptData, lang: ReceiptLang, text: ReceiptText): ReceiptModel {
   const T = (k: string) => text(`receiptDoc.${k}`);
   const dash = "—";
@@ -252,21 +271,18 @@ export function buildReceiptModel(d: ReceiptData, lang: ReceiptLang, text: Recei
     amountText: amount,
     statement: fill(T("statement"), {
       payer,
-      doc: payerDocument ? fill(T("statementDoc"), { doc: payerDocument }) : "",
+      doc: payerDocument ? fill(T("statementDoc"), { docLabel: documentKindLabel(payerDocument, T), doc: payerDocument }) : "",
       amount,
       words,
-      // The sentence adds its own punctuation after the description.
-      description: description.replace(/[\s.;,]+$/, "") || dash,
+      description: statementDescription(description, lang) || dash,
       period: period ? fill(T("statementPeriod"), { period }) : "",
     }),
     rows,
     placeAndDate: [city, date].filter(Boolean).join(", "),
     signatureName: issuerName || dash,
     signatureDocument: issuerDocument ? `${T("document")}: ${issuerDocument}` : "",
-    footerLines: [
-      [issuerName, issuerDocument && `${T("document")} ${issuerDocument}`].filter(Boolean).join(" · "),
-      [d.issuerEmail.trim(), d.issuerPhone.trim(), city].filter(Boolean).join(" · "),
-    ].filter(Boolean),
+    // Name and CPF/CNPJ already sit under the signature; the footer keeps contacts and city only.
+    footerLines: [[d.issuerEmail.trim(), d.issuerPhone.trim(), city].filter(Boolean).join(" · ")].filter(Boolean),
     disclaimer: T("disclaimer"),
   };
 }

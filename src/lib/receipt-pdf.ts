@@ -20,8 +20,10 @@ export const RECEIPT_LAYOUT = {
   valueSize: 10.5,
   labelSize: 8,
   placeGap: 12,
-  signatureMinY: 232,
-  signatureGap: 40,
+  placeLine: 5,
+  /** Signature line below the place/date line (room for a handwritten signature), or below the table. */
+  signatureAfterPlace: 26,
+  signatureAfterTable: 30,
   signatureWidth: 80,
   footerY: 270,
   colors: {
@@ -96,13 +98,14 @@ export async function renderReceiptPdf(model: ReceiptModel) {
   });
 
   // Place and date
+  const placeY = y + L.placeGap;
   if (model.placeAndDate) {
     doc.setFont("helvetica", "normal"); doc.setFontSize(L.valueSize); doc.setTextColor(C.text);
-    doc.text(model.placeAndDate, W - M, y + L.placeGap, { align: "right" });
+    doc.text(model.placeAndDate, W - M, placeY, { align: "right" });
   }
 
-  // Signature
-  const sigY = Math.max(y + L.signatureGap, L.signatureMinY);
+  // Signature follows the content (field limits keep it clear of the footer; clamped as a safeguard)
+  const sigY = Math.min(model.placeAndDate ? placeY + L.signatureAfterPlace : y + L.signatureAfterTable, L.footerY - 24);
   const sigX = (W - L.signatureWidth) / 2;
   doc.setDrawColor(C.forest); doc.setLineWidth(0.35); doc.line(sigX, sigY, sigX + L.signatureWidth, sigY);
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(C.text);
@@ -113,10 +116,10 @@ export async function renderReceiptPdf(model: ReceiptModel) {
     doc.text(fit(model.signatureDocument, 120), W / 2, sigY + 5.5 + sigName.length * 5, { align: "center" });
   }
 
-  // Footer band: issuer identification + disclaimer
+  // Footer band: issuer contacts and city (name/CPF-CNPJ are under the signature) + disclaimer
   doc.setFillColor(C.forest); doc.rect(0, L.footerY, W, L.page.height - L.footerY, "F");
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(C.cream);
-  let fy = L.footerY + 8.5;
+  let fy = L.footerY + 10.5;
   for (const line of model.footerLines) {
     doc.text(fit(line, contentW), W / 2, fy, { align: "center" });
     fy += 5;
