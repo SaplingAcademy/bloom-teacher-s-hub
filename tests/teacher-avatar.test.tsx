@@ -33,7 +33,7 @@ function render(user: any, profile: any) {
 
 const email = "mariana.albuquerque@escola.com";
 
-describe("shared teacher avatar (top bar + sidebar)", () => {
+describe("shared teacher avatar (sidebar account block)", () => {
   it("prefers the profile photo", () => {
     const { container } = render({ email }, { full_name: "Mariana Albuquerque", avatar_url: "https://cdn.example/a.png" });
     expect(container.querySelector("img")?.getAttribute("src")).toBe("https://cdn.example/a.png");

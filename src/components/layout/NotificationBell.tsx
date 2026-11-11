@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { reportUserError } from "@/lib/user-error";
+import { cn } from "@/lib/utils";
 
 interface Notification {
   id: string;
@@ -20,7 +21,7 @@ interface Notification {
 
 const COLUMNS = "id, user_id, title, message, type, read, created_at, post_id";
 
-export function NotificationBell() {
+export function NotificationBell({ className }: { className?: string }) {
   const { user } = useAuth();
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
@@ -126,12 +127,16 @@ export function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative rounded-xl p-2.5 text-muted-foreground transition-colors hover:bg-secondary"
+        className={cn(
+          "relative grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 cursor-pointer",
+          open && "bg-secondary text-foreground",
+          className,
+        )}
         aria-label={unread > 0 ? `${t("globalUi.notifications")} (${unread} ${t("notificationsUi.unread")})` : t("globalUi.notifications")}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
         {unread > 0 && (
-          <span className="absolute right-1 top-1 grid min-w-[18px] h-[18px] place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground ring-2 ring-header-bg">
+          <span className="absolute -right-1.5 -top-1.5 grid min-w-[18px] h-[18px] place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground ring-2 ring-background">
             {unread > 9 ? "9+" : unread}
           </span>
         )}

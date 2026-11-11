@@ -1,18 +1,23 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Globe, LogOut } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
 import { accountNav, adminNavItem } from "@/lib/navigation";
 import { TeacherAvatarContent, useTeacherIdentity } from "@/components/layout/TeacherAvatar";
 import { cn } from "@/lib/utils";
 
 const MENU_LABEL_KEYS: Record<string, string> = { profile: "sidebarAccount.myProfile", settings: "sidebarAccount.settings" };
+const LANGUAGES = [
+  { code: "pt", short: "PT", labelKey: "settingsUi.portugueseBrazil" },
+  { code: "en", short: "EN", labelKey: "settingsUi.englishUS" },
+] as const;
 
 /**
  * Teacher block fixed in the sidebar footer (avatar, name, e-mail) that opens a small menu above
- * it with "Meu perfil" and "Configurações" (plus "Administração" for users the existing super_admin
- * check already allows). Identity and avatar come from the shared TeacherAvatar module (same rule as
- * the top bar); without a valid name the e-mail is the only line.
+ * it with "Meu perfil", "Configurações" ("Administração" only for users the existing super_admin
+ * check already allows), the platform language (same setLang as Settings) and "Sair". Identity and
+ * avatar come from the shared TeacherAvatar module; without a valid name the e-mail is the only line.
  */
 export function SidebarAccountMenu({
   isExpanded,
@@ -31,7 +36,8 @@ export function SidebarAccountMenu({
   /** Result of the existing super_admin check (usePlan); the database re-verifies the role. */
   isAdmin?: boolean;
 }) {
-  const { t } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
+  const { signOut } = useAuth();
   const { name: teacherName, email } = useTeacherIdentity();
   const primary = teacherName || email;
 
@@ -102,6 +108,41 @@ export function SidebarAccountMenu({
             </>
           )}
         </nav>
+        <div className="my-1 h-px bg-border/60" />
+        <div role="group" aria-label={t("sidebarAccount.language")} className="flex items-center gap-2 px-2.5 py-1.5">
+          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="flex-1 text-xs font-semibold text-foreground">{t("sidebarAccount.language")}</span>
+          <div className="flex rounded-lg bg-secondary p-0.5">
+            {LANGUAGES.map((option) => (
+              <button
+                key={option.code}
+                type="button"
+                aria-pressed={lang === option.code}
+                aria-label={t(option.labelKey)}
+                title={t(option.labelKey)}
+                onClick={() => setLang(option.code)}
+                className={cn(
+                  "rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  lang === option.code ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {option.short}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="my-1 h-px bg-border/60" />
+        <button
+          type="button"
+          onClick={() => {
+            onOpenChange(false);
+            signOut();
+          }}
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:bg-destructive/10 focus-visible:outline-none cursor-pointer"
+        >
+          <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{t("common.logout")}</span>
+        </button>
       </PopoverContent>
     </Popover>
   );
