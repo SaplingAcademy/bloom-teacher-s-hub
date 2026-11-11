@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useScheduledContractActivation } from "@/hooks/use-scheduled-contract-activation";
+import { visitorRedirectTarget } from "@/lib/public-landing";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -89,7 +90,12 @@ function AppLayout() {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    // Visitors of the bare root see the public product page; every other protected path (and any
+    // auth round-trip carrying parameters) still goes to sign-in, exactly as before.
+    const target = typeof window === "undefined"
+      ? "/auth"
+      : visitorRedirectTarget(window.location.pathname, window.location.search, window.location.hash);
+    return <Navigate to={target} replace />;
   }
 
   const onboardingCompleted =

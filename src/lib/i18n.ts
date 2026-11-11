@@ -2183,6 +2183,11 @@ import { uiTranslations } from "./i18n-ui";
 for (const l of Object.keys(uiTranslations) as Language[]) {
   Object.assign(translations[l], uiTranslations[l] as unknown as TranslationDictionary);
 }
+// Public landing page copy (/conheca).
+import { landingTranslations } from "./i18n-landing";
+for (const l of Object.keys(landingTranslations) as Language[]) {
+  Object.assign(translations[l], landingTranslations[l] as unknown as TranslationDictionary);
+}
 
 /** Fills {0}, {1}… placeholders in a translated string. */
 export function fmt(template: string, ...args: Array<string | number | null | undefined>): string {
