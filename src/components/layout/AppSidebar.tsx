@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Pin, PinOff } from "lucide-react";
-import { navSections, bottomNav, adminNavItem } from "@/lib/navigation";
+import { navSections, bottomNav } from "@/lib/navigation";
 import { SidebarAccountMenu } from "@/components/layout/SidebarAccountMenu";
 import { usePlan } from "@/hooks/use-plan";
 import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
@@ -281,8 +281,8 @@ export function AppSidebar({
 
         {/* ── Bottom Section: Utility Links + teacher account block ─────────── */}
         <div className="shrink-0 border-t border-sidebar-border px-3 py-2 space-y-1">
-          {/* Bottom Utility Nav (Administração só aparece para super_admin) */}
-          {(isSuperAdmin ? [...bottomNav, adminNavItem] : bottomNav).map((item) => {
+          {/* Bottom Utility Nav ("Administração" now lives in the account menu, super_admin only) */}
+          {bottomNav.map((item) => {
             const active = isActive(item.to);
             const itemLabel = t(`nav.${item.id}`, item.label);
             const navLink = (
@@ -325,6 +325,7 @@ export function AppSidebar({
             textClasses={textClasses}
             open={accountMenuOpen}
             onOpenChange={setAccountMenuOpen}
+            isAdmin={isSuperAdmin}
             onNavigate={() => {
               setIsFocusWithin(false);
               if (onNavigate) onNavigate();
