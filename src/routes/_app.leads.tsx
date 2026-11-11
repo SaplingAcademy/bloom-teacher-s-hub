@@ -542,19 +542,29 @@ function LeadsPage() {
         }
       />
 
-      {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("leads.searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+      {/* Controls: search, Filtros (floating grouped panel), view switch; active filters as chips below */}
+      <LeadFiltersBar
+        filters={filters}
+        onChange={setFilters}
+        stages={KANBAN_STAGES}
+        leads={leads}
+        resultCount={filteredLeads.length}
+        hasSearch={searchQuery.trim() !== ""}
+        onClearSearch={() => setSearchQuery("")}
+        tasksError={tasksError}
+        onRetryTasks={loadLeadTasks}
+        search={
+          <div className="relative w-full">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t("leads.searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 text-sm"
+            />
+          </div>
+        }
+        viewToggle={
           <div className="flex items-center bg-muted/60 p-1 rounded-lg border border-border">
             <Button
               variant={viewMode === "kanban" ? "secondary" : "ghost"}
@@ -573,22 +583,8 @@ function LeadsPage() {
               <TableIcon className="w-3.5 h-3.5" /> {t("auditUi.table")}
             </Button>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-card p-4 rounded-xl border border-border">
-        <LeadFiltersBar
-          filters={filters}
-          onChange={setFilters}
-          stages={KANBAN_STAGES}
-          leads={leads}
-          resultCount={filteredLeads.length}
-          hasSearch={searchQuery.trim() !== ""}
-          onClearSearch={() => setSearchQuery("")}
-          tasksError={tasksError}
-          onRetryTasks={loadLeadTasks}
-        />
-      </div>
+        }
+      />
 
       {/* Main Content Area */}
       {loading ? (
