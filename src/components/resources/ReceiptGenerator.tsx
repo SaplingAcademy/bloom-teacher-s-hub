@@ -29,6 +29,22 @@ import { cn } from "@/lib/utils";
 const MANUAL = "__manual__";
 
 /**
+ * Who pays according to the student's current contract. The document is only used together with
+ * the person it belongs to: the student (signer_type "student") or a named guardian/company signer.
+ * A guardian/company without a name yields nothing, so the student's name is never paired with
+ * someone else's CPF/CNPJ. Issuer fields are never touched here.
+ */
+export function contractPayer(
+  contract: { signer_type: string; signer_name: string | null; signer_document: string | null },
+  studentName: string,
+): { payerName: string; payerDocument: string } | null {
+  const document = contract.signer_document?.trim() ?? "";
+  if (contract.signer_type === "student") return document ? { payerName: studentName, payerDocument: document } : null;
+  const name = contract.signer_name?.trim() ?? "";
+  return name ? { payerName: name, payerDocument: document } : null;
+}
+
+/**
  * Receipt generator: form + live A4 preview + PDF download. It only reads data to prefill the form
  * (teacher identity, the teacher's students and the selected student's current contract signer) and
  * never writes anything: no payment is marked as received and no charge or transaction is created.
@@ -76,12 +92,10 @@ export function ReceiptGenerator({ open, onOpenChange }: { open: boolean; onOpen
       const contracts = await listStudentContracts(id);
       if (attempt !== selection.current) return;
       const current = contracts.find((c) => c.status === "active") ?? null;
-      if (current) {
-        setData((d) => ({
-          ...d,
-          payerName: current.signer_type !== "student" && current.signer_name?.trim() ? current.signer_name.trim() : d.payerName,
-          payerDocument: current.signer_document?.trim() ?? "",
-        }));
+      const payer = current ? contractPayer(current, student.name) : null;
+      if (payer) {
+        // Only fill fields still holding what this selection set: never overwrite the teacher's edits.
+        setData((d) => (d.payerName === student.name && d.payerDocument === "" ? { ...d, ...payer } : d));
       }
     } catch {
       if (attempt === selection.current) setContractError(true);
