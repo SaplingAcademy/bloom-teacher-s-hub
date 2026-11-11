@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       syncedUserRef.current = userId;
       ensureStorageOwner(userId);
       try {
-        const [{ data: profileRow, error: profileError }, { data: onboardingRecord }] =
+        const [{ data: profileRow, error: profileError }, { data: onboardingRecord, error: onboardingError }] =
           await Promise.all([
             supabase
               .from("profiles")
@@ -74,6 +74,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ]);
 
         if (profileError) throw profileError;
+        // Completion may be recorded only in the onboarding answers: if they cannot be read and the
+        // profile does not already say "completed", surface the error (retry) instead of treating
+        // the teacher as "not started" and reopening the questionnaire.
+        if (onboardingError && !profileRow?.onboarding_completed) throw onboardingError;
         if (!profileRow) {
           throw new Error(
             "Perfil não encontrado para esta conta. Tente novamente em instantes ou entre em contato com o suporte.",
@@ -179,7 +183,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session.user);
         if (callbackTimeout) clearTimeout(callbackTimeout);
-        syncProfile(session.user.id, session.user.email, session.user.user_metadata).finally(() => {
+        syncProfile(session.user.id, session.user.email, session.user.user_metadata).catch(() => {
+          /* The error is kept in authError and shown with "Try again". */
+        }).finally(() => {
           setLoading(false);
         });
       } else {
@@ -217,7 +223,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         setLoading(true);
-        syncProfile(session.user.id, session.user.email, session.user.user_metadata).finally(() => {
+        syncProfile(session.user.id, session.user.email, session.user.user_metadata).catch(() => {
+          /* The error is kept in authError and shown with "Try again". */
+        }).finally(() => {
           setLoading(false);
         });
       } else {

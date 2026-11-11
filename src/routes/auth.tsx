@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { z } from "zod";
+import { onboardingGate, postLoginDestination } from "@/lib/onboarding-status";
 
 const authSearchSchema = z.object({
   error: z.string().optional(),
@@ -157,7 +158,9 @@ function mapSupabaseAuthError(err: any, lang: "pt" | "en"): string {
 }
 
 function AuthPage() {
-  const { user, loading: authLoading, profile, setLocalUser } = useAuth();
+  const { user, loading: authLoading, profile, error: authError, setLocalUser } = useAuth();
+  // Onboarding status only from the profile loaded from Supabase (see onboarding-status.ts).
+  const gate = onboardingGate({ loading: authLoading, error: authError, profile });
   const { lang, t: tr } = useLanguage();
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
@@ -432,23 +435,8 @@ function AuthPage() {
     }
 
     if (user) {
-      const onboardingCompleted =
-        Boolean(profile?.onboarding_completed) ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.completed") === "true"
-          : false);
-
-      const onboardingSkipped =
-        profile?.onboarding_status === "skipped" ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.skipped") === "true"
-          : false);
-
-      if (onboardingCompleted || onboardingSkipped) {
-        navigate({ to: "/" });
-      } else {
-        navigate({ to: "/onboarding" });
-      }
+      // Profile not loaded yet: "/" waits for it and decides (or shows the load error with retry).
+      navigate({ to: postLoginDestination(gate) ?? "/" });
     } else {
       if (confirmationEmail) {
         setEmail(confirmationEmail);
@@ -600,26 +588,11 @@ function AuthPage() {
   // Redirect to home/onboarding if user is already authenticated (outside of confirmation screens)
   useEffect(() => {
     if (!authLoading && user && view !== "confirmed_success" && view !== "confirmed_error" && view !== "unconfirmed") {
-      console.log("[Auth] User is authenticated, checking onboarding status...");
-      const onboardingCompleted =
-        Boolean(profile?.onboarding_completed) ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.completed") === "true"
-          : false);
-
-      const onboardingSkipped =
-        profile?.onboarding_status === "skipped" ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("bloom.onboarding.skipped") === "true"
-          : false);
-
-      if (onboardingCompleted || onboardingSkipped) {
-        navigate({ to: "/" });
-      } else {
-        navigate({ to: "/onboarding" });
-      }
+      // Waits until the AuthProvider has loaded the profile; a load error goes to "/" (error + retry).
+      const destination = postLoginDestination(gate);
+      if (destination) navigate({ to: destination });
     }
-  }, [user, authLoading, view, profile, navigate]);
+  }, [user, authLoading, view, gate, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -655,25 +628,8 @@ function AuthPage() {
         }
 
         toast.success(t.signInSuccess);
-
-        // Fetch user profile onboarding status from database
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", data.user.id)
-          .single();
-
-        const isCompleted =
-          profileData?.onboarding_completed ??
-          (typeof window !== "undefined"
-            ? localStorage.getItem("bloom.onboarding.completed") === "true"
-            : false);
-
-        if (isCompleted) {
-          navigate({ to: "/" });
-        } else {
-          navigate({ to: "/onboarding" });
-        }
+        // Navigation happens in the effect above once the AuthProvider has loaded this teacher's
+        // profile (onboarding status from Supabase), never from a partial read or browser storage.
       } else if (view === "signup") {
         console.log("Starting signup...");
         if (password !== confirmPassword) {

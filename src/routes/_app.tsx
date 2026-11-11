@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useScheduledContractActivation } from "@/hooks/use-scheduled-contract-activation";
 import { visitorRedirectTarget } from "@/lib/public-landing";
+import { onboardingGate } from "@/lib/onboarding-status";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -38,8 +39,7 @@ function AppLayout() {
     if (mobileOpen) setMobileOpen(false);
   };
 
-  if (loading) {
-    return (
+  const loadingScreen = (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-[#163020] font-figtree">
         <div className="flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-2xl bg-[#F4EBE1] flex items-center justify-center shadow-lg animate-pulse">
@@ -54,6 +54,9 @@ function AppLayout() {
         </div>
       </div>
     );
+
+  if (loading) {
+    return loadingScreen;
   }
 
   if (error) {
@@ -98,19 +101,13 @@ function AppLayout() {
     return <Navigate to={target} replace />;
   }
 
-  const onboardingCompleted =
-    Boolean(profile?.onboarding_completed) ||
-    (typeof window !== "undefined"
-      ? localStorage.getItem("bloom.onboarding.completed") === "true"
-      : false);
-
-  const onboardingSkipped =
-    profile?.onboarding_status === "skipped" ||
-    (typeof window !== "undefined"
-      ? localStorage.getItem("bloom.onboarding.skipped") === "true"
-      : false);
-
-  if (!onboardingCompleted && !onboardingSkipped) {
+  // Onboarding status comes only from the profile loaded from Supabase (never browser storage,
+  // which logout purges): wait while it loads, never treat a missing profile as "pending".
+  const gate = onboardingGate({ loading, error, profile });
+  if (gate === "loading") {
+    return loadingScreen;
+  }
+  if (gate === "pending") {
     return <Navigate to="/onboarding" replace />;
   }
 

@@ -10,6 +10,7 @@ import {
 } from "@/lib/onboarding-name";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { onboardingGate } from "@/lib/onboarding-status";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
@@ -265,7 +266,9 @@ export function normalizeOnboardingData(raw: any): OnboardingData {
 }
 
 export function OnboardingPage() {
-  const { user, session, loading: authLoading, signOut, updateProfileState } = useAuth();
+  const { user, session, loading: authLoading, profile, error: authError, signOut, updateProfileState } = useAuth();
+  // Onboarding status only from the profile loaded from Supabase (see onboarding-status.ts).
+  const gate = onboardingGate({ loading: authLoading, error: authError, profile });
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
 
@@ -280,6 +283,13 @@ export function OnboardingPage() {
   const [savingSkipName, setSavingSkipName] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccessView, setIsSuccessView] = useState(false);
+  // A teacher who already completed the setup never sees the questionnaire again; a status read
+  // error is not treated as "pending" either ("/" shows it with retry). The success screen right
+  // after finishing is kept (the profile turns "completed" while it is shown).
+  const leaveOnboarding = Boolean(user) && !isSubmitting && !isSuccessView && (gate === "completed" || gate === "error");
+  useEffect(() => {
+    if (leaveOnboarding) navigate({ to: "/", replace: true });
+  }, [leaveOnboarding, navigate]);
 
   const headerRef = useRef<HTMLElement>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
@@ -720,7 +730,7 @@ export function OnboardingPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (Boolean(user) && gate === "loading") || leaveOnboarding) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-[#163020]">
         <div className="h-16 w-16 rounded-2xl bg-[#F4EBE1] flex items-center justify-center shadow-lg animate-pulse">
