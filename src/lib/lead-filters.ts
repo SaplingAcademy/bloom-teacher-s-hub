@@ -34,6 +34,16 @@ export function countActiveLeadFilters(f: LeadFilters): number {
   ).length;
 }
 
+/** Keys whose value differs from the empty filter, in EMPTY_LEAD_FILTERS order (active-filter chips). */
+export function activeLeadFilterKeys(f: LeadFilters): (keyof LeadFilters)[] {
+  return (Object.keys(EMPTY_LEAD_FILTERS) as (keyof LeadFilters)[]).filter((k) => f[k] !== EMPTY_LEAD_FILTERS[k]);
+}
+
+/** Resets one filter to its empty value, keeping every other filter. */
+export function clearLeadFilter(f: LeadFilters, key: keyof LeadFilters): LeadFilters {
+  return { ...f, [key]: EMPTY_LEAD_FILTERS[key] };
+}
+
 export interface LeadTaskSummary {
   pending: number;
   overdue: number;

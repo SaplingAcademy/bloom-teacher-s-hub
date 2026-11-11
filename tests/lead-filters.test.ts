@@ -82,3 +82,15 @@ describe("task filter unavailability", () => {
     expect(isTaskFilterUnavailable(false, "all")).toBe(false);
   });
 });
+
+describe("active filter chips helpers", () => {
+  it("lists only the active filter keys and clears one at a time", async () => {
+    const { activeLeadFilterKeys, clearLeadFilter } = await import("@/lib/lead-filters");
+    const f = { ...EMPTY_LEAD_FILTERS, stage: "Em conversa", tasks: "overdue" as const, valueMin: "100" };
+    expect(activeLeadFilterKeys(EMPTY_LEAD_FILTERS)).toEqual([]);
+    expect(activeLeadFilterKeys(f)).toEqual(["stage", "valueMin", "tasks"]);
+    const next = clearLeadFilter(f, "tasks");
+    expect(next).toEqual({ ...f, tasks: "all" });
+    expect(activeLeadFilterKeys(next)).toEqual(["stage", "valueMin"]);
+  });
+});
