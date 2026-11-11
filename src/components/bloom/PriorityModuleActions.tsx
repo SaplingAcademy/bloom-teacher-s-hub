@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
@@ -22,14 +23,16 @@ import { PaymentConfirmationDialog } from "@/components/bloom/PaymentConfirmatio
 export type PriorityModuleAction =
   | { kind: "lead"; leadId: string }
   | { kind: "contract"; studentId: string; studentName: string }
-  | { kind: "payment"; invoiceId: string };
+  | { kind: "payment"; invoiceId: string; studentId?: string };
 
 export function moduleActionFor(item: DailyPriorityItem): PriorityModuleAction | null {
   if (item.category === "lead" && item.ref.leadId) return { kind: "lead", leadId: item.ref.leadId };
   // A renewal that was not activated is reviewed in the student's Finance tab (navigation), not renewed again.
   if (item.reason === "contract_renewal_not_activated") return null;
   if (item.category === "contract" && item.ref.studentId) return { kind: "contract", studentId: item.ref.studentId, studentName: item.title };
-  if (item.category === "payment" && item.ref.invoiceId) return { kind: "payment", invoiceId: item.ref.invoiceId };
+  if (item.category === "payment" && item.ref.invoiceId) {
+    return { kind: "payment", invoiceId: item.ref.invoiceId, ...(item.ref.studentId ? { studentId: item.ref.studentId } : {}) };
+  }
   return null;
 }
 
@@ -41,7 +44,29 @@ interface Props {
   onSaved: (kind: PriorityModuleAction["kind"]) => void;
 }
 
+/**
+ * Discreet secondary link inside the payment/contract modals: closes the modal and opens the
+ * student's Finance tab (existing /students deep link), where the charge and the package live.
+ */
+function ViewOriginLink({ studentId, label, onClose }: { studentId: string; label: string; onClose: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        onClose();
+        navigate({ to: "/students", search: { studentId, tab: "Finance" } });
+      }}
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded text-xs font-semibold text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+    >
+      {label}
+      <ArrowRight className="h-3 w-3" aria-hidden="true" />
+    </button>
+  );
+}
+
 export function PriorityModuleActions({ teacherId, action, onClose, onSaved }: Props) {
+  const { t } = useLanguage();
   if (action.kind === "lead") return <LeadAction teacherId={teacherId} leadId={action.leadId} onClose={onClose} onSaved={() => onSaved("lead")} />;
   if (action.kind === "contract") {
     return (
@@ -52,10 +77,19 @@ export function PriorityModuleActions({ teacherId, action, onClose, onSaved }: P
         studentId={action.studentId}
         studentName={action.studentName}
         onRenewalCompleted={() => onSaved("contract")}
+        secondaryAction={<ViewOriginLink studentId={action.studentId} label={t("today.resolve.viewContract")} onClose={onClose} />}
       />
     );
   }
-  return <PaymentAction teacherId={teacherId} invoiceId={action.invoiceId} onClose={onClose} onSaved={() => onSaved("payment")} />;
+  return (
+    <PaymentAction
+      teacherId={teacherId}
+      invoiceId={action.invoiceId}
+      onClose={onClose}
+      onSaved={() => onSaved("payment")}
+      secondaryAction={action.studentId ? <ViewOriginLink studentId={action.studentId} label={t("today.resolve.viewPayment")} onClose={onClose} /> : undefined}
+    />
+  );
 }
 
 function LeadAction({ teacherId, leadId, onClose, onSaved }: { teacherId: string; leadId: string; onClose: () => void; onSaved: () => void }) {
@@ -145,7 +179,7 @@ function LeadAction({ teacherId, leadId, onClose, onSaved }: { teacherId: string
   );
 }
 
-function PaymentAction({ teacherId, invoiceId, onClose, onSaved }: { teacherId: string; invoiceId: string; onClose: () => void; onSaved: () => void }) {
+function PaymentAction({ teacherId, invoiceId, onClose, onSaved, secondaryAction }: { teacherId: string; invoiceId: string; onClose: () => void; onSaved: () => void; secondaryAction?: React.ReactNode }) {
   const { t, lang } = useLanguage();
   const [invoice, setInvoice] = useState<RealInvoice | null>(null);
 
@@ -185,6 +219,7 @@ function PaymentAction({ teacherId, invoiceId, onClose, onSaved }: { teacherId: 
       }}
       onClose={onClose}
       onConfirmed={onSaved}
+      secondaryAction={secondaryAction}
     />
   );
 }

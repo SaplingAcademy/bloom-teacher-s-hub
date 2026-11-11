@@ -66,7 +66,10 @@ export function PaymentConfirmationDialog({
   labels,
   onClose,
   onConfirmed,
+  secondaryAction,
 }: {
+  /** Optional discreet link shown on the footer's left (e.g. Today's "Ver pagamento"). */
+  secondaryAction?: React.ReactNode;
   invoice: RealInvoice | null;
   mode: "pay" | "edit";
   teacherId: string;
@@ -166,6 +169,7 @@ export function PaymentConfirmationDialog({
         </div>
 
         <DialogFooter className="gap-2">
+          {secondaryAction && <div className="flex items-center justify-center sm:mr-auto">{secondaryAction}</div>}
           <Button variant="outline" disabled={saving} onClick={onClose}>
             {labels.cancel}
           </Button>
