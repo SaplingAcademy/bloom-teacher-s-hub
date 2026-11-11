@@ -197,8 +197,9 @@ function Hero() {
   return (
     <section id="topo" className="relative isolate overflow-x-clip pt-28 sm:pt-36 lg:pt-44">
       <div className={container}>
-        <p className={cn(eyebrowCls, "landing-rise relative z-10")}>{t("landing.hero.eyebrow")}</p>
-        <h1 className="landing-rise relative z-10 mt-6 max-w-[15ch] font-display text-[2.85rem] font-bold leading-[1] tracking-[-0.04em] text-foreground sm:max-w-none sm:text-[4.4rem] lg:text-[5.6rem]" style={{ "--rise-delay": "80ms" } as CSSProperties}>
+        {/* Phones: eyebrow, headline and subtitle share one centered axis; from tablets up the headline stays left-aligned */}
+        <p className={cn(eyebrowCls, "landing-rise relative z-10 text-center sm:text-left")}>{t("landing.hero.eyebrow")}</p>
+        <h1 className="landing-rise relative z-10 mx-auto mt-6 max-w-[15ch] text-center sm:mx-0 sm:text-left font-display text-[2.85rem] font-bold leading-[1] tracking-[-0.04em] text-foreground sm:max-w-none sm:text-[4.4rem] lg:text-[5.6rem]" style={{ "--rise-delay": "80ms" } as CSSProperties}>
           <span className="block">{t("landing.hero.titleA")}</span>
           <span className="block">
             {t("landing.hero.titleB")}{" "}
