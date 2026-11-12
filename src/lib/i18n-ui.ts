@@ -900,7 +900,16 @@ export const uiTranslations = {
       "points": "pts",
       "you": "Você",
       "leaderboardEmpty": "Ninguém pontuou neste período ainda.",
-      "unnamed": "Professor(a)"
+      "unnamed": "Professor(a)",
+      "topic": "Assunto",
+      "topicRequired": "Escolha o assunto da publicação.",
+      "topics": { "questions": "Dúvidas", "lesson_ideas": "Ideias de aulas", "materials": "Materiais", "management": "Gestão", "achievements": "Conquistas" },
+      "filtersLabel": "Filtrar publicações",
+      "filterAll": "Tudo",
+      "filterHelp": "Ajude outro professor",
+      "helpHint": "Dúvidas que ainda não receberam resposta. Que tal compartilhar sua experiência?",
+      "emptyTopic": "Ainda não há publicações neste assunto.",
+      "emptyHelp": "Nenhuma dúvida sem resposta no momento."
     },
     "communityUi": {
       "eyebrow": "Ecossistema de conhecimento",
@@ -2548,7 +2557,16 @@ export const uiTranslations = {
       "points": "pts",
       "you": "You",
       "leaderboardEmpty": "Nobody has scored in this period yet.",
-      "unnamed": "Teacher"
+      "unnamed": "Teacher",
+      "topic": "Topic",
+      "topicRequired": "Choose the post topic.",
+      "topics": { "questions": "Questions", "lesson_ideas": "Lesson ideas", "materials": "Materials", "management": "Management", "achievements": "Achievements" },
+      "filtersLabel": "Filter posts",
+      "filterAll": "All",
+      "filterHelp": "Help another teacher",
+      "helpHint": "Questions that haven't been answered yet. Why not share your experience?",
+      "emptyTopic": "No posts in this topic yet.",
+      "emptyHelp": "No unanswered questions right now."
     },
     "communityUi": {
       "eyebrow": "Knowledge ecosystem",

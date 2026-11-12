@@ -6,6 +6,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
 import { reportUserError } from "@/lib/user-error";
+import {
+  countNeedsHelp,
+  filterCommunityPosts,
+  normalizeCommunityTopic,
+  type CommunityFilter,
+  type CommunityTopic,
+} from "@/lib/community-topics";
+import { fetchCommunityPostRows } from "@/lib/community-feed";
+import { CommunityFilterBar } from "@/components/community/CommunityFilterBar";
+import { CommunityTopicPicker } from "@/components/community/CommunityTopicPicker";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +70,8 @@ interface Post {
   title: string;
   content: string;
   tags: string[];
+  /** null for posts created before topics existed (shown without a label). */
+  topic: CommunityTopic | null;
   created_at: string;
   author: Author;
   waterCount: number;
@@ -122,7 +134,11 @@ function CommunityPage() {
   const [sendingComment, setSendingComment] = useState(false);
 
   const [newOpen, setNewOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", content: "", tags: "" });
+  const [form, setForm] = useState<{ title: string; content: string; tags: string; topic: CommunityTopic | null }>({ title: "", content: "", tags: "", topic: null });
+  const [topicError, setTopicError] = useState(false);
+  const [filter, setFilter] = useState<CommunityFilter>("all");
+  // False only while the topic column migration is not applied yet: legacy read, no topic on publish.
+  const [topicsEnabled, setTopicsEnabled] = useState(true);
   const [publishing, setPublishing] = useState(false);
 
   const [period, setPeriod] = useState<Period>("week");
@@ -132,10 +148,9 @@ function CommunityPage() {
   const loadPosts = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
-    const { data, error } = await supabase
-      .from("community_posts")
-      .select("id, author_id, title, content, tags, likes_count, created_at, updated_at")
-      .order("created_at", { ascending: false });
+    // Falls back to the previous read while the topic migration is not applied.
+    const { data, error, topicsEnabled: hasTopics } = await fetchCommunityPostRows();
+    setTopicsEnabled(hasTopics);
     if (error) {
       reportUserError(error, t("communityV1.loadError"));
       setLoadError(true);
@@ -169,6 +184,7 @@ function CommunityPage() {
           title: p.title,
           content: p.content,
           tags: p.tags ?? [],
+          topic: normalizeCommunityTopic(p.topic),
           created_at: p.created_at,
           author: profilesMap.get(String(p.author_id)) ?? null,
           waterCount: rs.length,
@@ -320,27 +336,28 @@ function CommunityPage() {
     const title = form.title.trim();
     const content = form.content.trim();
     if (!title || !content) return;
+    if (topicsEnabled && !form.topic) {
+      setTopicError(true);
+      return;
+    }
     const tags = form.tags.split(",").map((s) => s.trim()).filter(Boolean);
     setPublishing(true);
-    const { error } = await supabase.from("community_posts").insert({ author_id: userId, title, content, tags });
+    const { error } = await supabase
+      .from("community_posts")
+      .insert({ author_id: userId, title, content, tags, ...(topicsEnabled ? { topic: form.topic } : {}) });
     setPublishing(false);
     if (error) return toast.error(reportUserError(error, t("communityV1.actionError")));
     toast.success(t("communityV1.published"));
-    setForm({ title: "", content: "", tags: "" });
+    setForm({ title: "", content: "", tags: "", topic: null });
+    setTopicError(false);
     setNewOpen(false);
     loadPosts();
   };
 
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return posts;
-    return posts.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.content.toLowerCase().includes(q) ||
-        p.tags.some((x) => x.toLowerCase().includes(q)),
-    );
-  }, [posts, search]);
+  const visible = useMemo(() => filterCommunityPosts(posts, filter, search), [posts, filter, search]);
+  const helpCount = useMemo(() => countNeedsHelp(posts), [posts]);
+  const emptyFilterText =
+    search.trim() ? t("communityV1.noResults") : filter === "help" ? t("communityV1.emptyHelp") : t("communityV1.emptyTopic");
 
   const periods: Period[] = ["week", "month", "year", "all"];
   const medal = (pos: number) =>
@@ -429,6 +446,11 @@ function CommunityPage() {
             />
           </div>
 
+          {topicsEnabled && <CommunityFilterBar value={filter} onChange={setFilter} helpCount={helpCount} t={t} />}
+          {topicsEnabled && filter === "help" && (
+            <p className="text-xs text-muted-foreground">{t("communityV1.helpHint")}</p>
+          )}
+
           {loading ? (
             <p className="text-sm text-muted-foreground text-center py-10">{t("communityV1.loading")}</p>
           ) : loadError ? (
@@ -446,7 +468,7 @@ function CommunityPage() {
               </Button>
             </div>
           ) : visible.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-10">{t("communityV1.noResults")}</p>
+            <p className="text-sm text-muted-foreground text-center py-10">{emptyFilterText}</p>
           ) : (
             visible.map((post) => (
               <article
@@ -456,10 +478,13 @@ function CommunityPage() {
               >
                 <header className="flex items-center gap-3">
                   <Avatar name={post.author?.full_name} url={post.author?.avatar_url} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{post.author?.full_name || t("communityV1.unnamed")}</p>
                     <p className="text-xs text-muted-foreground">{fmtDate(post.created_at)}</p>
                   </div>
+                  {post.topic && (
+                    <Badge variant="outline" className="shrink-0 font-semibold">{t(`communityV1.topics.${post.topic}`)}</Badge>
+                  )}
                 </header>
                 <h3 className="font-display font-semibold text-lg leading-snug">{post.title}</h3>
                 <p className="text-sm text-foreground/90 whitespace-pre-line">{post.content}</p>
@@ -554,6 +579,17 @@ function CommunityPage() {
             <DialogTitle>{t("communityV1.newPost")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={publish} className="space-y-4">
+            {topicsEnabled && (
+              <CommunityTopicPicker
+                value={form.topic}
+                onChange={(topic) => {
+                  setForm((f) => ({ ...f, topic }));
+                  setTopicError(false);
+                }}
+                showError={topicError}
+                t={t}
+              />
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="cp-title">{t("communityV1.postTitle")}</Label>
               <Input id="cp-title" value={form.title} placeholder={t("communityV1.titlePlaceholder")}
