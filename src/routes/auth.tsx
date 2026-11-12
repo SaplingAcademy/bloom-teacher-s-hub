@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 import { z } from "zod";
 import { onboardingGate, postLoginDestination } from "@/lib/onboarding-status";
+import { clearOAuthPending, consumeOAuthPending, markOAuthPending, oauthErrorKey, oauthRedirectUrl } from "@/lib/oauth-callback";
 
 const authSearchSchema = z.object({
   error: z.string().optional(),
@@ -479,7 +480,12 @@ function AuthPage() {
         urlType === "signup" ||
         hashParams.has("access_token");
 
-      if (!hasCallback) return;
+      if (!hasCallback) {
+        // A Google redirect abandoned with the browser's back button leaves no callback: drop its
+        // marker so a later confirmation link in this tab is not taken for an OAuth return.
+        clearOAuthPending(sessionStorage);
+        return;
+      }
 
       callbackProcessedRef.current = true;
       console.log("[Auth] Auth callback detected in URL:", window.location.href);
@@ -487,6 +493,28 @@ function AuthPage() {
 
       if (typeof window !== "undefined") {
         sessionStorage.removeItem("bloom.auth.view");
+      }
+
+      // Case 0: return of a Google sign-in (marker set right before the redirect). It is never an
+      // e-mail confirmation: no confirmation screens, and no second code exchange.
+      if (consumeOAuthPending(sessionStorage)) {
+        const oauthError = urlError || hashError;
+        const oauthErrorDesc = urlErrorDescription || hashErrorDesc;
+        if (oauthError || oauthErrorDesc) {
+          console.error("[Auth] Google OAuth returned an error:", oauthError);
+          toast.error(tr(oauthErrorKey(oauthError, oauthErrorDesc)));
+        } else {
+          // The Supabase client reads the session from the callback URL itself; getSession waits for
+          // it. The redirect effect below then continues once the AuthProvider has loaded the profile.
+          const { data, error } = await supabase.auth.getSession();
+          if (error || !data.session) {
+            console.error("[Auth] Google OAuth returned without a session:", error);
+            toast.error(tr("auth.googleFailed"));
+          }
+        }
+        setLoading(false);
+        if (window.location.pathname === "/auth") navigate({ to: "/auth", replace: true });
+        return;
       }
 
       // Case 1: Callback error returned from Supabase
@@ -717,7 +745,8 @@ function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    const redirectTo = `${window.location.origin}/auth`;
+    const redirectTo = oauthRedirectUrl(window.location.origin);
+    markOAuthPending(sessionStorage);
     console.log("[Auth] Starting Google OAuth flow...");
     console.log("[Auth] Redirect URL being used:", redirectTo);
     try {
@@ -734,6 +763,7 @@ function AuthPage() {
     } catch (err) {
       const error = err as Error;
       console.error("[Auth] Google Auth error:", error);
+      clearOAuthPending(sessionStorage);
       toast.error(reportUserError(error, t.errorHeader));
       setLoading(false);
     }
