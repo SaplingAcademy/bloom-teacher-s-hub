@@ -38,6 +38,7 @@ import {
   Check,
   X,
   Lock,
+  ReceiptText,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { PanelCard } from "@/components/bloom/PanelCard";
@@ -192,6 +193,10 @@ function ResourcesPage() {
   // Finance → Receipts opens the receipt generator (same library authorization as any template).
   const [receiptOpen, setReceiptOpen] = useState(false);
   const RECEIPT_RESOURCE_ID = "admin-receipt";
+  const isReceipt = (template: LibraryResource) => template.id === RECEIPT_RESOURCE_ID;
+  // The receipt resource is shown as "Recibos" (the generator); every other card keeps its catalog text.
+  const titleOf = (template: LibraryResource) => (isReceipt(template) ? translate("receipts.libraryTitle") : template.title);
+  const descriptionOf = (template: LibraryResource) => (isReceipt(template) ? translate("receipts.libraryDescription") : template.description);
 
   useEffect(() => {
     // Load states
@@ -352,9 +357,11 @@ function ResourcesPage() {
 
   // Helper to search and filter templates
   const filteredTemplates = allTemplates.filter((item) => {
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase());
+      item.title.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      (isReceipt(item) && (titleOf(item).toLowerCase().includes(query) || descriptionOf(item).toLowerCase().includes(query)));
 
     if (selectedCategory) {
       return item.category === selectedCategory && matchesSearch;
@@ -516,10 +523,10 @@ function ResourcesPage() {
               return (
                 <PanelCard
                   key={template.id}
-                  title={template.title}
-                  description={template.description}
-                  icon={<catMeta.icon className="h-4 w-4" />}
-                  className="hover:shadow-md transition-shadow relative"
+                  title={titleOf(template)}
+                  description={descriptionOf(template)}
+                  icon={isReceipt(template) ? <ReceiptText className="h-4 w-4" /> : <catMeta.icon className="h-4 w-4" />}
+                  className="hover:shadow-md transition-shadow relative min-w-0"
                   contentClassName="p-5 flex flex-col justify-between min-h-[140px]"
                 >
                   <div className="flex-1">{accessBadge(template.id)}</div>
@@ -536,6 +543,16 @@ function ResourcesPage() {
                       {isFav ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
                     </Button>
 
+                    {isReceipt(template) ? (
+                      <Button variant="ghost"
+                        disabled={accessBusy}
+                        onClick={(e) => handleUseTemplate(template, e)}
+                        className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
+                      >
+                        <ReceiptText className="h-3.5 w-3.5" />
+                        {translate("receipts.open")}
+                      </Button>
+                    ) : (
                     <div className="flex items-center gap-1.5">
                       <Button variant="ghost"
                         onClick={() => handleOpenPreview(template)}
@@ -553,6 +570,7 @@ function ResourcesPage() {
                         {t.useTemplate}
                       </Button>
                     </div>
+                    )}
                   </div>
                 </PanelCard>
               );
@@ -815,7 +833,7 @@ function ResourcesPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <catMeta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
                         <span className="text-xs font-semibold text-foreground truncate">
-                          {template.title}
+                          {titleOf(template)}
                         </span>
                         {accessBadge(template.id)}
                       </div>
@@ -864,7 +882,7 @@ function ResourcesPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <catMeta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
                         <span className="text-xs font-semibold text-foreground truncate">
-                          {template.title}
+                          {titleOf(template)}
                         </span>
                         {accessBadge(template.id)}
                       </div>

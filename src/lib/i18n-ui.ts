@@ -683,6 +683,7 @@ export const uiTranslations = {
       "methods": { "pix": "Pix", "cash": "Dinheiro", "bankTransfer": "Transferência bancária", "creditCard": "Cartão de crédito", "debitCard": "Cartão de débito", "boleto": "Boleto", "other": "Outro" }
     },
     "receipts": {
+      "libraryTitle": "Recibos", "libraryDescription": "Gere recibos de pagamentos recebidos, com prévia ao vivo e PDF A4 pronto para enviar.", "open": "Gerar recibo",
       "title": "Gerador de recibos", "subtitle": "Preencha os dados de um pagamento já recebido e baixe o recibo em PDF (A4).",
       "notInvoice": "O recibo comprova um pagamento recebido. Ele não é nota fiscal e não altera o Financeiro.",
       "student": "Aluno", "manual": "Preencher manualmente", "studentPlaceholder": "Selecione um aluno",
@@ -2330,6 +2331,7 @@ export const uiTranslations = {
       "methods": { "pix": "Pix", "cash": "Cash", "bankTransfer": "Bank transfer", "creditCard": "Credit card", "debitCard": "Debit card", "boleto": "Boleto", "other": "Other" }
     },
     "receipts": {
+      "libraryTitle": "Receipts", "libraryDescription": "Create receipts for payments received, with a live preview and an A4 PDF ready to send.", "open": "Create receipt",
       "title": "Receipt generator", "subtitle": "Fill in a payment you already received and download the receipt as an A4 PDF.",
       "notInvoice": "A receipt confirms a payment received. It is not a tax invoice and does not change Finance.",
       "student": "Student", "manual": "Fill in manually", "studentPlaceholder": "Select a student",
