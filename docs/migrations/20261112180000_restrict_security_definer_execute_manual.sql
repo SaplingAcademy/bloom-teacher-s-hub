@@ -128,6 +128,8 @@ create table if not exists bloom_security_audit.p1_function_acl_snapshot (
   original_acl aclitem[] not null,
   captured_at timestamptz not null default now()
 );
+ALTER TABLE bloom_security_audit.p1_function_acl_snapshot
+ENABLE ROW LEVEL SECURITY;
 revoke all on bloom_security_audit.p1_function_acl_snapshot from public, anon, authenticated;
 
 -- Conferência de snapshot preexistente (aborta se for incompatível; não reutiliza em silêncio).
