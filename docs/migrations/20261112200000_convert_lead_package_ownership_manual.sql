@@ -28,7 +28,10 @@
 --   - exatamente um INSERT em public.students e um UPDATE em public.tasks com
 --     "where lead_id = p_lead_id" e sem filtro de teacher_id;
 --   - reaplicação: se as duas alterações já estiverem presentes, nada é feito; se só uma estiver,
---     aborta (estado inesperado);
+--     aborta (estado inesperado). "Validação do pacote presente" exige a condição completa
+--     (p_package_id não nulo e não existe public.packages com id = p_package_id e
+--     teacher_id = p_teacher_id → return com a mensagem de erro), imediatamente antes do INSERT em
+--     public.students — não basta a mensagem; mensagem sem essa condição aborta;
 --   - antes de alterar, guarda a definição e o ACL originais em
 --     bloom_security_audit.p2_function_definition_snapshot (schema fora da API, RLS habilitado,
 --     sem acesso para PUBLIC, anon e authenticated) — uma única vez;
@@ -59,6 +62,8 @@ do $p2$
 declare
   c_sig constant text := 'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)';
   c_error constant text := 'Package not found or unauthorized';
+  -- Condição completa da validação do pacote, imediatamente antes do INSERT em public.students
+  c_pkg_re constant text := 'if\s+p_package_id\s+is\s+not\s+null\s+and\s+not\s+exists\s*\(\s*select\s+1\s+from\s+public\.packages(\s+\w+)?\s+where\s+(\w+\.)?id\s*=\s*p_package_id\s+and\s+(\w+\.)?teacher_id\s*=\s*p_teacher_id\s*\)\s*then\s+return\s+jsonb_build_object\s*\(\s*''success''\s*,\s*false\s*,\s*''error''\s*,\s*''Package not found or unauthorized''\s*\)\s*;\s*end\s+if\s*;\s*insert\s+into\s+public\.students\s*\(';
   v_oid oid;
   v_count int;
   v_def text;
@@ -111,7 +116,10 @@ begin
   end if;
   v_tasks_block := v_tasks[1];
 
-  v_has_pkg := position(c_error in v_def) > 0;
+  v_has_pkg := (select count(*) from regexp_matches(v_def, c_pkg_re, 'gi')) = 1;
+  if not v_has_pkg and position(c_error in v_def) > 0 then
+    raise exception 'P2 abortado: mensagem "%" presente sem a validação esperada do pacote; revisar a definição.', c_error;
+  end if;
   v_has_tasks := v_tasks_block ~* '\mteacher_id\s*=\s*p_teacher_id\M';
 
   if v_has_pkg and v_has_tasks then
@@ -175,7 +183,7 @@ begin
     into v_after
   from pg_proc p where p.oid = v_oid;
 
-  if position(c_error in v_after.def) = 0
+  if (select count(*) from regexp_matches(v_after.def, c_pkg_re, 'gi')) <> 1
      or v_after.def !~* 'update\s+public\.tasks\M[^;]*where\s+lead_id\s*=\s*p_lead_id\s+and\s+teacher_id\s*=\s*p_teacher_id' then
     raise exception 'P2 abortado: alterações ausentes na definição recriada.';
   end if;
@@ -199,11 +207,11 @@ commit;
 
 -- =========================================================================================
 -- VERIFICAÇÃO PÓS-APLICAÇÃO (somente leitura; executar separadamente)
--- Esperado: valida_pacote = true, filtra_tarefas = true, preserva_converted_at = true,
+-- Esperado: valida_pacote = true (condição completa antes do INSERT em students), filtra_tarefas = true, preserva_converted_at = true,
 --           security_definer = true, dono = postgres, anon_exec = false, auth_exec = true.
 -- =========================================================================================
 -- select
---   position('Package not found or unauthorized' in d.def) > 0 as valida_pacote,
+--   d.def ~* 'if\s+p_package_id\s+is\s+not\s+null\s+and\s+not\s+exists\s*\(\s*select\s+1\s+from\s+public\.packages(\s+\w+)?\s+where\s+(\w+\.)?id\s*=\s*p_package_id\s+and\s+(\w+\.)?teacher_id\s*=\s*p_teacher_id\s*\)\s*then\s+return\s+jsonb_build_object\s*\(\s*''success''\s*,\s*false\s*,\s*''error''\s*,\s*''Package not found or unauthorized''\s*\)\s*;\s*end\s+if\s*;\s*insert\s+into\s+public\.students\s*\(' as valida_pacote,
 --   d.def ~* 'update\s+public\.tasks\M[^;]*where\s+lead_id\s*=\s*p_lead_id\s+and\s+teacher_id\s*=\s*p_teacher_id' as filtra_tarefas,
 --   d.def ~* 'converted_at\s*=\s*coalesce\s*\(\s*converted_at' as preserva_converted_at,
 --   p.prosecdef as security_definer,
