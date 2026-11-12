@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDailyPriorities } from "@/lib/daily-priorities";
 import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
+import { invalidateAfterFirstRead } from "@/lib/query-refresh";
 import { formatLocalDateStr } from "@/lib/time-off-engine";
 
 export const dailyPrioritiesQueryKey = (teacherId: string, day: string) =>
@@ -31,11 +32,10 @@ export function useDailyPrioritiesQuery(teacherId: string) {
     // Automation is secondary work: priority reads must not wait for its writes.
     void runInactiveLeadCheckOnLoad(teacherId)
       .then((result) => {
-        // A newly created follow-up is read back without discarding visible data.
+        // A newly created follow-up is read back without discarding visible data — also when the
+        // automation finishes during the first read, which would otherwise absorb the refresh.
         if (active && result.processedCount > 0) {
-          void queryClient.invalidateQueries({
-            queryKey: dailyPrioritiesQueryKey(teacherId, day),
-          });
+          invalidateAfterFirstRead(queryClient, dailyPrioritiesQueryKey(teacherId, day));
         }
       })
       .catch((error) => {
