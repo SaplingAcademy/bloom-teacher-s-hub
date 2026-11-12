@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { fetchAttentionQueue, AttentionItem } from "@/lib/attention-queue";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "@tanstack/react-router";
 import { useLanguage } from "@/hooks/use-language";
+import { useUrgentQueueQuery } from "@/hooks/use-urgent-queue-query";
 import { ShieldAlert, AlertTriangle, ArrowUpRight, RefreshCw } from "lucide-react";
-import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
 
 interface UrgentWidgetProps {
   teacherId: string;
@@ -14,38 +14,40 @@ interface UrgentWidgetProps {
 export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
-  const [urgentItems, setUrgentItems] = useState<AttentionItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadUrgentItems = async () => {
-    if (!teacherId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      await runInactiveLeadCheckOnLoad(teacherId);
-      const items = await fetchAttentionQueue(teacherId, lang);
-      // Filter high-urgency items
-      const highUrgent = items.filter((item) => item.urgency === "high");
-      setUrgentItems(highUrgent);
-    } catch (e) {
-      console.warn("[UrgentWidget] Failed to load urgent items:", e);
-      setUrgentItems([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUrgentItems();
-  }, [teacherId, lang]);
+  const { data, isPending, isFetching, refetch } = useUrgentQueueQuery(teacherId, lang);
+  const urgentItems = data ?? [];
+  const loading = isFetching;
 
   const handleAction = (targetUrl: string) => {
     if (targetUrl) {
       navigate({ to: targetUrl as any });
     }
   };
+
+  // First load only (no cached data yet): a card-sized placeholder so the block does not pop in.
+  if (teacherId && isPending) {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t("today.urgentTitle")}
+        data-testid="urgent-skeleton"
+        className="rounded-2xl border border-stone-200/80 bg-card p-5 sm:p-6 shadow-sm"
+      >
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="h-9 w-9 rounded-xl" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+        </div>
+        <div className="mt-4 space-y-2.5">
+          <Skeleton className="h-[58px] w-full rounded-xl" />
+          <Skeleton className="h-[58px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   if (urgentItems.length === 0) return null;
 
@@ -84,7 +86,7 @@ export function UrgentWidget({ teacherId }: UrgentWidgetProps) {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={loadUrgentItems}
+          onClick={() => void refetch()}
           disabled={loading}
           className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
           title={t("today.refreshUrgent")}
