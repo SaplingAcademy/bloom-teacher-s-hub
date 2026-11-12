@@ -36,7 +36,13 @@
 --   não for SECURITY DEFINER, se alguma do grupo B não retornar `trigger` ou se alguma do grupo B
 --   não estiver vinculada a ao menos um trigger.
 --   O snapshot é gravado uma única vez por função (reexecutar o arquivo não sobrescreve os
---   privilégios originais com os já restringidos).
+--   privilégios originais com os já restringidos). Se já existir um snapshot, ele só é reutilizado
+--   quando for compatível: estrutura esperada, exatamente as 13 funções deste arquivo e, para cada
+--   uma, privilégios atuais iguais aos originais (P1 ainda não aplicado ou revertido) ou iguais ao
+--   resultado esperado do P1 (reexecução). Caso contrário, aborta sem alterar nada.
+--   Ao final, antes do commit, confere os privilégios efetivos: anon sem EXECUTE nas 13 funções,
+--   authenticated com EXECUTE no grupo A e sem EXECUTE no grupo B; se não, aborta e desfaz tudo
+--   (ex.: grants feitos por outro grantor que o REVOKE do usuário atual não remove).
 --
 -- ROLLBACK
 --   Ver a seção "ROLLBACK EXATO" no fim do arquivo: restaura, a partir do snapshot, exatamente os
@@ -109,6 +115,105 @@ create table if not exists bloom_security_audit.p1_function_acl_snapshot (
 );
 revoke all on bloom_security_audit.p1_function_acl_snapshot from public, anon, authenticated;
 
+-- Conferência de snapshot preexistente (aborta se for incompatível; não reutiliza em silêncio).
+-- Compara, por papel (PUBLIC, anon, authenticated, service_role), EXECUTE e WITH GRANT OPTION.
+do $$
+declare
+  v_expected text[] := array[
+    'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)',
+    'public.get_public_teacher_profiles()',
+    'public.get_community_leaderboard(text, integer)',
+    'public.handle_new_user()',
+    'public.handle_new_profile_plan()',
+    'public.enforce_free_plan_active_student_limit()',
+    'public.normalize_lead_stage_trigger()',
+    'public.handle_community_comment_reputation()',
+    'public.handle_community_comment_reputation_delete()',
+    'public.handle_community_water_reputation()',
+    'public.handle_community_water_reputation_delete()',
+    'public.handle_post_comment_notification()',
+    'public.sync_lead_interaction_timestamps()'
+  ];
+  v_group_a text[] := array[
+    'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)',
+    'public.get_public_teacher_profiles()',
+    'public.get_community_leaderboard(text, integer)'
+  ];
+  v_rows int;
+  v_matching int;
+  s record;
+  v_oid oid;
+  v_orig text[];
+  v_cur text[];
+  v_post text[];
+begin
+  if (select count(*) from information_schema.columns
+      where table_schema = 'bloom_security_audit' and table_name = 'p1_function_acl_snapshot'
+        and ((column_name = 'function_signature' and data_type = 'text')
+          or (column_name = 'original_acl' and udt_name = '_aclitem'))) <> 2 then
+    raise exception 'P1 abortado: tabela de snapshot preexistente com estrutura inesperada.';
+  end if;
+
+  select count(*), count(*) filter (where function_signature = any (v_expected))
+    into v_rows, v_matching
+  from bloom_security_audit.p1_function_acl_snapshot;
+
+  if v_rows = 0 then
+    return; -- primeira aplicação: o snapshot será gravado a seguir
+  end if;
+  if v_rows <> v_matching or v_matching <> array_length(v_expected, 1) then
+    raise exception 'P1 abortado: snapshot preexistente incompatível (% linhas, % das 13 funções esperadas).',
+      v_rows, v_matching;
+  end if;
+
+  for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
+    v_oid := to_regprocedure(s.function_signature);
+    if v_oid is null then
+      raise exception 'P1 abortado: função do snapshot % não existe.', s.function_signature;
+    end if;
+
+    -- privilégios originais (snapshot), por papel: 'papel:tem_grant_option'
+    select array(
+      select e.r || ':' || bool_or(e.g) from (
+        select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
+        from aclexplode(s.original_acl) x
+        where x.privilege_type = 'EXECUTE'
+          and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+      ) e group by e.r order by e.r)
+    into v_orig;
+
+    -- privilégios atuais
+    select array(
+      select e.r || ':' || bool_or(e.g) from (
+        select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
+        from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+        where p.oid = v_oid
+          and x.privilege_type = 'EXECUTE'
+          and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+      ) e group by e.r order by e.r)
+    into v_cur;
+
+    -- resultado esperado do P1 a partir do original
+    select array(
+      select e.r || ':' || bool_or(e.g) from (
+        select split_part(o, ':', 1) as r, split_part(o, ':', 2)::boolean as g
+        from unnest(v_orig) o
+        where (s.function_signature = any (v_group_a) and split_part(o, ':', 1) in ('authenticated', 'service_role'))
+           or (not (s.function_signature = any (v_group_a)) and split_part(o, ':', 1) = 'service_role')
+        union all
+        select r, false from unnest(array['authenticated', 'service_role']) r
+        where s.function_signature = any (v_group_a)
+      ) e group by e.r order by e.r)
+    into v_post;
+
+    if v_cur is distinct from v_orig and v_cur is distinct from v_post then
+      raise exception 'P1 abortado: snapshot preexistente incompatível com %: original %, atual %, esperado após P1 %.',
+        s.function_signature, v_orig, v_cur, v_post;
+    end if;
+  end loop;
+end;
+$$;
+
 insert into bloom_security_audit.p1_function_acl_snapshot (function_signature, original_acl)
 select 'public.' || p.proname || '(' || oidvectortypes(p.proargtypes) || ')',
        coalesce(p.proacl, acldefault('f', p.proowner))
@@ -156,6 +261,35 @@ revoke execute on function public.handle_community_water_reputation_delete()    
 revoke execute on function public.handle_post_comment_notification()             from public, anon, authenticated;
 revoke execute on function public.sync_lead_interaction_timestamps()             from public, anon, authenticated;
 
+-- -----------------------------------------------------------------------------------------
+-- 2. Conferência final dos privilégios efetivos (aborta e desfaz tudo se algo não ficou certo)
+-- -----------------------------------------------------------------------------------------
+do $$
+declare
+  s record;
+  v_oid oid;
+  v_group_a text[] := array[
+    'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)',
+    'public.get_public_teacher_profiles()',
+    'public.get_community_leaderboard(text, integer)'
+  ];
+begin
+  for s in select function_signature from bloom_security_audit.p1_function_acl_snapshot loop
+    v_oid := to_regprocedure(s.function_signature);
+    if has_function_privilege('anon', v_oid, 'EXECUTE') then
+      raise exception 'P1 abortado: anon ainda executa %.', s.function_signature;
+    end if;
+    if s.function_signature = any (v_group_a) then
+      if not has_function_privilege('authenticated', v_oid, 'EXECUTE') then
+        raise exception 'P1 abortado: authenticated perdeu EXECUTE em %.', s.function_signature;
+      end if;
+    elsif has_function_privilege('authenticated', v_oid, 'EXECUTE') then
+      raise exception 'P1 abortado: authenticated ainda executa a função de trigger %.', s.function_signature;
+    end if;
+  end loop;
+end;
+$$;
+
 commit;
 
 -- =========================================================================================
@@ -195,6 +329,12 @@ commit;
 -- concede de volta exatamente o que cada um desses papéis tinha antes (inclusive WITH GRANT
 -- OPTION, se havia). O privilégio do dono da função nunca foi alterado e não é tocado.
 -- Nada é concedido além do que constava no snapshot.
+-- Grant option: o REVOKE simples remove o privilégio e o grant option atuais (mesmo que o atual
+-- tenha grant option e o original não); o GRANT seguinte recoloca WITH GRANT OPTION somente onde o
+-- original tinha. Se algum desses papéis tiver repassado o privilégio a terceiros, o REVOKE falha
+-- ("dependent privileges exist") e nada é revertido; não se usa CASCADE para não afetar terceiros.
+-- Ao final, o próprio rollback confere papel a papel (EXECUTE e grant option) e desfaz tudo se o
+-- resultado não for idêntico ao snapshot.
 -- =========================================================================================
 -- begin;
 -- do $$
@@ -203,6 +343,8 @@ commit;
 --   a record;
 --   v_oid oid;
 --   v_grantee text;
+--   v_orig text[];
+--   v_cur text[];
 -- begin
 --   if not exists (select 1 from bloom_security_audit.p1_function_acl_snapshot) then
 --     raise exception 'Rollback abortado: snapshot vazio.';
@@ -223,6 +365,29 @@ commit;
 --       execute format('grant execute on function %s to %s%s', v_oid::regprocedure, v_grantee,
 --                      case when a.is_grantable then ' with grant option' else '' end);
 --     end loop;
+--   end loop;
+--
+--   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
+--     select array(
+--       select e.r || ':' || bool_or(e.g) from (
+--         select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
+--         from aclexplode(s.original_acl) x
+--         where x.privilege_type = 'EXECUTE'
+--           and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--       ) e group by e.r order by e.r)
+--     into v_orig;
+--     select array(
+--       select e.r || ':' || bool_or(e.g) from (
+--         select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
+--         from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--         where p.oid = to_regprocedure(s.function_signature)
+--           and x.privilege_type = 'EXECUTE'
+--           and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--       ) e group by e.r order by e.r)
+--     into v_cur;
+--     if v_cur is distinct from v_orig then
+--       raise exception 'Rollback abortado: % ficou %, original %.', s.function_signature, v_cur, v_orig;
+--     end if;
 --   end loop;
 -- end;
 -- $$;
