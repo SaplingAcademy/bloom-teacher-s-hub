@@ -48,6 +48,13 @@
 --   que service_role manteve exatamente o acesso efetivo que tinha no grupo A.
 --   search_path fixado em pg_catalog, public durante a transação (SET LOCAL), para que funções e
 --   tipos de sistema não sejam resolvidos por objetos homônimos em outros schemas.
+--   Concedentes (grantors): todas as comparações de ACL consideram papel, concedente e grant
+--   option. O arquivo aborta se algum privilégio EXECUTE original de PUBLIC, anon, authenticated ou
+--   service_role tiver sido concedido por outro papel que não o usuário que executa o script:
+--   REVOKE só remove o que o próprio usuário concedeu, e GRANT sempre registra o usuário atual como
+--   concedente, então só nesse caso a aplicação e o rollback reproduzem as entradas exatamente
+--   (papel, concedente e grant option). Ao final, o ACL resultante é comparado entrada a entrada
+--   com o resultado esperado.
 --
 -- ROLLBACK
 --   Ver a seção "ROLLBACK EXATO" no fim do arquivo: restaura, a partir do snapshot, exatamente os
@@ -124,7 +131,8 @@ create table if not exists bloom_security_audit.p1_function_acl_snapshot (
 revoke all on bloom_security_audit.p1_function_acl_snapshot from public, anon, authenticated;
 
 -- Conferência de snapshot preexistente (aborta se for incompatível; não reutiliza em silêncio).
--- Compara, por papel (PUBLIC, anon, authenticated, service_role), EXECUTE e WITH GRANT OPTION.
+-- Compara, para PUBLIC, anon, authenticated e service_role, cada entrada EXECUTE: papel, concedente e
+-- WITH GRANT OPTION.
 do $$
 declare
   v_expected text[] := array[
@@ -180,42 +188,45 @@ begin
       raise exception 'P1 abortado: função do snapshot % não existe.', s.function_signature;
     end if;
 
-    -- privilégios originais (snapshot), por papel: 'papel:tem_grant_option'
+    -- entradas EXECUTE originais (snapshot): 'papel:concedente:tem_grant_option'
     select array(
-      select e.r || ':' || bool_or(e.g) from (
-        select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
-        from aclexplode(s.original_acl) x
-        where x.privilege_type = 'EXECUTE'
+      select distinct (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) || ':' || x.grantor::regrole::text || ':' || x.is_grantable
+      from aclexplode(s.original_acl) x
+      where x.privilege_type = 'EXECUTE'
           and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
-      ) e group by e.r order by e.r)
+      order by 1)
     into v_orig;
 
-    -- privilégios atuais
+    -- entradas atuais
     select array(
-      select e.r || ':' || bool_or(e.g) from (
-        select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
-        from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
-        where p.oid = v_oid
-          and x.privilege_type = 'EXECUTE'
-          and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
-      ) e group by e.r order by e.r)
+      select distinct (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) || ':' || x.grantor::regrole::text || ':' || x.is_grantable
+      from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+      where p.oid = v_oid
+        and x.privilege_type = 'EXECUTE'
+        and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+      order by 1)
     into v_cur;
 
-    -- resultado esperado do P1 a partir do original
+    -- resultado esperado do P1 a partir do original (GRANT registra current_user como concedente
+    -- e nunca remove um grant option já existente da mesma entrada)
     select array(
-      select e.r || ':' || bool_or(e.g) from (
-        select split_part(o, ':', 1) as r, split_part(o, ':', 2)::boolean as g
+      select distinct e.k from (
+        select o as k
         from unnest(v_orig) o
         where (s.function_signature = any (v_group_a) and split_part(o, ':', 1) in ('authenticated', 'service_role'))
            or (not (s.function_signature = any (v_group_a)) and split_part(o, ':', 1) = 'service_role')
         union all
-        select 'authenticated', false
+        select 'authenticated:' || current_user::regrole::text || ':false'
         where s.function_signature = any (v_group_a)
+          and not exists (select 1 from unnest(v_orig) o
+                          where split_part(o, ':', 1) = 'authenticated' and split_part(o, ':', 2) = current_user::regrole::text)
         union all
-        select 'service_role', false
+        select 'service_role:' || current_user::regrole::text || ':false'
         where s.function_signature = any (v_group_a)
           and exists (select 1 from unnest(v_orig) o where split_part(o, ':', 1) in ('public', 'service_role'))
-      ) e group by e.r order by e.r)
+          and not exists (select 1 from unnest(v_orig) o
+                          where split_part(o, ':', 1) = 'service_role' and split_part(o, ':', 2) = current_user::regrole::text)
+      ) e order by 1)
     into v_post;
 
     if v_cur is distinct from v_orig and v_cur is distinct from v_post then
@@ -246,6 +257,27 @@ where p.oid in (
   'public.sync_lead_interaction_timestamps()'::regprocedure
 )
 on conflict (function_signature) do nothing;
+
+-- Concedentes: só é possível remover e restaurar exatamente as entradas concedidas pelo usuário atual.
+do $$
+declare
+  v_bad text;
+begin
+  select string_agg(distinct sn.function_signature || ' (' ||
+           (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) ||
+           ' concedido por ' || x.grantor::regrole::text || ')', '; ')
+    into v_bad
+  from bloom_security_audit.p1_function_acl_snapshot sn
+  cross join lateral aclexplode(sn.original_acl) x
+  where x.privilege_type = 'EXECUTE'
+    and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+    and x.grantor <> current_user::regrole;
+  if v_bad is not null then
+    raise exception 'P1 abortado: privilégios originais com concedente diferente de %: %. Execute como o concedente ou revise antes.',
+      current_user, v_bad;
+  end if;
+end;
+$$;
 
 -- -----------------------------------------------------------------------------------------
 -- A. RPCs do app logado: remover PUBLIC/anon, manter authenticated (explícito);
@@ -306,6 +338,9 @@ do $$
 declare
   s record;
   v_oid oid;
+  v_orig text[];
+  v_cur text[];
+  v_post text[];
   v_group_a text[] := array[
     'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)',
     'public.get_public_teacher_profiles()',
@@ -314,6 +349,46 @@ declare
 begin
   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
     v_oid := to_regprocedure(s.function_signature);
+
+    -- ACL resultante (papel, concedente, grant option) idêntico ao esperado
+    select array(
+      select distinct (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) || ':' || x.grantor::regrole::text || ':' || x.is_grantable
+      from aclexplode(s.original_acl) x
+      where x.privilege_type = 'EXECUTE'
+          and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+      order by 1)
+    into v_orig;
+    select array(
+      select distinct (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) || ':' || x.grantor::regrole::text || ':' || x.is_grantable
+      from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+      where p.oid = v_oid
+        and x.privilege_type = 'EXECUTE'
+        and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+      order by 1)
+    into v_cur;
+    select array(
+      select distinct e.k from (
+        select o as k
+        from unnest(v_orig) o
+        where (s.function_signature = any (v_group_a) and split_part(o, ':', 1) in ('authenticated', 'service_role'))
+           or (not (s.function_signature = any (v_group_a)) and split_part(o, ':', 1) = 'service_role')
+        union all
+        select 'authenticated:' || current_user::regrole::text || ':false'
+        where s.function_signature = any (v_group_a)
+          and not exists (select 1 from unnest(v_orig) o
+                          where split_part(o, ':', 1) = 'authenticated' and split_part(o, ':', 2) = current_user::regrole::text)
+        union all
+        select 'service_role:' || current_user::regrole::text || ':false'
+        where s.function_signature = any (v_group_a)
+          and exists (select 1 from unnest(v_orig) o where split_part(o, ':', 1) in ('public', 'service_role'))
+          and not exists (select 1 from unnest(v_orig) o
+                          where split_part(o, ':', 1) = 'service_role' and split_part(o, ':', 2) = current_user::regrole::text)
+      ) e order by 1)
+    into v_post;
+    if v_cur is distinct from v_post then
+      raise exception 'P1 abortado: ACL de % ficou %, esperado %.', s.function_signature, v_cur, v_post;
+    end if;
+
     if has_function_privilege('anon', v_oid, 'EXECUTE') then
       raise exception 'P1 abortado: anon ainda executa %.', s.function_signature;
     end if;
@@ -389,7 +464,12 @@ commit;
 --   - a impressão digital informada (v_fingerprint) não for igual à do snapshot atual;
 --   - o snapshot não contiver exatamente as 13 funções deste arquivo;
 --   - o snapshot listar, para papéis que o P1 não altera (dono e quaisquer outros fora de PUBLIC,
---     anon, authenticated e service_role), privilégios diferentes dos atuais — sinal de edição.
+--     anon, authenticated e service_role), entradas diferentes das atuais (papel, concedente,
+--     privilégio, grant option) — sinal de edição;
+--   - alguma entrada original de PUBLIC, anon, authenticated ou service_role tiver concedente
+--     diferente do usuário que executa o rollback (o GRANT registraria outro concedente).
+-- O rollback deve ser executado pelo mesmo papel que aplicou o P1 (normalmente postgres). A
+-- conferência final compara papel, concedente e grant option, entrada a entrada.
 -- Substitua <COLE_A_IMPRESSAO_DIGITAL> pelo valor guardado após a aplicação.
 -- =========================================================================================
 -- begin;
@@ -435,6 +515,15 @@ commit;
 --   if v_rows <> v_matching or v_matching <> array_length(v_expected, 1) then
 --     raise exception 'Rollback abortado: snapshot com % linhas, % das 13 funções esperadas.', v_rows, v_matching;
 --   end if;
+--   if exists (
+--     select 1 from bloom_security_audit.p1_function_acl_snapshot sn
+--     cross join lateral aclexplode(sn.original_acl) x
+--     where x.privilege_type = 'EXECUTE'
+--       and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--       and x.grantor <> current_user::regrole
+--   ) then
+--     raise exception 'Rollback abortado: há entradas originais com concedente diferente de %; execute como o papel que aplicou o P1.', current_user;
+--   end if;
 --   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
 --     v_oid := to_regprocedure(s.function_signature);
 --     if v_oid is null then
@@ -442,16 +531,16 @@ commit;
 --     end if;
 --     -- papéis que o P1 não altera: snapshot e estado atual precisam coincidir
 --     if exists (
---       (select x.grantee, x.privilege_type, x.is_grantable from aclexplode(s.original_acl) x
+--       (select x.grantee, x.grantor, x.privilege_type, x.is_grantable from aclexplode(s.original_acl) x
 --        where x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole)
 --        except
---        select x.grantee, x.privilege_type, x.is_grantable from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--        select x.grantee, x.grantor, x.privilege_type, x.is_grantable from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
 --        where p.oid = v_oid and x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
 --       union all
---       (select x.grantee, x.privilege_type, x.is_grantable from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--       (select x.grantee, x.grantor, x.privilege_type, x.is_grantable from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
 --        where p.oid = v_oid and x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole)
 --        except
---        select x.grantee, x.privilege_type, x.is_grantable from aclexplode(s.original_acl) x
+--        select x.grantee, x.grantor, x.privilege_type, x.is_grantable from aclexplode(s.original_acl) x
 --        where x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
 --     ) then
 --       raise exception 'Rollback abortado: snapshot de % diverge do atual em papéis não alterados pelo P1.', s.function_signature;
@@ -478,21 +567,19 @@ commit;
 --
 --   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
 --     select array(
---       select e.r || ':' || bool_or(e.g) from (
---         select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
---         from aclexplode(s.original_acl) x
---         where x.privilege_type = 'EXECUTE'
---           and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
---       ) e group by e.r order by e.r)
+--       select distinct (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) || ':' || x.grantor::regrole::text || ':' || x.is_grantable
+--       from aclexplode(s.original_acl) x
+--       where x.privilege_type = 'EXECUTE'
+--         and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--       order by 1)
 --     into v_orig;
 --     select array(
---       select e.r || ':' || bool_or(e.g) from (
---         select case when x.grantee = 0 then 'public' else x.grantee::regrole::text end as r, x.is_grantable as g
---         from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
---         where p.oid = to_regprocedure(s.function_signature)
---           and x.privilege_type = 'EXECUTE'
---           and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
---       ) e group by e.r order by e.r)
+--       select distinct (case when x.grantee = 0 then 'public' else x.grantee::regrole::text end) || ':' || x.grantor::regrole::text || ':' || x.is_grantable
+--       from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--       where p.oid = to_regprocedure(s.function_signature)
+--         and x.privilege_type = 'EXECUTE'
+--         and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--       order by 1)
 --     into v_cur;
 --     if v_cur is distinct from v_orig then
 --       raise exception 'Rollback abortado: % ficou %, original %.', s.function_signature, v_cur, v_orig;
@@ -504,19 +591,20 @@ commit;
 --
 -- Conferência do rollback (somente leitura): deve retornar zero linhas.
 -- Compara, para PUBLIC, anon, authenticated e service_role, os privilégios EXECUTE originais
--- (snapshot) com os atuais, nos dois sentidos: nada faltando e nada a mais.
+-- (snapshot) com os atuais — papel, concedente e grant option —, nos dois sentidos: nada faltando e
+-- nada a mais.
 -- with roles(grantee) as (
 --   select 0::oid union all
 --   select oid from pg_roles where rolname in ('anon', 'authenticated', 'service_role')
 -- ),
 -- original as (
---   select s.function_signature, x.grantee, x.is_grantable
+--   select s.function_signature, x.grantee, x.grantor, x.is_grantable
 --   from bloom_security_audit.p1_function_acl_snapshot s
 --   cross join lateral aclexplode(s.original_acl) x
 --   where x.privilege_type = 'EXECUTE' and x.grantee in (select grantee from roles)
 -- ),
 -- atual as (
---   select s.function_signature, x.grantee, x.is_grantable
+--   select s.function_signature, x.grantee, x.grantor, x.is_grantable
 --   from bloom_security_audit.p1_function_acl_snapshot s
 --   join pg_proc p on p.oid = to_regprocedure(s.function_signature)
 --   cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
