@@ -5,9 +5,19 @@
 export const COMMUNITY_TOPICS = ["questions", "lesson_ideas", "materials", "management", "achievements"] as const;
 export type CommunityTopic = (typeof COMMUNITY_TOPICS)[number];
 
-/** "all" = every post; "help" = "Ajude outro professor" (questions nobody answered yet). */
-export type CommunityFilter = "all" | CommunityTopic | "help";
-export const COMMUNITY_FILTERS: CommunityFilter[] = ["all", ...COMMUNITY_TOPICS, "help"];
+/**
+ * "all" = every post; "help" = "Ajude outro professor" (questions nobody answered yet);
+ * "saved" = the current teacher's saved posts (private).
+ */
+export type CommunityFilter = "all" | CommunityTopic | "help" | "saved";
+export const COMMUNITY_FILTERS: CommunityFilter[] = ["all", ...COMMUNITY_TOPICS, "help", "saved"];
+
+/** Filters shown in the feed: topic filters need the topic column, "Salvos" needs the saved table. */
+export function visibleCommunityFilters(opts: { topics: boolean; saved: boolean }): CommunityFilter[] {
+  return COMMUNITY_FILTERS.filter((f) =>
+    f === "all" ? true : f === "saved" ? opts.saved : opts.topics,
+  );
+}
 
 export function isCommunityTopic(value: unknown): value is CommunityTopic {
   return typeof value === "string" && (COMMUNITY_TOPICS as readonly string[]).includes(value);
@@ -24,6 +34,8 @@ interface FilterablePost {
   tags: string[];
   topic: CommunityTopic | null;
   commentCount: number;
+  /** Saved by the current teacher (only their own saves are ever loaded). */
+  savedByMe?: boolean;
 }
 
 /** A question with no comments yet: shown under "Ajude outro professor". */
@@ -34,6 +46,7 @@ export function needsHelp(post: Pick<FilterablePost, "topic" | "commentCount">):
 export function matchesCommunityFilter(post: FilterablePost, filter: CommunityFilter): boolean {
   if (filter === "all") return true;
   if (filter === "help") return needsHelp(post);
+  if (filter === "saved") return post.savedByMe === true;
   return post.topic === filter;
 }
 

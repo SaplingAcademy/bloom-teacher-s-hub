@@ -10,12 +10,15 @@ import {
   countNeedsHelp,
   filterCommunityPosts,
   normalizeCommunityTopic,
+  visibleCommunityFilters,
   type CommunityFilter,
   type CommunityTopic,
 } from "@/lib/community-topics";
 import { fetchCommunityPostRows } from "@/lib/community-feed";
 import { CommunityFilterBar } from "@/components/community/CommunityFilterBar";
 import { CommunityTopicPicker } from "@/components/community/CommunityTopicPicker";
+import { CommunitySaveButton } from "@/components/community/CommunitySaveButton";
+import { fetchSavedPostIds, savePost, unsavePost } from "@/lib/community-saved";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,6 +80,8 @@ interface Post {
   waterCount: number;
   wateredByMe: boolean;
   commentCount: number;
+  /** Private: saved by the current teacher. */
+  savedByMe: boolean;
 }
 
 interface Comment {
@@ -139,6 +144,9 @@ function CommunityPage() {
   const [filter, setFilter] = useState<CommunityFilter>("all");
   // False only while the topic column migration is not applied yet: legacy read, no topic on publish.
   const [topicsEnabled, setTopicsEnabled] = useState(true);
+  // False until the saved-posts table is confirmed (hidden while the migration is not applied).
+  const [savedEnabled, setSavedEnabled] = useState(false);
+  const [busySave, setBusySave] = useState<Set<string>>(new Set());
   const [publishing, setPublishing] = useState(false);
 
   const [period, setPeriod] = useState<Period>("week");
@@ -159,21 +167,37 @@ function CommunityPage() {
     }
     const ids = (data ?? []).map((p: any) => p.id);
     const profilesMap = await fetchPublicTeacherProfiles();
+    let savedIds = new Set<string>();
     let reactions: { post_id: string; user_id: string }[] = [];
     let commentRows: { post_id: string }[] = [];
+    // Own saved posts: hidden (not an error) only while the table does not exist; any other failure
+    // (permission, connection) is a load error like reactions/comments.
+    const savedRead = userId ? fetchSavedPostIds(userId) : Promise.resolve({ ids: new Set<string>(), error: null, savedEnabled: false });
     if (ids.length) {
-      const [r, c] = await Promise.all([
+      const [r, c, sv] = await Promise.all([
         supabase.from("reactions").select("post_id, user_id").eq("type", "water").in("post_id", ids),
         supabase.from("comments").select("post_id").in("post_id", ids),
+        savedRead,
       ]);
-      if (r.error || c.error) {
-        reportUserError(r.error ?? c.error, t("communityV1.loadError"));
+      if (r.error || c.error || sv.error) {
+        reportUserError(r.error ?? c.error ?? sv.error, t("communityV1.loadError"));
         setLoadError(true);
         setLoading(false);
         return;
       }
       reactions = (r.data ?? []) as any;
       commentRows = (c.data ?? []) as any;
+      savedIds = sv.ids;
+      setSavedEnabled(sv.savedEnabled);
+    } else {
+      const sv = await savedRead;
+      if (sv.error) {
+        reportUserError(sv.error, t("communityV1.loadError"));
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+      setSavedEnabled(sv.savedEnabled);
     }
     setPosts(
       (data ?? []).map((p: any) => {
@@ -190,6 +214,7 @@ function CommunityPage() {
           waterCount: rs.length,
           wateredByMe: !!userId && rs.some((x) => x.user_id === userId),
           commentCount: commentRows.filter((x) => x.post_id === p.id).length,
+          savedByMe: savedIds.has(p.id),
         };
       }),
     );
@@ -248,6 +273,28 @@ function CommunityPage() {
       loadLeaders(period);
     }
     setBusyWater((s) => {
+      const n = new Set(s);
+      n.delete(post.id);
+      return n;
+    });
+  };
+
+  // Private bookmark: optimistic toggle, reverted with the real error if the write fails.
+  // Touches only community_saved_posts (no reactions, points or notifications).
+  const toggleSave = async (post: Post) => {
+    if (!userId) return toast.error(t("communityV1.loginRequired"));
+    if (busySave.has(post.id)) return;
+    const next = !post.savedByMe;
+    const setSaved = (value: boolean) =>
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, savedByMe: value } : p)));
+    setBusySave((s) => new Set(s).add(post.id));
+    setSaved(next);
+    const { error } = next ? await savePost(userId, post.id) : await unsavePost(userId, post.id);
+    if (error) {
+      setSaved(!next);
+      toast.error(reportUserError(error, t("communityV1.actionError")));
+    }
+    setBusySave((s) => {
       const n = new Set(s);
       n.delete(post.id);
       return n;
@@ -356,8 +403,18 @@ function CommunityPage() {
 
   const visible = useMemo(() => filterCommunityPosts(posts, filter, search), [posts, filter, search]);
   const helpCount = useMemo(() => countNeedsHelp(posts), [posts]);
-  const emptyFilterText =
-    search.trim() ? t("communityV1.noResults") : filter === "help" ? t("communityV1.emptyHelp") : t("communityV1.emptyTopic");
+  const filters = useMemo(() => visibleCommunityFilters({ topics: topicsEnabled, saved: savedEnabled }), [topicsEnabled, savedEnabled]);
+  // A filter that is no longer available (e.g. saved table missing) falls back to "Tudo".
+  useEffect(() => {
+    if (!filters.includes(filter)) setFilter("all");
+  }, [filters, filter]);
+  const emptyFilterText = search.trim()
+    ? t("communityV1.noResults")
+    : filter === "help"
+      ? t("communityV1.emptyHelp")
+      : filter === "saved"
+        ? t("communityV1.emptySaved")
+        : t("communityV1.emptyTopic");
 
   const periods: Period[] = ["week", "month", "year", "all"];
   const medal = (pos: number) =>
@@ -448,7 +505,9 @@ function CommunityPage() {
             />
           </div>
 
-          {topicsEnabled && <CommunityFilterBar value={filter} onChange={setFilter} helpCount={helpCount} t={t} />}
+          {filters.length > 1 && (
+            <CommunityFilterBar value={filter} onChange={setFilter} helpCount={helpCount} t={t} filters={filters} />
+          )}
           {topicsEnabled && filter === "help" && (
             <p className="text-xs text-muted-foreground">{t("communityV1.helpHint")}</p>
           )}
@@ -497,7 +556,7 @@ function CommunityPage() {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
                   <Button
                     variant={post.wateredByMe ? "default" : "outline"}
                     size="sm"
@@ -515,6 +574,16 @@ function CommunityPage() {
                     {openComments === post.id ? t("communityV1.hideComments") : t("communityV1.comments")}
                     <span className="tabular-nums">· {post.commentCount}</span>
                   </Button>
+                  {savedEnabled && (
+                    <span className="ml-auto">
+                    <CommunitySaveButton
+                      saved={post.savedByMe}
+                      busy={busySave.has(post.id)}
+                      onToggle={() => toggleSave(post)}
+                      t={t}
+                    />
+                    </span>
+                  )}
                 </div>
 
                 {openComments === post.id && (
