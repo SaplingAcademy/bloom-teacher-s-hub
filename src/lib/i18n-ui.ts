@@ -859,6 +859,10 @@ export const uiTranslations = {
       "converting": "Convertendo..."
     },
     "notificationsUi": { "title": "Notificações", "markAllRead": "Marcar todas como lidas", "empty": "Você ainda não tem notificações.", "loading": "Carregando…", "loadError": "Não foi possível carregar as notificações.", "unread": "não lidas" },
+    "profileGarden": {
+      "title": "Meu Jardim",
+      "description": "As ideias que você plantou na Comunidade Bloom. Um espaço para acompanhar suas contribuições e ver o que floresceu."
+    },
     "communityV1": {
       "eyebrow": "Comunidade",
       "title": "Comunidade Bloom",
@@ -1213,8 +1217,6 @@ export const uiTranslations = {
       "teachersHelped": "Professores Ajudados",
       "acceptedSolutions": "Soluções Aceitas",
       "resourcesShared": "Recursos Compartilhados",
-      "teacherPublicationHistory": "Histórico de Publicações do Educador",
-      "allYourQuestionsTipsResourcesAndCommunity": "Todas as suas perguntas, atividades, recursos e artigos com snapshots de versão imutáveis.",
       "publicationTitle": "Publicação & Título",
       "category": "Categoria",
       "version": "Versão",
@@ -2522,6 +2524,10 @@ export const uiTranslations = {
       "converting": "Converting..."
     },
     "notificationsUi": { "title": "Notifications", "markAllRead": "Mark all as read", "empty": "You have no notifications yet.", "loading": "Loading…", "loadError": "Could not load notifications.", "unread": "unread" },
+    "profileGarden": {
+      "title": "My Garden",
+      "description": "The ideas you planted in the Bloom Community. A space to follow your contributions and see what has blossomed."
+    },
     "communityV1": {
       "eyebrow": "Community",
       "title": "Bloom Community",
@@ -2876,8 +2882,6 @@ export const uiTranslations = {
       "teachersHelped": "Teachers Helped",
       "acceptedSolutions": "Accepted Solutions",
       "resourcesShared": "Resources Shared",
-      "teacherPublicationHistory": "Teacher Publication History",
-      "allYourQuestionsTipsResourcesAndCommunity": "All your questions, tips, resources, and community articles with immutable version history.",
       "publicationTitle": "Publication & Title",
       "category": "Category",
       "version": "Version",

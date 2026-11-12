@@ -36,6 +36,7 @@ import {
   FileText,
   Clock,
   Camera,
+  Sprout,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -647,11 +648,12 @@ function ProfilePage() {
       <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
           <div>
-            <h3 className="font-display text-lg font-bold text-foreground">
-              {tr("auditUi.teacherPublicationHistory")}
+            <h3 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
+              <Sprout className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              {tr("profileGarden.title")}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {tr("auditUi.allYourQuestionsTipsResourcesAndCommunity")}
+              {tr("profileGarden.description")}
             </p>
           </div>
         </div>
