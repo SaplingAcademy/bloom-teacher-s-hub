@@ -62,8 +62,9 @@ do $p2$
 declare
   c_sig constant text := 'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)';
   c_error constant text := 'Package not found or unauthorized';
-  -- Condição completa da validação do pacote, imediatamente antes do INSERT em public.students
-  c_pkg_re constant text := 'if\s+p_package_id\s+is\s+not\s+null\s+and\s+not\s+exists\s*\(\s*select\s+1\s+from\s+public\.packages(\s+\w+)?\s+where\s+(\w+\.)?id\s*=\s*p_package_id\s+and\s+(\w+\.)?teacher_id\s*=\s*p_teacher_id\s*\)\s*then\s+return\s+jsonb_build_object\s*\(\s*''success''\s*,\s*false\s*,\s*''error''\s*,\s*''Package not found or unauthorized''\s*\)\s*;\s*end\s+if\s*;\s*insert\s+into\s+public\.students\s*\(';
+  -- Condição completa da validação do pacote (alias pk de public.packages em id e teacher_id),
+  -- imediatamente antes do INSERT em public.students
+  c_pkg_re constant text := 'if\s+p_package_id\s+is\s+not\s+null\s+and\s+not\s+exists\s*\(\s*select\s+1\s+from\s+public\.packages\s+pk\s+where\s+pk\.id\s*=\s*p_package_id\s+and\s+pk\.teacher_id\s*=\s*p_teacher_id\s*\)\s*then\s+return\s+jsonb_build_object\s*\(\s*''success''\s*,\s*false\s*,\s*''error''\s*,\s*''Package not found or unauthorized''\s*\)\s*;\s*end\s+if\s*;\s*insert\s+into\s+public\.students\s*\(';
   v_oid oid;
   v_count int;
   v_def text;
@@ -211,7 +212,7 @@ commit;
 --           security_definer = true, dono = postgres, anon_exec = false, auth_exec = true.
 -- =========================================================================================
 -- select
---   d.def ~* 'if\s+p_package_id\s+is\s+not\s+null\s+and\s+not\s+exists\s*\(\s*select\s+1\s+from\s+public\.packages(\s+\w+)?\s+where\s+(\w+\.)?id\s*=\s*p_package_id\s+and\s+(\w+\.)?teacher_id\s*=\s*p_teacher_id\s*\)\s*then\s+return\s+jsonb_build_object\s*\(\s*''success''\s*,\s*false\s*,\s*''error''\s*,\s*''Package not found or unauthorized''\s*\)\s*;\s*end\s+if\s*;\s*insert\s+into\s+public\.students\s*\(' as valida_pacote,
+--   d.def ~* 'if\s+p_package_id\s+is\s+not\s+null\s+and\s+not\s+exists\s*\(\s*select\s+1\s+from\s+public\.packages\s+pk\s+where\s+pk\.id\s*=\s*p_package_id\s+and\s+pk\.teacher_id\s*=\s*p_teacher_id\s*\)\s*then\s+return\s+jsonb_build_object\s*\(\s*''success''\s*,\s*false\s*,\s*''error''\s*,\s*''Package not found or unauthorized''\s*\)\s*;\s*end\s+if\s*;\s*insert\s+into\s+public\.students\s*\(' as valida_pacote,
 --   d.def ~* 'update\s+public\.tasks\M[^;]*where\s+lead_id\s*=\s*p_lead_id\s+and\s+teacher_id\s*=\s*p_teacher_id' as filtra_tarefas,
 --   d.def ~* 'converted_at\s*=\s*coalesce\s*\(\s*converted_at' as preserva_converted_at,
 --   p.prosecdef as security_definer,
