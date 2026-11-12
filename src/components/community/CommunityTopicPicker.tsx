@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { COMMUNITY_TOPICS, type CommunityTopic } from "@/lib/community-topics";
 
 interface Props {
@@ -23,10 +24,15 @@ export function CommunityTopicPicker({ value, onChange, showError, t }: Props) {
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(topic)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:text-foreground"
+              // Selected: solid primary with light text and a check mark (not color alone); no color
+              // transition, so it never shows a faded intermediate state.
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+                selected
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground"
+                  : "border-border bg-card text-foreground/75 transition-colors hover:border-primary/40 hover:text-foreground"
               }`}
             >
+              {selected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
               {t(`communityV1.topics.${topic}`)}
             </button>
           );

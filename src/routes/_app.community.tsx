@@ -372,6 +372,8 @@ function CommunityPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
+        // Phones: one column, so the title shows in full and the button sits below the description.
+        className="grid-cols-1"
         eyebrow={t("communityV1.eyebrow")}
         title={t("communityV1.title")}
         description={t("communityV1.description")}

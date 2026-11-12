@@ -55,7 +55,14 @@ describe("CommunityTopicPicker", () => {
     expect(onChange).toHaveBeenCalledWith("management");
 
     await render(createElement(CommunityTopicPicker, { value: "management", onChange, showError: false, t }));
-    expect(container.querySelector("[role=radio][aria-checked=true]")?.textContent).toBe("Gestão");
+    const selected = container.querySelector("[role=radio][aria-checked=true]")!;
+    expect(selected.textContent).toBe("Gestão");
+    // High-contrast selected state, marked by a check icon (not color alone) and without a color transition.
+    expect(selected.className).toContain("bg-primary");
+    expect(selected.className).toContain("text-primary-foreground");
+    expect(selected.className).not.toContain("transition-colors");
+    expect(selected.querySelector("svg")).not.toBeNull();
+    expect(container.querySelectorAll("[role=radio] svg")).toHaveLength(1);
     expect(container.querySelector("[role=alert]")).toBeNull();
   });
 });

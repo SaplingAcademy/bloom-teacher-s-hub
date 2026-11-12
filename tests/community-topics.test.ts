@@ -43,11 +43,19 @@ describe("community topics", () => {
     expect(filterCommunityPosts(posts, "management", "verbos")).toEqual([]);
   });
 
-  it("detects a missing topic column (migration not applied) without hiding other errors", () => {
+  it("recognizes only the missing topic column error, never masking other Supabase errors", () => {
+    // Matched: the column does not exist yet (read 42703 / write PGRST204).
     expect(isMissingTopicColumn({ code: "42703", message: "column community_posts.topic does not exist" })).toBe(true);
+    expect(isMissingTopicColumn({ code: "42703", message: 'column "topic" does not exist' })).toBe(true);
     expect(isMissingTopicColumn({ code: "PGRST204", message: "Could not find the 'topic' column of 'community_posts' in the schema cache" })).toBe(true);
-    expect(isMissingTopicColumn({ code: "42501", message: "permission denied" })).toBe(false);
+    // Not matched: other columns, similar names, other tables, other codes.
     expect(isMissingTopicColumn({ code: "42703", message: "column community_posts.foo does not exist" })).toBe(false);
+    expect(isMissingTopicColumn({ code: "42703", message: "column community_posts.topic_id does not exist" })).toBe(false);
+    expect(isMissingTopicColumn({ code: "42703", message: "column community_posts.subtopic does not exist" })).toBe(false);
+    expect(isMissingTopicColumn({ code: "PGRST204", message: "Could not find the 'topic' column of 'comments' in the schema cache" })).toBe(false);
+    expect(isMissingTopicColumn({ code: "42501", message: "permission denied for table community_posts (topic)" })).toBe(false);
+    expect(isMissingTopicColumn({ code: "PGRST301", message: "JWT expired" })).toBe(false);
+    expect(isMissingTopicColumn({ message: "column community_posts.topic does not exist" })).toBe(false);
     expect(isMissingTopicColumn(null)).toBe(false);
   });
 });

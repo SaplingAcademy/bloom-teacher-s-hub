@@ -56,12 +56,20 @@ export function countNeedsHelp(posts: Pick<FilterablePost, "topic" | "commentCou
 }
 
 /**
- * True when Supabase reports that the topic column does not exist yet (migration not applied):
- * "42703" on reads, "PGRST204" (schema cache) on writes. The feed then falls back to the legacy
- * read, so publishing the app before the SQL never breaks the Community.
+ * True only for "the topic column does not exist" (migration not applied):
+ *   - Postgres 42703 on reads: `column community_posts.topic does not exist` (or `column "topic" ...`);
+ *   - PostgREST PGRST204 on writes: `Could not find the 'topic' column of 'community_posts' ...`.
+ * Any other error (other columns, permissions, network, RLS) is NOT matched, so it surfaces as a
+ * load error instead of being masked by the legacy read.
  */
 export function isMissingTopicColumn(error: { code?: string; message?: string } | null | undefined): boolean {
   if (!error) return false;
-  const mentionsTopic = /\btopic\b/i.test(error.message ?? "");
-  return (error.code === "42703" || error.code === "PGRST204") && mentionsTopic;
+  const message = error.message ?? "";
+  if (error.code === "42703") {
+    return /column (?:community_posts\.topic|"topic"|topic) does not exist/i.test(message);
+  }
+  if (error.code === "PGRST204") {
+    return /could not find the 'topic' column of 'community_posts'/i.test(message);
+  }
+  return false;
 }
