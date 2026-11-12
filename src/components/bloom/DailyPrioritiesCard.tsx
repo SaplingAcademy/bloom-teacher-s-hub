@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { urgentQueueRootKey } from "@/hooks/use-urgent-queue-query";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
 import { PriorityResolutionPanel, isInlineResolvable } from "@/components/bloom/PriorityResolutionPanel";
 import { PriorityModuleActions, moduleActionFor, type PriorityModuleAction } from "@/components/bloom/PriorityModuleActions";
@@ -261,10 +262,13 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-sidebar-accent-foreground">
               {t("today.prioritiesTitle")}
             </h2>
+            {/* The former fixed subtitle now lives in this tooltip (hover, focus or tap). */}
+            <InfoTooltip
+              label={t("today.prioritiesInfoLabel")}
+              text={t("today.prioritiesSubtitle")}
+              className="-ml-1 text-sidebar-accent-foreground"
+            />
           </div>
-          <p className="text-xs text-sidebar-foreground/80 font-medium mt-0.5">
-            {t("today.prioritiesSubtitle")}
-          </p>
         </div>
       </div>
 
