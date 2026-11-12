@@ -11,8 +11,10 @@
 -- O QUE MUDA
 --   A) RPCs chamadas pelo app logado (Leads, Comunidade, Perfil):
 --        convert_lead_to_student, get_public_teacher_profiles, get_community_leaderboard
---      → sem EXECUTE para PUBLIC e anon; EXECUTE explícito para authenticated e service_role
---        (explícito para não depender do grant herdado de PUBLIC, que é removido).
+--      → sem EXECUTE para PUBLIC e anon; EXECUTE explícito para authenticated (explícito para não
+--        depender do grant herdado de PUBLIC, que é removido). service_role recebe EXECUTE explícito
+--        somente se já executava a função antes (diretamente ou via PUBLIC, conforme o snapshot):
+--        o acesso existente é preservado, nunca ampliado.
 --   B) Funções usadas exclusivamente por triggers (retornam `trigger`, não são chamadas pelo app):
 --        handle_new_user, handle_new_profile_plan, enforce_free_plan_active_student_limit,
 --        normalize_lead_stage_trigger, handle_community_comment_reputation,
@@ -42,13 +44,19 @@
 --   resultado esperado do P1 (reexecução). Caso contrário, aborta sem alterar nada.
 --   Ao final, antes do commit, confere os privilégios efetivos: anon sem EXECUTE nas 13 funções,
 --   authenticated com EXECUTE no grupo A e sem EXECUTE no grupo B; se não, aborta e desfaz tudo
---   (ex.: grants feitos por outro grantor que o REVOKE do usuário atual não remove).
+--   (ex.: grants feitos por outro grantor que o REVOKE do usuário atual não remove); confere também
+--   que service_role manteve exatamente o acesso efetivo que tinha no grupo A.
+--   search_path fixado em pg_catalog, public durante a transação (SET LOCAL), para que funções e
+--   tipos de sistema não sejam resolvidos por objetos homônimos em outros schemas.
 --
 -- ROLLBACK
 --   Ver a seção "ROLLBACK EXATO" no fim do arquivo: restaura, a partir do snapshot, exatamente os
 --   privilégios EXECUTE originais de PUBLIC, anon, authenticated e service_role em cada função.
+--   Depois da aplicação, execute a consulta "IMPRESSÃO DIGITAL DO SNAPSHOT" e guarde o resultado
+--   fora do banco: o rollback exige esse valor e aborta se o snapshot tiver sido alterado.
 -- =========================================================================================
 begin;
+set local search_path = pg_catalog, public;
 
 -- -----------------------------------------------------------------------------------------
 -- 0. Conferência prévia (aborta a transação se algo não estiver como esperado)
@@ -201,8 +209,12 @@ begin
         where (s.function_signature = any (v_group_a) and split_part(o, ':', 1) in ('authenticated', 'service_role'))
            or (not (s.function_signature = any (v_group_a)) and split_part(o, ':', 1) = 'service_role')
         union all
-        select r, false from unnest(array['authenticated', 'service_role']) r
+        select 'authenticated', false
         where s.function_signature = any (v_group_a)
+        union all
+        select 'service_role', false
+        where s.function_signature = any (v_group_a)
+          and exists (select 1 from unnest(v_orig) o where split_part(o, ':', 1) in ('public', 'service_role'))
       ) e group by e.r order by e.r)
     into v_post;
 
@@ -236,16 +248,42 @@ where p.oid in (
 on conflict (function_signature) do nothing;
 
 -- -----------------------------------------------------------------------------------------
--- A. RPCs do app logado: remover PUBLIC/anon, manter authenticated (explícito) e service_role
+-- A. RPCs do app logado: remover PUBLIC/anon, manter authenticated (explícito);
+--    service_role só mantém EXECUTE se já tinha (direto ou via PUBLIC) segundo o snapshot
 -- -----------------------------------------------------------------------------------------
 revoke execute on function public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text) from public, anon;
-grant  execute on function public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text) to authenticated, service_role;
+grant  execute on function public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text) to authenticated;
 
 revoke execute on function public.get_public_teacher_profiles() from public, anon;
-grant  execute on function public.get_public_teacher_profiles() to authenticated, service_role;
+grant  execute on function public.get_public_teacher_profiles() to authenticated;
 
 revoke execute on function public.get_community_leaderboard(text, integer) from public, anon;
-grant  execute on function public.get_community_leaderboard(text, integer) to authenticated, service_role;
+grant  execute on function public.get_community_leaderboard(text, integer) to authenticated;
+
+do $$
+declare
+  v_fn text;
+  v_had boolean;
+begin
+  foreach v_fn in array array[
+    'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)',
+    'public.get_public_teacher_profiles()',
+    'public.get_community_leaderboard(text, integer)'
+  ] loop
+    select exists (
+      select 1
+      from bloom_security_audit.p1_function_acl_snapshot sn
+      cross join lateral aclexplode(sn.original_acl) x
+      where sn.function_signature = v_fn
+        and x.privilege_type = 'EXECUTE'
+        and (x.grantee = 0 or x.grantee = 'service_role'::regrole)
+    ) into v_had;
+    if v_had then
+      execute format('grant execute on function %s to service_role', to_regprocedure(v_fn)::regprocedure);
+    end if;
+  end loop;
+end;
+$$;
 
 -- -----------------------------------------------------------------------------------------
 -- B. Funções exclusivas de triggers: sem EXECUTE direto pela API
@@ -274,7 +312,7 @@ declare
     'public.get_community_leaderboard(text, integer)'
   ];
 begin
-  for s in select function_signature from bloom_security_audit.p1_function_acl_snapshot loop
+  for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
     v_oid := to_regprocedure(s.function_signature);
     if has_function_privilege('anon', v_oid, 'EXECUTE') then
       raise exception 'P1 abortado: anon ainda executa %.', s.function_signature;
@@ -282,6 +320,12 @@ begin
     if s.function_signature = any (v_group_a) then
       if not has_function_privilege('authenticated', v_oid, 'EXECUTE') then
         raise exception 'P1 abortado: authenticated perdeu EXECUTE em %.', s.function_signature;
+      end if;
+      if has_function_privilege('service_role', v_oid, 'EXECUTE') is distinct from exists (
+           select 1 from aclexplode(s.original_acl) x
+           where x.privilege_type = 'EXECUTE'
+             and (x.grantee = 0 or x.grantee = 'service_role'::regrole)) then
+        raise exception 'P1 abortado: acesso de service_role em % difere do original.', s.function_signature;
       end if;
     elsif has_function_privilege('authenticated', v_oid, 'EXECUTE') then
       raise exception 'P1 abortado: authenticated ainda executa a função de trigger %.', s.function_signature;
@@ -316,6 +360,12 @@ commit;
 --   and p.prosecdef
 -- order by grupo, p.proname;
 --
+-- IMPRESSÃO DIGITAL DO SNAPSHOT (somente leitura): executar logo após a aplicação e guardar o
+-- valor fora do banco (ex.: no registro da mudança). O rollback exige esse valor.
+-- select md5(string_agg(function_signature || '=' || original_acl::text, ';' order by function_signature)) as fingerprint,
+--        count(*) as funcoes
+-- from bloom_security_audit.p1_function_acl_snapshot;
+--
 -- Snapshot gravado (somente leitura): privilégios originais × atuais de cada função
 -- select s.function_signature, s.captured_at, s.original_acl,
 --        p.proacl as current_acl
@@ -335,10 +385,36 @@ commit;
 -- ("dependent privileges exist") e nada é revertido; não se usa CASCADE para não afetar terceiros.
 -- Ao final, o próprio rollback confere papel a papel (EXECUTE e grant option) e desfaz tudo se o
 -- resultado não for idêntico ao snapshot.
+-- Antes de alterar qualquer coisa, o rollback valida o snapshot e aborta se:
+--   - a impressão digital informada (v_fingerprint) não for igual à do snapshot atual;
+--   - o snapshot não contiver exatamente as 13 funções deste arquivo;
+--   - o snapshot listar, para papéis que o P1 não altera (dono e quaisquer outros fora de PUBLIC,
+--     anon, authenticated e service_role), privilégios diferentes dos atuais — sinal de edição.
+-- Substitua <COLE_A_IMPRESSAO_DIGITAL> pelo valor guardado após a aplicação.
 -- =========================================================================================
 -- begin;
+-- set local search_path = pg_catalog, public;
 -- do $$
 -- declare
+--   v_fingerprint text := '<COLE_A_IMPRESSAO_DIGITAL>';
+--   v_expected text[] := array[
+--     'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)',
+--     'public.get_public_teacher_profiles()',
+--     'public.get_community_leaderboard(text, integer)',
+--     'public.handle_new_user()',
+--     'public.handle_new_profile_plan()',
+--     'public.enforce_free_plan_active_student_limit()',
+--     'public.normalize_lead_stage_trigger()',
+--     'public.handle_community_comment_reputation()',
+--     'public.handle_community_comment_reputation_delete()',
+--     'public.handle_community_water_reputation()',
+--     'public.handle_community_water_reputation_delete()',
+--     'public.handle_post_comment_notification()',
+--     'public.sync_lead_interaction_timestamps()'
+--   ];
+--   v_actual_fp text;
+--   v_rows int;
+--   v_matching int;
 --   s record;
 --   a record;
 --   v_oid oid;
@@ -346,9 +422,42 @@ commit;
 --   v_orig text[];
 --   v_cur text[];
 -- begin
---   if not exists (select 1 from bloom_security_audit.p1_function_acl_snapshot) then
+--   select md5(string_agg(function_signature || '=' || original_acl::text, ';' order by function_signature)),
+--          count(*), count(*) filter (where function_signature = any (v_expected))
+--     into v_actual_fp, v_rows, v_matching
+--   from bloom_security_audit.p1_function_acl_snapshot;
+--   if v_rows = 0 then
 --     raise exception 'Rollback abortado: snapshot vazio.';
 --   end if;
+--   if v_actual_fp is distinct from v_fingerprint then
+--     raise exception 'Rollback abortado: impressão digital do snapshot não confere (snapshot alterado ou valor incorreto).';
+--   end if;
+--   if v_rows <> v_matching or v_matching <> array_length(v_expected, 1) then
+--     raise exception 'Rollback abortado: snapshot com % linhas, % das 13 funções esperadas.', v_rows, v_matching;
+--   end if;
+--   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
+--     v_oid := to_regprocedure(s.function_signature);
+--     if v_oid is null then
+--       raise exception 'Rollback abortado: função % não existe mais.', s.function_signature;
+--     end if;
+--     -- papéis que o P1 não altera: snapshot e estado atual precisam coincidir
+--     if exists (
+--       (select x.grantee, x.privilege_type, x.is_grantable from aclexplode(s.original_acl) x
+--        where x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole)
+--        except
+--        select x.grantee, x.privilege_type, x.is_grantable from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--        where p.oid = v_oid and x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--       union all
+--       (select x.grantee, x.privilege_type, x.is_grantable from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--        where p.oid = v_oid and x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole)
+--        except
+--        select x.grantee, x.privilege_type, x.is_grantable from aclexplode(s.original_acl) x
+--        where x.grantee <> 0 and x.grantee not in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--     ) then
+--       raise exception 'Rollback abortado: snapshot de % diverge do atual em papéis não alterados pelo P1.', s.function_signature;
+--     end if;
+--   end loop;
+--
 --   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
 --     v_oid := to_regprocedure(s.function_signature);
 --     if v_oid is null then
