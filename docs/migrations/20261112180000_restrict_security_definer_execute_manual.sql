@@ -3,8 +3,10 @@
 -- Aplicação MANUAL no SQL Editor do Supabase. Não usar ferramentas de migração gerenciadas.
 --
 -- ESCOPO
---   Somente permissões (GRANT/REVOKE EXECUTE). Não altera definições de funções, tabelas,
---   dados, triggers nem políticas RLS.
+--   Somente permissões (GRANT/REVOKE EXECUTE). Não altera definições de funções, tabelas de
+--   negócio, dados, triggers nem políticas RLS. Para permitir um rollback exato, guarda antes um
+--   snapshot dos privilégios originais em bloom_security_audit.p1_function_acl_snapshot (schema
+--   próprio, fora da API: sem acesso para PUBLIC, anon e authenticated).
 --
 -- O QUE MUDA
 --   A) RPCs chamadas pelo app logado (Leads, Comunidade, Perfil):
@@ -29,24 +31,16 @@
 --   de publicações, water_idea e as demais RPCs do app.
 --
 -- SEGURANÇA DA EXECUÇÃO
---   Tudo roda em uma transação. Antes de revogar, o bloco de conferência aborta (sem alterar nada)
---   se alguma função listada não existir com a assinatura esperada, se alguma do grupo B não
---   retornar `trigger`, ou se alguma do grupo B não estiver vinculada a ao menos um trigger.
+--   Tudo roda em uma transação. Antes de qualquer alteração, a conferência aborta (sem alterar
+--   nada) se alguma função listada não existir com a assinatura esperada, se alguma do grupo A
+--   não for SECURITY DEFINER, se alguma do grupo B não retornar `trigger` ou se alguma do grupo B
+--   não estiver vinculada a ao menos um trigger.
+--   O snapshot é gravado uma única vez por função (reexecutar o arquivo não sobrescreve os
+--   privilégios originais com os já restringidos).
 --
--- ROLLBACK (restaura o estado anterior, se necessário)
---   grant execute on function public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text) to public, anon;
---   grant execute on function public.get_public_teacher_profiles() to public, anon;
---   grant execute on function public.get_community_leaderboard(text, integer) to public, anon;
---   grant execute on function public.handle_new_user() to public, anon, authenticated;
---   grant execute on function public.handle_new_profile_plan() to public, anon, authenticated;
---   grant execute on function public.enforce_free_plan_active_student_limit() to public, anon, authenticated;
---   grant execute on function public.normalize_lead_stage_trigger() to public, anon, authenticated;
---   grant execute on function public.handle_community_comment_reputation() to public, anon, authenticated;
---   grant execute on function public.handle_community_comment_reputation_delete() to public, anon, authenticated;
---   grant execute on function public.handle_community_water_reputation() to public, anon, authenticated;
---   grant execute on function public.handle_community_water_reputation_delete() to public, anon, authenticated;
---   grant execute on function public.handle_post_comment_notification() to public, anon, authenticated;
---   grant execute on function public.sync_lead_interaction_timestamps() to public, anon, authenticated;
+-- ROLLBACK
+--   Ver a seção "ROLLBACK EXATO" no fim do arquivo: restaura, a partir do snapshot, exatamente os
+--   privilégios EXECUTE originais de PUBLIC, anon, authenticated e service_role em cada função.
 -- =========================================================================================
 begin;
 
@@ -80,6 +74,9 @@ begin
     if v_oid is null then
       raise exception 'P1 abortado: função % não encontrada com esta assinatura.', v_fn;
     end if;
+    if not (select prosecdef from pg_proc where oid = v_oid) then
+      raise exception 'P1 abortado: % não é SECURITY DEFINER; revisar antes.', v_fn;
+    end if;
   end loop;
 
   foreach v_fn in array v_triggers loop
@@ -96,6 +93,42 @@ begin
   end loop;
 end;
 $$;
+
+-- -----------------------------------------------------------------------------------------
+-- 1. Snapshot dos privilégios originais (para rollback exato)
+--    proacl NULL significa "privilégios padrão" (dono + EXECUTE para PUBLIC): grava-se o
+--    equivalente explícito via acldefault, para o rollback saber o que restaurar.
+-- -----------------------------------------------------------------------------------------
+create schema if not exists bloom_security_audit;
+revoke all on schema bloom_security_audit from public, anon, authenticated;
+
+create table if not exists bloom_security_audit.p1_function_acl_snapshot (
+  function_signature text primary key,
+  original_acl aclitem[] not null,
+  captured_at timestamptz not null default now()
+);
+revoke all on bloom_security_audit.p1_function_acl_snapshot from public, anon, authenticated;
+
+insert into bloom_security_audit.p1_function_acl_snapshot (function_signature, original_acl)
+select 'public.' || p.proname || '(' || oidvectortypes(p.proargtypes) || ')',
+       coalesce(p.proacl, acldefault('f', p.proowner))
+from pg_proc p
+where p.oid in (
+  'public.convert_lead_to_student(uuid, uuid, text, text, text, text, text, text, text, uuid, text, text)'::regprocedure,
+  'public.get_public_teacher_profiles()'::regprocedure,
+  'public.get_community_leaderboard(text, integer)'::regprocedure,
+  'public.handle_new_user()'::regprocedure,
+  'public.handle_new_profile_plan()'::regprocedure,
+  'public.enforce_free_plan_active_student_limit()'::regprocedure,
+  'public.normalize_lead_stage_trigger()'::regprocedure,
+  'public.handle_community_comment_reputation()'::regprocedure,
+  'public.handle_community_comment_reputation_delete()'::regprocedure,
+  'public.handle_community_water_reputation()'::regprocedure,
+  'public.handle_community_water_reputation_delete()'::regprocedure,
+  'public.handle_post_comment_notification()'::regprocedure,
+  'public.sync_lead_interaction_timestamps()'::regprocedure
+)
+on conflict (function_signature) do nothing;
 
 -- -----------------------------------------------------------------------------------------
 -- A. RPCs do app logado: remover PUBLIC/anon, manter authenticated (explícito) e service_role
@@ -148,3 +181,76 @@ commit;
 -- where p.pronamespace = 'public'::regnamespace
 --   and p.prosecdef
 -- order by grupo, p.proname;
+--
+-- Snapshot gravado (somente leitura): privilégios originais × atuais de cada função
+-- select s.function_signature, s.captured_at, s.original_acl,
+--        p.proacl as current_acl
+-- from bloom_security_audit.p1_function_acl_snapshot s
+-- left join pg_proc p on p.oid = to_regprocedure(s.function_signature)
+-- order by s.function_signature;
+
+-- =========================================================================================
+-- ROLLBACK EXATO (somente se necessário; executar separadamente, sem os "--")
+-- Para cada função do snapshot: remove EXECUTE de PUBLIC, anon, authenticated e service_role e
+-- concede de volta exatamente o que cada um desses papéis tinha antes (inclusive WITH GRANT
+-- OPTION, se havia). O privilégio do dono da função nunca foi alterado e não é tocado.
+-- Nada é concedido além do que constava no snapshot.
+-- =========================================================================================
+-- begin;
+-- do $$
+-- declare
+--   s record;
+--   a record;
+--   v_oid oid;
+--   v_grantee text;
+-- begin
+--   if not exists (select 1 from bloom_security_audit.p1_function_acl_snapshot) then
+--     raise exception 'Rollback abortado: snapshot vazio.';
+--   end if;
+--   for s in select function_signature, original_acl from bloom_security_audit.p1_function_acl_snapshot loop
+--     v_oid := to_regprocedure(s.function_signature);
+--     if v_oid is null then
+--       raise exception 'Rollback abortado: função % não existe mais.', s.function_signature;
+--     end if;
+--     execute format('revoke execute on function %s from public, anon, authenticated, service_role', v_oid::regprocedure);
+--     for a in
+--       select x.grantee, x.is_grantable
+--       from aclexplode(s.original_acl) x
+--       where x.privilege_type = 'EXECUTE'
+--         and (x.grantee = 0 or x.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole))
+--     loop
+--       v_grantee := case when a.grantee = 0 then 'public' else a.grantee::regrole::text end;
+--       execute format('grant execute on function %s to %s%s', v_oid::regprocedure, v_grantee,
+--                      case when a.is_grantable then ' with grant option' else '' end);
+--     end loop;
+--   end loop;
+-- end;
+-- $$;
+-- commit;
+--
+-- Conferência do rollback (somente leitura): deve retornar zero linhas.
+-- Compara, para PUBLIC, anon, authenticated e service_role, os privilégios EXECUTE originais
+-- (snapshot) com os atuais, nos dois sentidos: nada faltando e nada a mais.
+-- with roles(grantee) as (
+--   select 0::oid union all
+--   select oid from pg_roles where rolname in ('anon', 'authenticated', 'service_role')
+-- ),
+-- original as (
+--   select s.function_signature, x.grantee, x.is_grantable
+--   from bloom_security_audit.p1_function_acl_snapshot s
+--   cross join lateral aclexplode(s.original_acl) x
+--   where x.privilege_type = 'EXECUTE' and x.grantee in (select grantee from roles)
+-- ),
+-- atual as (
+--   select s.function_signature, x.grantee, x.is_grantable
+--   from bloom_security_audit.p1_function_acl_snapshot s
+--   join pg_proc p on p.oid = to_regprocedure(s.function_signature)
+--   cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x
+--   where x.privilege_type = 'EXECUTE' and x.grantee in (select grantee from roles)
+-- )
+-- (select 'faltando' as diferenca, * from original except select 'faltando', * from atual)
+-- union all
+-- (select 'a mais', * from atual except select 'a mais', * from original);
+--
+-- Limpeza do snapshot (opcional, apenas depois de confirmar que o rollback não será necessário)
+-- drop schema bloom_security_audit cascade;
