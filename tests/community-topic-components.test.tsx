@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { t as translate } from "@/lib/i18n";
 import { CommunityFilterBar } from "../src/components/community/CommunityFilterBar";
 import { CommunityTopicPicker } from "../src/components/community/CommunityTopicPicker";
+import { CommunitySaveButton } from "../src/components/community/CommunitySaveButton";
 
 const t = (k: string) => translate(k, "pt");
 let root: Root;
@@ -26,7 +27,7 @@ describe("CommunityFilterBar", () => {
   it("shows Tudo, the five topics and Ajude outro professor with the unanswered count", async () => {
     await render(createElement(CommunityFilterBar, { value: "all", onChange: () => {}, helpCount: 2, t }));
     expect([...container.querySelectorAll("button")].map((b) => b.textContent)).toEqual([
-      "Tudo", "Dúvidas", "Ideias de aulas", "Materiais", "Gestão", "Conquistas", "Ajude outro professor2",
+      "Tudo", "Dúvidas", "Ideias de aulas", "Materiais", "Gestão", "Conquistas", "Ajude outro professor2", "Salvos",
     ]);
     expect(button("Tudo").getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe("Filtrar publicações");
@@ -66,3 +67,34 @@ describe("CommunityTopicPicker", () => {
     expect(container.querySelector("[role=alert]")).toBeNull();
   });
 });
+
+describe("CommunityFilterBar with visible filters", () => {
+  it("renders only the given filters (e.g. Salvos hidden before the migration)", async () => {
+    await render(createElement(CommunityFilterBar, { value: "all", onChange: () => {}, helpCount: 0, t, filters: ["all", "saved"] }));
+    expect([...container.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Tudo", "Salvos"]);
+  });
+});
+
+describe("CommunitySaveButton", () => {
+  it("toggles between Salvar and Salvo with a bookmark icon and pressed state", async () => {
+    const onToggle = vi.fn();
+    await render(createElement(CommunitySaveButton, { saved: false, busy: false, onToggle, t }));
+    let btn = container.querySelector("button")!;
+    expect(btn.textContent).toBe("Salvar");
+    expect(btn.getAttribute("aria-pressed")).toBe("false");
+    expect(btn.getAttribute("aria-label")).toBe("Salvar publicação");
+    expect(btn.querySelector("svg")).not.toBeNull();
+    await act(async () => btn.click());
+    expect(onToggle).toHaveBeenCalledTimes(1);
+
+    await render(createElement(CommunitySaveButton, { saved: true, busy: false, onToggle, t }));
+    btn = container.querySelector("button")!;
+    expect(btn.textContent).toBe("Salvo");
+    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    expect(btn.getAttribute("aria-label")).toBe("Remover dos salvos");
+
+    await render(createElement(CommunitySaveButton, { saved: true, busy: true, onToggle, t }));
+    expect(container.querySelector("button")!.disabled).toBe(true);
+  });
+});
+

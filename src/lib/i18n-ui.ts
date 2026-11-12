@@ -909,7 +909,13 @@ export const uiTranslations = {
       "filterHelp": "Ajude outro professor",
       "helpHint": "Dúvidas que ainda não receberam resposta. Que tal compartilhar sua experiência?",
       "emptyTopic": "Ainda não há publicações neste assunto.",
-      "emptyHelp": "Nenhuma dúvida sem resposta no momento."
+      "emptyHelp": "Nenhuma dúvida sem resposta no momento.",
+      "filterSaved": "Salvos",
+      "save": "Salvar",
+      "saved": "Salvo",
+      "saveLabel": "Salvar publicação",
+      "unsaveLabel": "Remover dos salvos",
+      "emptySaved": "Você ainda não salvou publicações. Use “Salvar” para guardar as que quiser rever."
     },
     "communityUi": {
       "eyebrow": "Ecossistema de conhecimento",
@@ -2566,7 +2572,13 @@ export const uiTranslations = {
       "filterHelp": "Help another teacher",
       "helpHint": "Questions that haven't been answered yet. Why not share your experience?",
       "emptyTopic": "No posts in this topic yet.",
-      "emptyHelp": "No unanswered questions right now."
+      "emptyHelp": "No unanswered questions right now.",
+      "filterSaved": "Saved",
+      "save": "Save",
+      "saved": "Saved",
+      "saveLabel": "Save post",
+      "unsaveLabel": "Remove from saved",
+      "emptySaved": "You haven't saved any posts yet. Use “Save” to keep the ones you want to revisit."
     },
     "communityUi": {
       "eyebrow": "Knowledge ecosystem",

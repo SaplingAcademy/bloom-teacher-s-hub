@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   COMMUNITY_FILTERS,
+  visibleCommunityFilters,
   countNeedsHelp,
   filterCommunityPosts,
   isMissingTopicColumn,
@@ -8,13 +9,31 @@ import {
   normalizeCommunityTopic,
 } from "@/lib/community-topics";
 
-const post = (over: Partial<{ title: string; content: string; tags: string[]; topic: any; commentCount: number }> = {}) => ({
+const post = (over: Partial<{ title: string; content: string; tags: string[]; topic: any; commentCount: number; savedByMe: boolean }> = {}) => ({
   title: "Título", content: "Conteúdo", tags: [], topic: null, commentCount: 0, ...over,
 });
 
 describe("community topics", () => {
-  it("lists Tudo, the five topics and Ajude outro professor", () => {
-    expect(COMMUNITY_FILTERS).toEqual(["all", "questions", "lesson_ideas", "materials", "management", "achievements", "help"]);
+  it("lists Tudo, the five topics, Ajude outro professor and Salvos", () => {
+    expect(COMMUNITY_FILTERS).toEqual(["all", "questions", "lesson_ideas", "materials", "management", "achievements", "help", "saved"]);
+  });
+
+  it("shows topic filters only with topics and Salvos only with the saved table", () => {
+    expect(visibleCommunityFilters({ topics: true, saved: true })).toEqual(COMMUNITY_FILTERS);
+    expect(visibleCommunityFilters({ topics: true, saved: false })).not.toContain("saved");
+    expect(visibleCommunityFilters({ topics: false, saved: true })).toEqual(["all", "saved"]);
+    expect(visibleCommunityFilters({ topics: false, saved: false })).toEqual(["all"]);
+  });
+
+  it("Salvos lists only the teacher's saved posts and combines with the text search", () => {
+    const posts = [
+      post({ title: "Jogo de verbos", topic: "lesson_ideas", savedByMe: true }),
+      post({ title: "Planilha de pacotes", topic: "materials", savedByMe: true }),
+      post({ title: "Jogo de cartas", topic: "lesson_ideas", savedByMe: false }),
+    ];
+    expect(filterCommunityPosts(posts, "saved", "").map((p) => p.title)).toEqual(["Jogo de verbos", "Planilha de pacotes"]);
+    expect(filterCommunityPosts(posts, "saved", "jogo").map((p) => p.title)).toEqual(["Jogo de verbos"]);
+    expect(filterCommunityPosts(posts, "saved", "inexistente")).toEqual([]);
   });
 
   it("normalizes unknown or missing topics to no label", () => {
