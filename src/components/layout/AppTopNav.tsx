@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, ChevronsUpDown } from "lucide-react";
 import { BloomMark } from "@/components/bloom/Logo";
@@ -61,10 +61,22 @@ function Badge({ children }: { children: string }) {
  * - Click/tap/keyboard: the tab toggles it (a click on a hover-opened menu keeps it open, and then
  *   it no longer closes on leave). Touch pointers never trigger the hover behaviour.
  * - Always: Esc, a click outside or choosing a module closes it.
+ * - Motion: the panel fades/slides in (8px down, PANEL_OPEN_MS ease-out) and out (8px up,
+ *   PANEL_CLOSE_MS ease-in, after the hover tolerance); it stays mounted while fading out, so a
+ *   pointer coming back reverses the transition from where it is (no flash). With
+ *   prefers-reduced-motion there is no transition and it hides at once.
  * The same panel serves desktop, tablet and mobile (columns adapt to the width).
  */
 /** Delay before a hover-opened menu closes after the pointer leaves the tab and the panel. */
 export const HOVER_CLOSE_DELAY = 200;
+/** Panel entrance / exit durations (ms). */
+export const PANEL_OPEN_MS = 250;
+export const PANEL_CLOSE_MS = 200;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
 
 export function AppTopNav() {
   const { t } = useLanguage();
@@ -78,7 +90,45 @@ export function AppTopNav() {
   const menuRef = useRef<HTMLDivElement>(null);
   const tabRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  // `mounted`: the panel is in the layout (not hidden); `shown`: its visible end state. Opening
+  // mounts first and switches to shown on the next layout pass (so the transition starts from
+  // opacity 0 / -8px); closing switches to hidden-state styles and unmounts after the exit.
+  const [mounted, setMounted] = useState(false);
+  const [shown, setShown] = useState(false);
+  const unmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelUnmount = () => {
+    if (unmountTimerRef.current) {
+      clearTimeout(unmountTimerRef.current);
+      unmountTimerRef.current = null;
+    }
+  };
+  useEffect(() => cancelUnmount, []);
+
+  useEffect(() => {
+    if (open) {
+      cancelUnmount();
+      setMounted(true);
+      return;
+    }
+    setShown(false);
+    if (prefersReducedMotion()) {
+      setMounted(false);
+      return;
+    }
+    // transitionend is not guaranteed (e.g. interrupted styles), so a timer bounds the exit.
+    unmountTimerRef.current = setTimeout(() => {
+      unmountTimerRef.current = null;
+      setMounted(false);
+    }, PANEL_CLOSE_MS + 20);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !mounted || shown) return;
+    void panelRef.current?.offsetHeight; // commit the start styles before switching to shown
+    setShown(true);
+  }, [open, mounted, shown]);
 
   const cancelHoverClose = () => {
     if (closeTimerRef.current) {
@@ -98,7 +148,13 @@ export function AppTopNav() {
     }
   };
   const onRegionPointerEnter = (event: React.PointerEvent) => {
-    if (isMouse(event)) cancelHoverClose();
+    if (!isMouse(event)) return;
+    cancelHoverClose();
+    // Pointer back on the panel while it is fading out: reopen from where the transition is.
+    if (!open && mounted) {
+      setOpenMode("hover");
+      setOpen(true);
+    }
   };
   const onRegionPointerLeave = (event: React.PointerEvent) => {
     if (!isMouse(event) || !open || openMode !== "hover") return;
@@ -190,11 +246,16 @@ export function AppTopNav() {
         </button>
 
         <div
+          ref={panelRef}
           id={panelId}
-          hidden={!open}
+          hidden={!mounted}
+          data-state={shown ? "open" : "closed"}
           onPointerEnter={onRegionPointerEnter}
           onPointerLeave={onRegionPointerLeave}
-          className="order-1 w-full border-b border-border bg-card shadow-[var(--shadow-lg)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-150"
+          className={cn(
+            "order-1 w-full border-b border-border bg-card shadow-[var(--shadow-lg)] transition-[opacity,translate] motion-reduce:transition-none",
+            shown ? "translate-y-0 opacity-100 duration-[250ms] ease-out" : "-translate-y-2 opacity-0 duration-200 ease-in",
+          )}
         >
           <nav
             aria-label={t("nav.mainNavigation")}

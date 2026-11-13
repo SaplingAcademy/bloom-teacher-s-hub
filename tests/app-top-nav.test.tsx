@@ -23,7 +23,7 @@ vi.mock("@/hooks/use-language", async () => {
   return { useLanguage: () => ({ lang: mocks.lang, setLang: vi.fn(), t: (k: string, f?: string) => t(k, mocks.lang, f) }) };
 });
 
-import { AppTopNav, HOVER_CLOSE_DELAY } from "../src/components/layout/AppTopNav";
+import { AppTopNav, HOVER_CLOSE_DELAY, PANEL_CLOSE_MS } from "../src/components/layout/AppTopNav";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root;
@@ -213,5 +213,101 @@ describe("AppTopNav mega menu — desktop hover", () => {
     expect(isOpen()).toBe(false);
     act(() => { vi.advanceTimersByTime(1000); });
     expect(isOpen()).toBe(false);
+  });
+});
+
+describe("AppTopNav mega menu — open/close transition", () => {
+  const state = () => panel().getAttribute("data-state");
+  const cls = () => panel().getAttribute("class") ?? "";
+  const advance = (ms: number) => act(() => { vi.advanceTimersByTime(ms); });
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("enters with fade + 8px slide down (250 ms ease-out) and stays over the page", () => {
+    render();
+    expect(panel().hidden).toBe(true);
+    expect(state()).toBe("closed");
+    hoverIn(tab());
+    expect(panel().hidden).toBe(false);
+    expect(state()).toBe("open");
+    expect(cls()).toContain("transition-[opacity,translate]");
+    expect(cls()).toMatch(/\bopacity-100\b/);
+    expect(cls()).toMatch(/\btranslate-y-0\b/);
+    expect(cls()).toContain("duration-[250ms]");
+    expect(cls()).toContain("ease-out");
+    expect(cls()).toContain("motion-reduce:transition-none");
+  });
+
+  it("starts the exit only after the 200 ms tolerance, fades/slides up (200 ms ease-in), then hides", () => {
+    render();
+    hoverIn(tab());
+    moveOut(tab());
+    advance(HOVER_CLOSE_DELAY - 1);
+    expect(state()).toBe("open");
+    advance(1);
+    expect(tab().getAttribute("aria-expanded")).toBe("false");
+    expect(state()).toBe("closed");
+    expect(panel().hidden).toBe(false); // still fading out
+    expect(cls()).toMatch(/\bopacity-0\b/);
+    expect(cls()).toContain("-translate-y-2");
+    expect(cls()).toContain("duration-200");
+    expect(cls()).toContain("ease-in");
+    advance(PANEL_CLOSE_MS + 20);
+    expect(panel().hidden).toBe(true);
+  });
+
+  it("pointer back on the fading panel reopens it without hiding or flashing", () => {
+    render();
+    hoverIn(tab());
+    moveOut(tab());
+    advance(HOVER_CLOSE_DELAY + 80); // mid fade-out
+    expect(state()).toBe("closed");
+    hoverIn(panel().querySelector("h2")!);
+    expect(tab().getAttribute("aria-expanded")).toBe("true");
+    expect(state()).toBe("open");
+    expect(panel().hidden).toBe(false);
+    advance(1000);
+    expect(panel().hidden).toBe(false);
+    expect(state()).toBe("open");
+  });
+
+  it("pointer back on the tab during the fade-out also reopens it", () => {
+    render();
+    hoverIn(tab());
+    moveOut(tab());
+    advance(HOVER_CLOSE_DELAY + 50);
+    hoverIn(tab());
+    advance(1000);
+    expect(state()).toBe("open");
+    expect(panel().hidden).toBe(false);
+  });
+
+  it("click, keyboard and touch still toggle it, with the same exit before hiding", () => {
+    render();
+    click(tab());
+    expect(state()).toBe("open");
+    click(tab());
+    expect(state()).toBe("closed");
+    expect(panel().hidden).toBe(false);
+    advance(PANEL_CLOSE_MS + 20);
+    expect(panel().hidden).toBe(true);
+    click(tab());
+    act(() => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
+    advance(PANEL_CLOSE_MS + 20);
+    expect(panel().hidden).toBe(true);
+    expect(document.activeElement).toBe(tab());
+  });
+
+  it("with prefers-reduced-motion it hides at once (no exit animation)", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), media: query, addEventListener() {}, removeEventListener() {} }));
+    render();
+    hoverIn(tab());
+    expect(panel().hidden).toBe(false);
+    moveOut(tab());
+    advance(HOVER_CLOSE_DELAY);
+    expect(panel().hidden).toBe(true);
   });
 });
