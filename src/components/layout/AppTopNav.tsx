@@ -53,29 +53,81 @@ function Badge({ children }: { children: string }) {
 
 /**
  * Main app navigation: the dark-green header (logo, notifications, teacher account) is always
- * visible; the modules live in a collapsible mega menu opened only by clicking/tapping the small
- * centred tab under the header. Closed by default; the open panel floats over the page (nothing is
- * pushed down) and closes on a second tab click, a click outside, Esc or after choosing a module.
+ * visible; the modules live in a collapsible mega menu opened from the small centred tab under the
+ * header. Closed by default; the open panel floats over the page (nothing is pushed down).
+ * - Mouse: hovering the tab opens it; it stays open while the pointer is over the tab or the panel
+ *   (they touch, no gap) and closes HOVER_CLOSE_DELAY ms after leaving them, unless the pointer
+ *   comes back first. Other header areas never open it.
+ * - Click/tap/keyboard: the tab toggles it (a click on a hover-opened menu keeps it open, and then
+ *   it no longer closes on leave). Touch pointers never trigger the hover behaviour.
+ * - Always: Esc, a click outside or choosing a module closes it.
  * The same panel serves desktop, tablet and mobile (columns adapt to the width).
  */
+/** Delay before a hover-opened menu closes after the pointer leaves the tab and the panel. */
+export const HOVER_CLOSE_DELAY = 200;
+
 export function AppTopNav() {
   const { t } = useLanguage();
   const { isSuperAdmin } = usePlan();
   const view = useNavItemView();
   const groups = getNavGroups();
   const [open, setOpen] = useState(false);
+  // "hover": opened by the mouse over the tab (auto-closes on leave); "click": opened by click,
+  // tap or keyboard (stays until toggled, Esc, outside click or navigation).
+  const [openMode, setOpenMode] = useState<"hover" | "click">("click");
   const menuRef = useRef<HTMLDivElement>(null);
   const tabRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelId = useId();
+
+  const cancelHoverClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+  useEffect(() => cancelHoverClose, []);
+
+  const isMouse = (event: React.PointerEvent) => event.pointerType === "mouse";
+  const onTabPointerEnter = (event: React.PointerEvent) => {
+    if (!isMouse(event)) return;
+    cancelHoverClose();
+    if (!open) {
+      setOpenMode("hover");
+      setOpen(true);
+    }
+  };
+  const onRegionPointerEnter = (event: React.PointerEvent) => {
+    if (isMouse(event)) cancelHoverClose();
+  };
+  const onRegionPointerLeave = (event: React.PointerEvent) => {
+    if (!isMouse(event) || !open || openMode !== "hover") return;
+    cancelHoverClose();
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      setOpen(false);
+    }, HOVER_CLOSE_DELAY);
+  };
+  const onTabClick = () => {
+    cancelHoverClose();
+    if (!open) {
+      setOpenMode("click");
+      setOpen(true);
+    } else if (openMode === "hover") {
+      setOpenMode("click"); // the click confirms the hover-opened menu instead of closing it
+    } else {
+      setOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false);
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) close();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        close();
         tabRef.current?.focus();
       }
     };
@@ -87,7 +139,10 @@ export function AppTopNav() {
     };
   }, [open]);
 
-  const close = () => setOpen(false);
+  const close = () => {
+    cancelHoverClose();
+    setOpen(false);
+  };
 
   return (
     <div className="relative z-40 shrink-0">
@@ -115,11 +170,18 @@ export function AppTopNav() {
         <button
           ref={tabRef}
           type="button"
-          onClick={() => setOpen((current) => !current)}
+          onClick={onTabClick}
+          onPointerEnter={onTabPointerEnter}
+          onPointerLeave={onRegionPointerLeave}
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={open ? t("nav.closeMenu") : t("nav.openMenu")}
-          className="order-2 -mt-px grid h-6 w-16 place-items-center rounded-b-xl bg-sidebar text-sidebar-foreground/75 shadow-[0_4px_10px_-4px_rgb(0_0_0/0.35)] transition-colors hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring cursor-pointer"
+          className={cn(
+            "relative order-2 -mt-px grid h-6 w-16 place-items-center rounded-b-xl bg-sidebar text-sidebar-foreground/75 shadow-[0_4px_10px_-4px_rgb(0_0_0/0.35)] transition-colors hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring cursor-pointer",
+            // While open, an invisible strip above the tab bridges it to the panel during the
+            // entrance animation, so moving the pointer between them never counts as leaving.
+            open && "before:absolute before:inset-x-0 before:-top-3 before:h-3 before:content-['']",
+          )}
         >
           <ChevronDown
             className={cn("h-4 w-4 transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")}
@@ -130,6 +192,8 @@ export function AppTopNav() {
         <div
           id={panelId}
           hidden={!open}
+          onPointerEnter={onRegionPointerEnter}
+          onPointerLeave={onRegionPointerLeave}
           className="order-1 w-full border-b border-border bg-card shadow-[var(--shadow-lg)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-150"
         >
           <nav
