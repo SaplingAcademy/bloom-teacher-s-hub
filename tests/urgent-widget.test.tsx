@@ -93,7 +93,10 @@ describe("Urgent dashboard visibility", () => {
     await settle();
     expect(container.querySelector("[data-testid=urgent-skeleton]")).toBeNull();
     expect(container.textContent).toContain("Urgent");
-    expect(container.textContent).toContain("1 item");
+    // No item counter; the description lives in the Info tooltip, not under the title.
+    expect(container.textContent).not.toContain("1 item");
+    expect(container.textContent).not.toContain("Immediate attention");
+    expect(container.querySelector('button[aria-label$="Urgent"]')).not.toBeNull();
     expect(container.textContent).toContain("Occurrence urgent");
     expect(container.textContent).not.toContain("Occurrence ordinary");
 
@@ -102,11 +105,12 @@ describe("Urgent dashboard visibility", () => {
     expect(mocks.navigate).toHaveBeenCalledWith({ to: "/leads?leadId=urgent" });
   });
 
-  it("renders every urgent occurrence once with a plural count", async () => {
+  it("renders every urgent occurrence once, without an item counter", async () => {
     mocks.fetch.mockResolvedValue([item("one"), item("two")]);
     await mount();
-    expect(container.textContent).toContain("2 items");
-    expect(container.querySelectorAll("button").length).toBe(3);
+    expect(container.textContent).not.toContain("2 items");
+    // Info tooltip + refresh + one Resolve per occurrence.
+    expect(container.querySelectorAll("button").length).toBe(4);
     expect(container.textContent).toContain("Occurrence one");
     expect(container.textContent).toContain("Occurrence two");
   });
