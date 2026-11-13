@@ -159,7 +159,6 @@ const translations = {
     greetingAfternoon: "Good afternoon",
     greetingEvening: "Good evening",
     greeting: "Good morning",
-    subtitle: "Here's everything that needs your attention today. Bloom keeps the busywork out of your way.",
     finishSetupTitle: "Finish personalizing your Bloom 🌱",
     finishSetupSubtitle: "Complete a few details to get the most out of your schedule, finances, and insights.",
     continueSetup: "Continue setup",
@@ -218,8 +217,6 @@ const translations = {
     greetingAfternoon: "Boa tarde",
     greetingEvening: "Boa noite",
     greeting: "Bom dia",
-    subtitle:
-      "Aqui está tudo o que precisa de você hoje. A Bloom mantém o trabalho chato longe de você.",
     finishSetupTitle: "Termine de personalizar sua Bloom 🌱",
     finishSetupSubtitle: "Complete algumas informações para aproveitar melhor sua agenda, finanças e recomendações.",
     continueSetup: "Continuar configuração",
@@ -826,7 +823,6 @@ function TodayPage() {
         title={greetingTitle}
         titleClassName="text-[26px] sm:text-[32px]"
         eyebrowClassName="text-accent/65"
-        description={t.subtitle}
         actions={
           <>
             <FinancialPrivacyToggle className="h-9 w-9" />
