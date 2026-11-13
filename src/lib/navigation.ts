@@ -145,3 +145,44 @@ export const aiNav: NavItem = {
 };
 
 export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav, ...accountNav];
+
+/** Breakpoint (Tailwind) from which a primary item is shown in the horizontal bar. */
+export type TopNavBreakpoint = "md" | "lg" | "xl";
+
+/**
+ * Horizontal top navigation: main sections ordered by frequency of use, each visible in the bar from
+ * a breakpoint; below it the item moves into the "Mais" menu. Every other item of `navSections`
+ * stays in "Mais", so no section is ever dropped (see getTopNav).
+ */
+export const topNavPrimary: { id: string; showFrom: TopNavBreakpoint }[] = [
+  { id: "today", showFrom: "md" },
+  { id: "calendar", showFrom: "md" },
+  { id: "students", showFrom: "md" },
+  { id: "leads", showFrom: "md" },
+  { id: "finance", showFrom: "lg" },
+  { id: "resources", showFrom: "lg" },
+  { id: "community", showFrom: "xl" },
+];
+
+export type TopNav = {
+  primary: { item: NavItem; showFrom: TopNavBreakpoint }[];
+  /** Always in "Mais" (in their navSections order). */
+  more: NavItem[];
+};
+
+/** Splits navSections into the bar's primary items and the "Mais" items; each item appears exactly once. */
+export function getTopNav(sections: NavSection[] = navSections): TopNav {
+  const all = sections.flatMap((s) => s.items);
+  const byId = new Map(all.map((item) => [item.id, item]));
+  const primary = topNavPrimary
+    .filter((p) => byId.has(p.id))
+    .map((p) => ({ item: byId.get(p.id)!, showFrom: p.showFrom }));
+  const primaryIds = new Set(primary.map((p) => p.item.id));
+  return { primary, more: all.filter((item) => !primaryIds.has(item.id)) };
+}
+
+/** Same active rule the sidebar used: "/" only on the root, other sections by prefix. */
+export function isNavItemActive(item: NavItem, pathname: string) {
+  if (item.disabled) return false;
+  return item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+}

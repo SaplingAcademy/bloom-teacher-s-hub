@@ -1,9 +1,5 @@
-import { useEffect, useState } from "react";
-import { Menu } from "lucide-react";
-import { useLanguage } from "@/hooks/use-language";
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
-import { AppSidebar } from "@/components/layout/AppSidebar";
-import { BloomMark } from "@/components/bloom/Logo";
+import { AppTopNav, APP_CONTAINER } from "@/components/layout/AppTopNav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useScheduledContractActivation } from "@/hooks/use-scheduled-contract-activation";
@@ -16,31 +12,8 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { user, loading, profile, error, retryProfileSync, signOut } = useAuth();
-  const { t } = useLanguage();
   // Scheduled contract renewals: activation fallback when the app opens (same RPC as the schedule).
   useScheduledContractActivation(user?.id);
-
-  // Desktop Pinning State (persisted in localStorage)
-  const [isPinned, setIsPinned] = useState(false);
-  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const storedPin = localStorage.getItem("bloom_sidebar_pinned");
-    if (storedPin) setIsPinned(storedPin === "true");
-  }, []);
-
-  const togglePin = () => {
-    setIsPinned((prev) => {
-      const next = !prev;
-      localStorage.setItem("bloom_sidebar_pinned", String(next));
-      return next;
-    });
-  };
-
-  const handleNavigate = () => {
-    if (mobileOpen) setMobileOpen(false);
-  };
 
   const loadingScreen = (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-[#163020] font-figtree">
@@ -115,61 +88,14 @@ function AppLayout() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden relative">
-      {/* Desktop Sidebar Layout Container */}
-      <div
-        className={cn(
-          "hidden h-screen shrink-0 relative z-30 lg:block transition-[width] duration-300 ease-in-out",
-          isPinned ? "w-[240px]" : "w-[72px]"
-        )}
-      >
-        <div className="absolute top-0 left-0 h-full z-30">
-          <AppSidebar
-            isPinned={isPinned}
-            onTogglePin={togglePin}
-            onNavigate={handleNavigate}
-            onExpandChange={(expanded) => setIsHoverExpanded(expanded)}
-          />
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-background">
+      {/* Top navigation (header + horizontal menu): same on every authenticated page. */}
+      <AppTopNav />
+      <main className="min-h-0 flex-1 overflow-y-auto scroll-smooth pb-6 pt-4 lg:pt-6">
+        <div className={cn(APP_CONTAINER)}>
+          <Outlet />
         </div>
-      </div>
-
-      {/* Mobile Drawer (Hidden on Desktop) */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div className="absolute left-0 top-0 h-full z-50 shadow-2xl">
-            <AppSidebar
-              isMobile={true}
-              onNavigate={() => setMobileOpen(false)}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Region — No layout jump when sidebar expands on hover */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden relative z-10">
-        {/* Mobile-only navigation trigger: no top bar on desktop, the sidebar holds all navigation. */}
-        <div className="flex h-14 shrink-0 items-center gap-2 px-2 sm:px-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            aria-label={t("globalUi.openNavigation")}
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </button>
-          <BloomMark className="text-primary" />
-          <span className="font-display text-lg font-bold text-foreground">Bloom</span>
-        </div>
-        <main className="flex-1 overflow-y-auto scroll-smooth px-4 pb-6 pt-2 sm:px-6 lg:px-8 lg:pt-6">
-          <div className="mx-auto max-w-7xl">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      </main>
     </div>
   );
 }
