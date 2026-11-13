@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { CourseCardsSkeleton } from "@/components/bloom/skeletons";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,14 +148,18 @@ export function AcademyHome() {
       {/* Header */}
       <header className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
-            {t("academy.home.title")}
-          </h1>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
+              {t("academy.home.title")}
+            </h1>
+            <InfoTooltip
+              label={`${t("globalUi.aboutPage")} ${t("academy.home.title")}`}
+              text={t("academy.home.subtitle")}
+              className="text-muted-foreground"
+            />
+          </div>
           <Badge variant="secondary">{t("academy.adminBadge")}</Badge>
         </div>
-        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
-          {t("academy.home.subtitle")}
-        </p>
         <div className="relative max-w-md">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"

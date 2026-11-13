@@ -20,6 +20,7 @@ import { CommunityTopicPicker } from "@/components/community/CommunityTopicPicke
 import { CommunitySaveButton } from "@/components/community/CommunitySaveButton";
 import { fetchSavedPostIds, savePost, unsavePost } from "@/lib/community-saved";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -429,11 +430,11 @@ function CommunityPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        // Phones: one column, so the title shows in full and the button sits below the description.
+        // Phones: one column, so the title shows in full and the button sits below it.
         className="grid-cols-1"
         eyebrow={t("communityV1.eyebrow")}
         title={t("communityV1.title")}
-        description={t("communityV1.description")}
+        titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("communityV1.title")}`} text={t("communityV1.description")} className="text-muted-foreground" />}
         actions={
           <Button onClick={() => setNewOpen(true)} className="gap-1.5">
             <Plus className="w-4 h-4" /> {t("communityV1.newPost")}

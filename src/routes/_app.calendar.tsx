@@ -29,6 +29,7 @@ import {
   RotateCcw,
   } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { CalendarRowsSkeleton, MonthGridSkeleton } from "@/components/bloom/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1109,7 +1110,7 @@ function CalendarPage() {
       {/* PAGE HEADER */}
       <PageHeader
         title={currentTranslation.title}
-        description={currentTranslation.description}
+        titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${currentTranslation.title}`} text={currentTranslation.description} className="text-muted-foreground" />}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => { setSchedulingContext(null); setIsScheduleChoiceOpen(true); }}><Plus className="h-4 w-4" />{t("calendarUi.scheduleAction")}</Button>

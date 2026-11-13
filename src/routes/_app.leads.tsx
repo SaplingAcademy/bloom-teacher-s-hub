@@ -34,6 +34,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { KanbanSkeleton, ListRowsSkeleton } from "@/components/bloom/skeletons";
 import { LeadDetailSheet } from "@/components/bloom/LeadDetailSheet";
 import { LeadInteractionDialog } from "@/components/bloom/LeadInteractionDialog";
@@ -529,7 +530,7 @@ function LeadsPage() {
       <PageHeader
         eyebrow={t("auditUi.salesPipeline")}
         title={t("leads.title")}
-        description={t("leads.subtitle")}
+        titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("leads.title")}`} text={t("leads.subtitle")} className="text-muted-foreground" />}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
