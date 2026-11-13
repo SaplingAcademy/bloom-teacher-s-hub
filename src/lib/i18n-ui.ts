@@ -34,6 +34,7 @@ export const uiTranslations = {
     "workspace": {
       "title": "Workspace", "eyebrow": "Seu espaço de organização",
       "subtitle": "Organize ideias, projetos e anotações em um só lugar.",
+      "infoLabel": "Sobre o Workspace",
       "tabsLabel": "Seções do Workspace",
       "tabs": { "mural": "Meu Mural", "projects": "Projetos", "notebooks": "Cadernos" },
       "loading": "Carregando Workspace…", "soon": "Disponível em breve",
@@ -1699,6 +1700,7 @@ export const uiTranslations = {
     "workspace": {
       "title": "Workspace", "eyebrow": "Your organization space",
       "subtitle": "Organize ideas, projects and notes in one place.",
+      "infoLabel": "About Workspace",
       "tabsLabel": "Workspace sections",
       "tabs": { "mural": "My Board", "projects": "Projects", "notebooks": "Notebooks" },
       "loading": "Loading Workspace…", "soon": "Coming soon",

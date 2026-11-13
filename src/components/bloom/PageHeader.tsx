@@ -10,9 +10,11 @@ type PageHeaderProps = {
   /** Optional overrides (defaults unchanged for every other page). */
   titleClassName?: string;
   eyebrowClassName?: string;
+  /** Optional element right after the title (e.g. an info tooltip icon). */
+  titleAddon?: ReactNode;
 };
 
-export function PageHeader({ title, description, actions, eyebrow, className, titleClassName, eyebrowClassName }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, eyebrow, className, titleClassName, eyebrowClassName, titleAddon }: PageHeaderProps) {
   return (
     <header
       className={cn(
@@ -26,9 +28,18 @@ export function PageHeader({ title, description, actions, eyebrow, className, ti
             {eyebrow}
           </p>
         )}
-        <h1 className={cn("truncate font-display text-2xl font-bold text-foreground sm:text-[28px]", titleClassName)}>
-          {title}
-        </h1>
+        {titleAddon ? (
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h1 className={cn("truncate font-display text-2xl font-bold text-foreground sm:text-[28px]", titleClassName)}>
+              {title}
+            </h1>
+            {titleAddon}
+          </div>
+        ) : (
+          <h1 className={cn("truncate font-display text-2xl font-bold text-foreground sm:text-[28px]", titleClassName)}>
+            {title}
+          </h1>
+        )}
         {description && (
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>
         )}
