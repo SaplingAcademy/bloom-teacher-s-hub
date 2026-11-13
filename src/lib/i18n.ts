@@ -102,6 +102,8 @@ export const translations: Record<Language, TranslationDictionary> = {
       adminDesc: "Professores e planos",
       askBloomAi: "Perguntar à Bloom IA",
       soon: "Em breve",
+      more: "Mais",
+      mainNavigation: "Navegação principal",
     },
     status: {
       active: "Ativo",
@@ -1097,7 +1099,9 @@ export const translations: Record<Language, TranslationDictionary> = {
       admin: "Administration",
       adminDesc: "Teachers and plans",
       askBloomAi: "Ask Bloom AI",
-      soon: "Soon",
+      soon: "Coming Soon",
+      more: "More",
+      mainNavigation: "Main navigation",
     },
     status: {
       active: "Active",

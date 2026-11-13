@@ -36,8 +36,7 @@ export function SidebarAccountMenu({
   /** Result of the existing super_admin check (usePlan); the database re-verifies the role. */
   isAdmin?: boolean;
 }) {
-  const { lang, setLang, t } = useLanguage();
-  const { signOut } = useAuth();
+  const { t } = useLanguage();
   const { name: teacherName, email } = useTeacherIdentity();
   const primary = teacherName || email;
 
@@ -73,77 +72,103 @@ export function SidebarAccountMenu({
         sideOffset={8}
         className="w-56 rounded-xl border-border p-1.5 shadow-[var(--shadow-lg)]"
       >
-        <nav aria-label={t("sidebarAccount.menu")}>
-          {accountNav.map((item) => (
+        <AccountMenuPanel
+          isAdmin={isAdmin}
+          onClose={() => onOpenChange(false)}
+          onNavigate={onNavigate}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/**
+ * Contents of the teacher account menu ("Meu perfil", "Configurações", "Administração" only for
+ * super_admin, language, "Sair"), shared by the sidebar footer block and the top header.
+ */
+export function AccountMenuPanel({
+  onClose,
+  onNavigate,
+  isAdmin = false,
+}: {
+  onClose: () => void;
+  onNavigate: () => void;
+  isAdmin?: boolean;
+}) {
+  const { lang, setLang, t } = useLanguage();
+  const { signOut } = useAuth();
+  return (
+    <>
+      <nav aria-label={t("sidebarAccount.menu")}>
+        {accountNav.map((item) => (
+          <Link
+            key={item.id}
+            to={item.to}
+            onClick={() => {
+              onClose();
+              onNavigate();
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none"
+          >
+            <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span>{t(MENU_LABEL_KEYS[item.id] ?? `nav.${item.id}`)}</span>
+          </Link>
+        ))}
+        {isAdmin && (
+          <>
+            <div role="separator" className="mx-1 my-1 h-px bg-border/60" />
             <Link
-              key={item.id}
-              to={item.to}
+              to={adminNavItem.to}
               onClick={() => {
-                onOpenChange(false);
+                onClose();
                 onNavigate();
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none"
             >
-              <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <span>{t(MENU_LABEL_KEYS[item.id] ?? `nav.${item.id}`)}</span>
+              <adminNavItem.icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">{t("nav.admin", adminNavItem.label)}</span>
+              <span className="shrink-0 rounded border border-amber-200/80 bg-amber-50 px-1.5 py-px text-[9px] font-bold leading-4 tracking-wider text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
+                {t("sidebarAccount.adminTag")}
+              </span>
             </Link>
+          </>
+        )}
+      </nav>
+      <div className="my-1 h-px bg-border/60" />
+      <div role="group" aria-label={t("sidebarAccount.language")} className="flex items-center gap-2 px-2.5 py-1.5">
+        <Globe className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="flex-1 text-xs font-semibold text-foreground">{t("sidebarAccount.language")}</span>
+        <div className="flex rounded-lg bg-secondary p-0.5">
+          {LANGUAGES.map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              aria-pressed={lang === option.code}
+              aria-label={t(option.labelKey)}
+              title={t(option.labelKey)}
+              onClick={() => setLang(option.code)}
+              className={cn(
+                "rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                lang === option.code ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option.short}
+            </button>
           ))}
-          {isAdmin && (
-            <>
-              <div role="separator" className="mx-1 my-1 h-px bg-border/60" />
-              <Link
-                to={adminNavItem.to}
-                onClick={() => {
-                  onOpenChange(false);
-                  onNavigate();
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none"
-              >
-                <adminNavItem.icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate">{t("nav.admin", adminNavItem.label)}</span>
-                <span className="shrink-0 rounded border border-amber-200/80 bg-amber-50 px-1.5 py-px text-[9px] font-bold leading-4 tracking-wider text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
-                  {t("sidebarAccount.adminTag")}
-                </span>
-              </Link>
-            </>
-          )}
-        </nav>
-        <div className="my-1 h-px bg-border/60" />
-        <div role="group" aria-label={t("sidebarAccount.language")} className="flex items-center gap-2 px-2.5 py-1.5">
-          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="flex-1 text-xs font-semibold text-foreground">{t("sidebarAccount.language")}</span>
-          <div className="flex rounded-lg bg-secondary p-0.5">
-            {LANGUAGES.map((option) => (
-              <button
-                key={option.code}
-                type="button"
-                aria-pressed={lang === option.code}
-                aria-label={t(option.labelKey)}
-                title={t(option.labelKey)}
-                onClick={() => setLang(option.code)}
-                className={cn(
-                  "rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  lang === option.code ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {option.short}
-              </button>
-            ))}
-          </div>
         </div>
-        <div className="my-1 h-px bg-border/60" />
-        <button
-          type="button"
-          onClick={() => {
-            onOpenChange(false);
-            signOut();
-          }}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:bg-destructive/10 focus-visible:outline-none cursor-pointer"
-        >
-          <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{t("common.logout")}</span>
-        </button>
-      </PopoverContent>
-    </Popover>
+      </div>
+      <div className="my-1 h-px bg-border/60" />
+      <button
+        type="button"
+        onClick={() => {
+          onClose();
+          signOut();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:bg-destructive/10 focus-visible:outline-none cursor-pointer"
+      >
+        <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>{t("common.logout")}</span>
+      </button>
+    </>
   );
 }

@@ -95,7 +95,7 @@ export const uiTranslations = {
       }
     },
     "academy": {
-      "nav": "Bloom Academy", "soonBadge": "Coming Soon",
+      "nav": "Bloom Academy", "soonBadge": "Em breve",
       "soonTitle": "Bloom Academy — Em breve",
       "soonDescription": "Estamos preparando um espaço exclusivo para o seu desenvolvimento profissional. Novidades em breve!",
       "adminTitle": "Bloom Academy",
