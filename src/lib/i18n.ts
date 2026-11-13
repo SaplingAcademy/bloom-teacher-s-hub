@@ -1099,7 +1099,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       admin: "Administration",
       adminDesc: "Teachers and plans",
       askBloomAi: "Ask Bloom AI",
-      soon: "Soon",
+      soon: "Coming Soon",
       more: "More",
       mainNavigation: "Main navigation",
     },
