@@ -1,21 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { getTopNav, isNavItemActive, navSections, topNavPrimary } from "../src/lib/navigation";
+import { getNavGroups, isNavItemActive, navSections } from "../src/lib/navigation";
 
-describe("top navigation", () => {
-  it("shows every section exactly once (bar or 'Mais'), nothing removed", () => {
-    const { primary, more } = getTopNav();
-    const ids = [...primary.map((p) => p.item.id), ...more.map((i) => i.id)];
+describe("top navigation (mega menu groups)", () => {
+  it("shows every module exactly once, nothing removed", () => {
+    const ids = getNavGroups().flatMap((g) => g.items.map((i) => i.id));
     const all = navSections.flatMap((s) => s.items.map((i) => i.id));
     expect([...ids].sort()).toEqual([...all].sort());
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("keeps the frequency order and per-breakpoint visibility of the main sections", () => {
-    const { primary, more } = getTopNav();
-    expect(primary.map((p) => p.item.id)).toEqual(topNavPrimary.map((p) => p.id));
-    expect(primary.filter((p) => p.showFrom === "md").map((p) => p.item.id)).toEqual(["today", "calendar", "students", "leads"]);
-    expect(more.map((i) => i.id)).toEqual(["workspaceHub", "growth", "academy", "marketplace"]);
-    expect(more.find((i) => i.id === "marketplace")?.disabled).toBe(true);
+  it("distributes the modules in the three requested columns, in order", () => {
+    expect(getNavGroups().map((g) => [g.id, g.items.map((i) => i.id)])).toEqual([
+      ["management", ["today", "calendar", "students", "leads"]],
+      ["business", ["finance", "growth", "workspaceHub"]],
+      ["resources", ["resources", "community", "academy", "marketplace"]],
+    ]);
+  });
+
+  it("never drops a module missing from the groups (appended to the last column)", () => {
+    const extra = { id: "extra", label: "Extra", to: "/extra", icon: navSections[0].items[0].icon, description: "" };
+    const groups = getNavGroups([...navSections, { id: "x", label: "X", items: [extra] }]);
+    expect(groups.at(-1)!.items.at(-1)!.id).toBe("extra");
   });
 
   it("uses the same active rule as before", () => {
