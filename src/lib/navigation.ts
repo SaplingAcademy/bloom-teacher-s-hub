@@ -146,39 +146,33 @@ export const aiNav: NavItem = {
 
 export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav, ...accountNav];
 
-/** Breakpoint (Tailwind) from which a primary item is shown in the horizontal bar. */
-export type TopNavBreakpoint = "md" | "lg" | "xl";
-
 /**
- * Horizontal top navigation: main sections ordered by frequency of use, each visible in the bar from
- * a breakpoint; below it the item moves into the "Mais" menu. Every other item of `navSections`
- * stays in "Mais", so no section is ever dropped (see getTopNav).
+ * Mega menu (top navigation panel): modules grouped in three columns. Every item of `navSections`
+ * belongs to exactly one group (see getNavGroups), so no module is ever dropped.
  */
-export const topNavPrimary: { id: string; showFrom: TopNavBreakpoint }[] = [
-  { id: "today", showFrom: "md" },
-  { id: "calendar", showFrom: "md" },
-  { id: "students", showFrom: "md" },
-  { id: "leads", showFrom: "md" },
-  { id: "finance", showFrom: "lg" },
-  { id: "resources", showFrom: "lg" },
-  { id: "community", showFrom: "xl" },
+export const navGroups: { id: "management" | "business" | "resources"; itemIds: string[] }[] = [
+  { id: "management", itemIds: ["today", "calendar", "students", "leads"] },
+  { id: "business", itemIds: ["finance", "growth", "workspaceHub"] },
+  { id: "resources", itemIds: ["resources", "community", "academy", "marketplace"] },
 ];
 
-export type TopNav = {
-  primary: { item: NavItem; showFrom: TopNavBreakpoint }[];
-  /** Always in "Mais" (in their navSections order). */
-  more: NavItem[];
-};
+export type NavGroup = { id: string; items: NavItem[] };
 
-/** Splits navSections into the bar's primary items and the "Mais" items; each item appears exactly once. */
-export function getTopNav(sections: NavSection[] = navSections): TopNav {
+/**
+ * Resolves navGroups to NavItems from navSections (same routes, icons and flags). Items that are
+ * not listed in any group are appended to the last group instead of disappearing.
+ */
+export function getNavGroups(sections: NavSection[] = navSections): NavGroup[] {
   const all = sections.flatMap((s) => s.items);
   const byId = new Map(all.map((item) => [item.id, item]));
-  const primary = topNavPrimary
-    .filter((p) => byId.has(p.id))
-    .map((p) => ({ item: byId.get(p.id)!, showFrom: p.showFrom }));
-  const primaryIds = new Set(primary.map((p) => p.item.id));
-  return { primary, more: all.filter((item) => !primaryIds.has(item.id)) };
+  const groups = navGroups.map((g) => ({
+    id: g.id,
+    items: g.itemIds.map((id) => byId.get(id)).filter((item): item is NavItem => Boolean(item)),
+  }));
+  const listed = new Set(groups.flatMap((g) => g.items.map((i) => i.id)));
+  const rest = all.filter((item) => !listed.has(item.id));
+  if (rest.length) groups[groups.length - 1].items.push(...rest);
+  return groups;
 }
 
 /** Same active rule the sidebar used: "/" only on the root, other sections by prefix. */

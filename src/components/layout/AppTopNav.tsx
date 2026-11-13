@@ -1,38 +1,27 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, ChevronsUpDown, Menu } from "lucide-react";
+import { ChevronDown, ChevronsUpDown } from "lucide-react";
 import { BloomMark } from "@/components/bloom/Logo";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { AccountMenuPanel } from "@/components/layout/SidebarAccountMenu";
 import { TeacherAvatarContent, useTeacherIdentity } from "@/components/layout/TeacherAvatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { usePlan } from "@/hooks/use-plan";
 import { useLanguage } from "@/hooks/use-language";
 import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
-import { getTopNav, isNavItemActive, type NavItem, type TopNavBreakpoint } from "@/lib/navigation";
+import { adminNavItem, getNavGroups, isNavItemActive, type NavItem } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
-/** Same container width as the page content, so the bar and the pages line up. */
+/** Same container width as the page content, so the header and the pages line up. */
 export const APP_CONTAINER = "mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8";
 
-// Static class names per breakpoint (Tailwind needs literal strings).
-const SHOW_IN_BAR: Record<TopNavBreakpoint, string> = { md: "", lg: "hidden lg:inline-flex", xl: "hidden xl:inline-flex" };
-const HIDE_IN_MORE: Record<TopNavBreakpoint, string> = { md: "hidden", lg: "lg:hidden", xl: "xl:hidden" };
-const MORE_ACTIVE_BELOW: Record<TopNavBreakpoint, string> = {
-  md: "",
-  lg: "max-lg:text-foreground max-lg:after:bg-accent",
-  xl: "max-xl:text-foreground max-xl:after:bg-accent",
+const GROUP_LABEL_KEYS: Record<string, string> = {
+  management: "nav.groupManagement",
+  business: "nav.groupBusiness",
+  resources: "nav.groupResources",
 };
 
-/** Label, badge and state of a nav item: one place for the bar, the "Mais" menu and the mobile menu. */
+/** Label, badge and state of a module, shared by every entry of the panel. */
 function useNavItemView() {
   const { t } = useLanguage();
   const { isSuperAdmin } = usePlan();
@@ -52,49 +41,58 @@ function useNavItemView() {
   });
 }
 
+type ItemView = ReturnType<typeof useNavItemView>;
+
 function Badge({ children }: { children: string }) {
   return (
-    <span className="shrink-0 rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold leading-none text-lilac">
+    <span className="shrink-0 whitespace-nowrap rounded-full bg-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold leading-none text-lilac">
       {children}
     </span>
   );
 }
 
-const barItemClasses =
-  "relative inline-flex h-12 shrink-0 items-center gap-2 whitespace-nowrap px-3 text-sm font-medium transition-colors " +
-  "after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-transparent after:transition-colors " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring rounded-md cursor-pointer";
-
 /**
- * Main app navigation: a dark-green header (logo, notifications, teacher account) and, from md up, a
- * horizontal bar with the main sections plus a "Mais" menu. Below md the bar is replaced by a menu
- * opened from the header. All three views render the same items from getTopNav().
+ * Main app navigation: the dark-green header (logo, notifications, teacher account) is always
+ * visible; the modules live in a collapsible mega menu opened only by clicking/tapping the small
+ * centred tab under the header. Closed by default; the open panel floats over the page (nothing is
+ * pushed down) and closes on a second tab click, a click outside, Esc or after choosing a module.
+ * The same panel serves desktop, tablet and mobile (columns adapt to the width).
  */
 export function AppTopNav() {
   const { t } = useLanguage();
   const { isSuperAdmin } = usePlan();
   const view = useNavItemView();
-  const { primary, more } = getTopNav();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const groups = getNavGroups();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const tabRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
-  const movedToMore = primary.filter((p) => p.showFrom !== "md");
-  const activeMoved = movedToMore.find((p) => view(p.item).active);
-  const activeInMore = more.some((item) => view(item).active);
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        tabRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
 
   return (
     <div className="relative z-40 shrink-0">
-      {/* Row 1 — header */}
       <header className="bg-sidebar text-sidebar-foreground">
         <div className={cn(APP_CONTAINER, "flex h-14 items-center gap-2")}>
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="-ml-2 grid h-10 w-10 place-items-center rounded-xl text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring md:hidden"
-            aria-label={t("globalUi.openNavigation")}
-            aria-expanded={mobileOpen}
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </button>
           <Link
             to="/"
             className="flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
@@ -110,132 +108,95 @@ export function AppTopNav() {
         </div>
       </header>
 
-      {/* Row 2 — horizontal navigation (md and up) */}
-      <nav aria-label={t("nav.mainNavigation")} className="hidden border-b border-border bg-card md:block">
-        <div className={cn(APP_CONTAINER, "flex h-12 items-center gap-0.5")}>
-          {/* -ml-3 cancels the items' horizontal padding so the first label lines up with the logo and the content. */}
-          <div className="-ml-3 flex items-center gap-0.5">
-            {primary.map(({ item, showFrom }) => {
-              const v = view(item);
-              return (
+      {/* Mega menu: floats over the page (absolute), so it takes no space while closed. */}
+      <div ref={menuRef} className="absolute inset-x-0 top-full flex flex-col items-center">
+        {/* DOM order: tab first, then the panel (keyboard Tab goes from the tab into the modules);
+            visually the panel sits above the tab, which hangs from its bottom edge. */}
+        <button
+          ref={tabRef}
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={open ? t("nav.closeMenu") : t("nav.openMenu")}
+          className="order-2 -mt-px grid h-6 w-16 place-items-center rounded-b-xl bg-sidebar text-sidebar-foreground/75 shadow-[0_4px_10px_-4px_rgb(0_0_0/0.35)] transition-colors hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring cursor-pointer"
+        >
+          <ChevronDown
+            className={cn("h-4 w-4 transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")}
+            aria-hidden="true"
+          />
+        </button>
+
+        <div
+          id={panelId}
+          hidden={!open}
+          className="order-1 w-full border-b border-border bg-card shadow-[var(--shadow-lg)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-150"
+        >
+          <nav
+            aria-label={t("nav.mainNavigation")}
+            className={cn(APP_CONTAINER, "max-h-[calc(100dvh-3.5rem-2.5rem)] overflow-y-auto py-5 sm:py-6")}
+          >
+            <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 md:grid-cols-3 lg:gap-x-12">
+              {groups.map((group) => {
+                const headingId = `${panelId}-${group.id}`;
+                return (
+                  <section key={group.id} aria-labelledby={headingId}>
+                    <h2
+                      id={headingId}
+                      className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80"
+                    >
+                      {t(GROUP_LABEL_KEYS[group.id] ?? group.id)}
+                    </h2>
+                    <ul className="space-y-0.5">
+                      {group.items.map((item) => (
+                        <ModuleItem key={item.id} item={item} view={view} onNavigate={close} />
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+
+            {isSuperAdmin && (
+              <div className="mt-5 border-t border-border/60 pt-3">
                 <Link
-                  key={item.id}
-                  to={item.to}
-                  aria-current={v.active ? "page" : undefined}
-                  className={cn(
-                    barItemClasses,
-                    SHOW_IN_BAR[showFrom],
-                    v.active
-                      ? "font-semibold text-foreground after:bg-accent"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+                  to={adminNavItem.to}
+                  onClick={close}
+                  aria-current={view(adminNavItem).active ? "page" : undefined}
+                  className="inline-flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <item.icon className={cn("h-4 w-4", v.active ? "text-accent" : "")} aria-hidden="true" />
-                  {v.label}
+                  <adminNavItem.icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <span>{t("nav.admin", adminNavItem.label)}</span>
+                  <span className="rounded border border-amber-200/80 bg-amber-50 px-1.5 py-px text-[9px] font-bold leading-4 tracking-wider text-amber-700">
+                    {t("sidebarAccount.adminTag")}
+                  </span>
                 </Link>
-              );
-            })}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  barItemClasses,
-                  "data-[state=open]:text-foreground",
-                  activeInMore ? "font-semibold text-foreground after:bg-accent" : "text-muted-foreground hover:text-foreground",
-                  !activeInMore && activeMoved && MORE_ACTIVE_BELOW[activeMoved.showFrom],
-                )}
-              >
-                {t("nav.more")}
-                <ChevronDown className="h-4 w-4" aria-hidden="true" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={6} className="w-max min-w-64 max-w-[calc(100vw-2rem)] rounded-xl p-1.5">
-                {movedToMore.map(({ item, showFrom }) => (
-                  <MoreItem key={item.id} item={item} view={view} className={HIDE_IN_MORE[showFrom]} />
-                ))}
-                {movedToMore.length > 0 && <DropdownMenuSeparator className="xl:hidden" />}
-                {more.map((item) => (
-                  <MoreItem key={item.id} item={item} view={view} />
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile menu (below md): same items, full list */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" aria-describedby={undefined} className="w-[min(20rem,85vw)] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
-          <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-            <BloomMark className="text-sidebar-primary" />
-            <SheetTitle className="font-display text-lg font-bold text-sidebar-foreground">Bloom</SheetTitle>
-          </div>
-          <nav aria-label={t("nav.mainNavigation")} className="overflow-y-auto px-3 py-3">
-            <ul className="space-y-1">
-              {primary.map(({ item }) => (
-                <MobileItem key={item.id} item={item} view={view} onNavigate={() => setMobileOpen(false)} />
-              ))}
-            </ul>
-            <p className="mb-1.5 mt-4 px-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/45">
-              {t("nav.more")}
-            </p>
-            <ul className="space-y-1">
-              {more.map((item) => (
-                <MobileItem key={item.id} item={item} view={view} onNavigate={() => setMobileOpen(false)} />
-              ))}
-            </ul>
+              </div>
+            )}
           </nav>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </div>
     </div>
   );
 }
 
-type ItemView = ReturnType<typeof useNavItemView>;
-
-function MoreItem({ item, view, className }: { item: NavItem; view: ItemView; className?: string }) {
-  const v = view(item);
-  const content = (
-    <>
-      <item.icon className={cn("h-4 w-4 shrink-0", v.active ? "text-accent" : "text-muted-foreground")} aria-hidden="true" />
-      <span className="flex-1 whitespace-nowrap">{v.label}</span>
-      {v.badge && <Badge>{v.badge}</Badge>}
-    </>
-  );
-  const itemClasses = cn(
-    "flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm cursor-pointer",
-    v.active ? "bg-accent-soft/60 font-semibold text-foreground" : "font-medium",
-    className,
-  );
-  if (v.disabled) {
-    return (
-      <DropdownMenuItem disabled className={itemClasses}>
-        {content}
-      </DropdownMenuItem>
-    );
-  }
-  return (
-    <DropdownMenuItem asChild className={itemClasses}>
-      <Link to={item.to} aria-current={v.active ? "page" : undefined}>
-        {content}
-      </Link>
-    </DropdownMenuItem>
-  );
-}
-
-function MobileItem({ item, view, onNavigate }: { item: NavItem; view: ItemView; onNavigate: () => void }) {
+function ModuleItem({ item, view, onNavigate }: { item: NavItem; view: ItemView; onNavigate: () => void }) {
   const v = view(item);
   const classes = cn(
-    "flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
+    "relative flex min-h-11 w-full max-w-sm items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
     v.disabled
-      ? "cursor-not-allowed text-sidebar-foreground/40"
+      ? "cursor-not-allowed text-muted-foreground/60"
       : v.active
-        ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-        : "font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+        ? "bg-accent-soft/35 font-semibold text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent"
+        : "font-medium text-foreground/80 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
   );
   const content = (
     <>
-      <item.icon className={cn("h-[18px] w-[18px] shrink-0", v.active ? "text-sidebar-primary" : "")} aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate">{v.label}</span>
+      <item.icon
+        className={cn("h-5 w-5 shrink-0", v.active ? "text-accent" : v.disabled ? "text-muted-foreground/50" : "text-muted-foreground")}
+        aria-hidden="true"
+      />
+      <span className="whitespace-nowrap">{v.label}</span>
       {v.badge && <Badge>{v.badge}</Badge>}
     </>
   );
@@ -246,7 +207,7 @@ function MobileItem({ item, view, onNavigate }: { item: NavItem; view: ItemView;
           {content}
         </span>
       ) : (
-        <Link to={item.to} aria-current={v.active ? "page" : undefined} onClick={onNavigate} className={classes}>
+        <Link to={item.to} onClick={onNavigate} aria-current={v.active ? "page" : undefined} className={classes}>
           {content}
         </Link>
       )}

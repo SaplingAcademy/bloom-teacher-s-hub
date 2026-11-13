@@ -89,9 +89,9 @@ function AppLayout() {
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-background">
-      {/* Top navigation (header + horizontal menu): same on every authenticated page. */}
+      {/* Top navigation (header + collapsible mega menu): same on every authenticated page. */}
       <AppTopNav />
-      <main className="min-h-0 flex-1 overflow-y-auto scroll-smooth pb-6 pt-4 lg:pt-6">
+      <main className="min-h-0 flex-1 overflow-y-auto scroll-smooth pb-6 pt-9 lg:pt-10">
         <div className={cn(APP_CONTAINER)}>
           <Outlet />
         </div>
