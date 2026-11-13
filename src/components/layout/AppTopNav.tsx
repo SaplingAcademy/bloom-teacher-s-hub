@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { usePlan } from "@/hooks/use-plan";
 import { useLanguage } from "@/hooks/use-language";
 import { ACADEMY_PUBLISHED } from "@/lib/academy-access";
-import { adminNavItem, getNavGroups, isNavItemActive, type NavItem } from "@/lib/navigation";
+import { getNavGroups, isNavItemActive, type NavItem } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 /** Same container width as the page content, so the header and the pages line up. */
@@ -156,23 +156,6 @@ export function AppTopNav() {
                 );
               })}
             </div>
-
-            {isSuperAdmin && (
-              <div className="mt-5 border-t border-border/60 pt-3">
-                <Link
-                  to={adminNavItem.to}
-                  onClick={close}
-                  aria-current={view(adminNavItem).active ? "page" : undefined}
-                  className="inline-flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <adminNavItem.icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <span>{t("nav.admin", adminNavItem.label)}</span>
-                  <span className="rounded border border-amber-200/80 bg-amber-50 px-1.5 py-px text-[9px] font-bold leading-4 tracking-wider text-amber-700">
-                    {t("sidebarAccount.adminTag")}
-                  </span>
-                </Link>
-              </div>
-            )}
           </nav>
         </div>
       </div>

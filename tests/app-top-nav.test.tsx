@@ -103,18 +103,23 @@ describe("AppTopNav mega menu", () => {
     expect(isOpen()).toBe(false);
   });
 
-  it("shows Administração only for super_admin; English badges follow the language", () => {
+  it("keeps Administração out of the mega menu; it stays in the account menu only for super_admin", () => {
+    const accountTrigger = () => container.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!;
     render();
     click(tab());
     expect(panel().querySelector('a[href="/admin"]')).toBeNull();
+    click(accountTrigger());
+    expect(document.querySelector('a[href="/admin"]')).toBeNull();
     act(() => root.unmount());
     mocks.superAdmin = true;
     mocks.lang = "en";
     root = createRoot(container);
     render();
     click(tab());
-    expect(panel().querySelector('a[href="/admin"]')!.textContent).toContain("Administration");
+    expect(panel().querySelector('a[href="/admin"]')).toBeNull();
     expect(panel().textContent).toContain("MarketplaceComing Soon");
     expect(panel().textContent).not.toContain("Bloom AcademyComing Soon"); // super_admin sees Academy without the badge
+    click(accountTrigger());
+    expect(document.querySelector('a[href="/admin"]')!.textContent).toContain("Administration");
   });
 });
