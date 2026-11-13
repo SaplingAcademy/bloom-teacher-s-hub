@@ -23,7 +23,7 @@ vi.mock("@/hooks/use-language", async () => {
   return { useLanguage: () => ({ lang: mocks.lang, setLang: vi.fn(), t: (k: string, f?: string) => t(k, mocks.lang, f) }) };
 });
 
-import { AppTopNav } from "../src/components/layout/AppTopNav";
+import { AppTopNav, HOVER_CLOSE_DELAY } from "../src/components/layout/AppTopNav";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root;
@@ -121,5 +121,97 @@ describe("AppTopNav mega menu", () => {
     expect(panel().textContent).not.toContain("Bloom AcademyComing Soon"); // super_admin sees Academy without the badge
     click(accountTrigger());
     expect(document.querySelector('a[href="/admin"]')!.textContent).toContain("Administration");
+  });
+});
+
+/** React derives onPointerEnter/Leave from pointerover/pointerout + relatedTarget. */
+function pointer(type: "pointerover" | "pointerout", target: Element, related: Element, pointerType = "mouse") {
+  act(() => {
+    const event = new MouseEvent(type, { bubbles: true, relatedTarget: related });
+    Object.defineProperty(event, "pointerType", { value: pointerType });
+    target.dispatchEvent(event);
+  });
+}
+const hoverIn = (el: Element, pointerType = "mouse") => pointer("pointerover", el, document.body, pointerType);
+const moveOut = (el: Element, to: Element = document.body) => pointer("pointerout", el, to);
+
+describe("AppTopNav mega menu — desktop hover", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("opens when the mouse enters the tab (no click) and closes 200 ms after leaving it", () => {
+    render();
+    hoverIn(tab());
+    expect(isOpen()).toBe(true);
+    moveOut(tab());
+    act(() => { vi.advanceTimersByTime(HOVER_CLOSE_DELAY - 1); });
+    expect(isOpen()).toBe(true);
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(isOpen()).toBe(false);
+  });
+
+  it("cancels the close when the pointer returns within 200 ms", () => {
+    render();
+    hoverIn(tab());
+    moveOut(tab());
+    act(() => { vi.advanceTimersByTime(150); });
+    hoverIn(tab());
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(isOpen()).toBe(true);
+  });
+
+  it("stays open while moving from the tab into the panel and while over the panel; closes after leaving it", () => {
+    render();
+    hoverIn(tab());
+    moveOut(tab(), panel());
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(isOpen()).toBe(true);
+    const link = panel().querySelector('a[href="/students"]')!;
+    moveOut(panel().querySelector("h2")!, link);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(isOpen()).toBe(true);
+    moveOut(link, document.body);
+    act(() => { vi.advanceTimersByTime(HOVER_CLOSE_DELAY); });
+    expect(isOpen()).toBe(false);
+  });
+
+  it("does not open when hovering other header areas, nor on touch pointers", () => {
+    render();
+    hoverIn(container.querySelector("header a")!);
+    hoverIn(container.querySelector('button[aria-label="Notificações"]')!);
+    hoverIn(container.querySelector('button[aria-haspopup="dialog"]')!);
+    expect(isOpen()).toBe(false);
+    hoverIn(tab(), "touch");
+    expect(isOpen()).toBe(false);
+  });
+
+  it("a click on a hover-opened menu keeps it open (no auto-close); the next click closes it", () => {
+    render();
+    hoverIn(tab());
+    click(tab());
+    expect(isOpen()).toBe(true);
+    moveOut(tab());
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(isOpen()).toBe(true);
+    click(tab());
+    expect(isOpen()).toBe(false);
+  });
+
+  it("Esc, an outside click and choosing a module still close a hover-opened menu (no late reopen)", () => {
+    render();
+    hoverIn(tab());
+    act(() => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
+    expect(isOpen()).toBe(false);
+    moveOut(tab());
+    hoverIn(tab());
+    pointerDown(document.body);
+    expect(isOpen()).toBe(false);
+    moveOut(tab());
+    hoverIn(tab());
+    moveOut(tab(), panel());
+    click(panel().querySelector('a[href="/leads"]')!);
+    expect(isOpen()).toBe(false);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(isOpen()).toBe(false);
   });
 });
