@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { WorkspaceTabs } from "@/components/bloom/workspace/WorkspaceShell";
 import { useLanguage } from "@/hooks/use-language";
 
@@ -21,7 +22,11 @@ function WorkspaceLayout() {
   const { t } = useLanguage();
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={t("workspace.eyebrow")} title={t("workspace.title")} description={t("workspace.subtitle")} />
+      <PageHeader
+        eyebrow={t("workspace.eyebrow")}
+        title={t("workspace.title")}
+        titleAddon={<InfoTooltip label={t("workspace.infoLabel")} text={t("workspace.subtitle")} className="text-muted-foreground" />}
+      />
       <WorkspaceTabs />
       <Outlet />
     </div>

@@ -39,6 +39,7 @@ import {
   Repeat,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { ListRowsSkeleton } from "@/components/bloom/skeletons";
 import { StatCard } from "@/components/bloom/StatCard";
 import { PackageRenewalModal } from "@/components/bloom/PackageRenewalModal";
@@ -207,6 +208,7 @@ const translations = {
     langToggle: "PT",
     title: "Finance & Accounts",
     description: "Manage incoming payments, packages, and operational expenses in one workspace.",
+    infoLabel: "About Finance & Accounts",
     tabLedger: "Income & Invoices",
     tabPackages: "Packages",
     tabExpenses: "Expenses",
@@ -275,6 +277,7 @@ const translations = {
     title: "Financeiro & Contas",
     description:
       "Gerencie recebíveis, planos contratados e despesas operacionais em um único lugar.",
+    infoLabel: "Sobre Financeiro & Contas",
     tabLedger: "Faturamento & Receitas",
     tabPackages: "Planos / Pacotes",
     tabExpenses: "Despesas",
@@ -715,7 +718,11 @@ function FinancePage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <PageHeader title={t.title} description={t.description} actions={<FinancialPrivacyToggle />} />
+      <PageHeader
+        title={t.title}
+        titleAddon={<InfoTooltip label={t.infoLabel} text={t.description} className="text-muted-foreground" />}
+        actions={<FinancialPrivacyToggle />}
+      />
 
       {/* TABS CONTROLLER */}
       <div className="flex gap-2 border-b border-border pb-1 overflow-x-auto">
