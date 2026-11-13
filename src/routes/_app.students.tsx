@@ -76,6 +76,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { CardsGridSkeleton } from "@/components/bloom/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -2674,7 +2675,7 @@ function StudentsPage() {
         <>
           <PageHeader
             title={t.title}
-            description={t.description}
+            titleAddon={<InfoTooltip label={`${tr("globalUi.aboutPage")} ${t.title}`} text={t.description} className="text-muted-foreground" />}
             actions={
               <button
                 onClick={() => setIsAddSelectionOpen(true)}

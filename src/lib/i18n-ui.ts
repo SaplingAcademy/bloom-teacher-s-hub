@@ -384,6 +384,7 @@ export const uiTranslations = {
     },
     "globalUi": {
       "openNavigation": "Abrir navegação",
+      "aboutPage": "Sobre",
       "selectLanguage": "Selecionar idioma",
       "notifications": "Notificações",
       "accountMenu": "Menu da conta",
@@ -2050,6 +2051,7 @@ export const uiTranslations = {
     },
     "globalUi": {
       "openNavigation": "Open navigation",
+      "aboutPage": "About",
       "selectLanguage": "Select language",
       "notifications": "Notifications",
       "accountMenu": "Account menu",

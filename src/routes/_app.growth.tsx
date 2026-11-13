@@ -56,6 +56,7 @@ import { useFeatureAccess } from "@/hooks/use-plan";
 import { useFinancialPrivacy } from "@/lib/financial-privacy";
 import { GrowthMetricsChart } from "@/components/bloom/GrowthMetricsChart";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { PanelSkeleton } from "@/components/bloom/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
@@ -629,7 +630,11 @@ function GrowthPage() {
   return (
     <div className="space-y-6">
       {/* HEADER SECTION */}
-      <PageHeader title={t.title} description={t.description} actions={<FinancialPrivacyToggle />} />
+      <PageHeader
+        title={t.title}
+        titleAddon={<InfoTooltip label={`${tr("globalUi.aboutPage")} ${t.title}`} text={t.description} className="text-muted-foreground" />}
+        actions={<FinancialPrivacyToggle />}
+      />
 
       {/* Meta Mensal & Capacidade Grid — items-start: expanding the capacity times must not stretch the goal card */}
       <div className="grid gap-5 lg:grid-cols-2 items-start">

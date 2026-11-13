@@ -41,6 +41,7 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { PanelCard } from "@/components/bloom/PanelCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -482,7 +483,7 @@ function ResourcesPage() {
       <PageHeader
         eyebrow={lang === "pt" ? "Kit de Ferramentas" : "Business Toolkit"}
         title={t.title}
-        description={t.subtitle}
+        titleAddon={<InfoTooltip label={`${translate("globalUi.aboutPage")} ${t.title}`} text={t.subtitle} className="text-muted-foreground" />}
         actions={
           <div className="relative w-64 md:w-80">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
