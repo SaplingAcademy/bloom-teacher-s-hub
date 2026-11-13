@@ -113,49 +113,52 @@ export function AppTopNav() {
       {/* Row 2 — horizontal navigation (md and up) */}
       <nav aria-label={t("nav.mainNavigation")} className="hidden border-b border-border bg-card md:block">
         <div className={cn(APP_CONTAINER, "flex h-12 items-center gap-0.5")}>
-          {primary.map(({ item, showFrom }) => {
-            const v = view(item);
-            return (
-              <Link
-                key={item.id}
-                to={item.to}
-                aria-current={v.active ? "page" : undefined}
+          {/* -ml-3 cancels the items' horizontal padding so the first label lines up with the logo and the content. */}
+          <div className="-ml-3 flex items-center gap-0.5">
+            {primary.map(({ item, showFrom }) => {
+              const v = view(item);
+              return (
+                <Link
+                  key={item.id}
+                  to={item.to}
+                  aria-current={v.active ? "page" : undefined}
+                  className={cn(
+                    barItemClasses,
+                    SHOW_IN_BAR[showFrom],
+                    v.active
+                      ? "font-semibold text-foreground after:bg-accent"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <item.icon className={cn("h-4 w-4", v.active ? "text-accent" : "")} aria-hidden="true" />
+                  {v.label}
+                </Link>
+              );
+            })}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 className={cn(
                   barItemClasses,
-                  SHOW_IN_BAR[showFrom],
-                  v.active
-                    ? "font-semibold text-foreground after:bg-accent"
-                    : "text-muted-foreground hover:text-foreground",
+                  "data-[state=open]:text-foreground",
+                  activeInMore ? "font-semibold text-foreground after:bg-accent" : "text-muted-foreground hover:text-foreground",
+                  !activeInMore && activeMoved && MORE_ACTIVE_BELOW[activeMoved.showFrom],
                 )}
               >
-                <item.icon className={cn("h-4 w-4", v.active ? "text-accent" : "")} aria-hidden="true" />
-                {v.label}
-              </Link>
-            );
-          })}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                barItemClasses,
-                "data-[state=open]:text-foreground",
-                activeInMore ? "font-semibold text-foreground after:bg-accent" : "text-muted-foreground hover:text-foreground",
-                !activeInMore && activeMoved && MORE_ACTIVE_BELOW[activeMoved.showFrom],
-              )}
-            >
-              {t("nav.more")}
-              <ChevronDown className="h-4 w-4" aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={6} className="w-64 rounded-xl p-1.5">
-              {movedToMore.map(({ item, showFrom }) => (
-                <MoreItem key={item.id} item={item} view={view} className={HIDE_IN_MORE[showFrom]} />
-              ))}
-              {movedToMore.length > 0 && <DropdownMenuSeparator className="xl:hidden" />}
-              {more.map((item) => (
-                <MoreItem key={item.id} item={item} view={view} />
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {t("nav.more")}
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={6} className="w-max min-w-64 max-w-[calc(100vw-2rem)] rounded-xl p-1.5">
+                {movedToMore.map(({ item, showFrom }) => (
+                  <MoreItem key={item.id} item={item} view={view} className={HIDE_IN_MORE[showFrom]} />
+                ))}
+                {movedToMore.length > 0 && <DropdownMenuSeparator className="xl:hidden" />}
+                {more.map((item) => (
+                  <MoreItem key={item.id} item={item} view={view} />
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </nav>
 
@@ -194,7 +197,7 @@ function MoreItem({ item, view, className }: { item: NavItem; view: ItemView; cl
   const content = (
     <>
       <item.icon className={cn("h-4 w-4 shrink-0", v.active ? "text-accent" : "text-muted-foreground")} aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate">{v.label}</span>
+      <span className="flex-1 whitespace-nowrap">{v.label}</span>
       {v.badge && <Badge>{v.badge}</Badge>}
     </>
   );
