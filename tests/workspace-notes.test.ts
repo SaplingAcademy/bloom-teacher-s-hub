@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { NOTE_COLORS, applyNoteCommand, moveNote, prepareNoteDraft, sortNotes, type WorkspaceNote } from "../src/lib/workspace-notes";
+import { NOTE_COLORS, applyNoteCommand, canLayer, layerNote, prepareNoteDraft, sortNotes, type WorkspaceNote } from "../src/lib/workspace-notes";
 
 const note = (id: string, order_index: number, pinned = false): WorkspaceNote => ({
-  id, order_index, pinned, user_id: "teacher", title: null, content: id, color: "yellow", created_at: "2026-11-05T19:22:00Z", updated_at: "2026-11-05T19:22:00Z",
+  id, order_index, pinned, user_id: "teacher", title: null, content: id, color: "yellow", pos_x: null, pos_y: null, created_at: "2026-11-05T19:22:00Z", updated_at: "2026-11-05T19:22:00Z",
 });
 
 describe("personal Workspace notes", () => {
@@ -18,18 +18,33 @@ describe("personal Workspace notes", () => {
   it("shows pinned notes first then uses saved positions with stable tie breaking", () => {
     expect(sortNotes([note("b", 1), note("z", 5, true), note("a", 1)]).map((n) => n.id)).toEqual(["z", "a", "b"]);
   });
-  it("moves to group start changing only the selected row's position", () => {
-    const before = [note("p", 0, true), note("a", 3), note("b", 9), note("c", 9)];
-    const after = moveNote(before, "c", -1);
-    expect(after.map((n) => n.id)).toEqual(["p", "c", "a", "b"]);
-    expect(after.find((n) => n.id === "c")?.order_index).toBe(2);
-    expect(after.find((n) => n.id === "b")?.order_index).toBe(9);
-    expect(before[3].order_index).toBe(9);
+  it("brings a note to the front by changing only its own order_index", () => {
+    const before = [note("p", 0, true), note("a", 3), note("b", 9)];
+    const after = layerNote(before, "p", "front");
+    expect(after.find((n) => n.id === "p")?.order_index).toBe(10);
+    expect(after.find((n) => n.id === "a")?.order_index).toBe(3);
+    expect(before[0].order_index).toBe(0);
+    expect(after.find((n) => n.id === "p")?.pinned).toBe(true);
   });
-  it("moves to group end without crossing pinned/unpinned groups", () => {
-    const before = [note("p", 0, true), note("q", 8, true), note("a", 1), note("b", 3)];
-    expect(moveNote(before, "p", 1).map((n) => n.id)).toEqual(["q", "p", "a", "b"]);
-    expect(moveNote(before, "a", 1).map((n) => n.id)).toEqual(["p", "q", "b", "a"]);
+  it("sends a note to the back and disables no-op layer moves", () => {
+    const before = [note("a", 3), note("b", 9), note("c", 1)];
+    expect(layerNote(before, "b", "back").find((n) => n.id === "b")?.order_index).toBe(0);
+    expect(canLayer(before, "b", "front")).toBe(false);
+    expect(canLayer(before, "c", "back")).toBe(false);
+    expect(canLayer(before, "a", "front")).toBe(true);
+    expect(layerNote(before, "b", "front").find((n) => n.id === "b")?.order_index).toBe(9);
+    expect(canLayer([note("x", 1), note("y", 1)], "x", "front")).toBe(true);
+  });
+  it("position changes only the dragged note's coordinates, keeping lock and layer", () => {
+    const before = [note("a", 0, true), note("b", 1)];
+    const after = applyNoteCommand(before, { type: "position", id: "b", x: 312, y: 48 }, "teacher", "now");
+    expect(after.find((n) => n.id === "b")).toMatchObject({ pos_x: 312, pos_y: 48, order_index: 1, pinned: false });
+    expect(after.find((n) => n.id === "a")).toBe(before[0]);
+    expect(before[1].pos_x).toBeNull();
+  });
+  it("new notes start without coordinates (automatic slot)", () => {
+    const after = applyNoteCommand([], { type: "create", id: "n", draft: { title: "", content: "x", color: "yellow" } }, "teacher", "now");
+    expect(after[0]).toMatchObject({ pos_x: null, pos_y: null });
   });
   it("pin/unpin and deletion preserve the rollback snapshot", () => {
     const before = [note("a", 0), note("b", 1)];

@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
-import { prepareNoteDraft, sortNotes, type NoteCommand, type WorkspaceNote } from "./workspace-notes";
+import { notePosition, prepareNoteDraft, sortNotes, type NoteCommand, type WorkspaceNote } from "./workspace-notes";
 
-const FIELDS = "id,user_id,title,content,color,pinned,order_index,created_at,updated_at";
+const FIELDS = "id,user_id,title,content,color,pinned,order_index,pos_x,pos_y,created_at,updated_at";
 export const workspaceNotesKey = (userId: string | undefined) => ["workspace-notes", userId] as const;
 
 async function authenticatedOwner(expectedId: string): Promise<string> {
@@ -50,8 +50,11 @@ export async function persistNoteCommand(expectedId: string, command: NoteComman
     if (saved.title !== draft.title || saved.content !== draft.content || saved.color !== draft.color) throw new Error("note_changed");
     return saved as WorkspaceNote;
   }
+  // Each command writes only its own columns (position: pos_x/pos_y; layer: order_index).
   const patch = command.type === "edit" ? prepareNoteDraft(command.draft)
-    : command.type === "pin" ? { pinned: command.pinned } : { order_index: note.order_index };
+    : command.type === "pin" ? { pinned: command.pinned }
+    : command.type === "position" ? notePosition(command.x, command.y)
+    : { order_index: note.order_index };
   const { data, error } = await supabase.from("workspace_notes").update(patch).eq("user_id", owner).eq("id", command.id).select(FIELDS).single();
   if (error) throw error;
   return data as WorkspaceNote;
