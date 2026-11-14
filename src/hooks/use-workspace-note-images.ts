@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
 import {
-  deleteNoteImage, fetchNoteImages, groupNoteImages, signNoteImageUrls, uploadNoteImage, workspaceNoteImagesKey,
+  deleteNoteImage, describeImageError, fetchNoteImages, groupNoteImages, signNoteImageUrls, uploadNoteImage, workspaceNoteImagesKey,
   SIGNED_URL_SECONDS, type NoteImage, type PreparedImage,
 } from "@/lib/workspace-note-images";
 
@@ -40,11 +40,17 @@ export function useWorkspaceNoteImages() {
     if (!owner || !authenticated) throw new Error("authentication_changed");
     const result: NoteImageResult = { failedRemovals: [], failedUploads: [] };
     for (const image of changes.removed) {
-      try { await deleteNoteImage(owner, image); } catch { result.failedRemovals.push(image.id); }
+      try { await deleteNoteImage(owner, image); } catch (error) {
+        result.failedRemovals.push(image.id);
+        console.error("[workspace-note-images] remove failed", describeImageError(error));
+      }
     }
     let order = Math.max(-1, ...kept.map((image) => image.order_index)) + 1;
     for (const image of changes.added) {
-      try { await uploadNoteImage(owner, noteId, image, order++); } catch { result.failedUploads.push(image.id); }
+      try { await uploadNoteImage(owner, noteId, image, order++); } catch (error) {
+        result.failedUploads.push(image.id);
+        console.error("[workspace-note-images] upload failed", describeImageError(error));
+      }
     }
     if (changes.removed.length || changes.added.length) await client.invalidateQueries({ queryKey: key });
     return result;
