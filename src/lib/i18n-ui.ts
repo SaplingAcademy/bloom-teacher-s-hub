@@ -14,6 +14,7 @@ export const uiTranslations = {
       "warnings": "Avisos (não impedem a geração)", "conflictWith": "Conflito com", "classLabel": "Turma:", "timezone": "Fuso horário:", "quantityRequired": "Informe uma quantidade inteira de aulas maior que zero."
     },
     "checklist": {
+      "info": "Anote o que precisa fazer e acompanhe suas tarefas pendentes.",
       "title": "Checklist", "pending": "{count} pendentes", "pendingOne": "1 pendente", "completed": "Concluídas",
       "add": "Adicionar tarefa", "titleLabel": "Tarefa", "placeholder": "Nova tarefa…", "edit": "Editar tarefa", "delete": "Excluir tarefa",
       "save": "Salvar", "cancel": "Cancelar", "complete": "Concluir: {title}", "reopen": "Desmarcar: {title}",
@@ -1681,6 +1682,7 @@ export const uiTranslations = {
       "warnings": "Warnings (generation is still allowed)", "conflictWith": "Conflict with", "classLabel": "Class:", "timezone": "Timezone:", "quantityRequired": "Enter a positive whole number of lessons."
     },
     "checklist": {
+      "info": "Write down what you need to do and keep track of your pending tasks.",
       "title": "Checklist", "pending": "{count} pending", "pendingOne": "1 pending", "completed": "Completed",
       "add": "Add task", "titleLabel": "Task", "placeholder": "New task…", "edit": "Edit task", "delete": "Delete task",
       "save": "Save", "cancel": "Cancel", "complete": "Complete: {title}", "reopen": "Uncheck: {title}",
