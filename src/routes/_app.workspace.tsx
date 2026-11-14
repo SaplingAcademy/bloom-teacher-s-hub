@@ -23,11 +23,12 @@ function WorkspaceLayout() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={t("workspace.eyebrow")}
+        // Phones: one column, so the tabs sit below the title; from sm they share the title's row.
+        className="grid-cols-1"
         title={t("workspace.title")}
         titleAddon={<InfoTooltip label={t("workspace.infoLabel")} text={t("workspace.subtitle")} className="text-muted-foreground" />}
+        actions={<WorkspaceTabs />}
       />
-      <WorkspaceTabs />
       <Outlet />
     </div>
   );
