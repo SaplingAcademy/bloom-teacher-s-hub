@@ -6,10 +6,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/hooks/use-language";
 import { useWorkspaceNotes } from "@/hooks/use-workspace-notes";
-import { canLayer, type WorkspaceNote } from "@/lib/workspace-notes";
+import { canLayer, type NoteDraft, type WorkspaceNote } from "@/lib/workspace-notes";
+import { useWorkspaceNoteImages, type NoteImageChanges } from "@/hooks/use-workspace-note-images";
+import type { NoteImage } from "@/lib/workspace-note-images";
 import { cn } from "@/lib/utils";
 import { WorkspaceGridSkeleton } from "./WorkspaceShell";
-import { NoteEditor, type NoteEditorState } from "./NoteEditor";
+import { NoteEditor, type NoteEditorState, type NoteSaveOutcome } from "./NoteEditor";
+import { NoteImages } from "./NoteImages";
 import { noteSurface } from "./note-appearance";
 import { NotesCanvas } from "./NotesCanvas";
 
@@ -35,6 +38,28 @@ export function NotesBoard() {
   const { notes, isLoading, error, pending, execute, refetch } = useWorkspaceNotes();
   const [editor, setEditor] = useState<NoteEditorState | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceNote | null>(null);
+  const noteImages = useWorkspaceNoteImages();
+  const imageAlt = (n: number) => t("workspace.mural.images.alt").replace("{n}", String(n));
+  /**
+   * Text first (unchanged text on an existing note is not rewritten), then image changes. The
+   * success toast only appears when both parts are saved; partial failures keep the editor open.
+   */
+  const saveNote = async (state: NoteEditorState, draft: NoteDraft, changes: NoteImageChanges, kept: readonly NoteImage[]): Promise<NoteSaveOutcome> => {
+    const hasImageChanges = changes.removed.length > 0 || changes.added.length > 0;
+    const textChanged = state.isNew || draft.title !== state.draft.title || draft.content !== state.draft.content || draft.color !== state.draft.color;
+    if (textChanged) {
+      if (!await execute({ type: state.isNew ? "create" : "edit", id: state.id, draft }, { quiet: hasImageChanges })) return null;
+      // The note exists now: later retries are edits of the same note.
+      setEditor((current) => current?.id === state.id ? { ...current, isNew: false, draft } : current);
+    }
+    if (!hasImageChanges) return { failedRemovals: [], failedUploads: [] };
+    let result;
+    try { result = await noteImages.saveNoteImages(state.id, changes, kept); }
+    catch { result = { failedRemovals: changes.removed.map((image) => image.id), failedUploads: changes.added.map((image) => image.id) }; }
+    if (result.failedRemovals.length || result.failedUploads.length) toast.error(t("workspace.mural.images.saveError"), { id: "workspace-notes-feedback" });
+    else toast.success(t("workspace.mural.saved"), { id: "workspace-notes-feedback", duration: 1800 });
+    return result;
+  };
   const startCreate = () => {
     toast.dismiss("workspace-notes-feedback");
     setEditor({ id: crypto.randomUUID(), isNew: true, draft: { title: "", content: "", color: "yellow" } });
@@ -72,6 +97,7 @@ export function NotesBoard() {
         onClick={() => startEdit(note)}>
         {note.title && <span className="mb-2 block break-words font-display text-base font-semibold tracking-normal">{note.title}</span>}
         <span className="block max-h-64 overflow-y-auto whitespace-pre-wrap break-words text-sm font-normal leading-relaxed [overflow-wrap:anywhere]">{note.content}</span>
+        <NoteImages images={noteImages.byNote[note.id] ?? []} urls={noteImages.urls} label={imageAlt} />
       </Button>
     </article>
   );
@@ -108,7 +134,8 @@ export function NotesBoard() {
       ))}
       </div>
       {editor && <NoteEditor key={editor.id} editor={editor} pending={pending} onClose={() => setEditor(null)}
-        onSave={(draft) => execute({ type: editor.isNew ? "create" : "edit", id: editor.id, draft })} />}
+        images={noteImages.byNote[editor.id] ?? []} urls={noteImages.urls}
+        onSave={(draft, changes, kept) => saveNote(editor, draft, changes, kept)} />}
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => { if (!open && !pending) setDeleting(null); }}>
         <AlertDialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-lg motion-reduce:animate-none">
           <AlertDialogHeader><AlertDialogTitle>{t("workspace.mural.deleteTitle")}</AlertDialogTitle>

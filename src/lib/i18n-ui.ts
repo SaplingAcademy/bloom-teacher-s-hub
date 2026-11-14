@@ -48,6 +48,11 @@ export const uiTranslations = {
         "moveFirst": "Mover para o início", "moveLast": "Mover para o fim", "deleteTitle": "Excluir esta nota?", "deleteBody": "Esta ação não pode ser desfeita.",
         "saved": "Nota salva.", "deleted": "Nota excluída.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
         "loadError": "Não foi possível carregar suas notas.", "retry": "Tentar novamente", "saving": "Salvando…", "pinned": "Travadas", "notes": "Notas",
+        "images": { "label": "Imagens", "hint": "Até 3 imagens JPG, PNG ou WebP. Imagens grandes são reduzidas automaticamente.", "add": "Adicionar imagem",
+          "remove": "Remover imagem {n}", "alt": "Imagem {n} da nota", "processing": "Preparando imagem…", "limit": "Cada nota pode ter até 3 imagens.",
+          "type": "Formato não suportado. Use JPG, PNG ou WebP.", "tooLarge": "Imagem muito grande. Escolha um arquivo menor.",
+          "process": "Não foi possível processar esta imagem.", "notSaved": "Não salva — tente novamente.",
+          "saveError": "A nota foi salva, mas algumas alterações de imagens falharam. Tente salvar novamente." },
         "colors": { "yellow": "Amarelo", "peach": "Pêssego", "mint": "Menta", "lavender": "Lavanda", "rose": "Rosa", "sky": "Azul-céu", "neutral": "Neutro" }
       },
       "projects": {
@@ -1716,6 +1721,11 @@ export const uiTranslations = {
         "moveFirst": "Move to start", "moveLast": "Move to end", "deleteTitle": "Delete this note?", "deleteBody": "This action cannot be undone.",
         "saved": "Note saved.", "deleted": "Note deleted.", "saveError": "Could not save this change. Please try again.",
         "loadError": "Could not load your notes.", "retry": "Try again", "saving": "Saving…", "pinned": "Locked", "notes": "Notes",
+        "images": { "label": "Images", "hint": "Up to 3 JPG, PNG or WebP images. Large images are resized automatically.", "add": "Add image",
+          "remove": "Remove image {n}", "alt": "Note image {n}", "processing": "Preparing image…", "limit": "Each note can have up to 3 images.",
+          "type": "Unsupported format. Use JPG, PNG or WebP.", "tooLarge": "Image too large. Choose a smaller file.",
+          "process": "Could not process this image.", "notSaved": "Not saved — try again.",
+          "saveError": "The note was saved, but some image changes failed. Please save again." },
         "colors": { "yellow": "Yellow", "peach": "Peach", "mint": "Mint", "lavender": "Lavender", "rose": "Rose", "sky": "Sky blue", "neutral": "Neutral" }
       },
       "projects": {

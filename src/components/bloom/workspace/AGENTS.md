@@ -3,6 +3,8 @@
 - Board (≥768px) positions come only from workspace_notes.pos_x/pos_y (both NULL = automatic slot ordered by created_at/id, never written); drags are local Pointer Events state and save one snapped, board-clamped position on release, rolled back on failure. Below 768px keep the stacked grid without drag.
 - `pinned` means "position locked" (not draggable); "front/back" moves one row past all notes through order_index (stacking order). Never mass-update positions or pinned; automatic slots never depend on pinned/order_index, so lock and layer changes never move notes, including after reload.
 - Serialize optimistic mutations per owner-scoped Query cache, cancel stale reads and roll back failures; retain the create editor UUID across retries to avoid duplicate notes.
+- Note images go only through `src/lib/workspace-note-images.ts`: private `workspace-media` bucket at `owner/notes/note/image.webp` built from Auth + UUIDs, metadata in workspace_note_images, signed URLs only; browser re-encodes to WebP (max 1600px, no EXIF), max 3 per note.
+- Image edits stay local until Save (text first, then removals and uploads); upload→row with object cleanup, file→row on removal, folder cleanup before note deletion; partial failures keep the editor open and never toast success.
 - Render note content as React text only, never HTML, and reuse semantic note tokens and PT/EN dictionaries so stored colors and content remain unchanged.
 # Personal projects
 - Projects use only workspace_projects/phases/items through `workspace-projects-data.ts`; every read/write re-verifies Auth and filters by owner and project, and updates never send user_id/project_id.
