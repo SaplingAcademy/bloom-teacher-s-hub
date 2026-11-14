@@ -1,7 +1,7 @@
 # Personal notes
 - Use only workspace_notes with the existing session client and RLS; freshly validate Auth identity and owner-filter writes so drafts never supply user_id.
-- Board (≥768px) positions come only from workspace_notes.pos_x/pos_y (both NULL = automatic slot from the existing order, never written); drags are local Pointer Events state and save one snapped, board-clamped position on release, rolled back on failure. Below 768px keep the stacked grid without drag.
-- `pinned` means "position locked" (not draggable); "front/back" moves one row past all notes through order_index (stacking order). Never mass-update positions or pinned; the board keeps its automatic slot order stable within a session.
+- Board (≥768px) positions come only from workspace_notes.pos_x/pos_y (both NULL = automatic slot ordered by created_at/id, never written); drags are local Pointer Events state and save one snapped, board-clamped position on release, rolled back on failure. Below 768px keep the stacked grid without drag.
+- `pinned` means "position locked" (not draggable); "front/back" moves one row past all notes through order_index (stacking order). Never mass-update positions or pinned; automatic slots never depend on pinned/order_index, so lock and layer changes never move notes, including after reload.
 - Serialize optimistic mutations per owner-scoped Query cache, cancel stale reads and roll back failures; retain the create editor UUID across retries to avoid duplicate notes.
 - Render note content as React text only, never HTML, and reuse semantic note tokens and PT/EN dictionaries so stored colors and content remain unchanged.
 # Personal projects

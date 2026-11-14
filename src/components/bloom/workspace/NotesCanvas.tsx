@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { sortNotes, type NoteCommand, type WorkspaceNote } from "@/lib/workspace-notes";
 import {
-  BOARD_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, boardHeightFor, boardLimits, clampToBoard, placeNotes, snapToBoard, stableSlotOrder, stackingOrder,
+  BOARD_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, boardHeightFor, boardLimits, clampToBoard, placeNotes, snapToBoard, stackingOrder,
   type BoardPoint,
 } from "@/lib/workspace-notes-layout";
 import { cn } from "@/lib/utils";
@@ -66,9 +66,7 @@ export function NotesCanvas({ notes, pending, execute, label, renderNote }: Note
     return () => observer.disconnect();
   }, [notes]);
 
-  const slotOrder = useRef<string[]>([]);
-  const order = useMemo(() => (slotOrder.current = stableSlotOrder(slotOrder.current, notes)), [notes]);
-  const placed = useMemo(() => placeNotes(notes, heights, boardWidth, order), [notes, heights, boardWidth, order]);
+  const placed = useMemo(() => placeNotes(notes, heights, boardWidth), [notes, heights, boardWidth]);
   const boardHeight = boardHeightFor(placed, heights, MIN_BOARD_HEIGHT);
   const layer = useMemo(() => new Map(stackingOrder(notes).map((note, index) => [note.id, index + 1])), [notes]);
   const limitsFor = (id: string) => boardLimits(boardWidth, boardHeight, heights[id] ?? DEFAULT_NOTE_HEIGHT);

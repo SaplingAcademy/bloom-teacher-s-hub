@@ -1,4 +1,4 @@
-import { sortNotes, MAX_NOTE_POSITION, type WorkspaceNote } from "./workspace-notes";
+import { MAX_NOTE_POSITION, type WorkspaceNote } from "./workspace-notes";
 
 /** Board grid step (matches the 24px texture) and the fixed note width on the free board. */
 export const BOARD_GRID_STEP = 24;
@@ -39,15 +39,24 @@ export function boardColumns(boardWidth: number): number {
 }
 
 /**
- * Automatic slots for notes without saved coordinates, derived from the existing order (pinned
- * first, then order_index): left-to-right rows, each column stacked by the measured heights. Every
- * note gets a slot by its order, so moving one note never shifts the others. Nothing is saved.
+ * Order of the automatic slots: creation time, then id. Both are immutable, so locking a note
+ * (pinned) or changing its layer (order_index) never moves any automatically placed note, in the
+ * session or after a reload, and older notes need no saved coordinates.
  */
-export function automaticSlots(notes: readonly WorkspaceNote[], heights: Readonly<Record<string, number>>, boardWidth: number, order?: readonly string[]): Record<string, BoardPoint> {
+export function slotOrder(notes: readonly WorkspaceNote[]): WorkspaceNote[] {
+  return [...notes].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+}
+
+/**
+ * Automatic slots for notes without saved coordinates: left-to-right rows in creation order, each
+ * column stacked by the measured heights. Every note keeps a slot, so dragging one note never
+ * shifts the others. Nothing is saved.
+ */
+export function automaticSlots(notes: readonly WorkspaceNote[], heights: Readonly<Record<string, number>>, boardWidth: number): Record<string, BoardPoint> {
   const columns = boardColumns(boardWidth);
   const bottoms = Array.from({ length: columns }, () => 0);
   const slots: Record<string, BoardPoint> = {};
-  orderedForSlots(notes, order).forEach((note, index) => {
+  slotOrder(notes).forEach((note, index) => {
     const column = index % columns;
     const y = ceilToGrid(bottoms[column]);
     slots[note.id] = { x: column * (BOARD_NOTE_WIDTH + BOARD_GRID_STEP), y };
@@ -56,30 +65,9 @@ export function automaticSlots(notes: readonly WorkspaceNote[], heights: Readonl
   return slots;
 }
 
-/** Slot order: a given id order (kept stable by the board) or the existing note order. */
-function orderedForSlots(notes: readonly WorkspaceNote[], order?: readonly string[]): WorkspaceNote[] {
-  if (!order) return sortNotes(notes);
-  const byId = new Map(notes.map((note) => [note.id, note]));
-  const listed = order.map((id) => byId.get(id)).filter((note): note is WorkspaceNote => Boolean(note));
-  const seen = new Set(listed.map((note) => note.id));
-  return [...listed, ...sortNotes(notes.filter((note) => !seen.has(note.id)))];
-}
-
-/**
- * Keeps the slot order stable while the board is open: known ids keep their place and new notes
- * are appended, so locking or re-layering a note (which changes pinned/order_index) never makes
- * the other automatically placed notes jump.
- */
-export function stableSlotOrder(previous: readonly string[], notes: readonly WorkspaceNote[]): string[] {
-  const ids = new Set(notes.map((note) => note.id));
-  const kept = previous.filter((id) => ids.has(id));
-  const known = new Set(kept);
-  return [...kept, ...sortNotes(notes).map((note) => note.id).filter((id) => !known.has(id))];
-}
-
 /** Where each note is drawn: saved coordinates (kept inside the current width) or its automatic slot. */
-export function placeNotes(notes: readonly WorkspaceNote[], heights: Readonly<Record<string, number>>, boardWidth: number, order?: readonly string[]): Record<string, PlacedNote> {
-  const slots = automaticSlots(notes, heights, boardWidth, order);
+export function placeNotes(notes: readonly WorkspaceNote[], heights: Readonly<Record<string, number>>, boardWidth: number): Record<string, PlacedNote> {
+  const slots = automaticSlots(notes, heights, boardWidth);
   const maxX = Math.max(0, boardWidth - BOARD_NOTE_WIDTH);
   const placed: Record<string, PlacedNote> = {};
   for (const note of notes) {

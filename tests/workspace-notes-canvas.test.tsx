@@ -98,6 +98,19 @@ describe("free-positioning notes board", () => {
     expect(position("a")).toBe(position("b"));
     expect(Number(wrapper("b").style.zIndex)).toBeGreaterThan(Number(wrapper("a").style.zIndex));
   });
+  it("layer and lock changes keep every note in place, also after a reload", async () => {
+    const notes = [note("a", 0), note("b", 1), note("c", 2)];
+    await mount(notes);
+    const before = ["a", "b", "c"].map(position);
+    const layered = applyNoteCommand(applyNoteCommand(notes, { type: "layer", id: "a", to: "front" }, "teacher", "now"),
+      { type: "pin", id: "c", pinned: true }, "teacher", "now");
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await mount(layered); // fresh board from the saved rows, like a page reload
+    expect(["a", "b", "c"].map(position)).toEqual(before);
+    expect(Number(wrapper("a").style.zIndex)).toBeGreaterThan(Number(wrapper("b").style.zIndex));
+    expect(execute).not.toHaveBeenCalled();
+  });
   it("returns the note to its saved place when the save fails", async () => {
     outcome = "fail";
     await mount([note("a", 0, { pos_x: 48, pos_y: 48 })]);
@@ -107,6 +120,7 @@ describe("free-positioning notes board", () => {
   });
   it("does not drag locked notes, from controls, or with touch; a plain click still opens", async () => {
     await mount([note("locked", 0, { pinned: true }), note("b", 1)]);
+    const lockedAt = position("locked");
     await dragFrom(container.querySelector('[data-open="locked"]')!, 200, 100);
     await dragFrom(container.querySelector('[data-lock="b"]')!, 200, 100);
     const body = container.querySelector('[data-open="b"]')!;
@@ -114,7 +128,7 @@ describe("free-positioning notes board", () => {
     await pointer(body, "pointermove", 300, 300, { pointerType: "touch" });
     await pointer(body, "pointerup", 300, 300, { pointerType: "touch" });
     expect(execute).not.toHaveBeenCalled();
-    expect(position("locked")).toBe("translate3d(0px, 0px, 0)");
+    expect(position("locked")).toBe(lockedAt);
     await pointer(body, "pointerdown", 100, 100);
     await pointer(body, "pointermove", 102, 101); // under the drag threshold
     await pointer(body, "pointerup", 102, 101);
