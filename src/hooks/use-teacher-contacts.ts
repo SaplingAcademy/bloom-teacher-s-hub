@@ -54,7 +54,7 @@ export function useContactActions() {
       if (action.type === "send") return sendContactRequest(action.teacherId);
       if (action.type === "accept" || action.type === "decline") await respondContactRequest(action.requestId, action.type === "accept");
       else if (action.type === "cancel") await cancelContactRequest(action.requestId);
-      else await removeContact(action.otherId);
+      else if (action.type === "remove") await removeContact(action.otherId);
       return null;
     },
     onSettled: () => client.invalidateQueries({ queryKey: ["teacher-contacts", owner] }),
