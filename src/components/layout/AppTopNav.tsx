@@ -61,17 +61,18 @@ function Badge({ children }: { children: string }) {
  * - Click/tap/keyboard: the tab toggles it (a click on a hover-opened menu keeps it open, and then
  *   it no longer closes on leave). Touch pointers never trigger the hover behaviour.
  * - Always: Esc, a click outside or choosing a module closes it.
- * - Motion: the panel fades/slides in (8px down, PANEL_OPEN_MS ease-out) and out (8px up,
- *   PANEL_CLOSE_MS ease-in, after the hover tolerance); it stays mounted while fading out, so a
- *   pointer coming back reverses the transition from where it is (no flash). With
+ * - Motion ("awning"): anchored right under the header, the panel's visible height grows from 0 to
+ *   its full height on open and shrinks back to 0 on close (PANEL_ANIM_MS, ease-in-out; on hover
+ *   close it starts after the tolerance). The content is clipped while it moves, the bottom
+ *   border and the tab follow the bottom edge, and nothing fades or slides. It stays mounted while
+ *   retracting, so a pointer coming back reverses the transition from the current height. With
  *   prefers-reduced-motion there is no transition and it hides at once.
  * The same panel serves desktop, tablet and mobile (columns adapt to the width).
  */
 /** Delay before a hover-opened menu closes after the pointer leaves the tab and the panel. */
 export const HOVER_CLOSE_DELAY = 200;
-/** Panel entrance / exit durations (ms). */
-export const PANEL_OPEN_MS = 250;
-export const PANEL_CLOSE_MS = 200;
+/** Duration of the panel's expand / retract transition (ms). */
+export const PANEL_ANIM_MS = 300;
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -92,9 +93,9 @@ export function AppTopNav() {
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
-  // `mounted`: the panel is in the layout (not hidden); `shown`: its visible end state. Opening
-  // mounts first and switches to shown on the next layout pass (so the transition starts from
-  // opacity 0 / -8px); closing switches to hidden-state styles and unmounts after the exit.
+  // `mounted`: the panel is in the layout (not hidden); `shown`: expanded. Opening mounts it
+  // collapsed (height 0) and expands it on the next layout pass, so the transition starts from 0;
+  // closing collapses it and unmounts it once retracted.
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const unmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,7 +122,7 @@ export function AppTopNav() {
     unmountTimerRef.current = setTimeout(() => {
       unmountTimerRef.current = null;
       setMounted(false);
-    }, PANEL_CLOSE_MS + 20);
+    }, PANEL_ANIM_MS + 20);
   }, [open]);
 
   useLayoutEffect(() => {
@@ -234,8 +235,8 @@ export function AppTopNav() {
           aria-label={open ? t("nav.closeMenu") : t("nav.openMenu")}
           className={cn(
             "relative order-2 -mt-px grid h-6 w-16 place-items-center rounded-b-xl bg-sidebar text-sidebar-foreground/75 shadow-[0_4px_10px_-4px_rgb(0_0_0/0.35)] transition-colors hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring cursor-pointer",
-            // While open, an invisible strip above the tab bridges it to the panel during the
-            // entrance animation, so moving the pointer between them never counts as leaving.
+            // While open, an invisible strip above the tab overlaps the panel's bottom edge, so
+            // moving the pointer between them never counts as leaving.
             open && "before:absolute before:inset-x-0 before:-top-3 before:h-3 before:content-['']",
           )}
         >
@@ -253,35 +254,40 @@ export function AppTopNav() {
           onPointerEnter={onRegionPointerEnter}
           onPointerLeave={onRegionPointerLeave}
           className={cn(
-            "order-1 w-full border-b border-border bg-card shadow-[var(--shadow-lg)] transition-[opacity,translate] motion-reduce:transition-none",
-            shown ? "translate-y-0 opacity-100 duration-[250ms] ease-out" : "-translate-y-2 opacity-0 duration-200 ease-in",
+            // Height animates via grid rows 0fr ↔ 1fr (to the content's real height, reversible
+            // mid-way); the inner wrapper clips the content. The tab (order-2) sits right after
+            // this element in the column, so it follows the bottom edge.
+            "order-1 grid w-full border-b border-border bg-card shadow-[var(--shadow-lg)] transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none",
+            shown ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
           )}
         >
-          <nav
-            aria-label={t("nav.mainNavigation")}
-            className={cn(APP_CONTAINER, "max-h-[calc(100dvh-3.5rem-2.5rem)] overflow-y-auto py-5 sm:py-6")}
-          >
-            <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 md:grid-cols-3 lg:gap-x-12">
-              {groups.map((group) => {
-                const headingId = `${panelId}-${group.id}`;
-                return (
-                  <section key={group.id} aria-labelledby={headingId}>
-                    <h2
-                      id={headingId}
-                      className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80"
-                    >
-                      {t(GROUP_LABEL_KEYS[group.id] ?? group.id)}
-                    </h2>
-                    <ul className="space-y-0.5">
-                      {group.items.map((item) => (
-                        <ModuleItem key={item.id} item={item} view={view} onNavigate={close} />
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
-          </nav>
+          <div className="min-h-0 overflow-hidden">
+            <nav
+              aria-label={t("nav.mainNavigation")}
+              className={cn(APP_CONTAINER, "max-h-[calc(100dvh-3.5rem-2.5rem)] overflow-y-auto py-5 sm:py-6")}
+            >
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 md:grid-cols-3 lg:gap-x-12">
+                {groups.map((group) => {
+                  const headingId = `${panelId}-${group.id}`;
+                  return (
+                    <section key={group.id} aria-labelledby={headingId}>
+                      <h2
+                        id={headingId}
+                        className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80"
+                      >
+                        {t(GROUP_LABEL_KEYS[group.id] ?? group.id)}
+                      </h2>
+                      <ul className="space-y-0.5">
+                        {group.items.map((item) => (
+                          <ModuleItem key={item.id} item={item} view={view} onNavigate={close} />
+                        ))}
+                      </ul>
+                    </section>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
         </div>
       </div>
     </div>

@@ -23,7 +23,7 @@ vi.mock("@/hooks/use-language", async () => {
   return { useLanguage: () => ({ lang: mocks.lang, setLang: vi.fn(), t: (k: string, f?: string) => t(k, mocks.lang, f) }) };
 });
 
-import { AppTopNav, HOVER_CLOSE_DELAY, PANEL_CLOSE_MS } from "../src/components/layout/AppTopNav";
+import { AppTopNav, HOVER_CLOSE_DELAY, PANEL_ANIM_MS } from "../src/components/layout/AppTopNav";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root;
@@ -216,7 +216,7 @@ describe("AppTopNav mega menu — desktop hover", () => {
   });
 });
 
-describe("AppTopNav mega menu — open/close transition", () => {
+describe("AppTopNav mega menu — awning (expand/retract) transition", () => {
   const state = () => panel().getAttribute("data-state");
   const cls = () => panel().getAttribute("class") ?? "";
   const advance = (ms: number) => act(() => { vi.advanceTimersByTime(ms); });
@@ -226,22 +226,36 @@ describe("AppTopNav mega menu — open/close transition", () => {
     vi.unstubAllGlobals();
   });
 
-  it("enters with fade + 8px slide down (250 ms ease-out) and stays over the page", () => {
+  it("animates the height only (grid rows 0fr → 1fr, ~300 ms ease-in-out), clipping the content — no fade or slide", () => {
     render();
     expect(panel().hidden).toBe(true);
-    expect(state()).toBe("closed");
     hoverIn(tab());
     expect(panel().hidden).toBe(false);
     expect(state()).toBe("open");
-    expect(cls()).toContain("transition-[opacity,translate]");
-    expect(cls()).toMatch(/\bopacity-100\b/);
-    expect(cls()).toMatch(/\btranslate-y-0\b/);
-    expect(cls()).toContain("duration-[250ms]");
-    expect(cls()).toContain("ease-out");
+    expect(cls()).toContain("grid-rows-[1fr]");
+    expect(cls()).toContain("transition-[grid-template-rows]");
+    expect(cls()).toContain("duration-300");
+    expect(cls()).toContain("ease-in-out");
     expect(cls()).toContain("motion-reduce:transition-none");
+    expect(cls()).not.toMatch(/opacity|translate/);
+    const clip = panel().firstElementChild!;
+    expect(clip.getAttribute("class")).toContain("overflow-hidden");
+    expect(clip.getAttribute("class")).toContain("min-h-0");
+    expect(clip.querySelector("nav")).not.toBeNull();
   });
 
-  it("starts the exit only after the 200 ms tolerance, fades/slides up (200 ms ease-in), then hides", () => {
+  it("the tab follows the bottom edge: it is the next item of the same column, right after the panel", () => {
+    render();
+    hoverIn(tab());
+    const column = tab().parentElement!;
+    expect(panel().parentElement).toBe(column);
+    expect(column.getAttribute("class")).toContain("flex-col");
+    expect(panel().getAttribute("class")).toContain("order-1");
+    expect(tab().getAttribute("class")).toContain("order-2");
+    expect(column.getAttribute("class")).toContain("absolute"); // overlays the page, never pushes it
+  });
+
+  it("retracts only after the 200 ms tolerance (rows → 0fr) and hides once retracted", () => {
     render();
     hoverIn(tab());
     moveOut(tab());
@@ -250,58 +264,47 @@ describe("AppTopNav mega menu — open/close transition", () => {
     advance(1);
     expect(tab().getAttribute("aria-expanded")).toBe("false");
     expect(state()).toBe("closed");
-    expect(panel().hidden).toBe(false); // still fading out
-    expect(cls()).toMatch(/\bopacity-0\b/);
-    expect(cls()).toContain("-translate-y-2");
-    expect(cls()).toContain("duration-200");
-    expect(cls()).toContain("ease-in");
-    advance(PANEL_CLOSE_MS + 20);
+    expect(cls()).toContain("grid-rows-[0fr]");
+    expect(panel().hidden).toBe(false); // still retracting
+    advance(PANEL_ANIM_MS + 20);
     expect(panel().hidden).toBe(true);
   });
 
-  it("pointer back on the fading panel reopens it without hiding or flashing", () => {
+  it("pointer back on the retracting panel or tab expands it again from the current height (never hidden)", () => {
     render();
     hoverIn(tab());
     moveOut(tab());
-    advance(HOVER_CLOSE_DELAY + 80); // mid fade-out
-    expect(state()).toBe("closed");
+    advance(HOVER_CLOSE_DELAY + 120); // mid retraction
     hoverIn(panel().querySelector("h2")!);
-    expect(tab().getAttribute("aria-expanded")).toBe("true");
     expect(state()).toBe("open");
-    expect(panel().hidden).toBe(false);
+    expect(cls()).toContain("grid-rows-[1fr]");
     advance(1000);
     expect(panel().hidden).toBe(false);
-    expect(state()).toBe("open");
-  });
-
-  it("pointer back on the tab during the fade-out also reopens it", () => {
-    render();
-    hoverIn(tab());
-    moveOut(tab());
-    advance(HOVER_CLOSE_DELAY + 50);
+    moveOut(panel().querySelector("h2")!);
+    advance(HOVER_CLOSE_DELAY + 100);
     hoverIn(tab());
     advance(1000);
     expect(state()).toBe("open");
     expect(panel().hidden).toBe(false);
   });
 
-  it("click, keyboard and touch still toggle it, with the same exit before hiding", () => {
+  it("click and Esc go through the same retraction before hiding", () => {
     render();
     click(tab());
     expect(state()).toBe("open");
     click(tab());
     expect(state()).toBe("closed");
     expect(panel().hidden).toBe(false);
-    advance(PANEL_CLOSE_MS + 20);
+    advance(PANEL_ANIM_MS + 20);
     expect(panel().hidden).toBe(true);
     click(tab());
     act(() => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
-    advance(PANEL_CLOSE_MS + 20);
+    advance(PANEL_ANIM_MS + 20);
     expect(panel().hidden).toBe(true);
     expect(document.activeElement).toBe(tab());
   });
 
-  it("with prefers-reduced-motion it hides at once (no exit animation)", () => {
+  it("with prefers-reduced-motion it hides at once (no retraction)", () => {
     vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), media: query, addEventListener() {}, removeEventListener() {} }));
     render();
     hoverIn(tab());
