@@ -7,12 +7,16 @@ import { applyNoteCommand, sortNotes, type NoteCommand, type WorkspaceNote } fro
 import { fetchWorkspaceNotes, persistNoteCommand, workspaceNotesKey } from "@/lib/workspace-notes-data";
 import { deleteAllNoteImages, workspaceNoteImagesKey } from "@/lib/workspace-note-images";
 
-export function useWorkspaceNotes() {
+/**
+ * One board's notes: the personal board (projectId = null, unchanged behavior) or a project's board.
+ * readOnly (archived projects) blocks every write here; RLS blocks them on the server too.
+ */
+export function useWorkspaceNotes(projectId: string | null = null, { readOnly = false }: { readOnly?: boolean } = {}) {
   const { user, session, loading } = useAuth();
   const { t } = useLanguage();
   const client = useQueryClient();
   const owner = user?.id;
-  const key = workspaceNotesKey(owner);
+  const key = workspaceNotesKey(owner, projectId);
   const authenticated = !loading && Boolean(owner && session?.user.id === owner);
   const pending = useIsMutating({ mutationKey: key }) > 0;
   const lock = useRef(false);
@@ -22,7 +26,7 @@ export function useWorkspaceNotes() {
     refetchOnWindowFocus: false,
     queryFn: ({ signal }) => {
       if (!owner || !authenticated) throw new Error("authentication_changed");
-      return fetchWorkspaceNotes(owner, signal);
+      return fetchWorkspaceNotes(owner, signal, projectId);
     },
   });
   const mutation = useMutation({
@@ -32,13 +36,13 @@ export function useWorkspaceNotes() {
       if (!owner || !authenticated) throw new Error("authentication_changed");
       // Files go first: if any cannot be removed, the note stays (no orphaned files in Storage).
       if (command.type === "delete") await deleteAllNoteImages(owner, command.id);
-      return persistNoteCommand(owner, command, client.getQueryData<WorkspaceNote[]>(key) ?? []);
+      return persistNoteCommand(owner, command, client.getQueryData<WorkspaceNote[]>(key) ?? [], projectId);
     },
     onMutate: async (command) => {
       await client.cancelQueries({ queryKey: key });
       const before = client.getQueryData<WorkspaceNote[]>(key);
       if (!before || !owner) throw new Error("notes_not_loaded");
-      client.setQueryData(key, applyNoteCommand(before, command, owner, new Date().toISOString()));
+      client.setQueryData(key, applyNoteCommand(before, command, owner, new Date().toISOString(), projectId));
       return { before };
     },
     onSuccess: (saved, command) => {
@@ -61,7 +65,7 @@ export function useWorkspaceNotes() {
   /** `quiet` skips the success toast when the caller reports the final outcome itself (note + images). */
   async function execute(command: NoteCommand, options: { quiet?: boolean } = {}): Promise<boolean> {
     // Synchronous latch also catches two clicks before React's pending render.
-    if (lock.current || client.isMutating({ mutationKey: key }) || !authenticated || !query.data) return false;
+    if (readOnly || lock.current || client.isMutating({ mutationKey: key }) || !authenticated || !query.data) return false;
     lock.current = true;
     quiet.current = Boolean(options.quiet);
     try { await mutation.mutateAsync(command); return true; }

@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { useAuth } from "./use-auth";
 import { useLanguage } from "./use-language";
 import { applyDetailCommand, computeProgress, prepareProjectDraft, type DetailCommand, type ProjectDetail } from "@/lib/workspace-projects";
+import { deleteProjectNoteFiles, workspaceNoteImagesKey } from "@/lib/workspace-note-images";
+import { workspaceNotesKey } from "@/lib/workspace-notes-data";
 import { fetchProjectDetail, fetchProjectSummaries, persistDetailCommand, persistListCommand, workspaceProjectKey, workspaceProjectsKey, type ListCommand, type ProjectSummary } from "@/lib/workspace-projects-data";
 
 const FEEDBACK = "workspace-projects-feedback";
@@ -48,7 +50,12 @@ export function useWorkspaceProjects() {
   });
   const mutation = useMutation({
     mutationKey: key, retry: false,
-    mutationFn: (command: ListCommand) => { if (!owner) throw new Error("authentication_changed"); return persistListCommand(owner, command); },
+    mutationFn: async (command: ListCommand) => {
+      if (!owner) throw new Error("authentication_changed");
+      // Board image files go first; if any cannot be removed the project is kept (no orphaned files).
+      if (command.type === "delete") await deleteProjectNoteFiles(owner, command.id);
+      return persistListCommand(owner, command);
+    },
     onMutate: async (command) => {
       await client.cancelQueries({ queryKey: key });
       const before = client.getQueryData<ProjectSummary[]>(key);
@@ -58,7 +65,11 @@ export function useWorkspaceProjects() {
     },
     onSuccess: (saved, command) => {
       if (saved) client.setQueryData<ProjectSummary[]>(key, (list = []) => list.map((e) => e.project.id === saved.id ? { ...e, project: saved } : e));
-      if (command.type === "delete") client.removeQueries({ queryKey: workspaceProjectKey(owner, command.id) });
+      if (command.type === "delete") {
+        client.removeQueries({ queryKey: workspaceProjectKey(owner, command.id) });
+        client.removeQueries({ queryKey: workspaceNotesKey(owner, command.id) });
+        void client.invalidateQueries({ queryKey: workspaceNoteImagesKey(owner) });
+      }
       else void client.invalidateQueries({ queryKey: workspaceProjectKey(owner, command.id) });
       toast.success(t(`workspace.projects.toast.${command.type}`), { id: FEEDBACK, duration: 1800 });
     },

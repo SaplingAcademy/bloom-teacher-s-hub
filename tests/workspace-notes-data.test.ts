@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceNote } from "../src/lib/workspace-notes";
 
-const mocks = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn(), eq: vi.fn(), result: { data: null as unknown, error: null as unknown } }));
+const mocks = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn(), eq: vi.fn(), is: vi.fn(), result: { data: null as unknown, error: null as unknown } }));
 vi.mock("@/lib/supabase", () => ({ supabase: { auth: { getUser: mocks.getUser }, from: mocks.from } }));
 import { fetchWorkspaceNotes, persistNoteCommand } from "../src/lib/workspace-notes-data";
 const saved: WorkspaceNote = { id: "n", user_id: "teacher", title: "", content: "hello", color: "yellow", pinned: false, order_index: 0, pos_x: null, pos_y: null, created_at: "now", updated_at: "now" };
@@ -11,7 +11,7 @@ beforeEach(() => {
   mocks.getUser.mockResolvedValue({ data: { user: { id: "teacher" } }, error: null });
   mocks.result = { data: saved, error: null };
   const chain = {
-    select: vi.fn().mockReturnThis(), eq: mocks.eq.mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockReturnThis(), abortSignal: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(), eq: mocks.eq.mockReturnThis(), is: mocks.is.mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockReturnThis(), abortSignal: vi.fn().mockReturnThis(),
     insert: mocks.insert.mockReturnThis(), update: mocks.update.mockReturnThis(), delete: mocks.delete.mockReturnThis(),
     single: vi.fn().mockImplementation(async () => mocks.result), maybeSingle: vi.fn().mockImplementation(async () => mocks.result),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(mocks.result).then(resolve),
@@ -75,6 +75,25 @@ describe("Workspace session-client persistence", () => {
     expect(await fetchWorkspaceNotes("teacher")).toEqual([saved]);
     expect(mocks.from).toHaveBeenCalledWith("workspace_notes");
     expect(mocks.eq).toHaveBeenCalledWith("user_id", "teacher");
+    expect(mocks.is).toHaveBeenCalledWith("project_id", null); // personal board never shows project notes
+    expect(mocks.eq).not.toHaveBeenCalledWith("project_id", expect.anything());
+  });
+  it("reads a project board only by its own project id", async () => {
+    mocks.result = { data: [], error: null };
+    await fetchWorkspaceNotes("teacher", undefined, "project-1");
+    expect(mocks.eq).toHaveBeenCalledWith("project_id", "project-1");
+    expect(mocks.is).not.toHaveBeenCalled();
+  });
+  it("creates project notes with the board's project id and personal notes without it", async () => {
+    const command = { type: "create", id: "n", draft: { title: "", content: "hello", color: "yellow" } } as const;
+    await persistNoteCommand("teacher", command, [saved], "project-1");
+    expect(mocks.insert).toHaveBeenLastCalledWith(expect.objectContaining({ user_id: "teacher", project_id: "project-1" }));
+    await persistNoteCommand("teacher", command, [saved]);
+    expect(mocks.insert.mock.calls.at(-1)![0]).not.toHaveProperty("project_id");
+  });
+  it("never sends project_id on updates", async () => {
+    await persistNoteCommand("teacher", { type: "position", id: "n", x: 0, y: 0 }, [saved], "project-1");
+    expect(mocks.update).toHaveBeenCalledWith({ pos_x: 0, pos_y: 0 });
   });
   it("recovers an already-committed create with the same editor UUID", async () => {
     const chain = mocks.from.mock.results[0]?.value ?? mocks.from();

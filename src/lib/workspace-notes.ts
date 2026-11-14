@@ -11,6 +11,8 @@ export interface WorkspaceNote {
   /** Free position on the board (px, board origin). NULL on both = automatic slot (older notes). */
   pos_x: number | null;
   pos_y: number | null;
+  /** NULL/undefined = personal board; a project id = that project's board. Never changes after creation. */
+  project_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,11 +62,11 @@ export function layerNote(notes: readonly WorkspaceNote[], id: string, to: "fron
   return sortNotes(notes.map((entry) => entry.id === id ? { ...entry, order_index } : entry));
 }
 
-export function applyNoteCommand(notes: readonly WorkspaceNote[], command: NoteCommand, userId: string, now: string): WorkspaceNote[] {
+export function applyNoteCommand(notes: readonly WorkspaceNote[], command: NoteCommand, userId: string, now: string, projectId: string | null = null): WorkspaceNote[] {
   if (command.type === "create") {
     if (notes.some((note) => note.id === command.id)) return [...notes];
     return sortNotes([...notes, { ...prepareNoteDraft(command.draft), id: command.id, user_id: userId, pinned: false,
-      order_index: Math.max(-1, ...notes.map((note) => note.order_index)) + 1, pos_x: null, pos_y: null, created_at: now, updated_at: now }]);
+      order_index: Math.max(-1, ...notes.map((note) => note.order_index)) + 1, pos_x: null, pos_y: null, project_id: projectId, created_at: now, updated_at: now }]);
   }
   if (command.type === "delete") return notes.filter((note) => note.id !== command.id);
   if (command.type === "layer") return layerNote(notes, command.id, command.to);

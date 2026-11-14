@@ -76,6 +76,7 @@ export const uiTranslations = {
         "toast": { "create": "Caderno criado.", "edit": "Caderno atualizado.", "delete": "Caderno excluído." }
       },
       "project": {
+        "pages": { "planning": "Página 1 de 2: Planejamento", "board": "Página 2 de 2: Mural", "toBoard": "Ir para o mural do projeto", "toPlanning": "Voltar ao planejamento", "boardTitle": "Mural do projeto", "readOnly": "Projeto arquivado: o mural está disponível somente para leitura." },
         "back": "Voltar aos projetos", "title": "Projeto", "phases": "Fases", "emptyBody": "As fases e tarefas deste projeto aparecerão aqui.",
         "notFoundTitle": "Projeto não encontrado", "notFoundBody": "Este projeto não existe ou não está disponível para sua conta.",
         "loadError": "Não foi possível carregar este projeto.", "saved": "Alteração salva.",
@@ -1788,6 +1789,7 @@ export const uiTranslations = {
         "toast": { "create": "Notebook created.", "edit": "Notebook updated.", "delete": "Notebook deleted." }
       },
       "project": {
+        "pages": { "planning": "Page 1 of 2: Planning", "board": "Page 2 of 2: Board", "toBoard": "Go to the project board", "toPlanning": "Back to planning", "boardTitle": "Project board", "readOnly": "Archived project: the board is read-only." },
         "back": "Back to projects", "title": "Project", "phases": "Phases", "emptyBody": "This project's phases and tasks will appear here.",
         "notFoundTitle": "Project not found", "notFoundBody": "This project doesn't exist or isn't available to your account.",
         "loadError": "Could not load this project.", "saved": "Change saved.",

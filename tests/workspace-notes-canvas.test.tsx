@@ -16,6 +16,7 @@ let outcome: "save" | "fail";
 const execute = vi.fn();
 const opened = vi.fn();
 
+let readOnly = false;
 function Harness({ initial }: { initial: WorkspaceNote[] }) {
   const [notes, setNotes] = useState(initial);
   execute.mockImplementation(async (command: NoteCommand) => {
@@ -24,7 +25,7 @@ function Harness({ initial }: { initial: WorkspaceNote[] }) {
     return true;
   });
   return createElement(NotesCanvas, {
-    notes, pending: false, execute, label: "Board",
+    notes, pending: false, readOnly, execute, label: "Board",
     renderNote: (entry: WorkspaceNote) => createElement("article", null,
       createElement("div", { "data-no-drag": true }, createElement("button", { "data-lock": entry.id }, "lock")),
       createElement("button", { "data-open": entry.id, onClick: () => opened(entry.id) }, entry.content)),
@@ -36,6 +37,7 @@ beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get() { return 960; } });
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get() { return 120; } });
   outcome = "save";
+  readOnly = false;
   execute.mockReset();
   opened.mockReset();
   container = document.createElement("div");
@@ -135,5 +137,12 @@ describe("free-positioning notes board", () => {
     await act(async () => (body as HTMLButtonElement).click());
     expect(opened).toHaveBeenCalledWith("b");
     expect(execute).not.toHaveBeenCalled();
+  });
+  it("read-only boards (archived projects) never start a drag", async () => {
+    readOnly = true;
+    await mount([note("a", 0, { pos_x: 48, pos_y: 48 })]);
+    await dragFrom(container.querySelector('[data-open="a"]')!, 200, 100);
+    expect(execute).not.toHaveBeenCalled();
+    expect(position("a")).toBe("translate3d(48px, 48px, 0)");
   });
 });

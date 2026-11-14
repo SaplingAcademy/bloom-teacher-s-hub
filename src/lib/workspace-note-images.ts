@@ -172,6 +172,25 @@ export async function deleteNoteImage(expectedId: string, image: Pick<NoteImage,
  */
 export async function deleteAllNoteImages(expectedId: string, noteId: string): Promise<void> {
   const owner = await authenticatedOwner(expectedId);
+  await removeNoteFiles(owner, noteId);
+  const { error } = await supabase.from("workspace_note_images").delete().eq("user_id", owner).eq("note_id", noteId);
+  if (error) throw error;
+}
+
+/**
+ * Before a project is deleted: remove the physical files of every note on its board. Rows are
+ * left to the database cascade (also for archived projects, whose rows cannot be deleted
+ * directly). Any failure stops the project deletion so no file is orphaned.
+ */
+export async function deleteProjectNoteFiles(expectedId: string, projectId: string): Promise<void> {
+  const owner = await authenticatedOwner(expectedId);
+  const { data, error } = await supabase.from("workspace_notes").select("id").eq("user_id", owner).eq("project_id", projectId);
+  if (error) throw error;
+  for (const note of (data ?? []) as { id: string }[]) await removeNoteFiles(owner, note.id);
+}
+
+/** Every file under owner/notes/note_id (rows plus leftovers of interrupted uploads). */
+async function removeNoteFiles(owner: string, noteId: string): Promise<void> {
   const folder = `${owner}/notes/${noteId}`;
   noteImagePath(owner, noteId, noteId); // validates both ids
   const bucket = supabase.storage.from(WORKSPACE_MEDIA_BUCKET);
@@ -185,6 +204,4 @@ export async function deleteAllNoteImages(expectedId: string, noteId: string): P
     const { error: removeError } = await bucket.remove([...paths]);
     if (removeError) throw removeError;
   }
-  const { error } = await supabase.from("workspace_note_images").delete().eq("user_id", owner).eq("note_id", noteId);
-  if (error) throw error;
 }

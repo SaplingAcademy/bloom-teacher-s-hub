@@ -12,6 +12,8 @@ import { WorkspaceBackLink, WorkspaceDetailSkeleton } from "./WorkspaceShell";
 import { ConfirmDialog, ItemDialog, ProjectDialog, TitleDialog } from "./ProjectDialogs";
 import { colorOf, projectIcon } from "./project-appearance";
 import { ProgressBar } from "./ProjectProgress";
+import { ProjectPages } from "./ProjectPages";
+import { NotesBoard } from "./NotesBoard";
 
 type ItemEditor = { id: string; isNew: boolean; initial: ItemDraft };
 type Confirm = { kind: "phase"; phase: WorkspacePhase } | { kind: "item"; item: WorkspaceItem } | { kind: "project" };
@@ -97,18 +99,26 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         <div className="mt-5"><ProgressBar progress={computeProgress(items)} color={color} /></div>
       </header>
 
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
-        <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
-      </div>
+      {/* Page 1 = planning (unchanged); page 2 = this project's own board. Header above stays in place. */}
+      <ProjectPages
+        labels={{ next: t("workspace.project.pages.toBoard"), previous: t("workspace.project.pages.toPlanning"),
+          position: (page) => t(page === 1 ? "workspace.project.pages.planning" : "workspace.project.pages.board") }}
+        planning={<div className="space-y-5">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
+            <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
+          </div>
 
-      <ItemContainer {...containerProps} phase={null} />
-      {phases.map((phase, index) => (
-        <ItemContainer key={phase.id} {...containerProps} phase={phase} first={index === 0} last={index === phases.length - 1}
-          onRename={() => setPhaseEditor({ id: phase.id, title: phase.title, isNew: false })}
-          onDeletePhase={() => setConfirm({ kind: "phase", phase })}
-          onMovePhase={(dir) => { const updates = reorder(phases, phase.id, dir); if (updates.length) void execute({ type: "reorderPhases", updates }); }} />
-      ))}
+          <ItemContainer {...containerProps} phase={null} />
+          {phases.map((phase, index) => (
+            <ItemContainer key={phase.id} {...containerProps} phase={phase} first={index === 0} last={index === phases.length - 1}
+              onRename={() => setPhaseEditor({ id: phase.id, title: phase.title, isNew: false })}
+              onDeletePhase={() => setConfirm({ kind: "phase", phase })}
+              onMovePhase={(dir) => { const updates = reorder(phases, phase.id, dir); if (updates.length) void execute({ type: "reorderPhases", updates }); }} />
+          ))}
+        </div>}
+        board={() => <NotesBoard projectId={project.id} readOnly={project.status !== "active"} title={t("workspace.project.pages.boardTitle")} />}
+      />
 
       <ProjectDialog open={editingProject} pending={pending} onClose={() => setEditingProject(false)}
         initial={{ title: project.title, description: project.description, color: project.color, icon: project.icon }}
