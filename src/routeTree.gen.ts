@@ -30,6 +30,7 @@ import { Route as AppResourcesRouteImport } from './routes/_app.resources'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
 import { Route as AppWorkspaceRouteImport } from './routes/_app.workspace'
+import { Route as AppCommunityContactsRouteImport } from './routes/_app.community_.contacts'
 import { Route as AppWorkspaceIndexRouteImport } from './routes/_app.workspace.index'
 import { Route as AppWorkspaceMuralRouteImport } from './routes/_app.workspace.mural'
 import { Route as AppWorkspaceNotebooksRouteImport } from './routes/_app.workspace.notebooks'
@@ -144,6 +145,11 @@ const AppWorkspaceRoute = AppWorkspaceRouteImport.update({
   path: '/workspace',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCommunityContactsRoute = AppCommunityContactsRouteImport.update({
+  id: '/community_/contacts',
+  path: '/community/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppWorkspaceIndexRoute = AppWorkspaceIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/workspace': typeof AppWorkspaceRouteWithChildren
+  '/community/contacts': typeof AppCommunityContactsRoute
   '/workspace/mural': typeof AppWorkspaceMuralRoute
   '/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
   '/workspace/projects': typeof AppWorkspaceProjectsRoute
@@ -245,6 +252,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
+  '/community/contacts': typeof AppCommunityContactsRoute
   '/workspace/mural': typeof AppWorkspaceMuralRoute
   '/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
   '/workspace/projects': typeof AppWorkspaceProjectsRoute
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/_app/students': typeof AppStudentsRoute
   '/_app/workspace': typeof AppWorkspaceRouteWithChildren
   '/_app/': typeof AppIndexRoute
+  '/_app/community_/contacts': typeof AppCommunityContactsRoute
   '/_app/workspace/mural': typeof AppWorkspaceMuralRoute
   '/_app/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
   '/_app/workspace/projects': typeof AppWorkspaceProjectsRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/students'
     | '/workspace'
+    | '/community/contacts'
     | '/workspace/mural'
     | '/workspace/notebooks'
     | '/workspace/projects'
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/students'
     | '/'
+    | '/community/contacts'
     | '/workspace/mural'
     | '/workspace/notebooks'
     | '/workspace/projects'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/_app/students'
     | '/_app/workspace'
     | '/_app/'
+    | '/_app/community_/contacts'
     | '/_app/workspace/mural'
     | '/_app/workspace/notebooks'
     | '/_app/workspace/projects'
@@ -541,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWorkspaceRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/community_/contacts': {
+      id: '/_app/community_/contacts'
+      path: '/community/contacts'
+      fullPath: '/community/contacts'
+      preLoaderRoute: typeof AppCommunityContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/workspace/': {
       id: '/_app/workspace/'
       path: '/'
@@ -646,6 +665,7 @@ interface AppRouteChildren {
   AppStudentsRoute: typeof AppStudentsRoute
   AppWorkspaceRoute: typeof AppWorkspaceRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppCommunityContactsRoute: typeof AppCommunityContactsRoute
   AppAcademyCourseCourseIdRoute: typeof AppAcademyCourseCourseIdRoute
   AppAcademyLessonLessonIdRoute: typeof AppAcademyLessonLessonIdRoute
   AppAcademyVideoVideoIdRoute: typeof AppAcademyVideoVideoIdRoute
@@ -668,6 +688,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppStudentsRoute: AppStudentsRoute,
   AppWorkspaceRoute: AppWorkspaceRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppCommunityContactsRoute: AppCommunityContactsRoute,
   AppAcademyCourseCourseIdRoute: AppAcademyCourseCourseIdRoute,
   AppAcademyLessonLessonIdRoute: AppAcademyLessonLessonIdRoute,
   AppAcademyVideoVideoIdRoute: AppAcademyVideoVideoIdRoute,

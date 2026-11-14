@@ -91,7 +91,7 @@ describe("AppTopNav mega menu", () => {
     expect(sections).toEqual([
       { title: "Gestão", items: ["Visão Geral", "Agenda", "Alunos", "Leads"] },
       { title: "Negócio", items: ["Financeiro", "Crescimento", "Workspace"] },
-      { title: "Recursos", items: ["Biblioteca", "Comunidade", "Bloom AcademyEm breve", "MercadoEm breve"] },
+      { title: "Recursos", items: ["Biblioteca", "Comunidade", "Meus Contatos", "Bloom AcademyEm breve", "MercadoEm breve"] },
     ]);
     const current = panel().querySelectorAll('[aria-current="page"]');
     expect([...current].map((a) => a.getAttribute("href"))).toEqual(["/finance"]);
