@@ -129,6 +129,20 @@ const KANBAN_STAGES = [
   { id: "Perdido", labelKey: "leads.stageLost", color: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20" },
 ];
 
+/**
+ * Kanban columns: every stage except "Perdido". Lost leads keep their stage (still selectable in
+ * the stage filter and the lead details, and listed in the Table view); they just have no column.
+ */
+const KANBAN_COLUMNS = KANBAN_STAGES.filter((stage) => stage.id !== "Perdido");
+
+/**
+ * Board layout: phones stack the columns; from md the five columns share the width equally in one
+ * row with a 16px gap and scroll horizontally inside the board when they would get narrower than
+ * 14rem (never overlapping or squeezing the stage names).
+ */
+const KANBAN_BOARD =
+  "grid grid-cols-1 gap-4 overflow-x-auto pb-4 md:grid-flow-col md:grid-cols-none lg:grid-cols-none xl:grid-cols-none md:auto-cols-[minmax(14rem,1fr)]";
+
 function LeadsPage() {
   const { user } = useAuth();
   const { lang, t, formatStatus } = useLanguage();
@@ -590,16 +604,16 @@ function LeadsPage() {
       {/* Main Content Area */}
       {loading ? (
         viewMode === "kanban" ? (
-          <KanbanSkeleton label={t("auditUi.loadingLeadPipeline")} />
+          <KanbanSkeleton label={t("auditUi.loadingLeadPipeline")} columns={KANBAN_COLUMNS.length} className={KANBAN_BOARD} />
         ) : (
           <ListRowsSkeleton label={t("auditUi.loadingLeadPipeline")} rows={6} />
         )
       ) : viewMode === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 overflow-x-auto pb-4">
-          {KANBAN_STAGES.map((stage) => {
+        <div className={KANBAN_BOARD}>
+          {KANBAN_COLUMNS.map((stage) => {
             const stageLeads = filteredLeads.filter((l) => l.stage === stage.id);
             return (
-              <div key={stage.id} className="bg-card/50 border border-border rounded-xl p-3 flex flex-col min-w-[260px] min-h-[400px]">
+              <div key={stage.id} className="bg-card/50 border border-border rounded-xl p-3 flex flex-col min-w-0 min-h-[400px]">
                 <div className="flex items-center justify-between pb-3 mb-2 border-b border-border">
                   <span className="font-semibold text-xs text-card-foreground flex items-center gap-1.5">
                     <Badge variant="outline" className={`${stage.color} border font-medium text-[11px]`}>

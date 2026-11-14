@@ -102,7 +102,7 @@ export function KanbanSkeleton({ label, columns = 6, className }: { label?: stri
       className={cn("grid grid-cols-1 gap-4 overflow-x-auto pb-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6", className)}
     >
       {Array.from({ length: columns }, (_, i) => (
-        <div key={i} className="flex min-h-[400px] min-w-[260px] flex-col rounded-xl border border-border bg-card/50 p-3">
+        <div key={i} className="flex min-h-[400px] min-w-0 flex-col rounded-xl border border-border bg-card/50 p-3">
           <div className="mb-2 flex items-center justify-between border-b border-border pb-3">
             <Skeleton className="h-5 w-20 rounded-full" />
             <Skeleton className="h-5 w-7 rounded-full" />
