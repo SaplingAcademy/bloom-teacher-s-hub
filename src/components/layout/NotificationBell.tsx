@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { reportUserError } from "@/lib/user-error";
+import { notificationTarget } from "@/lib/notification-targets";
 import { cn } from "@/lib/utils";
 
 interface Notification {
@@ -107,10 +108,11 @@ export function NotificationBell({ className }: { className?: string }) {
 
   const onItem = async (n: Notification) => {
     await markRead(n);
-    if (n.type === "community_comment" && n.post_id) {
-      setOpen(false);
-      navigate({ to: "/community", search: { post: n.post_id } });
-    }
+    const target = notificationTarget(n);
+    if (!target) return;
+    setOpen(false);
+    if (target.to === "/community") navigate({ to: "/community", search: { post: target.post } });
+    else navigate({ to: "/community/contacts", search: { tab: target.tab } });
   };
 
   const fmt = (iso: string) => {

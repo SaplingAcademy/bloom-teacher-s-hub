@@ -14,6 +14,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useContactActions, useTeacherContacts, useTeacherSearch, type ContactAction } from "@/hooks/use-teacher-contacts";
 import { contactErrorCode, cooldownDaysLeft, type ContactEntry, type TeacherSearchResult } from "@/lib/teacher-contacts";
 import { cn } from "@/lib/utils";
+import { parseContactsTab, type ContactsUrlTab } from "@/lib/notification-targets";
 
 const SUCCESS_KEY: Record<ContactAction["type"], string> = {
   send: "contacts.sent", accept: "contacts.accepted", decline: "contacts.declined", cancel: "contacts.cancelled", remove: "contacts.removed",
@@ -76,7 +77,19 @@ function ErrorState({ message, retry, retryLabel }: { message: string; retry: ()
   );
 }
 
-export function MyContactsPage() {
+/** URL tab names ↔ internal tab values. */
+const TAB_VALUE: Record<ContactsUrlTab, string> = { contacts: "contacts", received: "incoming", sent: "outgoing" };
+const URL_TAB: Record<string, ContactsUrlTab> = { contacts: "contacts", incoming: "received", outgoing: "sent" };
+
+export function MyContactsPage({ tab, onTabChange }: { tab?: ContactsUrlTab; onTabChange?: (tab: ContactsUrlTab) => void } = {}) {
+  // Controlled by the URL when the route provides it; local state otherwise.
+  const [localTab, setLocalTab] = useState<ContactsUrlTab>(parseContactsTab(tab) ?? "contacts");
+  const currentTab = onTabChange ? parseContactsTab(tab) ?? "contacts" : localTab;
+  const changeTab = (value: string) => {
+    const next = URL_TAB[value] ?? "contacts";
+    if (onTabChange) onTabChange(next);
+    else setLocalTab(next);
+  };
   const { t, lang } = useLanguage();
   const [raw, setRaw] = useState("");
   const [removing, setRemoving] = useState<ContactEntry | null>(null);
@@ -190,7 +203,7 @@ export function MyContactsPage() {
 
         {/* Lists */}
         <section className="@container rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <Tabs defaultValue="contacts">
+          <Tabs value={TAB_VALUE[currentTab]} onValueChange={changeTab}>
             <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
               <TabsTrigger value="contacts">{tabLabel("contacts.tabContacts", groups.contact.length)}</TabsTrigger>
               <TabsTrigger value="incoming">{tabLabel("contacts.tabIncoming", groups.incoming.length, true)}</TabsTrigger>
