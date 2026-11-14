@@ -6,7 +6,9 @@
 - Note images go only through `src/lib/workspace-note-images.ts`: private `workspace-media` bucket at `owner/notes/note/image.webp` built from Auth + UUIDs, metadata in workspace_note_images, signed URLs only; browser re-encodes to WebP (max 1600px, no EXIF), max 3 per note.
 - Image edits stay local until Save (text first, then removals and uploads); upload→row with object cleanup, file→row on removal, folder cleanup before note deletion; partial failures keep the editor open and never toast success.
 - Render note content as React text only, never HTML, and reuse semantic note tokens and PT/EN dictionaries so stored colors and content remain unchanged.
+- Boards are scoped by workspace_notes.project_id: NULL = personal (reads `.is("project_id", null)`), a project id = that project's board; cache keys include the scope, project_id comes only from the route on create and is never updated (DB trigger also blocks project_id/user_id changes). Archived project boards are read-only in the UI; RLS enforces it.
 # Personal projects
+- Project detail has exactly two pages (`ProjectPages`): planning (unchanged) and the project's board, mounted only when shown. Deleting a project first removes its board's Storage files (`deleteProjectNoteFiles`) and aborts on failure; rows go by FK cascade.
 - Projects use only workspace_projects/phases/items through `workspace-projects-data.ts`; every read/write re-verifies Auth and filters by owner and project, and updates never send user_id/project_id.
 - Progress is always derived in pure `workspace-projects.ts` from task/checklist items (0% when empty) and never stored; phase deletion relies on the FK SET NULL and the optimistic cache mirrors it.
 - Detail mutations are serialized per owner/project cache with optimistic apply and snapshot rollback; link URLs are http(s)-only in meta.url and re-validated before rendering.

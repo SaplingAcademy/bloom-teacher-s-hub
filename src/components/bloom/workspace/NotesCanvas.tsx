@@ -24,6 +24,8 @@ interface Drag {
 interface NotesCanvasProps {
   notes: readonly WorkspaceNote[];
   pending: boolean;
+  /** Archived project boards: notes are shown in place and cannot be dragged. */
+  readOnly?: boolean;
   execute: (command: NoteCommand) => Promise<boolean>;
   label: string;
   renderNote: (note: WorkspaceNote) => ReactNode;
@@ -34,7 +36,7 @@ interface NotesCanvasProps {
  * moves; one position command (snapped to the grid, inside the board) is sent on release. Failed
  * saves are rolled back by the notes hook, so the note simply returns to its saved place.
  */
-export function NotesCanvas({ notes, pending, execute, label, renderNote }: NotesCanvasProps) {
+export function NotesCanvas({ notes, pending, readOnly = false, execute, label, renderNote }: NotesCanvasProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [boardWidth, setBoardWidth] = useState(0);
   const [heights, setHeights] = useState<Record<string, number>>({});
@@ -111,7 +113,7 @@ export function NotesCanvas({ notes, pending, execute, label, renderNote }: Note
   const onPointerDown = (note: WorkspaceNote, event: ReactPointerEvent<HTMLDivElement>) => {
     suppressClick.current = false;
     // Mouse/pen only, primary button, never from the note's own controls, locked notes stay put.
-    if (event.pointerType === "touch" || event.button !== 0 || note.pinned || pending || dragRef.current) return;
+    if (event.pointerType === "touch" || event.button !== 0 || note.pinned || readOnly || pending || dragRef.current) return;
     if ((event.target as HTMLElement).closest("[data-no-drag]")) return;
     const origin = placed[note.id];
     if (!origin) return;
@@ -141,7 +143,7 @@ export function NotesCanvas({ notes, pending, execute, label, renderNote }: Note
         return (
           <div key={note.id} data-board-note={note.id} data-dragging={isDragged || undefined}
             className={cn("absolute left-0 top-0 select-none",
-              note.pinned ? "cursor-default" : "cursor-grab active:cursor-grabbing",
+              note.pinned || readOnly ? "cursor-default" : "cursor-grab active:cursor-grabbing",
               drag?.active && drag.id === note.id && "[&_article]:shadow-lg")}
             style={{ width: BOARD_NOTE_WIDTH, transform: `translate3d(${point.x}px, ${point.y}px, 0)`, zIndex: isDragged ? notes.length + 1 : layer.get(note.id) }}
             onPointerDown={(event) => onPointerDown(note, event)}

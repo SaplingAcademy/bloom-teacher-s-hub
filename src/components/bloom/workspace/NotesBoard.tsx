@@ -33,9 +33,14 @@ function subscribeFreeBoard(onChange: () => void) {
 }
 const isFreeBoard = () => typeof window !== "undefined" && Boolean(window.matchMedia?.(FREE_BOARD_QUERY).matches);
 
-export function NotesBoard() {
+/**
+ * The personal board (default, unchanged) or one project's board (projectId). readOnly (archived
+ * projects) shows notes and images but hides every write control; the hook and RLS also block writes.
+ */
+export function NotesBoard({ projectId = null, readOnly = false, title }: { projectId?: string | null; readOnly?: boolean; title?: string } = {}) {
   const { t } = useLanguage();
-  const { notes, isLoading, error, pending, execute, refetch } = useWorkspaceNotes();
+  const { notes, isLoading, error, pending, execute, refetch } = useWorkspaceNotes(projectId, { readOnly });
+  const heading = title ?? t("workspace.mural.title");
   const [editor, setEditor] = useState<NoteEditorState | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceNote | null>(null);
   const noteImages = useWorkspaceNoteImages();
@@ -73,7 +78,7 @@ export function NotesBoard() {
   const renderNote = (note: WorkspaceNote) => (
     <article data-note-id={note.id} aria-busy={pending}
       className={cn("min-w-0 rounded-lg border border-note-ink/10 p-4 text-note-ink shadow-note", noteSurface[note.color] ?? noteSurface.neutral)}>
-      <div className="-mr-1 -mt-1 mb-1 flex justify-end gap-1" data-no-drag>
+      {readOnly ? (note.pinned && <div className="-mr-1 -mt-1 mb-1 flex h-8 justify-end"><Lock className="m-2 h-4 w-4" aria-label={t("workspace.mural.pinned")} /></div>) : <div className="-mr-1 -mt-1 mb-1 flex justify-end gap-1" data-no-drag>
         <Button variant="ghost" size="icon" className={cn("h-8 w-8 text-note-ink hover:bg-note-ink/10 hover:text-note-ink", note.pinned && "bg-note-ink/10")}
           disabled={pending} aria-label={t(note.pinned ? "workspace.mural.unpin" : "workspace.mural.pin")}
           title={t(note.pinned ? "workspace.mural.unpin" : "workspace.mural.pin")} aria-pressed={note.pinned}
@@ -91,10 +96,10 @@ export function NotesBoard() {
             <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleting(note)}><Trash2 />{t("workspace.mural.delete")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-      <Button variant="ghost" disabled={pending} aria-label={`${t("workspace.mural.edit")}: ${note.title || note.content.slice(0, 60)}`}
-        className="block h-auto min-h-12 w-full overflow-hidden whitespace-normal p-0 text-left text-note-ink hover:bg-transparent hover:text-note-ink"
-        onClick={() => startEdit(note)}>
+      </div>}
+      <Button variant="ghost" disabled={pending} aria-label={readOnly ? note.title || note.content.slice(0, 60) : `${t("workspace.mural.edit")}: ${note.title || note.content.slice(0, 60)}`}
+        className={cn("block h-auto min-h-12 w-full overflow-hidden whitespace-normal p-0 text-left text-note-ink hover:bg-transparent hover:text-note-ink", readOnly && "cursor-default")}
+        onClick={() => { if (!readOnly) startEdit(note); }}>
         {note.title && <span className="mb-2 block break-words font-display text-base font-semibold tracking-normal">{note.title}</span>}
         <span className="block max-h-64 overflow-y-auto whitespace-pre-wrap break-words text-sm font-normal leading-relaxed [overflow-wrap:anywhere]">{note.content}</span>
         <NoteImages images={noteImages.byNote[note.id] ?? []} urls={noteImages.urls} label={imageAlt} />
@@ -104,11 +109,12 @@ export function NotesBoard() {
   const groups = [true, false].map((pinned) => ({ pinned, notes: (notes ?? []).filter((note) => note.pinned === pinned) }));
 
   return (
-    <section className="space-y-5" aria-label={t("workspace.mural.title")}>
+    <section className="space-y-5" aria-label={heading}>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-semibold tracking-normal">{t("workspace.mural.title")}</h2>
-        <Button onClick={startCreate} disabled={pending || !notes}><Plus aria-hidden />{t("workspace.mural.newNote")}</Button>
+        <h2 className="font-display text-lg font-semibold tracking-normal">{heading}</h2>
+        {!readOnly && <Button onClick={startCreate} disabled={pending || !notes}><Plus aria-hidden />{t("workspace.mural.newNote")}</Button>}
       </div>
+      {readOnly && <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" data-testid="board-read-only">{t("workspace.project.pages.readOnly")}</p>}
       {error && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/25 p-4 text-sm">
         <p className="flex-1 text-destructive">{t("workspace.mural.loadError")}</p>
         <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={pending}>{t("workspace.mural.retry")}</Button>
@@ -120,10 +126,10 @@ export function NotesBoard() {
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><StickyNote className="h-6 w-6" aria-hidden /></div>
           <h3 className="font-display text-lg font-semibold tracking-normal">{t("workspace.mural.emptyTitle")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{t("workspace.mural.emptyBody")}</p>
-          <Button className="mt-5" onClick={startCreate}><Plus aria-hidden />{t("workspace.mural.firstNote")}</Button>
+          {!readOnly && <Button className="mt-5" onClick={startCreate}><Plus aria-hidden />{t("workspace.mural.firstNote")}</Button>}
         </div>
       ) : freeBoard ? (
-        <NotesCanvas notes={allNotes} pending={pending} execute={execute} label={t("workspace.mural.boardLabel")} renderNote={renderNote} />
+        <NotesCanvas notes={allNotes} pending={pending} readOnly={readOnly} execute={execute} label={t("workspace.mural.boardLabel")} renderNote={renderNote} />
       ) : groups.filter((group) => group.notes.length > 0).map((group) => (
         <div key={String(group.pinned)} className="space-y-3">
           <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">{group.pinned && <Lock className="h-3.5 w-3.5" aria-hidden />}{t(group.pinned ? "workspace.mural.pinned" : "workspace.mural.notes")}</h3>
