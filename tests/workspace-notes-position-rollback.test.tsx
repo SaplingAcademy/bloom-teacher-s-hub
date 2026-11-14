@@ -47,7 +47,7 @@ describe("note position persistence", () => {
   it("keeps the saved row returned by the database", async () => {
     mocks.persist.mockResolvedValue({ ...saved, pos_x: 240, pos_y: 96 });
     await act(async () => { await api.execute({ type: "position", id: "a", x: 240, y: 96 }); });
-    expect(mocks.persist).toHaveBeenCalledWith("teacher", { type: "position", id: "a", x: 240, y: 96 }, expect.any(Array));
+    expect(mocks.persist).toHaveBeenCalledWith("teacher", { type: "position", id: "a", x: 240, y: 96 }, expect.any(Array), null);
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
     expect(mocks.fetch).toHaveBeenCalledOnce(); // no extra reads around the drop
     expect(api.notes?.[0]).toMatchObject({ pos_x: 240, pos_y: 96 });

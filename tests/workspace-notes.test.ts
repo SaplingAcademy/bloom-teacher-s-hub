@@ -71,3 +71,10 @@ describe("personal Workspace notes", () => {
     expect(after[1]).toBe(before[1]);
   });
 });
+describe("board scope", () => {
+  it("new notes on a project board carry that project id; personal ones stay null", () => {
+    const command = { type: "create", id: "n", draft: { title: "", content: "x", color: "yellow" } } as const;
+    expect(applyNoteCommand([], command, "teacher", "now", "project-1")[0].project_id).toBe("project-1");
+    expect(applyNoteCommand([], command, "teacher", "now")[0].project_id).toBeNull();
+  });
+});
