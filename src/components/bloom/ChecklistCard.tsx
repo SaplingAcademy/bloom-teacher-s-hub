@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChecklistDeadlineFields } from "./ChecklistDeadlineFields";
+import { InfoTooltip } from "./InfoTooltip";
 
 const NO_DEADLINE: ChecklistDeadline = { deadline_type: "none", due_date: null };
 
@@ -228,10 +229,19 @@ export function ChecklistCard() {
     <TooltipProvider delayDuration={350}>
       <section aria-label={t("checklist.title")} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm xl:h-full">
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 py-4 sm:px-5">
-          <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
-            {selected === 0 ? <ListChecks className="h-5 w-5 shrink-0" aria-hidden="true" /> : <History className="h-5 w-5 shrink-0" aria-hidden="true" />}
-            {t(selected === 0 ? "checklist.title" : "checklist.history")}
-          </h2>
+          <div className="flex min-w-0 items-center gap-1">
+            <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
+              {selected === 0 ? <ListChecks className="h-5 w-5 shrink-0" aria-hidden="true" /> : <History className="h-5 w-5 shrink-0" aria-hidden="true" />}
+              {t(selected === 0 ? "checklist.title" : "checklist.history")}
+            </h2>
+            {selected === 0 && (
+              <InfoTooltip
+                label={`${t("globalUi.aboutPage")} ${t("checklist.title")}`}
+                text={t("checklist.info")}
+                className="text-muted-foreground"
+              />
+            )}
+          </div>
           {!unavailable && <span aria-live="polite" className="text-xs font-semibold text-muted-foreground">
             {selected === 0
               ? t(pendingCount === 1 ? "checklist.pendingOne" : "checklist.pending").replace("{count}", String(pendingCount))
