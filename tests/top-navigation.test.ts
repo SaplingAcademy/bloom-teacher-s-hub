@@ -13,7 +13,7 @@ describe("top navigation (mega menu groups)", () => {
     expect(getNavGroups().map((g) => [g.id, g.items.map((i) => i.id)])).toEqual([
       ["management", ["today", "calendar", "students", "leads"]],
       ["business", ["finance", "growth", "workspaceHub"]],
-      ["resources", ["resources", "community", "academy", "marketplace"]],
+      ["resources", ["resources", "community", "contacts", "academy", "marketplace"]],
     ]);
   });
 
@@ -29,5 +29,13 @@ describe("top navigation (mega menu groups)", () => {
     expect(isNavItemActive(byId.today, "/students")).toBe(false);
     expect(isNavItemActive(byId.students, "/students/abc")).toBe(true);
     expect(isNavItemActive(byId.marketplace, "/marketplace")).toBe(false);
+  });
+
+  it("highlights My Contacts, not the feed, on /community/contacts", () => {
+    const byId = Object.fromEntries(navSections.flatMap((s) => s.items).map((i) => [i.id, i]));
+    expect(isNavItemActive(byId.community, "/community")).toBe(true);
+    expect(isNavItemActive(byId.community, "/community/contacts")).toBe(false);
+    expect(isNavItemActive(byId.contacts, "/community/contacts")).toBe(true);
+    expect(isNavItemActive(byId.contacts, "/community")).toBe(false);
   });
 });
