@@ -130,3 +130,21 @@ describe("My Contacts page states", () => {
     expect(text()).toContain("contacts.emptyContacts");
   });
 });
+
+describe("My Contacts tab from the URL", () => {
+  it("opens the tab given by the route and reports tab changes", async () => {
+    await act(async () => root.unmount());
+    const onTabChange = vi.fn();
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root.render(createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+      createElement(MyContactsPage, { tab: "received", onTabChange }))));
+    await settle();
+    expect(document.querySelectorAll('[data-testid="incoming-row"]')).toHaveLength(1);
+    expect(document.querySelector('[data-testid="contact-row"]')).toBeNull();
+    await openTab("contacts.tabOutgoing");
+    expect(onTabChange).toHaveBeenCalledWith("sent");
+  });
+});
+

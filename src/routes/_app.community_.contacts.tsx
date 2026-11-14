@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MyContactsPage } from "@/components/bloom/contacts/MyContactsPage";
+import { parseContactsTab, type ContactsUrlTab } from "@/lib/notification-targets";
 
 export const Route = createFileRoute("/_app/community_/contacts")({
   head: () => ({
@@ -12,5 +13,16 @@ export const Route = createFileRoute("/_app/community_/contacts")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: MyContactsPage,
+  validateSearch: (search: Record<string, unknown>): { tab?: ContactsUrlTab } => {
+    const tab = parseContactsTab(search.tab);
+    return tab ? { tab } : {};
+  },
+  component: MyContactsRoute,
 });
+
+/** The URL (?tab=) selects the tab, so bell notifications can open the right list. */
+function MyContactsRoute() {
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  return <MyContactsPage tab={tab ?? "contacts"} onTabChange={(next) => navigate({ search: { tab: next }, replace: true })} />;
+}
