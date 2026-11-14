@@ -36,6 +36,30 @@ export class NoteImageError extends Error {
   constructor(readonly code: ImageErrorCode) { super(code); }
 }
 
+/** Which call failed, with the original Supabase error kept (not replaced) for diagnosis. */
+export type ImageStep = "storage_upload" | "metadata_insert" | "storage_remove" | "metadata_delete";
+export class NoteImageStepError extends Error {
+  constructor(readonly step: ImageStep, readonly original: unknown) { super(`${step}_failed`); }
+}
+const failed = (step: ImageStep, original: unknown): never => { throw new NoteImageStepError(step, original); };
+
+/**
+ * Safe summary for the console: step, HTTP status and error code plus the short Supabase message
+ * with UUIDs masked. Never includes paths, row details, hints, tokens or file content.
+ */
+export function describeImageError(error: unknown) {
+  const step = error instanceof NoteImageStepError ? error.step : "unknown";
+  const source = (error instanceof NoteImageStepError ? error.original : error) as
+    { message?: unknown; code?: unknown; status?: unknown; statusCode?: unknown; error?: unknown } | null;
+  const text = (value: unknown) => typeof value === "string" || typeof value === "number" ? String(value) : undefined;
+  return {
+    step,
+    status: text(source?.statusCode) ?? text(source?.status),
+    code: text(source?.code) ?? text(source?.error),
+    message: text(source?.message)?.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>").slice(0, 200),
+  };
+}
+
 const IMAGE_FIELDS = "id,user_id,note_id,file_path,mime_type,size_bytes,width,height,order_index,created_at";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const workspaceNoteImagesKey = (userId: string | undefined) => ["workspace-note-images", userId] as const;
@@ -139,7 +163,7 @@ export async function uploadNoteImage(expectedId: string, noteId: string, image:
   if (image.blob.type !== "image/webp" || image.blob.size > MAX_STORED_IMAGE_BYTES) throw new NoteImageError("image_too_large");
   const bucket = supabase.storage.from(WORKSPACE_MEDIA_BUCKET);
   const { error: uploadError } = await bucket.upload(path, image.blob, { upsert: false, contentType: "image/webp", cacheControl: "3600" });
-  if (uploadError && !isDuplicateObject(uploadError)) throw uploadError;
+  if (uploadError && !isDuplicateObject(uploadError)) failed("storage_upload", uploadError);
   const row = { id: image.id, user_id: owner, note_id: noteId, file_path: path, mime_type: "image/webp", size_bytes: image.blob.size,
     width: image.width, height: image.height, order_index: orderIndex };
   const { data, error } = await supabase.from("workspace_note_images").insert(row).select(IMAGE_FIELDS).single();
@@ -150,7 +174,7 @@ export async function uploadNoteImage(expectedId: string, noteId: string, image:
     if (!readError && saved && (saved as NoteImage).note_id === noteId && (saved as NoteImage).file_path === path) return saved as NoteImage;
   }
   await bucket.remove([path]);
-  throw error;
+  return failed("metadata_insert", error);
 }
 
 /**
@@ -161,9 +185,9 @@ export async function deleteNoteImage(expectedId: string, image: Pick<NoteImage,
   const owner = await authenticatedOwner(expectedId);
   const path = noteImagePath(owner, image.note_id, image.id);
   const { error: removeError } = await supabase.storage.from(WORKSPACE_MEDIA_BUCKET).remove([path]);
-  if (removeError) throw removeError;
+  if (removeError) failed("storage_remove", removeError);
   const { error } = await supabase.from("workspace_note_images").delete().eq("user_id", owner).eq("note_id", image.note_id).eq("id", image.id);
-  if (error) throw error;
+  if (error) failed("metadata_delete", error);
 }
 
 /**
