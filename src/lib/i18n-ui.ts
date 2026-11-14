@@ -44,10 +44,10 @@ export const uiTranslations = {
         "newNote": "Nova nota", "firstNote": "Criar minha primeira nota", "editNote": "Editar nota", "titleLabel": "Título (opcional)",
         "titlePlaceholder": "Dê um título à sua nota", "contentLabel": "Conteúdo", "contentPlaceholder": "O que você quer lembrar?",
         "colorLabel": "Cor", "contentRequired": "Escreva o conteúdo da nota antes de salvar.", "save": "Salvar", "cancel": "Cancelar", "close": "Fechar",
-        "pin": "Fixar nota", "unpin": "Desafixar nota", "actions": "Ações da nota", "edit": "Editar", "delete": "Excluir",
+        "pin": "Travar posição", "unpin": "Destravar posição", "bringFront": "Trazer para frente", "sendBack": "Enviar para trás", "boardLabel": "Mural de notas (arraste as notas para posicioná-las)", "actions": "Ações da nota", "edit": "Editar", "delete": "Excluir",
         "moveFirst": "Mover para o início", "moveLast": "Mover para o fim", "deleteTitle": "Excluir esta nota?", "deleteBody": "Esta ação não pode ser desfeita.",
         "saved": "Nota salva.", "deleted": "Nota excluída.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
-        "loadError": "Não foi possível carregar suas notas.", "retry": "Tentar novamente", "saving": "Salvando…", "pinned": "Fixadas", "notes": "Notas",
+        "loadError": "Não foi possível carregar suas notas.", "retry": "Tentar novamente", "saving": "Salvando…", "pinned": "Travadas", "notes": "Notas",
         "colors": { "yellow": "Amarelo", "peach": "Pêssego", "mint": "Menta", "lavender": "Lavanda", "rose": "Rosa", "sky": "Azul-céu", "neutral": "Neutro" }
       },
       "projects": {
@@ -1712,10 +1712,10 @@ export const uiTranslations = {
         "newNote": "New note", "firstNote": "Create my first note", "editNote": "Edit note", "titleLabel": "Title (optional)",
         "titlePlaceholder": "Give your note a title", "contentLabel": "Content", "contentPlaceholder": "What would you like to remember?",
         "colorLabel": "Color", "contentRequired": "Write some content before saving your note.", "save": "Save", "cancel": "Cancel", "close": "Close",
-        "pin": "Pin note", "unpin": "Unpin note", "actions": "Note actions", "edit": "Edit", "delete": "Delete",
+        "pin": "Lock position", "unpin": "Unlock position", "bringFront": "Bring to front", "sendBack": "Send to back", "boardLabel": "Notes board (drag notes to position them)", "actions": "Note actions", "edit": "Edit", "delete": "Delete",
         "moveFirst": "Move to start", "moveLast": "Move to end", "deleteTitle": "Delete this note?", "deleteBody": "This action cannot be undone.",
         "saved": "Note saved.", "deleted": "Note deleted.", "saveError": "Could not save this change. Please try again.",
-        "loadError": "Could not load your notes.", "retry": "Try again", "saving": "Saving…", "pinned": "Pinned", "notes": "Notes",
+        "loadError": "Could not load your notes.", "retry": "Try again", "saving": "Saving…", "pinned": "Locked", "notes": "Notes",
         "colors": { "yellow": "Yellow", "peach": "Peach", "mint": "Mint", "lavender": "Lavender", "rose": "Rose", "sky": "Sky blue", "neutral": "Neutral" }
       },
       "projects": {

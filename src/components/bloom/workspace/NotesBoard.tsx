@@ -1,16 +1,17 @@
-import { useState, type CSSProperties } from "react";
+import { useState, useSyncExternalStore, type CSSProperties } from "react";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpToLine, MoreHorizontal, Pencil, Pin, PinOff, Plus, StickyNote, Trash2 } from "lucide-react";
+import { BringToFront, Lock, LockOpen, MoreHorizontal, Pencil, Plus, SendToBack, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/hooks/use-language";
 import { useWorkspaceNotes } from "@/hooks/use-workspace-notes";
-import { type WorkspaceNote } from "@/lib/workspace-notes";
+import { canLayer, type WorkspaceNote } from "@/lib/workspace-notes";
 import { cn } from "@/lib/utils";
 import { WorkspaceGridSkeleton } from "./WorkspaceShell";
 import { NoteEditor, type NoteEditorState } from "./NoteEditor";
 import { noteSurface } from "./note-appearance";
+import { NotesCanvas } from "./NotesCanvas";
 
 /** Thin green-grey grid lines (24 × 24px) for the board surface; low opacity so the notes stay in front. */
 const BOARD_GRID: CSSProperties = {
@@ -18,6 +19,16 @@ const BOARD_GRID: CSSProperties = {
     "linear-gradient(to right, oklch(0.55 0.03 150 / 0.09) 1px, transparent 1px), linear-gradient(to bottom, oklch(0.55 0.03 150 / 0.09) 1px, transparent 1px)",
   backgroundSize: "24px 24px",
 };
+
+/** Free positioning starts at the md breakpoint; narrower screens keep the stacked grid without drag. */
+const FREE_BOARD_QUERY = "(min-width: 768px)";
+function subscribeFreeBoard(onChange: () => void) {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const media = window.matchMedia(FREE_BOARD_QUERY);
+  media.addEventListener?.("change", onChange);
+  return () => media.removeEventListener?.("change", onChange);
+}
+const isFreeBoard = () => typeof window !== "undefined" && Boolean(window.matchMedia?.(FREE_BOARD_QUERY).matches);
 
 export function NotesBoard() {
   const { t } = useLanguage();
@@ -32,6 +43,38 @@ export function NotesBoard() {
     toast.dismiss("workspace-notes-feedback");
     setEditor({ id: note.id, isNew: false, draft: { title: note.title ?? "", content: note.content, color: note.color } });
   };
+  const freeBoard = useSyncExternalStore(subscribeFreeBoard, isFreeBoard, () => false);
+  const allNotes = notes ?? [];
+  const renderNote = (note: WorkspaceNote) => (
+    <article data-note-id={note.id} aria-busy={pending}
+      className={cn("min-w-0 rounded-lg border border-note-ink/10 p-4 text-note-ink shadow-note", noteSurface[note.color] ?? noteSurface.neutral)}>
+      <div className="-mr-1 -mt-1 mb-1 flex justify-end gap-1" data-no-drag>
+        <Button variant="ghost" size="icon" className={cn("h-8 w-8 text-note-ink hover:bg-note-ink/10 hover:text-note-ink", note.pinned && "bg-note-ink/10")}
+          disabled={pending} aria-label={t(note.pinned ? "workspace.mural.unpin" : "workspace.mural.pin")}
+          title={t(note.pinned ? "workspace.mural.unpin" : "workspace.mural.pin")} aria-pressed={note.pinned}
+          onClick={() => void execute({ type: "pin", id: note.id, pinned: !note.pinned })}>
+          {note.pinned ? <Lock aria-hidden /> : <LockOpen aria-hidden />}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-note-ink hover:bg-note-ink/10 hover:text-note-ink"
+            disabled={pending} aria-label={t("workspace.mural.actions")} title={t("workspace.mural.actions")}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => startEdit(note)}><Pencil />{t("workspace.mural.edit")}</DropdownMenuItem>
+            <DropdownMenuItem disabled={!canLayer(allNotes, note.id, "front")} onSelect={() => void execute({ type: "layer", id: note.id, to: "front" })}><BringToFront />{t("workspace.mural.bringFront")}</DropdownMenuItem>
+            <DropdownMenuItem disabled={!canLayer(allNotes, note.id, "back")} onSelect={() => void execute({ type: "layer", id: note.id, to: "back" })}><SendToBack />{t("workspace.mural.sendBack")}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleting(note)}><Trash2 />{t("workspace.mural.delete")}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <Button variant="ghost" disabled={pending} aria-label={`${t("workspace.mural.edit")}: ${note.title || note.content.slice(0, 60)}`}
+        className="block h-auto min-h-12 w-full overflow-hidden whitespace-normal p-0 text-left text-note-ink hover:bg-transparent hover:text-note-ink"
+        onClick={() => startEdit(note)}>
+        {note.title && <span className="mb-2 block break-words font-display text-base font-semibold tracking-normal">{note.title}</span>}
+        <span className="block max-h-64 overflow-y-auto whitespace-pre-wrap break-words text-sm font-normal leading-relaxed [overflow-wrap:anywhere]">{note.content}</span>
+      </Button>
+    </article>
+  );
   const groups = [true, false].map((pinned) => ({ pinned, notes: (notes ?? []).filter((note) => note.pinned === pinned) }));
 
   return (
@@ -53,40 +96,13 @@ export function NotesBoard() {
           <p className="mt-1 text-sm text-muted-foreground">{t("workspace.mural.emptyBody")}</p>
           <Button className="mt-5" onClick={startCreate}><Plus aria-hidden />{t("workspace.mural.firstNote")}</Button>
         </div>
+      ) : freeBoard ? (
+        <NotesCanvas notes={allNotes} pending={pending} execute={execute} label={t("workspace.mural.boardLabel")} renderNote={renderNote} />
       ) : groups.filter((group) => group.notes.length > 0).map((group) => (
         <div key={String(group.pinned)} className="space-y-3">
-          <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">{group.pinned && <Pin className="h-3.5 w-3.5" aria-hidden />}{t(group.pinned ? "workspace.mural.pinned" : "workspace.mural.notes")}</h3>
+          <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">{group.pinned && <Lock className="h-3.5 w-3.5" aria-hidden />}{t(group.pinned ? "workspace.mural.pinned" : "workspace.mural.notes")}</h3>
           <div className="grid grid-cols-1 items-start gap-4 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {group.notes.map((note, index) => (
-              <article key={note.id} data-note-id={note.id} aria-busy={pending}
-                className={cn("min-w-0 rounded-lg border border-note-ink/10 p-4 text-note-ink shadow-note", noteSurface[note.color] ?? noteSurface.neutral)}>
-                <div className="-mr-1 -mt-1 mb-1 flex justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-note-ink hover:bg-note-ink/10 hover:text-note-ink"
-                    disabled={pending} aria-label={t(note.pinned ? "workspace.mural.unpin" : "workspace.mural.pin")}
-                    title={t(note.pinned ? "workspace.mural.unpin" : "workspace.mural.pin")} aria-pressed={note.pinned}
-                    onClick={() => void execute({ type: "pin", id: note.id, pinned: !note.pinned })}>
-                    {note.pinned ? <Pin className="fill-current" aria-hidden /> : <PinOff aria-hidden />}
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-note-ink hover:bg-note-ink/10 hover:text-note-ink"
-                      disabled={pending} aria-label={t("workspace.mural.actions")} title={t("workspace.mural.actions")}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => startEdit(note)}><Pencil />{t("workspace.mural.edit")}</DropdownMenuItem>
-                      <DropdownMenuItem disabled={index === 0} onSelect={() => void execute({ type: "move", id: note.id, direction: -1 })}><ArrowUpToLine />{t("workspace.mural.moveFirst")}</DropdownMenuItem>
-                      <DropdownMenuItem disabled={index === group.notes.length - 1} onSelect={() => void execute({ type: "move", id: note.id, direction: 1 })}><ArrowDownToLine />{t("workspace.mural.moveLast")}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleting(note)}><Trash2 />{t("workspace.mural.delete")}</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button variant="ghost" disabled={pending} aria-label={`${t("workspace.mural.edit")}: ${note.title || note.content.slice(0, 60)}`}
-                  className="block h-auto min-h-12 w-full overflow-hidden whitespace-normal p-0 text-left text-note-ink hover:bg-transparent hover:text-note-ink"
-                  onClick={() => startEdit(note)}>
-                  {note.title && <span className="mb-2 block break-words font-display text-base font-semibold tracking-normal">{note.title}</span>}
-                  <span className="block max-h-64 overflow-y-auto whitespace-pre-wrap break-words text-sm font-normal leading-relaxed [overflow-wrap:anywhere]">{note.content}</span>
-                </Button>
-              </article>
-            ))}
+            {group.notes.map((note) => <div key={note.id} className="min-w-0">{renderNote(note)}</div>)}
           </div>
         </div>
       ))}

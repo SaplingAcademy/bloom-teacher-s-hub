@@ -4,7 +4,7 @@ import type { WorkspaceNote } from "../src/lib/workspace-notes";
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn(), eq: vi.fn(), result: { data: null as unknown, error: null as unknown } }));
 vi.mock("@/lib/supabase", () => ({ supabase: { auth: { getUser: mocks.getUser }, from: mocks.from } }));
 import { fetchWorkspaceNotes, persistNoteCommand } from "../src/lib/workspace-notes-data";
-const saved: WorkspaceNote = { id: "n", user_id: "teacher", title: "", content: "hello", color: "yellow", pinned: false, order_index: 0, created_at: "now", updated_at: "now" };
+const saved: WorkspaceNote = { id: "n", user_id: "teacher", title: "", content: "hello", color: "yellow", pinned: false, order_index: 0, pos_x: null, pos_y: null, created_at: "now", updated_at: "now" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -38,10 +38,27 @@ describe("Workspace session-client persistence", () => {
     expect(mocks.eq).toHaveBeenCalledWith("user_id", "teacher");
     expect(mocks.eq).toHaveBeenCalledWith("id", "n");
   });
-  it("reorders using only one row and order_index", async () => {
-    await persistNoteCommand("teacher", { type: "move", id: "n", direction: 1 }, [{ ...saved, order_index: 5 }]);
+  it("changes the stacking layer using only one row and order_index", async () => {
+    await persistNoteCommand("teacher", { type: "layer", id: "n", to: "front" }, [{ ...saved, order_index: 5 }]);
     expect(mocks.update).toHaveBeenCalledOnce();
     expect(mocks.update).toHaveBeenCalledWith({ order_index: 5 });
+  });
+  it("saves a dropped position as pos_x/pos_y only, owner/id-scoped and without user_id", async () => {
+    await persistNoteCommand("teacher", { type: "position", id: "n", x: 240, y: 96 }, [{ ...saved, pos_x: 240, pos_y: 96 }]);
+    expect(mocks.update).toHaveBeenCalledOnce();
+    expect(mocks.update).toHaveBeenCalledWith({ pos_x: 240, pos_y: 96 });
+    expect(mocks.eq).toHaveBeenCalledWith("user_id", "teacher");
+    expect(mocks.eq).toHaveBeenCalledWith("id", "n");
+    expect(mocks.from.mock.results[0].value.select).toHaveBeenCalledWith(expect.stringContaining("pos_x,pos_y"));
+  });
+  it("keeps saved coordinates within the database range", async () => {
+    await persistNoteCommand("teacher", { type: "position", id: "n", x: -10.4, y: 25000 }, [saved]);
+    expect(mocks.update).toHaveBeenCalledWith({ pos_x: 0, pos_y: 20000 });
+    await expect(persistNoteCommand("teacher", { type: "position", id: "n", x: Number.NaN, y: 0 }, [saved])).rejects.toThrow("invalid_position");
+  });
+  it("propagates failed position writes so the board can roll back", async () => {
+    mocks.result = { data: null, error: { message: "write rejected" } };
+    await expect(persistNoteCommand("teacher", { type: "position", id: "n", x: 0, y: 0 }, [saved])).rejects.toEqual({ message: "write rejected" });
   });
   it("does not report failed or zero-row deletion as success", async () => {
     mocks.result = { data: null, error: { message: "network failure" } };
@@ -68,6 +85,6 @@ describe("Workspace session-client persistence", () => {
   });
   it("propagates failed ordering writes instead of claiming success", async () => {
     mocks.result = { data: null, error: { message: "write rejected" } };
-    await expect(persistNoteCommand("teacher", { type: "move", id: "n", direction: -1 }, [saved])).rejects.toEqual({ message: "write rejected" });
+    await expect(persistNoteCommand("teacher", { type: "layer", id: "n", to: "back" }, [saved])).rejects.toEqual({ message: "write rejected" });
   });
 });
