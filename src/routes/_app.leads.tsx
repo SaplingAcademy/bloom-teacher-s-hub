@@ -542,7 +542,6 @@ function LeadsPage() {
     <div className="space-y-6 pb-12">
       {stageConfirmation.error && !stageConfirmation.request && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{stageConfirmation.error}</p>}
       <PageHeader
-        eyebrow={t("auditUi.salesPipeline")}
         title={t("leads.title")}
         titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("leads.title")}`} text={t("leads.subtitle")} className="text-muted-foreground" />}
         actions={
