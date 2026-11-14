@@ -225,7 +225,8 @@ export const uiTranslations = {
     },
     "libraryAccess": {
       "adminTitle": "Recursos da Biblioteca", "search": "Buscar recurso por nome", "free": "Free", "premium": "Premium",
-      "makeFree": "Tornar Free", "makePremium": "Tornar Premium", "confirmTitle": "Alterar classificação do recurso?",
+      "makeFree": "Tornar Free", "makePremium": "Tornar Premium", "markSoon": "Marcar como SOON", "release": "Liberar", "soonMessage": "Disponível em breve",
+      "confirmSoon": "{name} continuará visível na Biblioteca com a tag SOON, mas somente administradores poderão abrir.", "confirmRelease": "{name} voltará a ficar disponível, respeitando a classificação Free/Premium.", "confirmTitle": "Alterar classificação do recurso?",
       "confirmPremium": "O recurso {name} ficará disponível somente para professores Premium e administradoras.",
       "confirmFree": "O recurso {name} ficará disponível para todos os professores.", "confirm": "Confirmar alteração",
       "saved": "Classificação salva.", "saveError": "Não foi possível salvar a classificação. Tente novamente.",
@@ -1936,7 +1937,8 @@ export const uiTranslations = {
     },
     "libraryAccess": {
       "adminTitle": "Library Resources", "search": "Search resources by name", "free": "Free", "premium": "Premium",
-      "makeFree": "Make Free", "makePremium": "Make Premium", "confirmTitle": "Change resource classification?",
+      "makeFree": "Make Free", "makePremium": "Make Premium", "markSoon": "Mark as SOON", "release": "Release", "soonMessage": "Available soon",
+      "confirmSoon": "{name} will stay visible in the Library with the SOON tag, but only administrators can open it.", "confirmRelease": "{name} will be available again, following its Free/Premium classification.", "confirmTitle": "Change resource classification?",
       "confirmPremium": "The resource {name} will be available only to Premium teachers and administrators.",
       "confirmFree": "The resource {name} will be available to all teachers.", "confirm": "Confirm change",
       "saved": "Classification saved.", "saveError": "Could not save the classification. Please try again.",

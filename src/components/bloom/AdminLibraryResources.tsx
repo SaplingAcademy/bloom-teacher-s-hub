@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Lock, Unlock } from "lucide-react";
+import { Clock, Loader2, Search, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/use-language";
 import { usePlan } from "@/hooks/use-plan";
 import { LIBRARY_CATALOG, type LibraryResource } from "@/lib/library-catalog";
-import { ADMIN_LIBRARY_QUERY_KEY, fetchLibraryClassifications, resourceAccessLevel, setLibraryClassification } from "@/lib/library-access";
+import {
+  ADMIN_LIBRARY_QUERY_KEY, fetchLibraryClassifications, resourceAccessLevel, resourceAvailability, setLibraryAvailability, setLibraryClassification,
+  type LibraryAvailability,
+} from "@/lib/library-access";
 import type { SubscriptionPlan } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +20,17 @@ export function AdminLibraryResources() {
   const { isSuperAdmin } = usePlan();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [pending, setPending] = useState<{ resource: LibraryResource; level: SubscriptionPlan } | null>(null);
+  // One confirmation dialog for both independent controls: Free/Premium and availability (SOON).
+  const [pending, setPending] = useState<
+    | { kind: "level"; resource: LibraryResource; level: SubscriptionPlan }
+    | { kind: "availability"; resource: LibraryResource; availability: LibraryAvailability }
+    | null
+  >(null);
   const query = useQuery({ queryKey: ADMIN_LIBRARY_QUERY_KEY, queryFn: fetchLibraryClassifications, enabled: isSuperAdmin, staleTime: 0, refetchOnWindowFocus: "always" });
   const mutation = useMutation({
-    mutationFn: ({ resource, level }: { resource: LibraryResource; level: SubscriptionPlan }) => setLibraryClassification(resource.id, level),
+    mutationFn: (change: NonNullable<typeof pending>) => change.kind === "level"
+      ? setLibraryClassification(change.resource.id, change.level)
+      : setLibraryAvailability(change.resource.id, change.availability),
     onSuccess: async () => {
       toast.success(t("libraryAccess.saved"));
       setPending(null);
@@ -49,16 +59,23 @@ export function AdminLibraryResources() {
         <ul className="divide-y divide-border">
           {resources.map((resource) => {
             const level = resourceAccessLevel(resource.id, query.data);
+            const availability = resourceAvailability(resource.id, query.data);
             return <li key={resource.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="break-words font-semibold">{resource.title}</p>
                 <p className="text-xs text-muted-foreground">{t(`libraryAccess.categories.${resource.category}`)}</p>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex shrink-0 flex-wrap items-center gap-3">
+                {availability === "soon" && <Badge variant="outline" className="font-semibold tracking-wide">SOON</Badge>}
                 <Badge variant={level === "pro" ? "default" : "secondary"}>{level === "pro" ? t("libraryAccess.premium") : t("libraryAccess.free")}</Badge>
-                <Button size="sm" variant="outline" disabled={level === null || mutation.isPending} onClick={() => setPending({ resource, level: level === "pro" ? "free" : "pro" })}>
+                <Button size="sm" variant="outline" disabled={level === null || mutation.isPending} onClick={() => setPending({ kind: "level", resource, level: level === "pro" ? "free" : "pro" })}>
                   {level === "pro" ? <Unlock /> : <Lock />}
                   {level === "pro" ? t("libraryAccess.makeFree") : t("libraryAccess.makePremium")}
+                </Button>
+                <Button size="sm" variant="outline" disabled={availability === null || mutation.isPending}
+                  onClick={() => setPending({ kind: "availability", resource, availability: availability === "soon" ? "available" : "soon" })}>
+                  {availability === "soon" ? <Unlock /> : <Clock />}
+                  {availability === "soon" ? t("libraryAccess.release") : t("libraryAccess.markSoon")}
                 </Button>
               </div>
             </li>;
@@ -69,7 +86,9 @@ export function AdminLibraryResources() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("libraryAccess.confirmTitle")}</DialogTitle>
-            <DialogDescription>{pending ? t(pending.level === "pro" ? "libraryAccess.confirmPremium" : "libraryAccess.confirmFree").replace("{name}", pending.resource.title) : ""}</DialogDescription>
+            <DialogDescription>{pending ? t(pending.kind === "level"
+              ? pending.level === "pro" ? "libraryAccess.confirmPremium" : "libraryAccess.confirmFree"
+              : pending.availability === "soon" ? "libraryAccess.confirmSoon" : "libraryAccess.confirmRelease").replace("{name}", pending.resource.title) : ""}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" disabled={mutation.isPending} onClick={() => setPending(null)}>{t("common.cancel")}</Button>

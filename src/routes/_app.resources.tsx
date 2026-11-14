@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLibraryAccess } from "@/hooks/use-library-access";
 import { LIBRARY_CATALOG, librarySourceId, type LibraryResource, type ResourceTemplate } from "@/lib/library-catalog";
 import { accessLibraryResource } from "@/lib/library-content.functions";
-import { isLibraryPremiumError, LIBRARY_ACCESS_QUERY_KEY, type LibraryClassification } from "@/lib/library-access";
+import { isLibraryPremiumError, isLibrarySoonError, LIBRARY_ACCESS_QUERY_KEY, type LibraryClassification } from "@/lib/library-access";
 import { PremiumBenefitsDialog } from "@/components/bloom/PremiumGate";
 import { ReceiptGenerator } from "@/components/resources/ReceiptGenerator";
 import { Button } from "@/components/ui/button";
@@ -233,10 +233,15 @@ function ResourcesPage() {
     localStorage.setItem("bloom.resources.recent", JSON.stringify(updated));
   };
 
+  // Discreet notice for SOON resources (also used when the server refuses with LIBRARY_RESOURCE_SOON).
+  const showSoonNotice = () => toast(translate("libraryAccess.soonMessage"), { id: "library-soon" });
+
   // No visual/default classification ever substitutes for this authenticated assertion.
   const loadTemplate = async (template: LibraryResource): Promise<ResourceTemplate | null> => {
     const owner = user?.id;
     if (!owner) return null;
+    // SOON is closed for teachers before any request; the server enforces the same rule.
+    if (library.soonLocked(librarySourceId(template.id))) { showSoonNotice(); return null; }
     const attempt = ++accessAttempt.current;
     setAccessBusy(true);
     try {
@@ -248,12 +253,14 @@ function ResourcesPage() {
       if (attempt !== accessAttempt.current || userRef.current !== owner || !result.template) return null;
       setLoadedLevel(result.accessLevel);
       queryClient.setQueryData<LibraryClassification[]>(LIBRARY_ACCESS_QUERY_KEY(owner), (rows) => rows
-        ? [...rows.filter((row) => row.resource_id !== librarySourceId(template.id)), { resource_id: librarySourceId(template.id), access_level: result.accessLevel }]
+        ? [...rows.filter((row) => row.resource_id !== librarySourceId(template.id)),
+          { ...rows.find((row) => row.resource_id === librarySourceId(template.id)), resource_id: librarySourceId(template.id), access_level: result.accessLevel }]
         : undefined);
       const custom = customTemplates.find((item) => item.id === template.id);
       return custom ? { ...result.template, ...custom } : result.template;
     } catch (error) {
-      if (isLibraryPremiumError(error)) setPremiumOpen(true);
+      if (isLibrarySoonError(error)) showSoonNotice();
+      else if (isLibraryPremiumError(error)) setPremiumOpen(true);
       else toast.error(translate("libraryAccess.accessError"));
       return null;
     } finally {
@@ -266,19 +273,21 @@ function ResourcesPage() {
     const openTemplate = previewTemplate ?? builderTemplate;
     if (!openTemplate) return;
     const level = library.level(librarySourceId(openTemplate.id));
-    if (!library.fullAccess && (level === "pro" || (level === null && loadedLevel !== "free"))) {
+    if (library.soonLocked(librarySourceId(openTemplate.id)) ||
+      (!library.fullAccess && (level === "pro" || (level === null && loadedLevel !== "free")))) {
       setPreviewTemplate(null);
       setBuilderTemplate(null);
       setBuilderForm({});
     }
-  }, [library.data, library.isError, library.fullAccess, previewTemplate, builderTemplate, loadedLevel]);
+  }, [library.data, library.isError, library.fullAccess, library.isAdmin, previewTemplate, builderTemplate, loadedLevel]);
 
   // Same revocation rule for the receipt generator.
   useEffect(() => {
     if (!receiptOpen) return;
     const level = library.level(RECEIPT_RESOURCE_ID);
-    if (!library.fullAccess && (level === "pro" || (level === null && loadedLevel !== "free"))) setReceiptOpen(false);
-  }, [library.data, library.isError, library.fullAccess, receiptOpen, loadedLevel]);
+    if (library.soonLocked(RECEIPT_RESOURCE_ID) ||
+      (!library.fullAccess && (level === "pro" || (level === null && loadedLevel !== "free")))) setReceiptOpen(false);
+  }, [library.data, library.isError, library.fullAccess, library.isAdmin, receiptOpen, loadedLevel]);
 
   useEffect(() => {
     accessAttempt.current += 1;
@@ -289,8 +298,15 @@ function ResourcesPage() {
   }, [user?.id]);
 
   const accessBadge = (id: string) => {
-    if (library.level(librarySourceId(id)) !== "pro") return null;
-    return <Badge variant="secondary" className="gap-1 text-xs"><Lock className="h-3 w-3" />{translate("libraryAccess.premium")}</Badge>;
+    const sourceId = librarySourceId(id);
+    const soon = library.availability(sourceId) === "soon";
+    const premium = library.level(sourceId) === "pro";
+    const soonBadge = <Badge variant="outline" className="text-xs font-semibold tracking-wide" data-testid="library-soon-badge">SOON</Badge>;
+    const premiumBadge = <Badge variant="secondary" className="gap-1 text-xs"><Lock className="h-3 w-3" />{translate("libraryAccess.premium")}</Badge>;
+    // Teachers see only SOON on SOON resources; admins see both classifications.
+    if (soon && !library.isAdmin) return soonBadge;
+    if (soon && premium) return <span className="inline-flex flex-wrap items-center gap-1">{soonBadge}{premiumBadge}</span>;
+    return soon ? soonBadge : premium ? premiumBadge : null;
   };
 
   // Duplicates keep their source classification and reauthorize before copying content.
@@ -403,7 +419,11 @@ function ResourcesPage() {
       await navigator.clipboard.writeText(result.rendered);
       toast.success(t.copiedToast);
     } catch (error) {
-      if (isLibraryPremiumError(error)) {
+      if (isLibrarySoonError(error)) {
+        setBuilderTemplate(null);
+        setPreviewTemplate(null);
+        showSoonNotice();
+      } else if (isLibraryPremiumError(error)) {
         setBuilderTemplate(null);
         setPreviewTemplate(null);
         setPremiumOpen(true);
