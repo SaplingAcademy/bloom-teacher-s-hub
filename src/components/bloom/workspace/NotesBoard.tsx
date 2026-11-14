@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { ArrowDownToLine, ArrowUpToLine, MoreHorizontal, Pencil, Pin, PinOff, Plus, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 import { WorkspaceGridSkeleton } from "./WorkspaceShell";
 import { NoteEditor, type NoteEditorState } from "./NoteEditor";
 import { noteSurface } from "./note-appearance";
+
+/** Thin green-grey grid lines (24 × 24px) for the board surface; low opacity so the notes stay in front. */
+const BOARD_GRID: CSSProperties = {
+  backgroundImage:
+    "linear-gradient(to right, oklch(0.55 0.03 150 / 0.09) 1px, transparent 1px), linear-gradient(to bottom, oklch(0.55 0.03 150 / 0.09) 1px, transparent 1px)",
+  backgroundSize: "24px 24px",
+};
 
 export function NotesBoard() {
   const { t } = useLanguage();
@@ -37,6 +44,8 @@ export function NotesBoard() {
         <p className="flex-1 text-destructive">{t("workspace.mural.loadError")}</p>
         <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={pending}>{t("workspace.mural.retry")}</Button>
       </div>}
+      {/* Board surface: soft 24px grid where the notes are pinned (empty areas included). */}
+      <div className="min-h-[22rem] space-y-5 rounded-2xl border border-border/50 bg-card/40 p-4 sm:p-5" style={BOARD_GRID}>
       {isLoading ? <WorkspaceGridSkeleton variant="notes" /> : notes?.length === 0 && !error ? (
         <div className="flex flex-col items-center justify-center border border-dashed border-border px-6 py-14 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><StickyNote className="h-6 w-6" aria-hidden /></div>
@@ -81,6 +90,7 @@ export function NotesBoard() {
           </div>
         </div>
       ))}
+      </div>
       {editor && <NoteEditor key={editor.id} editor={editor} pending={pending} onClose={() => setEditor(null)}
         onSave={(draft) => execute({ type: editor.isNew ? "create" : "edit", id: editor.id, draft })} />}
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => { if (!open && !pending) setDeleting(null); }}>
