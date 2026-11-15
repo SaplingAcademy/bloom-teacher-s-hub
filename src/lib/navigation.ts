@@ -11,7 +11,7 @@ import {
   Newspaper,
   Store,
   UserCircle,
-  Contact,
+ 
   Settings,
   ShieldCheck,
   GraduationCap,
@@ -104,15 +104,8 @@ export const navSections: NavSection[] = [
         to: "/community",
         icon: Newspaper,
         description: "Ideas and discussion",
-        // Exact match: /community/contacts belongs to My Contacts, not to the feed.
+        // My Contacts is a tab inside Community (/community?view=contacts), not a menu entry.
         exact: true,
-      },
-      {
-        id: "contacts",
-        label: "My Contacts",
-        to: "/community/contacts",
-        icon: Contact,
-        description: "Connect with other teachers",
       },
       {
         id: "marketplace",
@@ -165,7 +158,7 @@ export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), .
 export const navGroups: { id: "management" | "business" | "resources"; itemIds: string[] }[] = [
   { id: "management", itemIds: ["today", "calendar", "students", "leads"] },
   { id: "business", itemIds: ["finance", "growth", "workspaceHub"] },
-  { id: "resources", itemIds: ["resources", "community", "contacts", "academy", "marketplace"] },
+  { id: "resources", itemIds: ["resources", "community", "academy", "marketplace"] },
 ];
 
 export type NavGroup = { id: string; items: NavItem[] };

@@ -1,4 +1,4 @@
-/** Tabs of /community/contacts as they appear in the URL (?tab=). */
+/** Tabs of My Contacts (inside Community: /community?view=contacts&tab=) as they appear in the URL. */
 export const CONTACTS_URL_TABS = ["contacts", "received", "sent"] as const;
 export type ContactsUrlTab = (typeof CONTACTS_URL_TABS)[number];
 
@@ -8,14 +8,14 @@ export function parseContactsTab(value: unknown): ContactsUrlTab | undefined {
 
 export type NotificationTarget =
   | { to: "/community"; post: string }
-  | { to: "/community/contacts"; tab: ContactsUrlTab }
+  | { to: "/community"; view: "contacts"; tab: ContactsUrlTab }
   | { to: "/workspace/projects" };
 
 /** Where clicking a bell notification leads; null keeps the current behavior (mark as read only). */
 export function notificationTarget(n: { type: string | null; post_id: string | null }): NotificationTarget | null {
   if (n.type === "community_comment" && n.post_id) return { to: "/community", post: n.post_id };
-  if (n.type === "contact_request") return { to: "/community/contacts", tab: "received" };
-  if (n.type === "contact_accepted") return { to: "/community/contacts", tab: "contacts" };
+  if (n.type === "contact_request") return { to: "/community", view: "contacts", tab: "received" };
+  if (n.type === "contact_accepted") return { to: "/community", view: "contacts", tab: "contacts" };
   // Project invites are answered above the projects list; accepted ones appear in the list.
   if (n.type === "project_invite" || n.type === "project_invite_accepted") return { to: "/workspace/projects" };
   return null;

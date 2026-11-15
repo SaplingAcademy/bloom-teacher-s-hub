@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Droplets, MessageSquare, Plus, Search, Send, Sprout, Trash2, Trophy } from "lucide-react";
+import { Contact, Droplets, MessageSquare, Newspaper, Plus, Search, Send, Sprout, Trash2, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +21,8 @@ import { CommunitySaveButton } from "@/components/community/CommunitySaveButton"
 import { fetchSavedPostIds, savePost, unsavePost } from "@/lib/community-saved";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { InfoTooltip } from "@/components/bloom/InfoTooltip";
+import { MyContactsPage } from "@/components/bloom/contacts/MyContactsPage";
+import { parseContactsTab, type ContactsUrlTab } from "@/lib/notification-targets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,8 +47,14 @@ export const Route = createFileRoute("/_app/community")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>): { post?: string } =>
-    typeof search.post === "string" && search.post ? { post: search.post } : {},
+  // ?post= focuses a post; ?view=contacts opens the My Contacts tab (?tab= selects its list).
+  validateSearch: (search: Record<string, unknown>): { post?: string; view?: "contacts"; tab?: ContactsUrlTab } => {
+    if (search.view === "contacts") {
+      const tab = parseContactsTab(search.tab);
+      return { view: "contacts", ...(tab ? { tab } : {}) };
+    }
+    return typeof search.post === "string" && search.post ? { post: search.post } : {};
+  },
   component: CommunityPage,
 });
 
@@ -332,7 +340,9 @@ function CommunityPage() {
     loadComments(postId);
   };
 
-  const { post: focusPost } = Route.useSearch();
+  const { post: focusPost, view, tab: contactsTab } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const contactsView = view === "contacts";
   const [handledFocus, setHandledFocus] = useState<string | null>(null);
   useEffect(() => {
     if (!focusPost || loading || handledFocus === focusPost) return;
@@ -435,16 +445,17 @@ function CommunityPage() {
         eyebrow={t("communityV1.eyebrow")}
         title={t("communityV1.title")}
         titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("communityV1.title")}`} text={t("communityV1.description")} className="text-muted-foreground" />}
-        actions={
+        actions={contactsView ? undefined : (
           <Button onClick={() => setNewOpen(true)} className="gap-1.5">
             <Plus className="w-4 h-4" /> {t("communityV1.newPost")}
           </Button>
-        }
+        )}
       />
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr] items-start">
+        <div className="space-y-4 lg:sticky lg:top-4">
         {/* Leaderboard */}
-        <aside className="rounded-2xl border border-border bg-card p-4 space-y-3 lg:sticky lg:top-4">
+        <aside className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-accent" />
             <h2 className="font-display font-semibold text-sm">{t("communityV1.highlights")}</h2>
@@ -494,7 +505,29 @@ function CommunityPage() {
           )}
         </aside>
 
-        {/* Feed */}
+        {/* Community tabs, below the leaderboard: posts or My Contacts (same page, ?view=contacts). */}
+        <nav aria-label={t("communityV1.sectionsLabel")} className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1 lg:grid-cols-1" data-testid="community-tabs">
+          {([
+            { id: "feed", icon: Newspaper, label: t("communityV1.postsTab"), active: !contactsView, search: {} },
+            { id: "contacts", icon: Contact, label: t("contacts.title"), active: contactsView, search: { view: "contacts" as const } },
+          ]).map((item) => (
+            <button key={item.id} type="button" aria-current={item.active ? "page" : undefined} data-testid={`community-tab-${item.id}`}
+              onClick={() => { if (!item.active) void navigate({ search: item.search }); }}
+              className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors lg:justify-start ${
+                item.active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}>
+              <item.icon className="h-4 w-4 shrink-0" aria-hidden /> <span className="truncate">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        </div>
+
+        {contactsView ? (
+          <section className="min-w-0" data-testid="community-contacts">
+            <MyContactsPage embedded tab={contactsTab ?? "contacts"} onTabChange={(next) => void navigate({ search: { view: "contacts", tab: next }, replace: true })} />
+          </section>
+        ) : (
+        /* Feed */
         <section className="space-y-4 min-w-0">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -643,6 +676,7 @@ function CommunityPage() {
             ))
           )}
         </section>
+        )}
       </div>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
