@@ -14,7 +14,8 @@ import { ConfirmDialog, ItemDialog, ProjectDialog, TitleDialog } from "./Project
 import { colorOf, projectIcon } from "./project-appearance";
 import { ProgressBar } from "./ProjectProgress";
 import { ProjectPages } from "./ProjectPages";
-import { ProjectSummary } from "./ProjectSummary";
+import { ProjectSummary, projectCreator } from "./ProjectSummary";
+import { useTeacherIdentity } from "@/components/layout/TeacherAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import { NotesBoard } from "./NotesBoard";
 
@@ -24,7 +25,9 @@ type Confirm = { kind: "phase"; phase: WorkspacePhase } | { kind: "item"; item: 
 export function ProjectDetailView({ projectId }: { projectId: string }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  // Same identity as the app header (profiles.full_name / avatar_url, with the shared name rules).
+  const identity = useTeacherIdentity();
   const { detail, isLoading, error, notFound, pending, execute, refetch } = useWorkspaceProject(projectId);
   const list = useWorkspaceProjects();
   const [editingProject, setEditingProject] = useState(false);
@@ -102,7 +105,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         </div>
         {/* Summary: creator, future collaborators, overall progress (Bloom green) and dates. Phases keep the project color. */}
         <ProjectSummary project={project} progress={computeProgress(items)} pending={pending}
-          creator={project.user_id === user?.id ? { name: profile?.name ?? "", photo: profile?.photo || null } : { name: "" }}
+          creator={projectCreator(project.user_id, user?.id, identity)}
           onSaveDates={(start, end) => execute({ type: "setDates", start_date: start, end_date: end })} />
       </header>
 
