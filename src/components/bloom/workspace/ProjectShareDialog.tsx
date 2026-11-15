@@ -12,13 +12,8 @@ import { normalizeInviteEmail, ShareError, type InviteOutcome, type ProjectMembe
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "./ProjectDialogs";
 
-const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
-
-export function PersonAvatar({ name, photo, className }: { name: string; photo?: string | null; className?: string }) {
-  return photo
-    ? <img src={photo} alt="" className={cn("h-8 w-8 shrink-0 rounded-full object-cover", className)} />
-    : <span aria-hidden className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lilac-soft text-xs font-semibold text-foreground", className)}>{initials(name)}</span>;
-}
+import { PersonAvatar } from "./PersonAvatar";
+export { PersonAvatar };
 
 type Feedback = { tone: "success" | "info" | "error"; text: string };
 type Confirm = { kind: "remove"; member: ProjectMember } | { kind: "leave" };

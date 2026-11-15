@@ -2,6 +2,13 @@
 export const PROJECT_COLORS = ["forest", "terracotta", "lilac", "sky", "amber", "slate"] as const;
 export const PROJECT_ICONS = ["folder", "book-open", "graduation-cap", "lightbulb", "calendar", "megaphone", "target", "palette"] as const;
 export const ITEM_TYPES = ["task", "checklist", "note", "link"] as const;
+/** New items are only tasks or links; checklist/note stay valid for existing items (never deleted). */
+export const CREATABLE_ITEM_TYPES = ["task", "link"] as const;
+/** Type options in the item form: creatable types, plus the current type when editing a legacy item. */
+export function itemTypeOptions(isNew: boolean, current: string): ItemType[] {
+  const base: ItemType[] = [...CREATABLE_ITEM_TYPES];
+  return !isNew && !base.includes(current as ItemType) && (ITEM_TYPES as readonly string[]).includes(current) ? [...base, current as ItemType] : base;
+}
 export type ProjectColor = (typeof PROJECT_COLORS)[number];
 export type ProjectIcon = (typeof PROJECT_ICONS)[number];
 export type ProjectStatus = "active" | "archived";
@@ -111,8 +118,9 @@ export type DetailCommand =
   | { type: "renamePhase"; id: string; title: string }
   | { type: "deletePhase"; id: string }
   | { type: "reorderPhases"; updates: OrderUpdate[] }
-  | { type: "createItem"; id: string; item: PreparedItem; order_index: number }
-  | { type: "editItem"; id: string; item: PreparedItem; order_index: number }
+  /** assignees (tasks only, when the assignee feature is available): exactly these teachers. */
+  | { type: "createItem"; id: string; item: PreparedItem; order_index: number; assignees?: string[] }
+  | { type: "editItem"; id: string; item: PreparedItem; order_index: number; assignees?: string[] }
   | { type: "toggleItem"; id: string; completed: boolean }
   | { type: "deleteItem"; id: string }
   | { type: "reorderItems"; updates: OrderUpdate[] };

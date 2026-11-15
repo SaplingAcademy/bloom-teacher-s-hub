@@ -12,6 +12,7 @@ vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn(), Link: ({ 
 vi.mock("@/hooks/use-workspace-projects", () => ({
   useWorkspaceProject: () => ({ detail: { project, phases: [], items: [] }, isLoading: false, error: null, notFound: false, pending: false, execute: vi.fn(), refetch: vi.fn() }),
   useWorkspaceProjects: () => ({ execute: vi.fn() }),
+  useItemAssignees: () => ({ byItem: {}, available: false }),
 }));
 vi.mock("@/hooks/use-project-members", () => ({ useProjectMembers: () => ({ members: [], leave: { mutateAsync: vi.fn() } }) }));
 vi.mock("../src/components/bloom/workspace/NotesBoard", () => ({ NotesBoard: () => null }));

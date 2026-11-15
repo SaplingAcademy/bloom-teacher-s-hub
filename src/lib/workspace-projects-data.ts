@@ -8,6 +8,22 @@ const PAGE = 500;
 
 export const workspaceProjectsKey = (userId: string | undefined) => ["workspace-projects", userId] as const;
 export const workspaceProjectKey = (userId: string | undefined, projectId: string) => ["workspace-project", userId, projectId] as const;
+export const workspaceItemAssigneesKey = (userId: string | undefined, projectId: string) => ["workspace-item-assignees", userId, projectId] as const;
+
+/**
+ * Task assignees of one project (item id → teacher ids, in assignment order). Read under RLS
+ * (owner or accepted participant); names/photos come from the participants list and the owner's
+ * public profile. Writes go only through create_project_task / set_project_item_assignees.
+ */
+export async function fetchItemAssignees(expectedId: string, projectId: string): Promise<Record<string, string[]>> {
+  await authenticatedOwner(expectedId);
+  const rows = await readAll<{ item_id: string; user_id: string }>((a, b) => supabase.from("workspace_item_assignees")
+    .select("item_id,user_id,created_at,workspace_project_items!inner(project_id)").eq("workspace_project_items.project_id", projectId)
+    .order("created_at").order("user_id").range(a, b));
+  const map: Record<string, string[]> = {};
+  for (const row of rows) (map[row.item_id] ??= []).push(row.user_id);
+  return map;
+}
 export interface ProjectSummary { project: WorkspaceProject; progress: Progress }
 
 export async function authenticatedOwner(expectedId: string): Promise<string> {
@@ -135,13 +151,24 @@ export async function persistDetailCommand(expectedId: string, projectId: string
       for (const u of command.updates) await single(phases().update({ order_index: u.order_index }).eq("project_id", projectId).eq("id", u.id).select("id").maybeSingle(), "phase_not_found");
       return;
     case "createItem": {
+      if (command.item.type === "task" && command.assignees) {
+        // Task + assignees in one database transaction (no task left without the chosen people).
+        const { error } = await supabase.rpc("create_project_task", { p_id: command.id, p_project: projectId, p_phase: command.item.phase_id,
+          p_title: command.item.title, p_content: command.item.content, p_order_index: command.order_index, p_assignees: command.assignees });
+        if (error) throw error; return;
+      }
       const { error } = await items().insert({ id: command.id, project_id: projectId, user_id: owner, ...command.item, completed: false, order_index: command.order_index });
       if (error && (error as { code?: string }).code !== "23505") throw error; return;
     }
     case "editItem": {
       const patch: Record<string, unknown> = { ...command.item, order_index: command.order_index };
       if (command.item.type === "note" || command.item.type === "link") patch.completed = false;
-      await single(items().update(patch).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "item_not_found"); return;
+      await single(items().update(patch).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "item_not_found");
+      if (command.item.type === "task" && command.assignees) {
+        const { error } = await supabase.rpc("set_project_item_assignees", { p_item: command.id, p_assignees: command.assignees });
+        if (error) throw error;
+      }
+      return;
     }
     case "toggleItem":
       await single(items().update({ completed: command.completed }).eq("project_id", projectId).eq("id", command.id).in("type", ["task", "checklist"]).select("id").maybeSingle(), "item_not_found"); return;
