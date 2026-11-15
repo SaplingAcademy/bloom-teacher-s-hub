@@ -3,7 +3,7 @@ import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/
 import { toast } from "sonner";
 import { useAuth } from "./use-auth";
 import { useLanguage } from "./use-language";
-import { applyDetailCommand, computeProgress, prepareProjectDraft, type DetailCommand, type ProjectDetail } from "@/lib/workspace-projects";
+import { applyDetailCommand, computeProgress, localCalendarDate, prepareProjectDraft, type DetailCommand, type ProjectDetail } from "@/lib/workspace-projects";
 import { deleteProjectNoteFiles, workspaceNoteImagesKey } from "@/lib/workspace-note-images";
 import { workspaceNotesKey } from "@/lib/workspace-notes-data";
 import { fetchProjectDetail, fetchProjectSummaries, persistDetailCommand, persistListCommand, workspaceProjectKey, workspaceProjectsKey, type ListCommand, type ProjectSummary } from "@/lib/workspace-projects-data";
@@ -30,7 +30,8 @@ function useLatch(key: readonly unknown[]) {
 export function applyListCommand(list: ProjectSummary[], command: ListCommand, owner: string, now: string): ProjectSummary[] {
   if (command.type === "delete") return list.filter((entry) => entry.project.id !== command.id);
   if (command.type === "create") {
-    return [{ project: { id: command.id, user_id: owner, ...prepareProjectDraft(command.draft), status: "active", created_at: now, updated_at: now } as ProjectSummary["project"], progress: computeProgress([]) }, ...list];
+    // Optimistic start date; the saved row (teacher's profile time zone) replaces it on success.
+    return [{ project: { id: command.id, user_id: owner, ...prepareProjectDraft(command.draft), status: "active", start_date: localCalendarDate(), end_date: null, created_at: now, updated_at: now } as ProjectSummary["project"], progress: computeProgress([]) }, ...list];
   }
   return list.map((entry) => entry.project.id !== command.id ? entry : {
     ...entry, project: { ...entry.project, ...(command.type === "edit" ? prepareProjectDraft(command.draft) : { status: command.status }), updated_at: now },

@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
-import { computeProgress, isUuid, prepareProjectDraft, type DetailCommand, type ProjectDetail, type ProjectDraft, type Progress, type ProjectStatus, type WorkspaceItem, type WorkspacePhase, type WorkspaceProject } from "./workspace-projects";
+import { computeProgress, isUuid, localCalendarDate, prepareProjectDates, prepareProjectDraft, type DetailCommand, type ProjectDetail, type ProjectDraft, type Progress, type ProjectStatus, type WorkspaceItem, type WorkspacePhase, type WorkspaceProject } from "./workspace-projects";
 
-const PROJECT_FIELDS = "id,user_id,title,description,color,icon,status,created_at,updated_at";
+const PROJECT_FIELDS = "id,user_id,title,description,color,icon,status,start_date,end_date,created_at,updated_at";
 const PHASE_FIELDS = "id,project_id,user_id,title,order_index,created_at,updated_at";
 const ITEM_FIELDS = "id,project_id,phase_id,user_id,type,title,content,completed,order_index,meta,created_at,updated_at";
 const PAGE = 500;
@@ -65,6 +65,12 @@ export type ListCommand =
   | { type: "setStatus"; id: string; status: ProjectStatus }
   | { type: "delete"; id: string };
 
+/** Today in the teacher's profile time zone (IANA); unreadable or invalid zone → browser zone. */
+export async function teacherToday(owner: string): Promise<string> {
+  const { data, error } = await supabase.from("profiles").select("timezone").eq("id", owner).maybeSingle();
+  return localCalendarDate(error ? null : (data as { timezone?: string | null } | null)?.timezone ?? null);
+}
+
 export async function persistListCommand(expectedId: string, command: ListCommand): Promise<WorkspaceProject | null> {
   const owner = await authenticatedOwner(expectedId);
   const projects = () => supabase.from("workspace_projects");
@@ -73,7 +79,7 @@ export async function persistListCommand(expectedId: string, command: ListComman
     return null;
   }
   if (command.type === "create") {
-    const { data, error } = await projects().insert({ id: command.id, user_id: owner, ...prepareProjectDraft(command.draft), status: "active" }).select(PROJECT_FIELDS).single();
+    const { data, error } = await projects().insert({ id: command.id, user_id: owner, ...prepareProjectDraft(command.draft), status: "active", start_date: await teacherToday(owner) }).select(PROJECT_FIELDS).single();
     if (!error) return data as WorkspaceProject;
     // Same dialog keeps its UUID across uncertain retries: read the row back instead of duplicating.
     if ((error as { code?: string }).code !== "23505") throw error;
@@ -92,6 +98,8 @@ export async function persistDetailCommand(expectedId: string, projectId: string
   switch (command.type) {
     case "editProject":
       await single(project().update(prepareProjectDraft(command.draft)).eq("user_id", owner).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
+    case "setDates":
+      await single(project().update(prepareProjectDates(command.start_date, command.end_date)).eq("user_id", owner).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
     case "setStatus":
       await single(project().update({ status: command.status }).eq("user_id", owner).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
     case "createPhase": {
