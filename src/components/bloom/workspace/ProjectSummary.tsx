@@ -19,11 +19,11 @@ interface ProjectSummaryProps {
 
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
 
-function Property({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
+function Property({ icon, label, children, valueClassName }: { icon: ReactNode; label: string; children: ReactNode; valueClassName?: string }) {
   return (
-    <div className="flex min-h-8 items-center gap-3">
+    <div className="flex min-h-8 items-center gap-3 sm:min-h-7">
       <dt className="flex w-24 shrink-0 items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</dt>
-      <dd className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-foreground">{children}</dd>
+      <dd className={cn("flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-foreground", valueClassName)}>{children}</dd>
     </div>
   );
 }
@@ -51,12 +51,13 @@ export function ProjectSummary({ project, progress, creator, pending, onSaveDate
 
   return (
     <>
-      <dl className="mt-4 grid gap-x-10 gap-y-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 sm:ml-16 sm:grid-cols-2" data-testid="project-summary">
-        <Property icon={<CircleUser className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.createdBy")}>
+      <dl className="mt-4 grid gap-x-10 gap-y-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 sm:ml-16 sm:grid-cols-2 sm:gap-y-0.5 sm:py-2" data-testid="project-summary">
+        {/* Long names wrap to at most two lines; the avatar and the + stay in place inside the card. */}
+        <Property icon={<CircleUser className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.createdBy")} valueClassName="flex-nowrap">
           {creator.photo
             ? <img src={creator.photo} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
             : <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lilac-soft text-[10px] font-semibold text-foreground">{initials(name)}</span>}
-          <span className="truncate">{name}</span>
+          <span className="line-clamp-2 min-w-0 break-words [overflow-wrap:anywhere]" title={name}>{name}</span>
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -75,7 +76,8 @@ export function ProjectSummary({ project, progress, creator, pending, onSaveDate
             <span className="block h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress.percent}%`, backgroundColor: "var(--primary)" }} />
           </span>
           <span className="text-xs font-medium tabular-nums">{progress.percent}%</span>
-          <span className="text-xs text-muted-foreground">· {t("workspace.project.summary.tasksDone").replace("{done}", String(progress.done)).replace("{total}", String(progress.total))}</span>
+          <span className="hidden text-xs text-muted-foreground sm:inline" aria-hidden>·</span>
+          <span className="text-xs text-muted-foreground" data-testid="project-tasks-done">{t("workspace.project.summary.tasksDone").replace("{done}", String(progress.done)).replace("{total}", String(progress.total))}</span>
         </Property>
         <Property icon={<CalendarDays className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.start")}>
           {dateButton(project.start_date, "project-start-date")}
