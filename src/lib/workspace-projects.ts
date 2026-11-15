@@ -11,6 +11,8 @@ export type StatusFilter = "active" | "archived" | "all";
 export interface WorkspaceProject {
   id: string; user_id: string; title: string; description: string; color: ProjectColor; icon: string;
   status: ProjectStatus; created_at: string; updated_at: string;
+  /** Calendar days (YYYY-MM-DD), never converted between time zones. end_date is optional. */
+  start_date: string; end_date: string | null;
 }
 export interface WorkspacePhase { id: string; project_id: string; user_id: string; title: string; order_index: number; created_at: string; updated_at: string }
 export interface WorkspaceItem {
@@ -94,6 +96,7 @@ export function reorder<T extends { id: string; order_index: number; created_at:
 export type DetailCommand =
   | { type: "editProject"; draft: ProjectDraft }
   | { type: "setStatus"; status: ProjectStatus }
+  | { type: "setDates"; start_date: string; end_date: string | null }
   | { type: "createPhase"; id: string; title: string; order_index: number }
   | { type: "renamePhase"; id: string; title: string }
   | { type: "deletePhase"; id: string }
@@ -113,6 +116,7 @@ export function applyDetailCommand(detail: ProjectDetail, command: DetailCommand
   switch (command.type) {
     case "editProject": return { ...detail, project: { ...project, ...prepareProjectDraft(command.draft), updated_at: now } };
     case "setStatus": return { ...detail, project: { ...project, status: command.status, updated_at: now } };
+    case "setDates": return { ...detail, project: { ...project, ...prepareProjectDates(command.start_date, command.end_date), updated_at: now } };
     case "createPhase": return { ...detail, phases: [...phases, { id: command.id, project_id: project.id, user_id: project.user_id, title: command.title.trim(), order_index: command.order_index, created_at: now, updated_at: now }] };
     case "renamePhase": return { ...detail, phases: phases.map((p) => (p.id === command.id ? { ...p, title: command.title.trim(), updated_at: now } : p)) };
     // Mirrors FK ON DELETE SET NULL (phase_id): items stay in the project's general area.
@@ -124,6 +128,46 @@ export function applyDetailCommand(detail: ProjectDetail, command: DetailCommand
     case "deleteItem": return { ...detail, items: items.filter((i) => i.id !== command.id) };
     case "reorderItems": return { ...detail, items: applyOrder(items, command.updates) };
   }
+}
+
+const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+/** True only for a real calendar day written as YYYY-MM-DD. */
+export function isCalendarDate(value: string): boolean {
+  const match = CALENDAR_DATE.exec(value);
+  if (!match) return false;
+  const [y, m, d] = match.slice(1).map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
+/** Same rule as the database check: start required, end optional and never before start. */
+export function prepareProjectDates(start: string, end: string | null): { start_date: string; end_date: string | null } {
+  if (!isCalendarDate(start)) throw new Error("invalid_start_date");
+  const endDate = end ? end : null;
+  if (endDate !== null && !isCalendarDate(endDate)) throw new Error("invalid_end_date");
+  if (endDate !== null && endDate < start) throw new Error("end_before_start");
+  return { start_date: start, end_date: endDate };
+}
+
+/**
+ * Today as a calendar day (YYYY-MM-DD) in an IANA time zone; a missing or invalid zone falls
+ * back to the browser's zone. Used once, when a project is created.
+ */
+export function localCalendarDate(timeZone?: string | null, now: Date = new Date()): string {
+  const format = (zone?: string) => new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  if (timeZone) {
+    try { return format(timeZone); } catch { /* invalid zone: browser fallback */ }
+  }
+  return format();
+}
+
+/** Displays a calendar day in the interface language without any time-zone conversion. */
+export function formatCalendarDate(value: string, lang: string): string {
+  const match = CALENDAR_DATE.exec(value);
+  if (!match) return value;
+  const [y, m, d] = match.slice(1).map(Number);
+  return new Intl.DateTimeFormat(lang === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })
+    .format(new Date(Date.UTC(y, m - 1, d)));
 }
 
 export const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
