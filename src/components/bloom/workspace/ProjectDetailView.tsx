@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Layers, Link2, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
 import { useWorkspaceProject, useWorkspaceProjects } from "@/hooks/use-workspace-projects";
@@ -106,7 +107,14 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
           position: (page) => t(page === 1 ? "workspace.project.pages.planning" : "workspace.project.pages.board") }}
         planning={<div className="space-y-5">
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{t("workspace.project.newPhaseHint")}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
           </div>
 
