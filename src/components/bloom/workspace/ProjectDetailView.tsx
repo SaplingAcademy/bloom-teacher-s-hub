@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, type DragEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProjectOwnerProfile } from "@/lib/workspace-projects-data";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Archive, ArchiveRestore, LogOut, Users, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Layers, Link2, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, LogOut, Users, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Kanban, Layers, Link2, List, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
 import { useWorkspaceProject, useWorkspaceProjects } from "@/hooks/use-workspace-projects";
-import { computeProgress, containerItems, isTrackable, nextOrder, phaseProgress, reorder, safeUrl, sortPhases, type ItemDraft, type PreparedItem, type ProjectDetail, type WorkspaceItem, type WorkspacePhase } from "@/lib/workspace-projects";
+import { computeProgress, containerItems, kanbanDropItem, isTrackable, nextOrder, phaseProgress, reorder, safeUrl, sortPhases, type ItemDraft, type PreparedItem, type ProjectDetail, type WorkspaceItem, type WorkspacePhase } from "@/lib/workspace-projects";
 import { cn } from "@/lib/utils";
 import { WorkspaceBackLink, WorkspaceDetailSkeleton } from "./WorkspaceShell";
 import { ConfirmDialog, ItemDialog, ProjectDialog, TitleDialog } from "./ProjectDialogs";
@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { NotesBoard } from "./NotesBoard";
 import { ProjectShareDialog } from "./ProjectShareDialog";
 import { useProjectMembers } from "@/hooks/use-project-members";
+import { readProjectView, saveProjectView, type ProjectView } from "@/lib/workspace-project-view";
 import { toast } from "sonner";
 import { ShareError } from "@/lib/workspace-project-members";
 
@@ -41,6 +42,10 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [sharing, setSharing] = useState(false);
+  // Planning view (page 1): the current phases list or the Kanban board. Same data and commands.
+  // Remembered per teacher and project (display preference only); List when never chosen.
+  const [view, setViewState] = useState<ProjectView>(() => readProjectView(user?.id, projectId));
+  const setView = (next: ProjectView) => { setViewState(next); saveProjectView(user?.id, projectId, next); };
   const [leaving, setLeaving] = useState(false);
   // Same cache as the share dialog: accepted participants feed the summary avatars.
   const team = useProjectMembers(projectId, Boolean(detail));
@@ -98,6 +103,12 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const moveItem = (item: WorkspaceItem, phaseId: string | null) => execute({ type: "editItem", id: item.id, order_index: nextOrder(containerItems(items, phaseId)),
     item: { type: item.type, title: item.title, content: item.content, meta: item.meta, phase_id: phaseId } });
 
+  const phaseProps = (phase: WorkspacePhase, index: number) => ({
+    phase, first: index === 0, last: index === phases.length - 1,
+    onRename: () => setPhaseEditor({ id: phase.id, title: phase.title, isNew: false }),
+    onDeletePhase: () => setConfirm({ kind: "phase", phase }),
+    onMovePhase: (dir: -1 | 1) => { const updates = reorder(phases, phase.id, dir); if (updates.length) void execute({ type: "reorderPhases", updates }); },
+  });
   const containerProps = { detail, phases, pending: busy, color, onAdd: newItem, onEdit: editItem, onMove: moveItem,
     onToggle: (item: WorkspaceItem) => void execute({ type: "toggleItem", id: item.id, completed: !item.completed }),
     onReorder: (phaseId: string | null, id: string, dir: -1 | 1) => { const updates = reorder(containerItems(items, phaseId), id, dir); if (updates.length) void execute({ type: "reorderItems", updates }); },
@@ -154,6 +165,16 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         labels={{ next: t("workspace.project.pages.toBoard"), previous: t("workspace.project.pages.toPlanning"),
           position: (page) => t(page === 1 ? "workspace.project.pages.planning" : "workspace.project.pages.board") }}
         planning={<div className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Lista | Kanban, same toggle pattern as Leads. */}
+          <div role="group" aria-label={t("workspace.project.view.label")} className="flex items-center rounded-lg border border-border bg-muted/60 p-1" data-testid="project-view-toggle">
+            <Button variant={view === "list" ? "secondary" : "ghost"} size="sm" className="h-7 gap-1 text-xs" aria-pressed={view === "list"} onClick={() => setView("list")}>
+              <List className="h-3.5 w-3.5" aria-hidden />{t("workspace.project.view.list")}
+            </Button>
+            <Button variant={view === "kanban" ? "secondary" : "ghost"} size="sm" className="h-7 gap-1 text-xs" aria-pressed={view === "kanban"} onClick={() => setView("kanban")}>
+              <Kanban className="h-3.5 w-3.5" aria-hidden />{t("workspace.project.view.kanban")}
+            </Button>
+          </div>
           <div className="flex flex-wrap justify-end gap-2">
             <TooltipProvider delayDuration={200}>
               <Tooltip>
@@ -172,14 +193,19 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
               </Tooltip>
             </TooltipProvider>
           </div>
+          </div>
 
-          <ItemContainer {...containerProps} phase={null} />
-          {phases.map((phase, index) => (
-            <ItemContainer key={phase.id} {...containerProps} phase={phase} first={index === 0} last={index === phases.length - 1}
-              onRename={() => setPhaseEditor({ id: phase.id, title: phase.title, isNew: false })}
-              onDeletePhase={() => setConfirm({ kind: "phase", phase })}
-              onMovePhase={(dir) => { const updates = reorder(phases, phase.id, dir); if (updates.length) void execute({ type: "reorderPhases", updates }); }} />
-          ))}
+          {view === "list" ? <>
+            <ItemContainer {...containerProps} phase={null} />
+            {phases.map((phase, index) => (
+              <ItemContainer key={phase.id} {...containerProps} {...phaseProps(phase, index)} />
+            ))}
+          </> : (
+            <KanbanBoard {...containerProps} phaseProps={phaseProps} onDropItem={(itemId, phaseId) => {
+              const item = kanbanDropItem(items, itemId, phaseId);
+              if (item && !busy) void moveItem(item, phaseId);
+            }} />
+          )}
         </div>}
         board={() => <NotesBoard projectId={project.id} readOnly={project.status !== "active"} isProjectOwner={isOwner} title={t("workspace.project.pages.boardTitle")} />}
       />
@@ -227,18 +253,7 @@ function ItemContainer({ detail, phases, phase, pending, color, first, last, onA
       <div className="flex items-center gap-2">
         <h3 className="min-w-0 flex-1 break-words font-display text-base font-semibold">{phase?.title ?? t("workspace.project.general")}</h3>
         {progress && <span className="text-xs font-medium text-muted-foreground">{progress.percent}%</span>}
-        {phase && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("workspace.project.phaseActions")} disabled={pending}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={onRename}><Pencil aria-hidden />{t("workspace.project.renamePhase")}</DropdownMenuItem>
-              <DropdownMenuItem disabled={first} onSelect={() => onMovePhase?.(-1)}><ArrowUp aria-hidden />{t("workspace.project.moveUp")}</DropdownMenuItem>
-              <DropdownMenuItem disabled={last} onSelect={() => onMovePhase?.(1)}><ArrowDown aria-hidden />{t("workspace.project.moveDown")}</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onDeletePhase}><Trash2 aria-hidden />{t("workspace.project.deletePhase")}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        {phase && <PhaseMenu pending={pending} first={first} last={last} onRename={onRename} onDeletePhase={onDeletePhase} onMovePhase={onMovePhase} />}
       </div>
       {progress && <div className="mt-2"><ProgressBar progress={progress} color={color} compact /></div>}
       {items.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">{t("workspace.project.emptyContainer")}</p> : (
@@ -252,13 +267,93 @@ function ItemContainer({ detail, phases, phase, pending, color, first, last, onA
   );
 }
 
-function ItemRow({ item, phases, pending, first, last, onToggle, onEdit, onDelete, onMove, onReorder }: { item: WorkspaceItem; phases: WorkspacePhase[]; pending: boolean; first: boolean; last: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; onMove: (phaseId: string | null) => void; onReorder: (dir: -1 | 1) => void }) {
+/** Phase actions (rename, reorder, delete), shared by the list sections and the Kanban columns. */
+function PhaseMenu({ pending, first, last, onRename, onDeletePhase, onMovePhase }: Pick<ContainerProps, "pending" | "first" | "last" | "onRename" | "onDeletePhase" | "onMovePhase">) {
+  const { t } = useLanguage();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("workspace.project.phaseActions")} disabled={pending}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={onRename}><Pencil aria-hidden />{t("workspace.project.renamePhase")}</DropdownMenuItem>
+        <DropdownMenuItem disabled={first} onSelect={() => onMovePhase?.(-1)}><ArrowUp aria-hidden />{t("workspace.project.moveUp")}</DropdownMenuItem>
+        <DropdownMenuItem disabled={last} onSelect={() => onMovePhase?.(1)}><ArrowDown aria-hidden />{t("workspace.project.moveDown")}</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onDeletePhase}><Trash2 aria-hidden />{t("workspace.project.deletePhase")}</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const KANBAN_DRAG_TYPE = "application/x-bloom-workspace-item";
+
+/**
+ * Kanban view: the general area plus one column per phase (same order as the list), each item as
+ * a card. Desktop drag & drop moves an item to another column through the list's move command;
+ * on touch devices (no HTML drag events) the card's "Move to" menu does the same. Disabled while
+ * a write is pending or when the teacher cannot edit (participant on an archived project).
+ */
+function KanbanBoard({ detail, phases, pending, color, onAdd, onEdit, onToggle, onDelete, onMove, onReorder, phaseProps, onDropItem }:
+  Omit<ContainerProps, "phase"> & { phaseProps: (phase: WorkspacePhase, index: number) => Partial<ContainerProps>; onDropItem: (itemId: string, phaseId: string | null) => void }) {
+  const { t } = useLanguage();
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const columns: (WorkspacePhase | null)[] = [null, ...phases];
+  return (
+    <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-4" data-testid="project-kanban">
+      {columns.map((phase, index) => {
+        const phaseId = phase?.id ?? null;
+        const key = phaseId ?? "general";
+        const items = containerItems(detail.items, phaseId);
+        const progress = phase ? phaseProgress(detail.items, phase.id) : null;
+        const menu = phase ? phaseProps(phase, index - 1) : null;
+        return (
+          <section key={key} aria-label={phase?.title ?? t("workspace.project.general")} data-testid="kanban-column" data-phase={key}
+            onDragOver={(event) => { if (!dragging || pending) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; if (over !== key) setOver(key); }}
+            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOver((current) => current === key ? null : current); }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const id = event.dataTransfer.getData(KANBAN_DRAG_TYPE) || dragging;
+              setOver(null); setDragging(null);
+              if (id && !pending) onDropItem(id, phaseId);
+            }}
+            className={cn("flex min-h-[400px] w-[85vw] max-w-xs shrink-0 snap-start flex-col rounded-xl border bg-card/50 p-3 transition-colors sm:w-72",
+              over === key ? "border-primary bg-primary/5" : "border-border")}>
+            <div className="mb-2 flex items-center gap-2 border-b border-border pb-2">
+              <h3 className="min-w-0 flex-1 truncate text-sm font-semibold" title={phase?.title ?? t("workspace.project.general")}>{phase?.title ?? t("workspace.project.general")}</h3>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{items.length}</span>
+              {phase && menu && <PhaseMenu pending={pending} first={menu.first} last={menu.last} onRename={menu.onRename} onDeletePhase={menu.onDeletePhase} onMovePhase={menu.onMovePhase} />}
+            </div>
+            {progress && <div className="mb-2"><ProgressBar progress={progress} color={color} compact /></div>}
+            {items.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border py-8 text-center text-xs text-muted-foreground">{t(pending ? "workspace.project.emptyContainer" : "workspace.project.kanban.dropHere")}</p>
+            ) : (
+              <ul className="flex-1 space-y-2">
+                {items.map((item, position) => <ItemRow key={item.id} item={item} phases={phases} pending={pending} first={position === 0} last={position === items.length - 1}
+                  onToggle={() => onToggle(item)} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} onMove={(p) => onMove(item, p)} onReorder={(dir) => onReorder(phaseId, item.id, dir)}
+                  card={{ draggable: !pending, dragging: dragging === item.id,
+                    onDragStart: (event) => { event.dataTransfer.setData(KANBAN_DRAG_TYPE, item.id); event.dataTransfer.effectAllowed = "move"; setDragging(item.id); },
+                    onDragEnd: () => { setDragging(null); setOver(null); } }} />)}
+              </ul>
+            )}
+            <Button variant="ghost" size="sm" className="mt-2 justify-start text-muted-foreground" onClick={() => onAdd(phaseId)} disabled={pending}><Plus aria-hidden />{t("workspace.project.addHere")}</Button>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+interface KanbanCard { draggable: boolean; dragging: boolean; onDragStart: (event: DragEvent<HTMLLIElement>) => void; onDragEnd: () => void }
+
+function ItemRow({ item, phases, pending, first, last, onToggle, onEdit, onDelete, onMove, onReorder, card }: { item: WorkspaceItem; phases: WorkspacePhase[]; pending: boolean; first: boolean; last: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; onMove: (phaseId: string | null) => void; onReorder: (dir: -1 | 1) => void; card?: KanbanCard }) {
   const { t } = useLanguage();
   const trackable = isTrackable(item);
   const href = item.type === "link" ? safeUrl(item.meta.url) : null;
   const TypeIcon = item.type === "note" ? FileText : item.type === "link" ? Link2 : ListChecks;
   return (
-    <li className="flex items-start gap-3 py-2.5">
+    <li className={card ? cn("flex items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md", card.draggable && "cursor-grab active:cursor-grabbing", card.dragging && "opacity-50")
+      : "flex items-start gap-3 py-2.5"}
+      {...(card ? { draggable: card.draggable, onDragStart: card.onDragStart, onDragEnd: card.onDragEnd, "data-testid": "kanban-card", "data-item": item.id } : {})}>
       {trackable ? (
         <Checkbox className="mt-0.5" checked={item.completed} disabled={pending} onCheckedChange={onToggle}
           aria-label={t(item.completed ? "workspace.project.reopen" : "workspace.project.complete").replace("{title}", item.title)} />
