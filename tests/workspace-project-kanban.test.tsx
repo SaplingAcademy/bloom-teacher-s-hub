@@ -56,6 +56,7 @@ const mount = async () => {
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   document.body.innerHTML = "";
+  localStorage.clear();
   Object.assign(state, { status: "active", owner: "owner", pending: false });
   state.execute.mockReset().mockResolvedValue(true);
 });
@@ -104,6 +105,19 @@ describe("project Kanban view", () => {
     expect(card("i1").getAttribute("draggable")).toBe("false");
     await dragTo("i1", "f2");
     expect(state.execute).not.toHaveBeenCalled();
+  });
+  it("remembers Lista/Kanban per teacher and project; List when never chosen", async () => {
+    await mount();
+    expect(q('[data-testid="project-kanban"]')).toBeNull(); // default: List
+    await act(async () => button("workspace.project.view.kanban").click());
+    expect(localStorage.getItem("bloom.workspace.projectView.p1:me")).toBe("kanban");
+    await act(async () => root.unmount());
+    await mount(); // reopening the project restores Kanban
+    expect(q('[data-testid="project-kanban"]')).not.toBeNull();
+    expect(localStorage.getItem("bloom.workspace.projectView.p2:me")).toBeNull(); // other projects untouched
+    expect(localStorage.getItem("bloom.workspace.projectView.p1:other")).toBeNull(); // other teachers untouched
+    await act(async () => button("workspace.project.view.list").click());
+    expect(localStorage.getItem("bloom.workspace.projectView.p1:me")).toBe("list");
   });
   it("keeps toggling completion and adding items per column", async () => {
     await mount();

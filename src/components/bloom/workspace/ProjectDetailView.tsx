@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { NotesBoard } from "./NotesBoard";
 import { ProjectShareDialog } from "./ProjectShareDialog";
 import { useProjectMembers } from "@/hooks/use-project-members";
+import { readProjectView, saveProjectView, type ProjectView } from "@/lib/workspace-project-view";
 import { toast } from "sonner";
 import { ShareError } from "@/lib/workspace-project-members";
 
@@ -42,7 +43,9 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [sharing, setSharing] = useState(false);
   // Planning view (page 1): the current phases list or the Kanban board. Same data and commands.
-  const [view, setView] = useState<"list" | "kanban">("list");
+  // Remembered per teacher and project (display preference only); List when never chosen.
+  const [view, setViewState] = useState<ProjectView>(() => readProjectView(user?.id, projectId));
+  const setView = (next: ProjectView) => { setViewState(next); saveProjectView(user?.id, projectId, next); };
   const [leaving, setLeaving] = useState(false);
   // Same cache as the share dialog: accepted participants feed the summary avatars.
   const team = useProjectMembers(projectId, Boolean(detail));
