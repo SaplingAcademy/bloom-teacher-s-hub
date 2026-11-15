@@ -72,7 +72,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-5">
       {back}
-      <header className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+      <header className="pt-1">
         <div className="flex items-start gap-4">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `color-mix(in oklch, ${color} 16%, transparent)`, color }}><Icon className="h-6 w-6" aria-hidden /></span>
           <div className="min-w-0 flex-1">
@@ -96,7 +96,8 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="mt-5"><ProgressBar progress={computeProgress(items)} color={color} /></div>
+        {/* Overall project progress uses the Bloom green; phases keep the project color. */}
+        <div className="mt-5"><ProgressBar progress={computeProgress(items)} color="var(--primary)" /></div>
       </header>
 
       {/* Page 1 = planning (unchanged); page 2 = this project's own board. Header above stays in place. */}
@@ -104,9 +105,9 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         labels={{ next: t("workspace.project.pages.toBoard"), previous: t("workspace.project.pages.toPlanning"),
           position: (page) => t(page === 1 ? "workspace.project.pages.planning" : "workspace.project.pages.board") }}
         planning={<div className="space-y-5">
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
+            <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
           </div>
 
           <ItemContainer {...containerProps} phase={null} />
