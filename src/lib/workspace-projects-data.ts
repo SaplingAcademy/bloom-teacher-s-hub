@@ -29,25 +29,29 @@ async function readAll<T>(build: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
+/**
+ * Own projects plus projects shared with the teacher (accepted membership). RLS decides which rows
+ * are visible, so reads filter only by project, never by user_id (shared rows belong to the owner).
+ */
 export async function fetchProjectSummaries(expectedId: string): Promise<ProjectSummary[]> {
-  const owner = await authenticatedOwner(expectedId);
+  await authenticatedOwner(expectedId);
   const [projects, items] = await Promise.all([
-    readAll<WorkspaceProject>((a, b) => supabase.from("workspace_projects").select(PROJECT_FIELDS).eq("user_id", owner).order("updated_at", { ascending: false }).order("id").range(a, b)),
-    readAll<Pick<WorkspaceItem, "id" | "project_id" | "type" | "completed">>((a, b) => supabase.from("workspace_project_items").select("id,project_id,type,completed").eq("user_id", owner).in("type", ["task", "checklist"]).order("id").range(a, b)),
+    readAll<WorkspaceProject>((a, b) => supabase.from("workspace_projects").select(PROJECT_FIELDS).order("updated_at", { ascending: false }).order("id").range(a, b)),
+    readAll<Pick<WorkspaceItem, "id" | "project_id" | "type" | "completed">>((a, b) => supabase.from("workspace_project_items").select("id,project_id,type,completed").in("type", ["task", "checklist"]).order("id").range(a, b)),
   ]);
   return projects.map((project) => ({ project, progress: computeProgress(items.filter((item) => item.project_id === project.id)) }));
 }
 
 /** Missing and inaccessible projects are indistinguishable by design (RLS hides foreign rows). */
 export async function fetchProjectDetail(expectedId: string, projectId: string): Promise<ProjectDetail> {
-  const owner = await authenticatedOwner(expectedId);
+  await authenticatedOwner(expectedId);
   if (!isUuid(projectId)) throw new Error("project_not_found");
-  const { data: project, error } = await supabase.from("workspace_projects").select(PROJECT_FIELDS).eq("user_id", owner).eq("id", projectId).maybeSingle();
+  const { data: project, error } = await supabase.from("workspace_projects").select(PROJECT_FIELDS).eq("id", projectId).maybeSingle();
   if (error) throw error;
   if (!project) throw new Error("project_not_found");
   const [phases, items] = await Promise.all([
-    readAll<WorkspacePhase>((a, b) => supabase.from("workspace_project_phases").select(PHASE_FIELDS).eq("user_id", owner).eq("project_id", projectId).order("order_index").order("id").range(a, b)),
-    readAll<WorkspaceItem>((a, b) => supabase.from("workspace_project_items").select(ITEM_FIELDS).eq("user_id", owner).eq("project_id", projectId).order("order_index").order("id").range(a, b)),
+    readAll<WorkspacePhase>((a, b) => supabase.from("workspace_project_phases").select(PHASE_FIELDS).eq("project_id", projectId).order("order_index").order("id").range(a, b)),
+    readAll<WorkspaceItem>((a, b) => supabase.from("workspace_project_items").select(ITEM_FIELDS).eq("project_id", projectId).order("order_index").order("id").range(a, b)),
   ]);
   return { project: project as WorkspaceProject, phases, items };
 }
@@ -64,6 +68,17 @@ export type ListCommand =
   | { type: "edit"; id: string; draft: ProjectDraft }
   | { type: "setStatus"; id: string; status: ProjectStatus }
   | { type: "delete"; id: string };
+
+/**
+ * Public name/photo of a shared project's owner, through the existing public teacher-profile RPC
+ * (the same one Community uses); profiles RLS keeps other columns private. null when unavailable.
+ */
+export async function fetchProjectOwnerProfile(ownerId: string): Promise<{ name: string; photo: string | null } | null> {
+  const { data, error } = await supabase.rpc("get_public_teacher_profiles");
+  if (error) throw error;
+  const row = ((Array.isArray(data) ? data : []) as { id?: string; full_name?: string | null; avatar_url?: string | null }[]).find((entry) => entry?.id === ownerId);
+  return row ? { name: row.full_name?.trim() ?? "", photo: row.avatar_url ?? null } : null;
+}
 
 /** Today in the teacher's profile time zone (IANA); unreadable or invalid zone → browser zone. */
 export async function teacherToday(owner: string): Promise<string> {
@@ -85,11 +100,16 @@ export async function persistListCommand(expectedId: string, command: ListComman
     if ((error as { code?: string }).code !== "23505") throw error;
     return single(projects().select(PROJECT_FIELDS).eq("user_id", owner).eq("id", command.id).maybeSingle(), "project_not_found");
   }
-  const patch = command.type === "edit" ? prepareProjectDraft(command.draft) : { status: command.status };
-  return single(projects().update(patch).eq("user_id", owner).eq("id", command.id).select(PROJECT_FIELDS).maybeSingle(), "project_not_found");
+  // Editing details is allowed to participants (RLS); archiving/reactivating stays owner-only.
+  if (command.type === "edit") return single(projects().update(prepareProjectDraft(command.draft)).eq("id", command.id).select(PROJECT_FIELDS).maybeSingle(), "project_not_found");
+  return single(projects().update({ status: command.status }).eq("user_id", owner).eq("id", command.id).select(PROJECT_FIELDS).maybeSingle(), "project_not_found");
 }
 
-/** Every write filters by Auth owner and the current project; user_id/project_id are never updated. */
+/**
+ * Writes filter by the current project and row id; RLS decides whether the teacher is the owner
+ * or an accepted participant. Archiving stays owner-only. user_id/project_id are never updated;
+ * on insert the database sets user_id to the project owner (the value sent is ignored).
+ */
 export async function persistDetailCommand(expectedId: string, projectId: string, command: DetailCommand): Promise<void> {
   const owner = await authenticatedOwner(expectedId);
   const phases = () => supabase.from("workspace_project_phases");
@@ -97,9 +117,9 @@ export async function persistDetailCommand(expectedId: string, projectId: string
   const project = () => supabase.from("workspace_projects");
   switch (command.type) {
     case "editProject":
-      await single(project().update(prepareProjectDraft(command.draft)).eq("user_id", owner).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
+      await single(project().update(prepareProjectDraft(command.draft)).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
     case "setDates":
-      await single(project().update(prepareProjectDates(command.start_date, command.end_date)).eq("user_id", owner).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
+      await single(project().update(prepareProjectDates(command.start_date, command.end_date)).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
     case "setStatus":
       await single(project().update({ status: command.status }).eq("user_id", owner).eq("id", projectId).select("id").maybeSingle(), "project_not_found"); return;
     case "createPhase": {
@@ -107,12 +127,12 @@ export async function persistDetailCommand(expectedId: string, projectId: string
       if (error && (error as { code?: string }).code !== "23505") throw error; return;
     }
     case "renamePhase":
-      await single(phases().update({ title: command.title.trim() }).eq("user_id", owner).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "phase_not_found"); return;
+      await single(phases().update({ title: command.title.trim() }).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "phase_not_found"); return;
     case "deletePhase":
       // FK ON DELETE SET NULL (phase_id) keeps the phase's items in the general area.
-      await single(phases().delete().eq("user_id", owner).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "phase_not_found"); return;
+      await single(phases().delete().eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "phase_not_found"); return;
     case "reorderPhases":
-      for (const u of command.updates) await single(phases().update({ order_index: u.order_index }).eq("user_id", owner).eq("project_id", projectId).eq("id", u.id).select("id").maybeSingle(), "phase_not_found");
+      for (const u of command.updates) await single(phases().update({ order_index: u.order_index }).eq("project_id", projectId).eq("id", u.id).select("id").maybeSingle(), "phase_not_found");
       return;
     case "createItem": {
       const { error } = await items().insert({ id: command.id, project_id: projectId, user_id: owner, ...command.item, completed: false, order_index: command.order_index });
@@ -121,14 +141,14 @@ export async function persistDetailCommand(expectedId: string, projectId: string
     case "editItem": {
       const patch: Record<string, unknown> = { ...command.item, order_index: command.order_index };
       if (command.item.type === "note" || command.item.type === "link") patch.completed = false;
-      await single(items().update(patch).eq("user_id", owner).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "item_not_found"); return;
+      await single(items().update(patch).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "item_not_found"); return;
     }
     case "toggleItem":
-      await single(items().update({ completed: command.completed }).eq("user_id", owner).eq("project_id", projectId).eq("id", command.id).in("type", ["task", "checklist"]).select("id").maybeSingle(), "item_not_found"); return;
+      await single(items().update({ completed: command.completed }).eq("project_id", projectId).eq("id", command.id).in("type", ["task", "checklist"]).select("id").maybeSingle(), "item_not_found"); return;
     case "deleteItem":
-      await single(items().delete().eq("user_id", owner).eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "item_not_found"); return;
+      await single(items().delete().eq("project_id", projectId).eq("id", command.id).select("id").maybeSingle(), "item_not_found"); return;
     case "reorderItems":
-      for (const u of command.updates) await single(items().update({ order_index: u.order_index }).eq("user_id", owner).eq("project_id", projectId).eq("id", u.id).select("id").maybeSingle(), "item_not_found");
+      for (const u of command.updates) await single(items().update({ order_index: u.order_index }).eq("project_id", projectId).eq("id", u.id).select("id").maybeSingle(), "item_not_found");
       return;
   }
 }

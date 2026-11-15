@@ -21,6 +21,7 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
   const pending = useIsMutating({ mutationKey: key }) > 0;
   const lock = useRef(false);
   const quiet = useRef(false);
+  const deleteAuthor = useRef<string | null>(null);
   const query = useQuery({
     queryKey: key, enabled: authenticated && !pending, staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -35,7 +36,9 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
     mutationFn: async (command: NoteCommand) => {
       if (!owner || !authenticated) throw new Error("authentication_changed");
       // Files go first: if any cannot be removed, the note stays (no orphaned files in Storage).
-      if (command.type === "delete") await deleteAllNoteImages(owner, command.id);
+      // On a project board the files live in the note author's folder (the owner may delete them).
+      // The optimistic update removes the note first, so its author is captured in execute().
+      if (command.type === "delete") await deleteAllNoteImages(owner, command.id, deleteAuthor.current ?? owner);
       return persistNoteCommand(owner, command, client.getQueryData<WorkspaceNote[]>(key) ?? [], projectId);
     },
     onMutate: async (command) => {
@@ -68,9 +71,10 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
     if (readOnly || lock.current || client.isMutating({ mutationKey: key }) || !authenticated || !query.data) return false;
     lock.current = true;
     quiet.current = Boolean(options.quiet);
+    deleteAuthor.current = command.type === "delete" ? query.data.find((note) => note.id === command.id)?.user_id ?? null : null;
     try { await mutation.mutateAsync(command); return true; }
     catch { return false; }
-    finally { lock.current = false; quiet.current = false; }
+    finally { lock.current = false; quiet.current = false; deleteAuthor.current = null; }
   }
   return { notes: authenticated ? query.data : undefined, isLoading: loading || (authenticated && query.isPending),
     error: authenticated ? query.error : null, pending, execute, refetch: query.refetch };

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceNotes } from "@/hooks/use-workspace-notes";
 import { canLayer, type NoteDraft, type WorkspaceNote } from "@/lib/workspace-notes";
 import { useWorkspaceNoteImages, type NoteImageChanges } from "@/hooks/use-workspace-note-images";
@@ -36,14 +37,19 @@ const isFreeBoard = () => typeof window !== "undefined" && Boolean(window.matchM
 /**
  * The personal board (default, unchanged) or one project's board (projectId). readOnly (archived
  * projects) shows notes and images but hides every write control; the hook and RLS also block writes.
+ * On a shared project board every participant edits any note, images stay with the note's author and
+ * deleting another author's note is reserved to the project owner (isProjectOwner); RLS enforces it.
  */
-export function NotesBoard({ projectId = null, readOnly = false, title }: { projectId?: string | null; readOnly?: boolean; title?: string } = {}) {
+export function NotesBoard({ projectId = null, readOnly = false, isProjectOwner = true, title }: { projectId?: string | null; readOnly?: boolean; isProjectOwner?: boolean; title?: string } = {}) {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const isAuthor = (note: Pick<WorkspaceNote, "user_id">) => note.user_id === user?.id;
+  const canDelete = (note: WorkspaceNote) => !projectId || isProjectOwner || isAuthor(note);
   const { notes, isLoading, error, pending, execute, refetch } = useWorkspaceNotes(projectId, { readOnly });
   const heading = title ?? t("workspace.mural.title");
   const [editor, setEditor] = useState<NoteEditorState | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceNote | null>(null);
-  const noteImages = useWorkspaceNoteImages();
+  const noteImages = useWorkspaceNoteImages(projectId);
   const imageAlt = (n: number) => t("workspace.mural.images.alt").replace("{n}", String(n));
   /**
    * Text first (unchanged text on an existing note is not rewritten), then image changes. The
@@ -92,8 +98,10 @@ export function NotesBoard({ projectId = null, readOnly = false, title }: { proj
             <DropdownMenuItem onSelect={() => startEdit(note)}><Pencil />{t("workspace.mural.edit")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canLayer(allNotes, note.id, "front")} onSelect={() => void execute({ type: "layer", id: note.id, to: "front" })}><BringToFront />{t("workspace.mural.bringFront")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canLayer(allNotes, note.id, "back")} onSelect={() => void execute({ type: "layer", id: note.id, to: "back" })}><SendToBack />{t("workspace.mural.sendBack")}</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleting(note)}><Trash2 />{t("workspace.mural.delete")}</DropdownMenuItem>
+            {canDelete(note) && <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleting(note)}><Trash2 />{t("workspace.mural.delete")}</DropdownMenuItem>
+            </>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}
@@ -141,6 +149,7 @@ export function NotesBoard({ projectId = null, readOnly = false, title }: { proj
       </div>
       {editor && <NoteEditor key={editor.id} editor={editor} pending={pending} onClose={() => setEditor(null)}
         images={noteImages.byNote[editor.id] ?? []} urls={noteImages.urls}
+        imagesEditable={editor.isNew || isAuthor(allNotes.find((note) => note.id === editor.id) ?? { user_id: user?.id ?? "" })}
         onSave={(draft, changes, kept) => saveNote(editor, draft, changes, kept)} />}
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => { if (!open && !pending) setDeleting(null); }}>
         <AlertDialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-lg motion-reduce:animate-none">

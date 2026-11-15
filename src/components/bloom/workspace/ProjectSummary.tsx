@@ -18,12 +18,14 @@ interface ProjectSummaryProps {
 }
 
 /**
- * Creator shown in the summary. Without collaboration the creator is always the signed-in owner,
- * whose identity comes from useTeacherIdentity() (profiles.full_name / avatar_url). Any other
- * owner falls back to the neutral label until participants' profiles are loaded.
+ * Creator shown in the summary. The signed-in owner uses useTeacherIdentity() (profiles.full_name /
+ * avatar_url); on a shared project the owner's public profile is used, with the neutral label while
+ * it loads or when it is unavailable.
  */
-export function projectCreator(ownerId: string, currentUserId: string | undefined, identity: { name: string | null; avatarUrl: string | null }) {
-  return ownerId === currentUserId ? { name: identity.name ?? "", photo: identity.avatarUrl } : { name: "", photo: null };
+export function projectCreator(ownerId: string, currentUserId: string | undefined, identity: { name: string | null; avatarUrl: string | null },
+  ownerProfile: { name: string; photo: string | null } | null = null) {
+  if (ownerId === currentUserId) return { name: identity.name ?? "", photo: identity.avatarUrl };
+  return ownerProfile ? { name: ownerProfile.name, photo: ownerProfile.photo } : { name: "", photo: null };
 }
 
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";

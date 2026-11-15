@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProjectOwnerProfile } from "@/lib/workspace-projects-data";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Layers, Link2, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,11 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const [phaseEditor, setPhaseEditor] = useState<{ id: string; title: string; isNew: boolean } | null>(null);
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const sharedOwnerId = detail && user && detail.project.user_id !== user.id ? detail.project.user_id : null;
+  const ownerProfile = useQuery({
+    queryKey: ["workspace-project-owner", sharedOwnerId], enabled: Boolean(sharedOwnerId), staleTime: 10 * 60_000,
+    queryFn: () => fetchProjectOwnerProfile(sharedOwnerId!),
+  });
 
   const back = <WorkspaceBackLink to="/workspace/projects">{t("workspace.project.back")}</WorkspaceBackLink>;
   if (isLoading) return <div className="space-y-4">{back}<WorkspaceDetailSkeleton /></div>;
@@ -56,6 +63,9 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   );
 
   const { project, items } = detail;
+  // Shared projects: participants edit while active; archiving, deleting and members stay with the owner.
+  const isOwner = project.user_id === user?.id;
+  const busy = pending || (!isOwner && project.status !== "active");
   const phases = sortPhases(detail.phases);
   const color = colorOf(project.color);
   const Icon = projectIcon(project.icon);
@@ -71,7 +81,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const moveItem = (item: WorkspaceItem, phaseId: string | null) => execute({ type: "editItem", id: item.id, order_index: nextOrder(containerItems(items, phaseId)),
     item: { type: item.type, title: item.title, content: item.content, meta: item.meta, phase_id: phaseId } });
 
-  const containerProps = { detail, phases, pending, color, onAdd: newItem, onEdit: editItem, onMove: moveItem,
+  const containerProps = { detail, phases, pending: busy, color, onAdd: newItem, onEdit: editItem, onMove: moveItem,
     onToggle: (item: WorkspaceItem) => void execute({ type: "toggleItem", id: item.id, completed: !item.completed }),
     onReorder: (phaseId: string | null, id: string, dir: -1 | 1) => { const updates = reorder(containerItems(items, phaseId), id, dir); if (updates.length) void execute({ type: "reorderItems", updates }); },
     onDelete: (item: WorkspaceItem) => setConfirm({ kind: "item", item }) };
@@ -85,6 +95,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="break-words font-display text-xl font-semibold leading-tight sm:text-2xl">{project.title}</h2>
+              {!isOwner && <span className="rounded-full bg-lilac-soft px-2 py-0.5 text-xs font-medium text-foreground" data-testid="project-shared-badge">{t("workspace.projects.sharedBadge")}</span>}
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", project.status === "active" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                 {t(project.status === "active" ? "workspace.projects.activeBadge" : "workspace.projects.archivedBadge")}
               </span>
@@ -92,20 +103,22 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
             {project.description && <p className="mt-1.5 whitespace-pre-line break-words text-sm text-muted-foreground">{project.description}</p>}
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("workspace.projects.actions")} disabled={pending}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("workspace.projects.actions")} disabled={busy}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setEditingProject(true)}><Pencil aria-hidden />{t("workspace.mural.edit")}</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void execute({ type: "setStatus", status: project.status === "active" ? "archived" : "active" })}>
-                {project.status === "active" ? <><Archive aria-hidden />{t("workspace.projects.archive")}</> : <><ArchiveRestore aria-hidden />{t("workspace.projects.reactivate")}</>}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setConfirm({ kind: "project" })}><Trash2 aria-hidden />{t("workspace.mural.delete")}</DropdownMenuItem>
+              {isOwner && <>
+                <DropdownMenuItem onSelect={() => void execute({ type: "setStatus", status: project.status === "active" ? "archived" : "active" })}>
+                  {project.status === "active" ? <><Archive aria-hidden />{t("workspace.projects.archive")}</> : <><ArchiveRestore aria-hidden />{t("workspace.projects.reactivate")}</>}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setConfirm({ kind: "project" })}><Trash2 aria-hidden />{t("workspace.mural.delete")}</DropdownMenuItem>
+              </>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
         {/* Summary: creator, future collaborators, overall progress (Bloom green) and dates. Phases keep the project color. */}
-        <ProjectSummary project={project} progress={computeProgress(items)} pending={pending}
-          creator={projectCreator(project.user_id, user?.id, identity)}
+        <ProjectSummary project={project} progress={computeProgress(items)} pending={busy}
+          creator={projectCreator(project.user_id, user?.id, identity, ownerProfile.data ?? null)}
           onSaveDates={(start, end) => execute({ type: "setDates", start_date: start, end_date: end })} />
       </header>
 
@@ -118,12 +131,12 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
+                  <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={busy}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">{t("workspace.project.newPhaseHint")}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
+            <Button onClick={() => newItem(null)} disabled={busy}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
           </div>
 
           <ItemContainer {...containerProps} phase={null} />
@@ -134,7 +147,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
               onMovePhase={(dir) => { const updates = reorder(phases, phase.id, dir); if (updates.length) void execute({ type: "reorderPhases", updates }); }} />
           ))}
         </div>}
-        board={() => <NotesBoard projectId={project.id} readOnly={project.status !== "active"} title={t("workspace.project.pages.boardTitle")} />}
+        board={() => <NotesBoard projectId={project.id} readOnly={project.status !== "active"} isProjectOwner={isOwner} title={t("workspace.project.pages.boardTitle")} />}
       />
 
       <ProjectDialog open={editingProject} pending={pending} onClose={() => setEditingProject(false)}

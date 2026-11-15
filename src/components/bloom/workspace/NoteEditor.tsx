@@ -20,8 +20,9 @@ const ACCEPT = "image/jpeg,image/png,image/webp";
 const errorKey = (error: unknown) => error instanceof NoteImageError
   ? ({ image_type: "type", image_too_large: "tooLarge", image_limit: "limit", image_process: "process" } as const)[error.code] : "process";
 
-export function NoteEditor({ editor, pending, images = [], urls = {}, onClose, onSave }: {
-  editor: NoteEditorState; pending: boolean; images?: readonly NoteImage[]; urls?: Readonly<Record<string, string>>;
+/** imagesEditable = false (another author's note on a shared board): images are shown, not changed. */
+export function NoteEditor({ editor, pending, images = [], urls = {}, imagesEditable = true, onClose, onSave }: {
+  editor: NoteEditorState; pending: boolean; images?: readonly NoteImage[]; urls?: Readonly<Record<string, string>>; imagesEditable?: boolean;
   onClose: () => void; onSave: (draft: NoteDraft, changes: NoteImageChanges, kept: readonly NoteImage[]) => Promise<NoteSaveOutcome>;
 }) {
   const { t } = useLanguage();
@@ -109,20 +110,22 @@ export function NoteEditor({ editor, pending, images = [], urls = {}, onClose, o
           </div>
           <fieldset className="space-y-2" aria-describedby="workspace-note-images-hint">
             <legend className="mb-1 text-sm font-medium">{t("workspace.mural.images.label")}</legend>
-            <p id="workspace-note-images-hint" className="text-xs text-muted-foreground">{t("workspace.mural.images.hint")}</p>
+            {imagesEditable && <p id="workspace-note-images-hint" className="text-xs text-muted-foreground">{t("workspace.mural.images.hint")}</p>}
             {count > 0 && <ul className="grid grid-cols-3 gap-2" data-testid="editor-images">
               {kept.map((image, index) => <EditorThumb key={image.id} src={urls[image.file_path]} alt={imageLabel("alt", index + 1)}
-                removeLabel={imageLabel("remove", index + 1)} disabled={busy} onRemove={() => setRemoved((current) => [...current, image])} />)}
+                removeLabel={imageLabel("remove", index + 1)} disabled={busy} readOnly={!imagesEditable} onRemove={() => setRemoved((current) => [...current, image])} />)}
               {added.map((image, index) => <EditorThumb key={image.id} src={image.preview} alt={imageLabel("alt", kept.length + index + 1)}
                 removeLabel={imageLabel("remove", kept.length + index + 1)} disabled={busy} failed={image.failed}
                 failedLabel={t("workspace.mural.images.notSaved")} onRemove={() => dropAdded(image.id)} />)}
             </ul>}
-            <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden data-testid="note-image-input"
-              onChange={(event) => void addFiles(event.target.files)} />
-            <Button type="button" variant="outline" size="sm" disabled={busy || count >= MAX_IMAGES_PER_NOTE} onClick={() => fileInput.current?.click()}>
-              {processing ? <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden /> : <ImagePlus aria-hidden />}
-              {t(processing ? "workspace.mural.images.processing" : "workspace.mural.images.add")}
-            </Button>
+            {imagesEditable ? <>
+              <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden data-testid="note-image-input"
+                onChange={(event) => void addFiles(event.target.files)} />
+              <Button type="button" variant="outline" size="sm" disabled={busy || count >= MAX_IMAGES_PER_NOTE} onClick={() => fileInput.current?.click()}>
+                {processing ? <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden /> : <ImagePlus aria-hidden />}
+                {t(processing ? "workspace.mural.images.processing" : "workspace.mural.images.add")}
+              </Button>
+            </> : <p className="text-xs text-muted-foreground" data-testid="note-images-author-only">{t("workspace.mural.images.authorOnly")}</p>}
             {imageError && <p role="alert" className="text-sm text-destructive">{imageError}</p>}
           </fieldset>
           <fieldset className="space-y-2">
@@ -144,15 +147,15 @@ export function NoteEditor({ editor, pending, images = [], urls = {}, onClose, o
     </Dialog>
   );
 }
-function EditorThumb({ src, alt, removeLabel, disabled, failed, failedLabel, onRemove }: {
-  src?: string; alt: string; removeLabel: string; disabled: boolean; failed?: boolean; failedLabel?: string; onRemove: () => void;
+function EditorThumb({ src, alt, removeLabel, disabled, readOnly = false, failed, failedLabel, onRemove }: {
+  src?: string; alt: string; removeLabel: string; disabled: boolean; readOnly?: boolean; failed?: boolean; failedLabel?: string; onRemove: () => void;
 }) {
   return (
     <li className={cn("relative aspect-square overflow-hidden rounded-md border bg-muted", failed && "border-destructive ring-1 ring-destructive")}>
       {src ? <img src={src} alt={alt} draggable={false} className="h-full w-full object-cover" /> : <span aria-label={alt} role="img" className="block h-full w-full animate-pulse motion-reduce:animate-none" />}
       {failed && <span className="absolute inset-x-0 bottom-0 bg-destructive/90 px-1 py-0.5 text-center text-[10px] text-destructive-foreground">{failedLabel}</span>}
-      <Button type="button" variant="secondary" size="icon" disabled={disabled} aria-label={removeLabel} title={removeLabel}
-        className="absolute right-1 top-1 h-6 w-6 rounded-full shadow-sm" onClick={onRemove}><X className="h-3.5 w-3.5" aria-hidden /></Button>
+      {!readOnly && <Button type="button" variant="secondary" size="icon" disabled={disabled} aria-label={removeLabel} title={removeLabel}
+        className="absolute right-1 top-1 h-6 w-6 rounded-full shadow-sm" onClick={onRemove}><X className="h-3.5 w-3.5" aria-hidden /></Button>}
     </li>
   );
 }

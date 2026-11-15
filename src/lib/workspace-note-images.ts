@@ -38,7 +38,9 @@ export class NoteImageError extends Error {
 
 const IMAGE_FIELDS = "id,user_id,note_id,file_path,mime_type,size_bytes,width,height,order_index,created_at";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const workspaceNoteImagesKey = (userId: string | undefined) => ["workspace-note-images", userId] as const;
+/** Prefix ["workspace-note-images", userId] invalidates every board of the teacher. */
+export const workspaceNoteImagesKey = (userId: string | undefined, projectId: string | null = null) =>
+  ["workspace-note-images", userId, projectId ?? "personal"] as const;
 
 /** The only path shape ever written or removed; rejects anything that is not owner/notes/note/image. */
 export function noteImagePath(owner: string, noteId: string, imageId: string): string {
@@ -104,17 +106,24 @@ async function authenticatedOwner(expectedId: string): Promise<string> {
 const isDuplicateObject = (error: { message?: string; statusCode?: string | number } | null) =>
   Boolean(error && (String(error.statusCode) === "409" || /already exists|duplicate/i.test(error.message ?? "")));
 
-export async function fetchNoteImages(expectedId: string, signal?: AbortSignal): Promise<NoteImage[]> {
+/**
+ * Personal board: the teacher's own images. Project board: every image of that project's notes
+ * (any author), joined through the note; RLS only returns them while the project is accessible.
+ */
+export async function fetchNoteImages(expectedId: string, signal?: AbortSignal, projectId: string | null = null): Promise<NoteImage[]> {
   const owner = await authenticatedOwner(expectedId);
   const rows: NoteImage[] = [];
   for (let offset = 0; ; offset += 500) {
-    let query = supabase.from("workspace_note_images").select(IMAGE_FIELDS).eq("user_id", owner)
-      .order("note_id").order("order_index").order("created_at").order("id").range(offset, offset + 499);
+    const scoped = projectId
+      ? supabase.from("workspace_note_images").select(`${IMAGE_FIELDS},workspace_notes!inner(project_id)`).eq("workspace_notes.project_id", projectId)
+      : supabase.from("workspace_note_images").select(IMAGE_FIELDS).eq("user_id", owner);
+    let query = scoped.order("note_id").order("order_index").order("created_at").order("id").range(offset, offset + 499);
     if (signal) query = query.abortSignal(signal);
     const { data, error } = await query;
     if (error) throw error;
-    rows.push(...(data as NoteImage[]));
-    if (data.length < 500) return rows;
+    const page = (data ?? []) as (NoteImage & { workspace_notes?: unknown })[];
+    rows.push(...page.map(({ workspace_notes: _note, ...image }) => image as NoteImage));
+    if (page.length < 500) return rows;
   }
 }
 
@@ -167,38 +176,42 @@ export async function deleteNoteImage(expectedId: string, image: Pick<NoteImage,
 }
 
 /**
- * Before a note is deleted: remove every file under its folder (rows plus anything left by an
- * interrupted upload), then its image rows. Any failure stops the note deletion.
+ * Before a note is deleted: remove every file under its author's folder (rows plus anything left
+ * by an interrupted upload), then the author's own image rows. Another author's note (only the
+ * project owner may delete it) keeps its rows for the note's FK cascade. Any failure stops the
+ * note deletion.
  */
-export async function deleteAllNoteImages(expectedId: string, noteId: string): Promise<void> {
+export async function deleteAllNoteImages(expectedId: string, noteId: string, author: string = expectedId): Promise<void> {
   const owner = await authenticatedOwner(expectedId);
-  await removeNoteFiles(owner, noteId);
+  await removeNoteFiles(author, noteId);
+  if (author !== owner) return;
   const { error } = await supabase.from("workspace_note_images").delete().eq("user_id", owner).eq("note_id", noteId);
   if (error) throw error;
 }
 
 /**
- * Before a project is deleted: remove the physical files of every note on its board. Rows are
- * left to the database cascade (also for archived projects, whose rows cannot be deleted
- * directly). Any failure stops the project deletion so no file is orphaned.
+ * Before a project is deleted (owner only): remove the physical files of every note on its board,
+ * from each note author's folder (participants included). Rows are left to the database cascade
+ * (also for archived projects, whose rows cannot be deleted directly). Any failure stops the
+ * project deletion so no file is orphaned.
  */
 export async function deleteProjectNoteFiles(expectedId: string, projectId: string): Promise<void> {
-  const owner = await authenticatedOwner(expectedId);
-  const { data, error } = await supabase.from("workspace_notes").select("id").eq("user_id", owner).eq("project_id", projectId);
+  await authenticatedOwner(expectedId);
+  const { data, error } = await supabase.from("workspace_notes").select("id,user_id").eq("project_id", projectId);
   if (error) throw error;
-  for (const note of (data ?? []) as { id: string }[]) await removeNoteFiles(owner, note.id);
+  for (const note of (data ?? []) as { id: string; user_id: string }[]) await removeNoteFiles(note.user_id, note.id);
 }
 
-/** Every file under owner/notes/note_id (rows plus leftovers of interrupted uploads). */
-async function removeNoteFiles(owner: string, noteId: string): Promise<void> {
-  const folder = `${owner}/notes/${noteId}`;
-  noteImagePath(owner, noteId, noteId); // validates both ids
+/** Every file under author/notes/note_id (rows plus leftovers of interrupted uploads). */
+async function removeNoteFiles(author: string, noteId: string): Promise<void> {
+  const folder = `${author}/notes/${noteId}`;
+  noteImagePath(author, noteId, noteId); // validates both ids
   const bucket = supabase.storage.from(WORKSPACE_MEDIA_BUCKET);
-  const { data: rows, error: rowsError } = await supabase.from("workspace_note_images").select("id").eq("user_id", owner).eq("note_id", noteId);
+  const { data: rows, error: rowsError } = await supabase.from("workspace_note_images").select("id").eq("user_id", author).eq("note_id", noteId);
   if (rowsError) throw rowsError;
   const { data: listed, error: listError } = await bucket.list(folder, { limit: 100 });
   if (listError) throw listError;
-  const paths = new Set((rows as { id: string }[]).map((row) => noteImagePath(owner, noteId, row.id)));
+  const paths = new Set((rows as { id: string }[]).map((row) => noteImagePath(author, noteId, row.id)));
   for (const file of listed ?? []) if (/^[0-9a-f-]{36}\.webp$/i.test(file.name)) paths.add(`${folder}/${file.name}`);
   if (paths.size > 0) {
     const { error: removeError } = await bucket.remove([...paths]);

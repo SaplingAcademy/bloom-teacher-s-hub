@@ -64,7 +64,8 @@ describe("note position persistence", () => {
     mocks.persist.mockResolvedValueOnce(null);
     await act(async () => { ok = await api.execute({ type: "delete", id: "a" }); });
     expect(ok).toBe(true);
-    expect(mocks.cleanup).toHaveBeenLastCalledWith("teacher", "a");
+    // Third argument: the note's author, captured before the optimistic removal.
+    expect(mocks.cleanup).toHaveBeenLastCalledWith("teacher", "a", "teacher");
     expect(mocks.cleanup.mock.invocationCallOrder.at(-1)!).toBeLessThan(mocks.persist.mock.invocationCallOrder.at(-1)!);
   });
   it("quiet saves skip the success toast so the caller reports the combined outcome", async () => {

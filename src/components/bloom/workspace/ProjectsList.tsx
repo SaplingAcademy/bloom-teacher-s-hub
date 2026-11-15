@@ -4,6 +4,7 @@ import { Archive, ArchiveRestore, FolderKanban, MoreHorizontal, Pencil, Plus, Tr
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceProjects } from "@/hooks/use-workspace-projects";
 import { filterAndSortProjects, type ProjectDraft, type StatusFilter, type WorkspaceProject } from "@/lib/workspace-projects";
 import type { ProjectSummary } from "@/lib/workspace-projects-data";
@@ -18,6 +19,7 @@ const FILTERS: StatusFilter[] = ["active", "archived", "all"];
 export function ProjectsList({ filter, onFilter }: { filter: StatusFilter; onFilter: (f: StatusFilter) => void }) {
   const { t } = useLanguage();
   const { summaries, isLoading, error, pending, execute, refetch } = useWorkspaceProjects();
+  const { user } = useAuth();
   const [editor, setEditor] = useState<{ id: string; initial: ProjectDraft | null } | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceProject | null>(null);
   const byId = new Map((summaries ?? []).map((s) => [s.project.id, s]));
@@ -49,7 +51,7 @@ export function ProjectsList({ filter, onFilter }: { filter: StatusFilter; onFil
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((s) => <ProjectCard key={s.project.id} summary={s} disabled={pending}
+          {visible.map((s) => <ProjectCard key={s.project.id} summary={s} disabled={pending} isOwner={s.project.user_id === user?.id}
             onEdit={() => setEditor({ id: s.project.id, initial: { title: s.project.title, description: s.project.description, color: s.project.color, icon: s.project.icon } })}
             onStatus={() => void execute({ type: "setStatus", id: s.project.id, status: s.project.status === "active" ? "archived" : "active" })}
             onDelete={() => setDeleting(s.project)} />)}
@@ -63,7 +65,8 @@ export function ProjectsList({ filter, onFilter }: { filter: StatusFilter; onFil
   );
 }
 
-function ProjectCard({ summary: { project, progress }, disabled, onEdit, onStatus, onDelete }: { summary: ProjectSummary; disabled: boolean; onEdit: () => void; onStatus: () => void; onDelete: () => void }) {
+/** Shared projects (isOwner = false): participants only edit details while active; archive/delete stay with the owner. */
+function ProjectCard({ summary: { project, progress }, disabled, isOwner, onEdit, onStatus, onDelete }: { summary: ProjectSummary; disabled: boolean; isOwner: boolean; onEdit: () => void; onStatus: () => void; onDelete: () => void }) {
   const { t } = useLanguage();
   const Icon = projectIcon(project.icon);
   const color = colorOf(project.color);
@@ -75,15 +78,20 @@ function ProjectCard({ summary: { project, progress }, disabled, onEdit, onStatu
           <Link to="/workspace/projects/$projectId" params={{ projectId: project.id }} className="font-display text-base font-semibold leading-tight text-foreground after:absolute after:inset-0 after:rounded-2xl hover:underline focus-visible:outline-none">
             <span className="break-words">{project.title}</span>
           </Link>
-          {project.status === "archived" && <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t("workspace.projects.archivedBadge")}</span>}
+          {(project.status === "archived" || !isOwner) && <div className="mt-1 flex flex-wrap gap-1.5">
+            {!isOwner && <span className="inline-block rounded-full bg-lilac-soft px-2 py-0.5 text-xs font-medium text-foreground" data-testid="project-shared-badge">{t("workspace.projects.sharedBadge")}</span>}
+            {project.status === "archived" && <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t("workspace.projects.archivedBadge")}</span>}
+          </div>}
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="relative z-10 -mr-2 -mt-1 h-8 w-8" aria-label={t("workspace.projects.actions")} disabled={disabled}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="relative z-10 -mr-2 -mt-1 h-8 w-8" aria-label={t("workspace.projects.actions")} disabled={disabled || (!isOwner && project.status !== "active")}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onEdit}><Pencil aria-hidden />{t("workspace.mural.edit")}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={onStatus}>{project.status === "active" ? <><Archive aria-hidden />{t("workspace.projects.archive")}</> : <><ArchiveRestore aria-hidden />{t("workspace.projects.reactivate")}</>}</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive"><Trash2 aria-hidden />{t("workspace.mural.delete")}</DropdownMenuItem>
+            {isOwner && <>
+              <DropdownMenuItem onSelect={onStatus}>{project.status === "active" ? <><Archive aria-hidden />{t("workspace.projects.archive")}</> : <><ArchiveRestore aria-hidden />{t("workspace.projects.reactivate")}</>}</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive"><Trash2 aria-hidden />{t("workspace.mural.delete")}</DropdownMenuItem>
+            </>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
