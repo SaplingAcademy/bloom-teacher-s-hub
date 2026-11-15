@@ -6,8 +6,14 @@
 -- nunca tem linha nesta tabela.
 --
 -- Só professores com conta e perfil na Bloom podem ser convidados; o convite é ligado ao
--- user_id encontrado. Resposta neutra: um e-mail válido sempre recebe "enviado", exista ou não
--- uma conta; para e-mails sem conta nada é gravado e nenhuma notificação é criada.
+-- user_id encontrado e continua ligado a ele mesmo que o professor troque de e-mail.
+--
+-- Resposta neutra (limitada): o primeiro convite para um e-mail válido sempre recebe "enviado",
+-- exista ou não uma conta; para e-mails sem conta nada é gravado e nenhuma notificação é criada.
+-- LIMITAÇÃO CONHECIDA E ACEITA: isso NÃO impede totalmente a descoberta de contas pelo dono do
+-- projeto. Os retornos 'already_member' e 'cooldown' só ocorrem para contas existentes, e a
+-- listagem de participantes mostra convites pendentes apenas de e-mails que têm conta. A
+-- neutralidade vale só para a resposta do primeiro convite.
 --
 -- NÃO concede acesso a projetos: nenhuma política, FK, função de acesso, Storage ou tabela
 -- existente é alterada. Um convite aceito só passará a dar acesso na Etapa 2.
@@ -47,6 +53,19 @@ begin
       where table_schema = 'public' and table_name = 'notifications' and column_name = 'id') <> 'uuid' then
     raise exception 'notifications.id não é uuid';
   end if;
+  -- A FK invite_notification_id exige notifications.id como chave primária/única.
+  if not exists (select 1 from pg_constraint c
+                 where c.conrelid = 'public.notifications'::regclass and c.contype in ('p', 'u')
+                   and c.conkey = array[(select a.attnum from pg_attribute a
+                                          where a.attrelid = 'public.notifications'::regclass and a.attname = 'id')]::smallint[]) then
+    raise exception 'notifications.id não é chave primária/única';
+  end if;
+  if not exists (select 1 from pg_constraint c
+                 where c.conrelid = 'public.workspace_projects'::regclass and c.contype in ('p', 'u')
+                   and c.conkey = array[(select a.attnum from pg_attribute a
+                                          where a.attrelid = 'public.workspace_projects'::regclass and a.attname = 'id')]::smallint[]) then
+    raise exception 'workspace_projects.id não é chave primária/única';
+  end if;
   select data_type into v_type from information_schema.columns
    where table_schema = 'public' and table_name = 'notifications' and column_name = 'type';
   if v_type not in ('text', 'character varying') then
@@ -72,7 +91,8 @@ create table public.workspace_project_members (
   project_id               uuid not null references public.workspace_projects(id) on delete cascade,
   -- Professor convidado (conta e perfil existentes).
   user_id                  uuid not null references public.profiles(id) on delete cascade,
-  -- E-mail digitado pelo dono (minúsculas). Visível só para o dono, apenas em convites pendentes.
+  -- E-mail digitado pelo dono no último convite (minúsculas), só para exibição ao dono em
+  -- convites pendentes. Não identifica o convite: a identidade é sempre user_id.
   invited_email            text not null,
   invited_by               uuid not null references public.profiles(id) on delete cascade,
   role                     text not null default 'editor',
@@ -83,7 +103,6 @@ create table public.workspace_project_members (
   -- Notificação do convite atual: cancelar/responder afeta só ela (nunca outros projetos).
   invite_notification_id   uuid references public.notifications(id) on delete set null,
   constraint workspace_project_members_unique unique (project_id, user_id),
-  constraint workspace_project_members_email_unique unique (project_id, invited_email),
   constraint workspace_project_members_email_format check (invited_email = lower(btrim(invited_email)) and position('@' in invited_email) > 1 and char_length(invited_email) <= 320),
   constraint workspace_project_members_role_check check (role in ('editor')),
   constraint workspace_project_members_status_check check (status in ('pending', 'accepted', 'declined')),
@@ -141,7 +160,8 @@ end $$;
 --    perfil. Resposta neutra: 'sent' também para e-mails sem conta (nada é gravado nesse caso);
 --    nunca retorna id, nome, foto ou e-mail (o id do convite vem de list_project_members).
 --    Após uma recusa, novo convite só depois de 5 dias ('cooldown' com a data de liberação).
---    Ordem de locks em todas as RPCs: projeto → par (projeto, e-mail) → linha.
+--    Ordem de locks em todas as RPCs: projeto → par (projeto, professor) → linha.
+--    LIMITAÇÃO: 'already_member' e 'cooldown' permitem inferir que a conta existe (ver cabeçalho).
 create or replace function public.invite_project_member(p_project uuid, p_email text)
 returns table (status text, cooldown_until timestamptz)
 language plpgsql
@@ -178,8 +198,6 @@ begin
   select lower(u.email) into v_my_email from auth.users u where u.id = v_me;
   if v_email = v_my_email then raise exception 'invite_self'; end if;
 
-  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || p_project::text || ':' || v_email, 0));
-
   -- Conta + perfil correspondentes (e-mail exato, sem diferenciar maiúsculas), usada só aqui.
   select u.id into v_invitee
     from auth.users u join public.profiles p on p.id = u.id
@@ -197,6 +215,7 @@ begin
     return;
   end if;
 
+  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || p_project::text || ':' || v_invitee::text, 0));
   select m.id, m.status, m.responded_at, m.invite_notification_id
     into v_row_id, v_row_status, v_row_responded, v_row_notification
     from public.workspace_project_members m
@@ -255,7 +274,6 @@ as $$
 declare
   v_me uuid := auth.uid();
   v_project uuid;
-  v_email text;
   v_owner uuid;
   v_project_status text;
   v_title text;
@@ -265,10 +283,10 @@ begin
   if v_me is null then raise exception 'not_authenticated'; end if;
   if p_accept is null then raise exception 'invite_invalid_response'; end if;
 
-  select m.project_id, m.invited_email into v_project, v_email from public.workspace_project_members m where m.id = p_member_id;
+  select m.project_id into v_project from public.workspace_project_members m where m.id = p_member_id;
   if v_project is null then raise exception 'invite_not_found'; end if;
   perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:project:' || v_project::text, 0));
-  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || v_project::text || ':' || v_email, 0));
+  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || v_project::text || ':' || v_me::text, 0));
 
   select true, m.invite_notification_id into v_found, v_notification
     from public.workspace_project_members m
@@ -308,16 +326,16 @@ as $$
 declare
   v_me uuid := auth.uid();
   v_project uuid;
-  v_email text;
+  v_user uuid;
   v_status text;
   v_notification uuid;
 begin
   if v_me is null then raise exception 'not_authenticated'; end if;
 
-  select m.project_id, m.invited_email into v_project, v_email from public.workspace_project_members m where m.id = p_member_id;
+  select m.project_id, m.user_id into v_project, v_user from public.workspace_project_members m where m.id = p_member_id;
   if v_project is null then raise exception 'member_not_found'; end if;
   perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:project:' || v_project::text, 0));
-  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || v_project::text || ':' || v_email, 0));
+  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || v_project::text || ':' || v_user::text, 0));
 
   if not exists (select 1 from public.workspace_projects wp where wp.id = v_project and wp.user_id = v_me) then
     raise exception 'member_not_found';
@@ -344,17 +362,13 @@ as $$
 declare
   v_me uuid := auth.uid();
   v_id uuid;
-  v_email text;
 begin
   if v_me is null then raise exception 'not_authenticated'; end if;
   if exists (select 1 from public.workspace_projects wp where wp.id = p_project and wp.user_id = v_me) then
     raise exception 'owner_cannot_leave';
   end if;
-  select m.invited_email into v_email from public.workspace_project_members m
-   where m.project_id = p_project and m.user_id = v_me;
-  if v_email is null then raise exception 'member_not_found'; end if;
-  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:project:' || p_project::text, 0));
-  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || p_project::text || ':' || v_email, 0));
+  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:project:' || coalesce(p_project::text, ''), 0));
+  perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || coalesce(p_project::text, '') || ':' || v_me::text, 0));
 
   delete from public.workspace_project_members m
    where m.project_id = p_project and m.user_id = v_me and m.status = 'accepted'
@@ -364,7 +378,7 @@ end $$;
 
 -- 7. Participantes de um projeto (dono ou participante aceito).
 --    Aceitos/recusados: nome e foto. Pendentes (só para o dono): apenas o e-mail que o próprio
---    dono digitou, sem nome nem foto.
+--    dono digitou, sem nome nem foto. LIMITAÇÃO: só existem pendentes de e-mails com conta.
 create or replace function public.list_project_members(p_project uuid)
 returns table (member_id uuid, user_id uuid, full_name text, avatar_url text, invited_email text, role text,
                status text, created_at timestamptz, responded_at timestamptz)
@@ -463,9 +477,16 @@ commit;
 -- select conname, pg_get_constraintdef(oid) from pg_constraint
 --  where conrelid = 'public.workspace_project_members'::regclass order by conname;
 --
--- ROLLBACK (manual, somente se necessário; convites e participantes registrados serão perdidos):
+-- ROLLBACK (manual, somente se necessário; convites e participantes registrados serão perdidos).
+-- SEGURO APENAS ANTES DAS ETAPAS SEGUINTES: a partir da Etapa 2, políticas, funções de acesso e
+-- telas passarão a depender desta tabela e precisarão ser revertidas antes.
+-- Remove apenas as notificações de convite ainda referenciadas por convites (pelo id exato).
+-- Avisos "convite aceito" já entregues e avisos de convite cujo vínculo foi perdido permanecem
+-- como texto comum no sino (nenhuma outra notificação é tocada).
 -- begin;
---   delete from public.notifications where type in ('project_invite', 'project_invite_accepted');
+--   delete from public.notifications n
+--    using public.workspace_project_members m
+--    where m.invite_notification_id = n.id;
 --   drop function if exists public.list_my_project_invites();
 --   drop function if exists public.list_project_members(uuid);
 --   drop function if exists public.leave_project(uuid);
