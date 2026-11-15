@@ -501,7 +501,6 @@ function ResourcesPage() {
     <div className="space-y-7">
       {/* Page Header */}
       <PageHeader
-        eyebrow={lang === "pt" ? "Kit de Ferramentas" : "Business Toolkit"}
         title={t.title}
         titleAddon={<InfoTooltip label={`${translate("globalUi.aboutPage")} ${t.title}`} text={t.subtitle} className="text-muted-foreground" />}
         actions={
