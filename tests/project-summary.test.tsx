@@ -37,8 +37,10 @@ describe("project summary", () => {
     await render(null);
     expect(text()).toContain("Mariana Albuquerque");
     expect(text()).toContain("MA");
-    // Owner name uses the Bloom lilac of the avatar circle.
-    expect(document.querySelector('[data-testid="project-creator-name"]')!.className).toContain("text-lilac");
+    // Owner name uses the readable lilac token (darker in the light theme), still font-medium.
+    const ownerName = document.querySelector('[data-testid="project-creator-name"]')!;
+    expect(ownerName.className).toContain("text-lilac-strong");
+    expect(ownerName.className).toContain("font-medium");
     // Sharing lives only in the header "Compartilhar" button: no "+" beside the creator.
     expect(document.querySelector('[data-testid="project-share-plus"]')).toBeNull();
     expect(document.querySelector('[data-testid="project-summary"] button[aria-label*="addTeacher"]')).toBeNull();
