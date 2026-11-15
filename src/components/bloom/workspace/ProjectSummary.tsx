@@ -17,6 +17,15 @@ interface ProjectSummaryProps {
   onSaveDates: (start: string, end: string | null) => Promise<boolean>;
 }
 
+/**
+ * Creator shown in the summary. Without collaboration the creator is always the signed-in owner,
+ * whose identity comes from useTeacherIdentity() (profiles.full_name / avatar_url). Any other
+ * owner falls back to the neutral label until participants' profiles are loaded.
+ */
+export function projectCreator(ownerId: string, currentUserId: string | undefined, identity: { name: string | null; avatarUrl: string | null }) {
+  return ownerId === currentUserId ? { name: identity.name ?? "", photo: identity.avatarUrl } : { name: "", photo: null };
+}
+
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
 
 function Property({ icon, label, children, valueClassName }: { icon: ReactNode; label: string; children: ReactNode; valueClassName?: string }) {
