@@ -5,11 +5,14 @@
 -- aceitar, recusar, remover e sair. O proprietário continua sendo workspace_projects.user_id e
 -- nunca tem linha nesta tabela.
 --
--- Só professores com conta e perfil na Bloom podem ser convidados; o convite é ligado ao
--- user_id encontrado e continua ligado a ele mesmo que o professor troque de e-mail.
+-- Só professores com conta, perfil e e-mail CONFIRMADO no Supabase Auth
+-- (auth.users.email_confirmed_at is not null) podem ser convidados; o convite é ligado ao
+-- user_id encontrado e continua ligado a ele mesmo que o professor troque de e-mail. Aceitar
+-- também exige e-mail confirmado no momento do aceite (verificado pelo user_id, não pelo e-mail).
 --
 -- Resposta neutra (limitada): o primeiro convite para um e-mail válido sempre recebe "enviado",
--- exista ou não uma conta; para e-mails sem conta nada é gravado e nenhuma notificação é criada.
+-- exista ou não uma conta; para e-mails sem conta ou sem confirmação nada é gravado e nenhuma
+-- notificação é criada.
 -- LIMITAÇÃO CONHECIDA E ACEITA: isso NÃO impede totalmente a descoberta de contas pelo dono do
 -- projeto. Os retornos 'already_member' e 'cooldown' só ocorrem para contas existentes, e a
 -- listagem de participantes mostra convites pendentes apenas de e-mails que têm conta. A
@@ -37,6 +40,10 @@ begin
       where table_schema = 'public' and table_name = 'workspace_projects'
         and column_name in ('id', 'user_id', 'title', 'status')) <> 4 then
     raise exception 'workspace_projects: colunas esperadas ausentes (id, user_id, title, status)';
+  end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'auth' and table_name = 'users' and column_name = 'email_confirmed_at') then
+    raise exception 'auth.users.email_confirmed_at ausente';
   end if;
   if (select count(*) from information_schema.columns
       where table_schema = 'public' and table_name = 'notifications'
@@ -156,8 +163,9 @@ begin
   return v_id;
 end $$;
 
--- 3. Convidar por e-mail exato (somente o dono, projeto ativo), apenas professores com conta e
---    perfil. Resposta neutra: 'sent' também para e-mails sem conta (nada é gravado nesse caso);
+-- 3. Convidar por e-mail exato (somente o dono, projeto ativo), apenas professores com conta,
+--    perfil e e-mail confirmado. Resposta neutra: 'sent' também para e-mails sem conta ou sem
+--    confirmação (nada é gravado nesse caso);
 --    nunca retorna id, nome, foto ou e-mail (o id do convite vem de list_project_members).
 --    Após uma recusa, novo convite só depois de 5 dias ('cooldown' com a data de liberação).
 --    Ordem de locks em todas as RPCs: projeto → par (projeto, professor) → linha.
@@ -198,14 +206,15 @@ begin
   select lower(u.email) into v_my_email from auth.users u where u.id = v_me;
   if v_email = v_my_email then raise exception 'invite_self'; end if;
 
-  -- Conta + perfil correspondentes (e-mail exato, sem diferenciar maiúsculas), usada só aqui.
+  -- Conta + perfil correspondentes com e-mail confirmado (e-mail exato, sem diferenciar
+  -- maiúsculas), usada só aqui.
   select u.id into v_invitee
     from auth.users u join public.profiles p on p.id = u.id
-   where lower(u.email) = v_email
+   where lower(u.email) = v_email and u.email_confirmed_at is not null
    limit 1;
 
   if v_invitee is null then
-    -- E-mail sem conta: mesmo retorno de um convite enviado, sem gravar nada. O limite de
+    -- E-mail sem conta ou sem confirmação: mesmo retorno de um convite enviado, sem gravar nada. O limite de
     -- convites é aplicado igual nos dois casos para não diferenciar as respostas.
     if (select count(*) from public.workspace_project_members m
          where m.project_id = p_project and m.status in ('pending', 'accepted')) >= 50 then
@@ -263,7 +272,8 @@ begin
 end $$;
 
 -- 4. Responder ao próprio convite pendente.
---    Aceitar exige projeto ativo; recusar continua possível. Aceite notifica o dono; recusa é
+--    Aceitar exige projeto ativo e e-mail confirmado agora (pelo user_id da sessão, mesmo que o
+--    e-mail tenha mudado desde o convite); recusar continua possível. Aceite notifica o dono; recusa é
 --    silenciosa e inicia os 5 dias de espera para um novo convite.
 create or replace function public.respond_project_invite(p_member_id uuid, p_accept boolean)
 returns text
@@ -297,6 +307,9 @@ begin
   select wp.user_id, wp.status, wp.title into v_owner, v_project_status, v_title
     from public.workspace_projects wp where wp.id = v_project;
   if p_accept and v_project_status is distinct from 'active' then raise exception 'project_archived'; end if;
+  if p_accept and not exists (select 1 from auth.users u where u.id = v_me and u.email_confirmed_at is not null) then
+    raise exception 'email_not_confirmed';
+  end if;
 
   update public.workspace_project_members m
      set status = case when p_accept then 'accepted' else 'declined' end,
