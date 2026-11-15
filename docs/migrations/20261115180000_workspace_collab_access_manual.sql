@@ -236,18 +236,24 @@ grant execute on function public.workspace_project_accessible(uuid)      to auth
 grant execute on function public.workspace_project_writable(uuid)        to authenticated;
 
 -- 2. Proteções do projeto: id/user_id imutáveis; status (arquivar/reativar) só pelo dono.
---    Sem sessão (SQL Editor/service role) o status pode ser alterado administrativamente.
+--    Sem auth.uid(), só operação administrativa: sem papel JWT na sessão (SQL Editor/postgres)
+--    ou papel JWT service_role. Requisições anon/authenticated sem sub são recusadas.
 create or replace function public.workspace_projects_guard()
 returns trigger
 language plpgsql
 set search_path = ''
 as $$
+declare
+  v_uid uuid := (select auth.uid());
+  v_jwt_role text := coalesce(nullif(current_setting('request.jwt.claim.role', true), ''),
+                              nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role');
 begin
   if new.id is distinct from old.id or new.user_id is distinct from old.user_id then
     raise exception 'workspace_project_owner_immutable';
   end if;
-  if new.status is distinct from old.status and (select auth.uid()) is not null
-     and (select auth.uid()) is distinct from old.user_id then
+  if new.status is distinct from old.status
+     and v_uid is distinct from old.user_id
+     and not (v_uid is null and (v_jwt_role is null or v_jwt_role = 'service_role')) then
     raise exception 'workspace_project_owner_only';
   end if;
   return new;
