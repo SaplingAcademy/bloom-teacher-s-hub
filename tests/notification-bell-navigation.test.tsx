@@ -45,11 +45,11 @@ describe("NotificationBell navigation", () => {
   it("contact requests: mark as read and open the received tab", async () => {
     await clickItem("t-a");
     expect(mocks.update).toHaveBeenCalledWith({ read: true });
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/community/contacts", search: { tab: "received" } });
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/community", search: { view: "contacts", tab: "received" } });
   });
   it("accepted requests open the contacts tab", async () => {
     await clickItem("t-b");
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/community/contacts", search: { tab: "contacts" } });
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/community", search: { view: "contacts", tab: "contacts" } });
   });
   it("comment notifications keep opening their post", async () => {
     await clickItem("t-c");

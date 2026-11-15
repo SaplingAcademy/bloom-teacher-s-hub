@@ -111,9 +111,9 @@ export function NotificationBell({ className }: { className?: string }) {
     const target = notificationTarget(n);
     if (!target) return;
     setOpen(false);
-    if (target.to === "/community") navigate({ to: "/community", search: { post: target.post } });
-    else if (target.to === "/workspace/projects") navigate({ to: "/workspace/projects" });
-    else navigate({ to: "/community/contacts", search: { tab: target.tab } });
+    if (target.to === "/workspace/projects") navigate({ to: "/workspace/projects" });
+    else if ("view" in target) navigate({ to: "/community", search: { view: target.view, tab: target.tab } });
+    else navigate({ to: "/community", search: { post: target.post } });
   };
 
   const fmt = (iso: string) => {

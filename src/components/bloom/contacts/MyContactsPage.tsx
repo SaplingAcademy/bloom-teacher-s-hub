@@ -81,7 +81,8 @@ function ErrorState({ message, retry, retryLabel }: { message: string; retry: ()
 const TAB_VALUE: Record<ContactsUrlTab, string> = { contacts: "contacts", received: "incoming", sent: "outgoing" };
 const URL_TAB: Record<string, ContactsUrlTab> = { contacts: "contacts", incoming: "received", outgoing: "sent" };
 
-export function MyContactsPage({ tab, onTabChange }: { tab?: ContactsUrlTab; onTabChange?: (tab: ContactsUrlTab) => void } = {}) {
+/** embedded: rendered as a tab inside Community (compact heading instead of the page header). */
+export function MyContactsPage({ tab, onTabChange, embedded = false }: { tab?: ContactsUrlTab; onTabChange?: (tab: ContactsUrlTab) => void; embedded?: boolean } = {}) {
   // Controlled by the URL when the route provides it; local state otherwise.
   const [localTab, setLocalTab] = useState<ContactsUrlTab>(parseContactsTab(tab) ?? "contacts");
   const currentTab = onTabChange ? parseContactsTab(tab) ?? "contacts" : localTab;
@@ -165,15 +166,21 @@ export function MyContactsPage({ tab, onTabChange }: { tab?: ContactsUrlTab; onT
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <PageHeader
-        className="grid-cols-1"
-        eyebrow={t("communityV1.eyebrow")}
-        title={t("contacts.title")}
-        titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("contacts.title")}`} text={t("contacts.info")} className="text-muted-foreground" />}
-      />
+    <div className={cn("space-y-6", !embedded && "pb-12")}>
+      {embedded ? (
+        <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">{t("contacts.title")}
+          <InfoTooltip label={`${t("globalUi.aboutPage")} ${t("contacts.title")}`} text={t("contacts.info")} className="text-muted-foreground" /></h2>
+      ) : (
+        <PageHeader
+          className="grid-cols-1"
+          eyebrow={t("communityV1.eyebrow")}
+          title={t("contacts.title")}
+          titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("contacts.title")}`} text={t("contacts.info")} className="text-muted-foreground" />}
+        />
+      )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      {/* Inside Community the column is narrower: two columns only from xl. */}
+      <div className={cn("grid items-start gap-6", embedded ? "xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]")}>
         {/* Search */}
         <section aria-labelledby="contacts-search-title" className="@container space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5">
           <h2 id="contacts-search-title" className="font-display text-base font-semibold">{t("contacts.searchTitle")}</h2>
