@@ -21,6 +21,7 @@ vi.mock("@/hooks/use-workspace-projects", () => ({
     isLoading: false, error: null, notFound: false, pending: state.pending, execute: state.execute, refetch: vi.fn(),
   }),
   useWorkspaceProjects: () => ({ execute: vi.fn() }),
+  useItemAssignees: () => ({ byItem: {}, available: false }),
 }));
 vi.mock("@/hooks/use-project-members", () => ({ useProjectMembers: () => ({ members: [], leave: { mutateAsync: vi.fn() } }) }));
 vi.mock("@/lib/workspace-projects-data", async (original) => ({ ...(await original<object>()), fetchProjectOwnerProfile: async () => null }));

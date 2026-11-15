@@ -6,7 +6,7 @@ import { useLanguage } from "./use-language";
 import { applyDetailCommand, computeProgress, localCalendarDate, prepareProjectDraft, type DetailCommand, type ProjectDetail } from "@/lib/workspace-projects";
 import { deleteProjectNoteFiles, workspaceNoteImagesKey } from "@/lib/workspace-note-images";
 import { workspaceNotesKey } from "@/lib/workspace-notes-data";
-import { fetchProjectDetail, fetchProjectSummaries, persistDetailCommand, persistListCommand, workspaceProjectKey, workspaceProjectsKey, type ListCommand, type ProjectSummary } from "@/lib/workspace-projects-data";
+import { fetchItemAssignees, workspaceItemAssigneesKey, fetchProjectDetail, fetchProjectSummaries, persistDetailCommand, persistListCommand, workspaceProjectKey, workspaceProjectsKey, type ListCommand, type ProjectSummary } from "@/lib/workspace-projects-data";
 
 const FEEDBACK = "workspace-projects-feedback";
 
@@ -109,15 +109,30 @@ export function useWorkspaceProject(projectId: string) {
     onSuccess: (_r, command) => {
       // List progress/status derive from this project; refresh it lazily.
       void client.invalidateQueries({ queryKey: workspaceProjectsKey(owner) });
+      if (command.type === "createItem" || command.type === "editItem" || command.type === "deleteItem") void client.invalidateQueries({ queryKey: workspaceItemAssigneesKey(owner, projectId) });
       if (!["toggleItem", "reorderItems", "reorderPhases"].includes(command.type)) toast.success(t("workspace.project.saved"), { id: FEEDBACK, duration: 1500 });
     },
     onError: (_e, _c, context) => {
       if (context) client.setQueryData(key, context.before);
       toast.error(t("workspace.projects.saveError"), { id: FEEDBACK });
       void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({ queryKey: workspaceItemAssigneesKey(owner, projectId) });
     },
   });
   const execute = (command: DetailCommand) => (authenticated && query.data ? latch(() => mutation.mutateAsync(command)) : Promise.resolve(false));
   const notFound = (query.error as Error | null)?.message === "project_not_found";
   return { detail: authenticated ? query.data : undefined, isLoading: loading || (authenticated && query.isPending), error: authenticated && !notFound ? query.error : null, notFound, pending, execute, refetch: query.refetch };
+}
+
+/**
+ * Task assignees of a project. available = false while the assignee migration is not applied (or
+ * the read fails): the form hides the field and tasks are saved exactly as before.
+ */
+export function useItemAssignees(projectId: string, enabled = true) {
+  const { owner, authenticated } = useOwner();
+  const query = useQuery({
+    queryKey: workspaceItemAssigneesKey(owner, projectId), enabled: authenticated && enabled, staleTime: 30_000, retry: false,
+    queryFn: () => { if (!owner) throw new Error("authentication_changed"); return fetchItemAssignees(owner, projectId); },
+  });
+  return { byItem: query.data ?? {}, available: query.isSuccess };
 }

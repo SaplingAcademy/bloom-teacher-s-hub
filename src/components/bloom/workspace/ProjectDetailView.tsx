@@ -22,6 +22,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { NotesBoard } from "./NotesBoard";
 import { ProjectShareDialog } from "./ProjectShareDialog";
 import { useProjectMembers } from "@/hooks/use-project-members";
+import { useItemAssignees } from "@/hooks/use-workspace-projects";
+import { AssigneeAvatars, type Person } from "./TaskAssignees";
 import { readProjectView, saveProjectView, type ProjectView } from "@/lib/workspace-project-view";
 import { toast } from "sonner";
 import { ShareError } from "@/lib/workspace-project-members";
@@ -49,6 +51,8 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const [leaving, setLeaving] = useState(false);
   // Same cache as the share dialog: accepted participants feed the summary avatars.
   const team = useProjectMembers(projectId, Boolean(detail));
+  // Task assignees (feature hidden until the assignee migration is applied: available = false).
+  const assignees = useItemAssignees(projectId, Boolean(detail));
   const sharedOwnerId = detail && user && detail.project.user_id !== user.id ? detail.project.user_id : null;
   const ownerProfile = useQuery({
     queryKey: ["workspace-project-owner", sharedOwnerId], enabled: Boolean(sharedOwnerId), staleTime: 10 * 60_000,
@@ -91,14 +95,27 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const phases = sortPhases(detail.phases);
   const color = colorOf(project.color);
   const Icon = projectIcon(project.icon);
+  // Eligible assignees: the owner and accepted participants (the database validates again).
+  const people: Person[] = [
+    { id: project.user_id, name: creator.name.trim() || t("workspace.project.summary.unnamed"), photo: creator.photo ?? null },
+    ...(team.members ?? []).filter((m) => m.status === "accepted" && m.user_id && m.user_id !== project.user_id)
+      .map((m) => ({ id: m.user_id!, name: m.full_name?.trim() || t("workspace.project.summary.unnamed"), photo: m.avatar_url })),
+  ];
+  const assigneesOf = (item: WorkspaceItem): Person[] => item.type !== "task" ? []
+    : (assignees.byItem[item.id] ?? []).map((id) => people.find((p) => p.id === id)).filter((p): p is Person => Boolean(p));
   const newItem = (phaseId: string | null) => setItemEditor({ id: crypto.randomUUID(), isNew: true, initial: { type: "task", title: "", content: "", url: "", phase_id: phaseId } });
   const editItem = (item: WorkspaceItem) => setItemEditor({ id: item.id, isNew: false, initial: { type: item.type, title: item.title, content: item.content, url: typeof item.meta.url === "string" ? item.meta.url : "", phase_id: item.phase_id } });
-  const saveItem = (prepared: PreparedItem) => {
+  const saveItem = (prepared: PreparedItem, chosen?: string[]) => {
     const editor = itemEditor!;
     const existing = items.find((i) => i.id === editor.id);
     const target = containerItems(items, prepared.phase_id).filter((i) => i.id !== editor.id);
     const order = existing && existing.phase_id === prepared.phase_id ? existing.order_index : nextOrder(target);
-    return execute(editor.isNew ? { type: "createItem", id: editor.id, item: prepared, order_index: order } : { type: "editItem", id: editor.id, item: prepared, order_index: order });
+    // Editing: only send assignees when they changed (same order-insensitive set = no extra write).
+    const previous = assignees.byItem[editor.id] ?? [];
+    const changed = !chosen || editor.isNew || existing?.type !== "task" || chosen.length !== previous.length || chosen.some((id) => !previous.includes(id));
+    const assigneeField = chosen && changed ? { assignees: chosen } : {};
+    return execute(editor.isNew ? { type: "createItem", id: editor.id, item: prepared, order_index: order, ...assigneeField }
+      : { type: "editItem", id: editor.id, item: prepared, order_index: order, ...assigneeField });
   };
   const moveItem = (item: WorkspaceItem, phaseId: string | null) => execute({ type: "editItem", id: item.id, order_index: nextOrder(containerItems(items, phaseId)),
     item: { type: item.type, title: item.title, content: item.content, meta: item.meta, phase_id: phaseId } });
@@ -109,7 +126,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
     onDeletePhase: () => setConfirm({ kind: "phase", phase }),
     onMovePhase: (dir: -1 | 1) => { const updates = reorder(phases, phase.id, dir); if (updates.length) void execute({ type: "reorderPhases", updates }); },
   });
-  const containerProps = { detail, phases, pending: busy, color, onAdd: newItem, onEdit: editItem, onMove: moveItem,
+  const containerProps = { detail, phases, pending: busy, color, assigneesOf, onAdd: newItem, onEdit: editItem, onMove: moveItem,
     onToggle: (item: WorkspaceItem) => void execute({ type: "toggleItem", id: item.id, completed: !item.completed }),
     onReorder: (phaseId: string | null, id: string, dir: -1 | 1) => { const updates = reorder(containerItems(items, phaseId), id, dir); if (updates.length) void execute({ type: "reorderItems", updates }); },
     onDelete: (item: WorkspaceItem) => setConfirm({ kind: "item", item }) };
@@ -220,7 +237,12 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
       <TitleDialog open={!!phaseEditor} pending={pending} initial={phaseEditor?.title ?? ""} label={t("workspace.project.phaseName")}
         title={t(phaseEditor?.isNew ? "workspace.project.newPhase" : "workspace.project.renamePhase")} onClose={() => setPhaseEditor(null)}
         onSave={(title) => execute(phaseEditor!.isNew ? { type: "createPhase", id: phaseEditor!.id, title, order_index: nextOrder(phases) } : { type: "renamePhase", id: phaseEditor!.id, title })} />
-      {itemEditor && <ItemDialog open isNew={itemEditor.isNew} initial={itemEditor.initial} phases={phases} pending={pending} onClose={() => setItemEditor(null)} onSave={saveItem} />}
+      {itemEditor && <ItemDialog open isNew={itemEditor.isNew} initial={itemEditor.initial} phases={phases} pending={pending} onClose={() => setItemEditor(null)} onSave={saveItem}
+        assignees={assignees.available ? {
+          people, currentUserId: user?.id, readOnly: project.status !== "active",
+          // New task: the creator is preselected (and can be replaced, joined or removed before saving).
+          initial: itemEditor.isNew ? (user?.id && people.some((p) => p.id === user.id) ? [user.id] : []) : (assignees.byItem[itemEditor.id] ?? []),
+        } : undefined} />}
       <ConfirmDialog open={!!confirm} onClose={() => setConfirm(null)} confirm={t("workspace.mural.delete")}
         title={t(confirm?.kind === "phase" ? "workspace.project.deletePhaseTitle" : confirm?.kind === "project" ? "workspace.projects.deleteTitle" : "workspace.project.deleteItemTitle")}
         body={confirm?.kind === "phase" ? t("workspace.project.deletePhaseBody").replace("{count}", String(containerItems(items, confirm.phase.id).length))
@@ -239,10 +261,11 @@ interface ContainerProps {
   detail: ProjectDetail; phases: WorkspacePhase[]; phase: WorkspacePhase | null; pending: boolean; color: string; first?: boolean; last?: boolean;
   onAdd: (phaseId: string | null) => void; onEdit: (item: WorkspaceItem) => void; onToggle: (item: WorkspaceItem) => void; onDelete: (item: WorkspaceItem) => void;
   onMove: (item: WorkspaceItem, phaseId: string | null) => void; onReorder: (phaseId: string | null, id: string, dir: -1 | 1) => void;
+  assigneesOf?: (item: WorkspaceItem) => Person[];
   onRename?: () => void; onDeletePhase?: () => void; onMovePhase?: (dir: -1 | 1) => void;
 }
 
-function ItemContainer({ detail, phases, phase, pending, color, first, last, onAdd, onEdit, onToggle, onDelete, onMove, onReorder, onRename, onDeletePhase, onMovePhase }: ContainerProps) {
+function ItemContainer({ detail, phases, phase, pending, color, first, last, assigneesOf, onAdd, onEdit, onToggle, onDelete, onMove, onReorder, onRename, onDeletePhase, onMovePhase }: ContainerProps) {
   const { t } = useLanguage();
   const phaseId = phase?.id ?? null;
   const items = containerItems(detail.items, phaseId);
@@ -258,7 +281,7 @@ function ItemContainer({ detail, phases, phase, pending, color, first, last, onA
       {progress && <div className="mt-2"><ProgressBar progress={progress} color={color} compact /></div>}
       {items.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">{t("workspace.project.emptyContainer")}</p> : (
         <ul className="mt-3 divide-y divide-border">
-          {items.map((item, index) => <ItemRow key={item.id} item={item} phases={phases} pending={pending} first={index === 0} last={index === items.length - 1}
+          {items.map((item, index) => <ItemRow key={item.id} item={item} phases={phases} pending={pending} first={index === 0} last={index === items.length - 1} assignees={assigneesOf?.(item)}
             onToggle={() => onToggle(item)} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} onMove={(p) => onMove(item, p)} onReorder={(dir) => onReorder(phaseId, item.id, dir)} />)}
         </ul>
       )}
@@ -292,7 +315,7 @@ const KANBAN_DRAG_TYPE = "application/x-bloom-workspace-item";
  * on touch devices (no HTML drag events) the card's "Move to" menu does the same. Disabled while
  * a write is pending or when the teacher cannot edit (participant on an archived project).
  */
-function KanbanBoard({ detail, phases, pending, color, onAdd, onEdit, onToggle, onDelete, onMove, onReorder, phaseProps, onDropItem }:
+function KanbanBoard({ detail, phases, pending, color, assigneesOf, onAdd, onEdit, onToggle, onDelete, onMove, onReorder, phaseProps, onDropItem }:
   Omit<ContainerProps, "phase"> & { phaseProps: (phase: WorkspacePhase, index: number) => Partial<ContainerProps>; onDropItem: (itemId: string, phaseId: string | null) => void }) {
   const { t } = useLanguage();
   const [dragging, setDragging] = useState<string | null>(null);
@@ -328,7 +351,7 @@ function KanbanBoard({ detail, phases, pending, color, onAdd, onEdit, onToggle, 
               <p className="rounded-lg border border-dashed border-border py-8 text-center text-xs text-muted-foreground">{t(pending ? "workspace.project.emptyContainer" : "workspace.project.kanban.dropHere")}</p>
             ) : (
               <ul className="flex-1 space-y-2">
-                {items.map((item, position) => <ItemRow key={item.id} item={item} phases={phases} pending={pending} first={position === 0} last={position === items.length - 1}
+                {items.map((item, position) => <ItemRow key={item.id} item={item} phases={phases} pending={pending} first={position === 0} last={position === items.length - 1} assignees={assigneesOf?.(item)}
                   onToggle={() => onToggle(item)} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} onMove={(p) => onMove(item, p)} onReorder={(dir) => onReorder(phaseId, item.id, dir)}
                   card={{ draggable: !pending, dragging: dragging === item.id,
                     onDragStart: (event) => { event.dataTransfer.setData(KANBAN_DRAG_TYPE, item.id); event.dataTransfer.effectAllowed = "move"; setDragging(item.id); },
@@ -345,7 +368,7 @@ function KanbanBoard({ detail, phases, pending, color, onAdd, onEdit, onToggle, 
 
 interface KanbanCard { draggable: boolean; dragging: boolean; onDragStart: (event: DragEvent<HTMLLIElement>) => void; onDragEnd: () => void }
 
-function ItemRow({ item, phases, pending, first, last, onToggle, onEdit, onDelete, onMove, onReorder, card }: { item: WorkspaceItem; phases: WorkspacePhase[]; pending: boolean; first: boolean; last: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; onMove: (phaseId: string | null) => void; onReorder: (dir: -1 | 1) => void; card?: KanbanCard }) {
+function ItemRow({ item, phases, pending, first, last, onToggle, onEdit, onDelete, onMove, onReorder, card, assignees = [] }: { item: WorkspaceItem; phases: WorkspacePhase[]; pending: boolean; first: boolean; last: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; onMove: (phaseId: string | null) => void; onReorder: (dir: -1 | 1) => void; card?: KanbanCard; assignees?: Person[] }) {
   const { t } = useLanguage();
   const trackable = isTrackable(item);
   const href = item.type === "link" ? safeUrl(item.meta.url) : null;
@@ -370,6 +393,7 @@ function ItemRow({ item, phases, pending, first, last, onToggle, onEdit, onDelet
         {item.content && <p className={cn("mt-0.5 whitespace-pre-line break-words text-sm text-muted-foreground", item.type !== "note" && "line-clamp-2")}>{item.content}</p>}
         {item.type === "link" && !href && <p className="mt-0.5 text-xs text-destructive">{t("workspace.project.invalidUrl")}</p>}
       </div>
+      <AssigneeAvatars people={assignees} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label={t("workspace.project.itemActions")} disabled={pending}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end">

@@ -15,6 +15,9 @@
 - Shared boards: every participant edits/moves any note; images only by the note author; deleting another author's note is owner-only and cleans files in the author's folder (`deleteAllNoteImages(owner, note, author)`).
 - Progress is always derived in pure `workspace-projects.ts` from task/checklist items (0% when empty) and never stored; phase deletion relies on the FK SET NULL and the optimistic cache mirrors it.
 - Detail mutations are serialized per owner/project cache with optimistic apply and snapshot rollback; link URLs are http(s)-only in meta.url and re-validated before rendering.
+# Task assignees
+- Assignees live only in `workspace_item_assignees` (tasks only; owner or accepted members, validated in the DB); write through `create_project_task` (task + assignees atomically) and `set_project_item_assignees`, never direct table writes. `items.user_id` is the project owner, `items.created_by` the creator (set by the DB).
+- New items offer only task/link (`CREATABLE_ITEM_TYPES`); legacy checklist/note stay viewable/editable with their own type. The assignee field hides when `useItemAssignees().available` is false (migration not applied).
 # Personal notebooks
 - Notebook-only `NotebookFormatting` overrides shared `toggleList`, preserving unselected items and nested content while keeping toolbar/native shortcuts consistent; mouse presses on toolbar controls preserve the editor selection.
 - Notebooks/pages use only the session client through `workspace-notebooks-data.ts`, revalidate Auth, filter owner/notebook/id and never update ownership/parent IDs; FK/RLS remains authoritative.

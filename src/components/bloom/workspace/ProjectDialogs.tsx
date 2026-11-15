@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
-import { ITEM_TYPES, PROJECT_COLORS, PROJECT_ICONS, prepareItemDraft, type ItemDraft, type PreparedItem, type ProjectDraft, type WorkspacePhase } from "@/lib/workspace-projects";
+import { itemTypeOptions, PROJECT_COLORS, PROJECT_ICONS, prepareItemDraft, type ItemDraft, type PreparedItem, type ProjectDraft, type WorkspacePhase } from "@/lib/workspace-projects";
 import { colorOf, projectIcon } from "./project-appearance";
+import { AssigneePicker, type Person } from "./TaskAssignees";
 
 export function ProjectDialog({ open, initial, onClose, onSave, pending }: { open: boolean; initial: ProjectDraft | null; onClose: () => void; onSave: (draft: ProjectDraft) => Promise<boolean>; pending: boolean }) {
   const { t } = useLanguage();
@@ -94,15 +95,26 @@ export function TitleDialog({ open, title, label, initial, onClose, onSave, pend
 }
 
 const GENERAL = "__general__";
-export function ItemDialog({ open, initial, isNew, phases, onClose, onSave, pending }: { open: boolean; initial: ItemDraft; isNew: boolean; phases: WorkspacePhase[]; onClose: () => void; onSave: (item: PreparedItem) => Promise<boolean>; pending: boolean }) {
+/**
+ * assignees: present when the assignee feature is available. The field shows for tasks only;
+ * onSave receives the chosen teacher ids (undefined when the field is hidden or read-only).
+ */
+export function ItemDialog({ open, initial, isNew, phases, onClose, onSave, pending, assignees }: {
+  open: boolean; initial: ItemDraft; isNew: boolean; phases: WorkspacePhase[]; onClose: () => void;
+  onSave: (item: PreparedItem, assignees?: string[]) => Promise<boolean>; pending: boolean;
+  assignees?: { people: Person[]; initial: string[]; readOnly: boolean; currentUserId?: string };
+}) {
   const { t } = useLanguage();
   const [draft, setDraft] = useState(initial);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (open) { setDraft(initial); setError(null); } }, [open, initial]);
+  const [chosen, setChosen] = useState<string[]>(assignees?.initial ?? []);
+  useEffect(() => { if (open) { setDraft(initial); setError(null); setChosen(assignees?.initial ?? []); } }, [open, initial]); // eslint-disable-line react-hooks/exhaustive-deps
+  const types = itemTypeOptions(isNew, initial.type);
   const submit = async () => {
     let prepared: PreparedItem;
     try { prepared = prepareItemDraft(draft, phases); } catch (e) { setError((e as Error).message); return; }
-    if (await onSave(prepared)) onClose();
+    const sendAssignees = assignees && !assignees.readOnly && prepared.type === "task" ? chosen : undefined;
+    if (await onSave(prepared, sendAssignees)) onClose();
   };
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -114,7 +126,7 @@ export function ItemDialog({ open, initial, isNew, phases, onClose, onSave, pend
               <Label>{t("workspace.project.typeLabel")}</Label>
               <Select value={draft.type} onValueChange={(v) => { setDraft({ ...draft, type: v as ItemDraft["type"] }); setError(null); }}>
                 <SelectTrigger aria-label={t("workspace.project.typeLabel")}><SelectValue /></SelectTrigger>
-                <SelectContent>{ITEM_TYPES.map((type) => <SelectItem key={type} value={type}>{t(`workspace.project.types.${type}`)}</SelectItem>)}</SelectContent>
+                <SelectContent>{types.map((type) => <SelectItem key={type} value={type}>{t(`workspace.project.types.${type}`)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -144,6 +156,10 @@ export function ItemDialog({ open, initial, isNew, phases, onClose, onSave, pend
               <Label htmlFor="item-content">{t(draft.type === "note" ? "workspace.mural.contentLabel" : "workspace.project.detailsLabel")}</Label>
               <Textarea id="item-content" rows={draft.type === "note" ? 5 : 3} maxLength={5000} value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} />
             </div>
+          )}
+          {assignees && draft.type === "task" && (
+            <AssigneePicker people={assignees.people} value={chosen} onChange={setChosen} currentUserId={assignees.currentUserId}
+              readOnly={assignees.readOnly} disabled={pending} />
           )}
           <DialogFooter className="gap-2">
             <Button type="button" variant="ghost" onClick={onClose}>{t("workspace.mural.cancel")}</Button>
