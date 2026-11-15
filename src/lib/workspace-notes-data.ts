@@ -18,9 +18,10 @@ export async function fetchWorkspaceNotes(expectedId: string, signal?: AbortSign
   const rows: WorkspaceNote[] = [];
   // Read complete boards rather than silently truncating at the Data API row limit.
   for (let offset = 0; ; offset += 500) {
-    const scoped = supabase.from("workspace_notes").select(FIELDS).eq("user_id", owner);
-    // Boards never mix: personal reads only project_id IS NULL, a project board only its own id.
-    let query = (projectId ? scoped.eq("project_id", projectId) : scoped.is("project_id", null))
+    const notes = supabase.from("workspace_notes").select(FIELDS);
+    // Boards never mix: personal reads only the teacher's project_id IS NULL notes; a project board
+    // reads every note of that project (owner and accepted participants, decided by RLS).
+    let query = (projectId ? notes.eq("project_id", projectId) : notes.eq("user_id", owner).is("project_id", null))
       .order("pinned", { ascending: false }).order("order_index").order("created_at").order("id").range(offset, offset + 499);
     if (signal) query = query.abortSignal(signal);
     const { data, error } = await query;
@@ -30,18 +31,23 @@ export async function fetchWorkspaceNotes(expectedId: string, signal?: AbortSign
   }
 }
 
-/** Owner comes from Auth, never draft input; every update/delete also filters owner under RLS. */
-/** projectId comes from the board the note belongs to (route), never from form input; it is set only on create. */
+/**
+ * Author comes from Auth, never draft input. Personal notes filter by author; notes of a project
+ * board filter by that project, and RLS decides (participants edit any note; deleting another
+ * author's note is owner-only). projectId comes from the board (route) and is set only on create.
+ */
 export async function persistNoteCommand(expectedId: string, command: NoteCommand, optimistic: readonly WorkspaceNote[], projectId: string | null = null): Promise<WorkspaceNote | null> {
   const owner = await authenticatedOwner(expectedId);
   const note = optimistic.find((entry) => entry.id === command.id);
+  const scope = <Q extends { eq: (column: string, value: string) => Q }>(query: Q) =>
+    projectId ? query.eq("project_id", projectId) : query.eq("user_id", owner);
   if (command.type === "delete") {
-    const { data, error } = await supabase.from("workspace_notes").delete().eq("user_id", owner).eq("id", command.id).select("id").maybeSingle();
+    const { data, error } = await scope(supabase.from("workspace_notes").delete()).eq("id", command.id).select("id").maybeSingle();
     if (error) throw error;
     if (!data) throw new Error("note_not_found");
     return null;
   }
-  if (!note || note.user_id !== owner) throw new Error("note_not_found");
+  if (!note || (note.user_id !== owner && (!projectId || command.type === "create"))) throw new Error("note_not_found");
   if (command.type === "create") {
     const { data, error } = await supabase.from("workspace_notes").insert({
       id: command.id, user_id: owner, ...prepareNoteDraft(command.draft), pinned: false, order_index: note.order_index,
@@ -61,7 +67,7 @@ export async function persistNoteCommand(expectedId: string, command: NoteComman
     : command.type === "pin" ? { pinned: command.pinned }
     : command.type === "position" ? notePosition(command.x, command.y)
     : { order_index: note.order_index };
-  const { data, error } = await supabase.from("workspace_notes").update(patch).eq("user_id", owner).eq("id", command.id).select(FIELDS).single();
+  const { data, error } = await scope(supabase.from("workspace_notes").update(patch)).eq("id", command.id).select(FIELDS).single();
   if (error) throw error;
   return data as WorkspaceNote;
 }

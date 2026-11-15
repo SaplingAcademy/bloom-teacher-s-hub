@@ -63,7 +63,7 @@ describe("phases", () => {
   it("rejects items linked to a phase from another project", () => {
     expect(() => prepareItemDraft({ type: "task", title: "x", content: "", url: "", phase_id: "foreign" }, [phase("f1", 0)])).toThrow("phase_not_in_project");
   });
-  it("persists create/rename/delete scoped to owner and project", async () => {
+  it("persists create/rename/delete scoped to the project (RLS decides owner or participant)", async () => {
     await persistDetailCommand("teacher", P, { type: "createPhase", id: "f3", title: " Fase ", order_index: 2 });
     expect(mocks.insert).toHaveBeenCalledWith({ id: "f3", project_id: P, user_id: "teacher", title: "Fase", order_index: 2 });
     await persistDetailCommand("teacher", P, { type: "renamePhase", id: "f3", title: "Nova" });
@@ -71,7 +71,8 @@ describe("phases", () => {
     await persistDetailCommand("teacher", P, { type: "deletePhase", id: "f3" });
     expect(mocks.delete).toHaveBeenCalled();
     expect(mocks.eq).toHaveBeenCalledWith("project_id", P);
-    expect(mocks.eq).toHaveBeenCalledWith("user_id", "teacher");
+    expect(mocks.eq).toHaveBeenCalledWith("id", "f3");
+    expect(mocks.eq).not.toHaveBeenCalledWith("user_id", "teacher");
   });
 });
 
@@ -148,6 +149,7 @@ describe("errors, rollback and isolation", () => {
     await expect(fetchProjectDetail("teacher", "not-a-uuid")).rejects.toThrow("project_not_found");
     mocks.result = { data: null, error: null };
     await expect(fetchProjectDetail("teacher", P)).rejects.toThrow("project_not_found");
-    expect(mocks.eq).toHaveBeenCalledWith("user_id", "teacher");
+    // Foreign projects are hidden by RLS (owner or accepted participant), not by a client filter.
+    expect(mocks.eq).toHaveBeenCalledWith("id", P);
   });
 });

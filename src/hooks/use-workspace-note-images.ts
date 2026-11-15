@@ -9,18 +9,21 @@ import {
 export interface NoteImageChanges { removed: readonly NoteImage[]; added: readonly PreparedImage[] }
 export interface NoteImageResult { failedRemovals: string[]; failedUploads: string[] }
 
-/** Owner-scoped image metadata plus short-lived signed URLs, refreshed before they expire. */
-export function useWorkspaceNoteImages() {
+/**
+ * One board's image metadata (personal: the teacher's own; project: every author's images on that
+ * board) plus short-lived signed URLs, refreshed before they expire.
+ */
+export function useWorkspaceNoteImages(projectId: string | null = null) {
   const { user, session, loading } = useAuth();
   const client = useQueryClient();
   const owner = user?.id;
   const authenticated = !loading && Boolean(owner && session?.user.id === owner);
-  const key = workspaceNoteImagesKey(owner);
+  const key = workspaceNoteImagesKey(owner, projectId);
   const images = useQuery({
     queryKey: key, enabled: authenticated, staleTime: 60_000, refetchOnWindowFocus: false,
     queryFn: ({ signal }) => {
       if (!owner || !authenticated) throw new Error("authentication_changed");
-      return fetchNoteImages(owner, signal);
+      return fetchNoteImages(owner, signal, projectId);
     },
   });
   const paths = useMemo(() => (images.data ?? []).map((image) => image.file_path).sort(), [images.data]);
