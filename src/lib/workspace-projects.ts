@@ -83,6 +83,16 @@ export const containerItems = (items: readonly WorkspaceItem[], phaseId: string 
   items.filter((item) => item.phase_id === phaseId).sort(byOrder);
 export const nextOrder = (rows: readonly { order_index: number }[]) => rows.reduce((max, row) => Math.max(max, row.order_index + 1), 0);
 
+/**
+ * Kanban drop: the item being dropped on another column (phase id, null = general area), or null
+ * when nothing should change (unknown item, same column). The move itself reuses the list's
+ * "move to phase" command, so phase_id/order follow exactly the same rules in both views.
+ */
+export function kanbanDropItem(items: readonly WorkspaceItem[], itemId: string | null | undefined, targetPhaseId: string | null): WorkspaceItem | null {
+  const item = itemId ? items.find((entry) => entry.id === itemId) : undefined;
+  return item && item.phase_id !== targetPhaseId ? item : null;
+}
+
 /** Moves one row up/down by renumbering only the rows whose order_index actually changes. */
 export function reorder<T extends { id: string; order_index: number; created_at: string }>(sorted: readonly T[], id: string, direction: -1 | 1): OrderUpdate[] {
   const index = sorted.findIndex((row) => row.id === id);
