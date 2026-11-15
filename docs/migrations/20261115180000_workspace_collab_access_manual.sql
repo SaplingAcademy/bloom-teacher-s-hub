@@ -65,13 +65,26 @@ begin
   end if;
   -- Notas/imagens: as únicas RESTRICTIVE compatíveis são as do mural por projeto (todas presentes,
   -- nenhuma outra). Uma restrição desconhecida (ex.: user_id = auth.uid()) esconderia o mural dos
-  -- participantes.
-  if (select count(*) from pg_policies where schemaname = 'public' and permissive = 'RESTRICTIVE'
-        and policyname in ('workspace_notes_project_scope_select', 'workspace_notes_project_scope_insert',
-                           'workspace_notes_project_scope_update', 'workspace_notes_project_scope_delete',
-                           'workspace_note_images_project_scope_insert', 'workspace_note_images_project_scope_update',
-                           'workspace_note_images_project_scope_delete')) <> 7 then
-    raise exception 'Políticas RESTRICTIVE do mural por projeto ausentes ou diferentes do esperado';
+  -- participantes. Cada uma é comparada por tabela, comando, papéis, USING e WITH CHECK; a
+  -- comparação ignora apenas espaços e o prefixo "public." (depende do search_path da sessão).
+  if exists (
+    with expected(policyname, tablename, cmd, using_expr, check_expr) as (values
+      ('workspace_notes_project_scope_select',       'workspace_notes',       'SELECT', '((project_id IS NULL) OR workspace_project_accessible(project_id))', ''),
+      ('workspace_notes_project_scope_insert',       'workspace_notes',       'INSERT', '', '((project_id IS NULL) OR workspace_project_writable(project_id))'),
+      ('workspace_notes_project_scope_update',       'workspace_notes',       'UPDATE', '((project_id IS NULL) OR workspace_project_writable(project_id))', '((project_id IS NULL) OR workspace_project_writable(project_id))'),
+      ('workspace_notes_project_scope_delete',       'workspace_notes',       'DELETE', '((project_id IS NULL) OR workspace_project_writable(project_id))', ''),
+      ('workspace_note_images_project_scope_insert', 'workspace_note_images', 'INSERT', '', 'workspace_note_writable(note_id)'),
+      ('workspace_note_images_project_scope_update', 'workspace_note_images', 'UPDATE', 'workspace_note_writable(note_id)', 'workspace_note_writable(note_id)'),
+      ('workspace_note_images_project_scope_delete', 'workspace_note_images', 'DELETE', 'workspace_note_writable(note_id)', ''))
+    select 1 from expected e
+      left join pg_policies p on p.schemaname = 'public' and p.policyname = e.policyname
+     where p.policyname is null
+        or p.permissive <> 'RESTRICTIVE' or p.tablename <> e.tablename or p.cmd <> e.cmd
+        or p.roles <> array['authenticated']::name[]
+        or regexp_replace(lower(coalesce(p.qual, '')), '\s+|public\.', '', 'g')       <> regexp_replace(lower(e.using_expr), '\s+|public\.', '', 'g')
+        or regexp_replace(lower(coalesce(p.with_check, '')), '\s+|public\.', '', 'g') <> regexp_replace(lower(e.check_expr), '\s+|public\.', '', 'g')
+  ) then
+    raise exception 'Políticas RESTRICTIVE do mural por projeto ausentes ou com definição diferente do esperado (USING/WITH CHECK, comando, tabela ou papéis)';
   end if;
   if exists (select 1 from pg_policies where schemaname = 'public' and permissive = 'RESTRICTIVE'
              and tablename in ('workspace_notes', 'workspace_note_images')
