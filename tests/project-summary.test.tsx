@@ -13,7 +13,7 @@ const progress = { done: 2, total: 5, percent: 40 };
 const text = () => document.body.textContent ?? "";
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 const onShare = vi.fn();
-const render = (end: string | null, photo: string | null = null, extra: Record<string, unknown> = { canInvite: true, onShare }) => act(async () => root.render(createElement(ProjectSummary, {
+const render = (end: string | null, photo: string | null = null, extra: Record<string, unknown> = { onShare }) => act(async () => root.render(createElement(ProjectSummary, {
   project: { start_date: "2026-11-03", end_date: end }, progress, pending: false, creator: { name: "Mariana Albuquerque", photo }, onSaveDates, ...extra,
 })));
 const setInput = (id: string, value: string) => act(async () => {
@@ -33,24 +33,26 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); document.body.innerHTML = ""; });
 
 describe("project summary", () => {
-  it("shows creator initials, the add-teacher slot, green progress and the start date", async () => {
+  it("shows creator initials (no + share slot beside the name), green progress and the start date", async () => {
     await render(null);
     expect(text()).toContain("Mariana Albuquerque");
     expect(text()).toContain("MA");
-    expect(document.querySelector('button[aria-label="workspace.project.summary.addTeacher"]')).not.toBeNull();
-    await act(async () => (document.querySelector('[data-testid="project-share-plus"]') as HTMLButtonElement).click());
-    expect(onShare).toHaveBeenCalled();
+    // Sharing lives only in the header "Compartilhar" button: no "+" beside the creator.
+    expect(document.querySelector('[data-testid="project-share-plus"]')).toBeNull();
+    expect(document.querySelector('[data-testid="project-summary"] button[aria-label*="addTeacher"]')).toBeNull();
     const bar = document.querySelector('[role="progressbar"]')!;
     expect(bar.getAttribute("aria-valuenow")).toBe("40");
     expect((bar.firstElementChild as HTMLElement).style.backgroundColor).toBe("var(--primary)");
     expect(document.querySelector('[data-testid="project-start-date"]')!.textContent).toContain("03/11/2026");
   });
-  it("participants: no invite slot, accepted members shown as avatars", async () => {
-    await render(null, null, { canInvite: false, onShare, members: [{ id: "m1", name: "Bia Lima", photo: null }, { id: "m2", name: "Caio", photo: "c.png" }] });
+  it("accepted members shown as avatars, opening the participants list", async () => {
+    await render(null, null, { onShare, members: [{ id: "m1", name: "Bia Lima", photo: null }, { id: "m2", name: "Caio", photo: "c.png" }] });
     expect(document.querySelector('[data-testid="project-share-plus"]')).toBeNull();
     const avatars = document.querySelector('[data-testid="project-members-avatars"]')!;
     expect(avatars.textContent).toContain("BL");
     expect(avatars.querySelector("img")!.getAttribute("src")).toBe("c.png");
+    await act(async () => (avatars as HTMLButtonElement).click());
+    expect(onShare).toHaveBeenCalled();
   });
   it("hides the end property when there is no end date", async () => {
     await render(null);

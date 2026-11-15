@@ -107,13 +107,13 @@ export const uiTranslations = {
         "toast": { "create": "Caderno criado.", "edit": "Caderno atualizado.", "delete": "Caderno excluído." }
       },
       "project": {
-        "summary": { "createdBy": "Criado por", "progress": "Progresso", "start": "Início", "end": "Término", "endOptional": "Término (opcional)", "tasksDone": "{done} de {total} tarefas", "addTeacher": "Compartilhar projeto", "addEnd": "Término", "editDates": "Editar datas do projeto", "datesTitle": "Datas do projeto", "removeEnd": "Remover", "startRequired": "Informe a data de início.", "endBeforeStart": "O término não pode ser anterior ao início.", "unnamed": "Professor(a)" },
+        "summary": { "createdBy": "Criado por", "progress": "Progresso", "start": "Início", "end": "Término", "endOptional": "Término (opcional)", "tasksDone": "{done} de {total} tarefas", "addEnd": "Término", "editDates": "Editar datas do projeto", "datesTitle": "Datas do projeto", "removeEnd": "Remover", "startRequired": "Informe a data de início.", "endBeforeStart": "O término não pode ser anterior ao início.", "unnamed": "Professor(a)" },
         "pages": { "planning": "Página 1 de 2: Planejamento", "board": "Página 2 de 2: Mural", "toBoard": "Ir para o mural do projeto", "toPlanning": "Voltar ao planejamento", "boardTitle": "Mural do projeto", "readOnly": "Projeto arquivado: o mural está disponível somente para leitura." },
         "back": "Voltar aos projetos", "title": "Projeto", "phases": "Fases", "emptyBody": "As fases e tarefas deste projeto aparecerão aqui.",
         "notFoundTitle": "Projeto não encontrado", "notFoundBody": "Este projeto não existe ou não está disponível para sua conta.",
         "loadError": "Não foi possível carregar este projeto.", "saved": "Alteração salva.",
         "progressLabel": "{done} de {total} tarefas concluídas", "general": "Geral", "emptyContainer": "Nada aqui ainda.", "addHere": "Adicionar item",
-        "newItem": "Novo item", "editItem": "Editar item", "newPhase": "Nova fase", "newPhaseHint": "Divida seu projeto em etapas para organizar melhor suas atividades.", "renamePhase": "Renomear fase", "phaseName": "Nome da fase",
+        "newItem": "Novo item", "newItemHint": "Adicionar um novo item para cada fase do projeto", "editItem": "Editar item", "newPhase": "Nova fase", "newPhaseHint": "Divida seu projeto em etapas para organizar melhor suas atividades.", "renamePhase": "Renomear fase", "phaseName": "Nome da fase",
         "deletePhase": "Excluir fase", "deletePhaseTitle": "Excluir esta fase?",
         "deletePhaseBody": "Os {count} itens desta fase não serão excluídos: eles serão movidos para a área Geral do projeto.",
         "deleteItemTitle": "Excluir este item?", "phaseActions": "Ações da fase", "itemActions": "Ações do item",
@@ -1852,13 +1852,13 @@ export const uiTranslations = {
         "toast": { "create": "Notebook created.", "edit": "Notebook updated.", "delete": "Notebook deleted." }
       },
       "project": {
-        "summary": { "createdBy": "Created by", "progress": "Progress", "start": "Start", "end": "End", "endOptional": "End (optional)", "tasksDone": "{done} of {total} tasks", "addTeacher": "Share project", "addEnd": "End date", "editDates": "Edit project dates", "datesTitle": "Project dates", "removeEnd": "Remove", "startRequired": "Enter a start date.", "endBeforeStart": "The end date cannot be before the start date.", "unnamed": "Teacher" },
+        "summary": { "createdBy": "Created by", "progress": "Progress", "start": "Start", "end": "End", "endOptional": "End (optional)", "tasksDone": "{done} of {total} tasks", "addEnd": "End date", "editDates": "Edit project dates", "datesTitle": "Project dates", "removeEnd": "Remove", "startRequired": "Enter a start date.", "endBeforeStart": "The end date cannot be before the start date.", "unnamed": "Teacher" },
         "pages": { "planning": "Page 1 of 2: Planning", "board": "Page 2 of 2: Board", "toBoard": "Go to the project board", "toPlanning": "Back to planning", "boardTitle": "Project board", "readOnly": "Archived project: the board is read-only." },
         "back": "Back to projects", "title": "Project", "phases": "Phases", "emptyBody": "This project's phases and tasks will appear here.",
         "notFoundTitle": "Project not found", "notFoundBody": "This project doesn't exist or isn't available to your account.",
         "loadError": "Could not load this project.", "saved": "Change saved.",
         "progressLabel": "{done} of {total} tasks done", "general": "General", "emptyContainer": "Nothing here yet.", "addHere": "Add item",
-        "newItem": "New item", "editItem": "Edit item", "newPhase": "New phase", "newPhaseHint": "Split your project into stages to better organize your activities.", "renamePhase": "Rename phase", "phaseName": "Phase name",
+        "newItem": "New item", "newItemHint": "Add a new item for each project phase", "editItem": "Edit item", "newPhase": "New phase", "newPhaseHint": "Split your project into stages to better organize your activities.", "renamePhase": "Rename phase", "phaseName": "Phase name",
         "deletePhase": "Delete phase", "deletePhaseTitle": "Delete this phase?",
         "deletePhaseBody": "The {count} items in this phase won't be deleted: they'll move to the project's General area.",
         "deleteItemTitle": "Delete this item?", "phaseActions": "Phase actions", "itemActions": "Item actions",

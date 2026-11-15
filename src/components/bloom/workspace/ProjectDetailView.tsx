@@ -143,7 +143,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         </div>
         {/* Summary: creator, participants, overall progress (Bloom green) and dates. Phases keep the project color. */}
         <ProjectSummary project={project} progress={computeProgress(items)} pending={busy}
-          creator={creator} canInvite={isOwner && project.status === "active"} onShare={() => setSharing(true)}
+          creator={creator} onShare={() => setSharing(true)}
           members={(team.members ?? []).filter((m) => m.status === "accepted" && m.user_id)
             .map((m) => ({ id: m.member_id, name: m.full_name?.trim() || t("workspace.project.summary.unnamed"), photo: m.avatar_url }))}
           onSaveDates={(start, end) => execute({ type: "setDates", start_date: start, end_date: end })} />
@@ -163,7 +163,14 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
                 <TooltipContent className="max-w-xs">{t("workspace.project.newPhaseHint")}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Button onClick={() => newItem(null)} disabled={busy}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => newItem(null)} disabled={busy}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{t("workspace.project.newItemHint")}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <ItemContainer {...containerProps} phase={null} />

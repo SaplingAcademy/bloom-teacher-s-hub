@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage } from "@/hooks/use-language";
 import { formatCalendarDate, isCalendarDate, type Progress, type WorkspaceProject } from "@/lib/workspace-projects";
 import { cn } from "@/lib/utils";
@@ -15,9 +14,8 @@ interface ProjectSummaryProps {
   creator: { name: string; photo?: string | null };
   /** Accepted participants (avatars beside the creator). */
   members?: { id: string; name: string; photo: string | null }[];
-  /** Opens sharing (owner) or the participants list; the "+" is shown only when canInvite. */
+  /** Opens the participants list from the avatars (sharing itself lives in the header "Compartilhar" button). */
   onShare?: () => void;
-  canInvite?: boolean;
   pending: boolean;
   onSaveDates: (start: string, end: string | null) => Promise<boolean>;
 }
@@ -48,12 +46,11 @@ function Property({ icon, label, children, valueClassName }: { icon: ReactNode; 
  * Notion-like project summary (two lines on desktop, stacked on phones): creator, future
  * "add teacher" slot, short green progress, start date and the optional end date.
  */
-export function ProjectSummary({ project, progress, creator, members = [], onShare, canInvite = false, pending, onSaveDates }: ProjectSummaryProps) {
+export function ProjectSummary({ project, progress, creator, members = [], onShare, pending, onSaveDates }: ProjectSummaryProps) {
   const { t, lang } = useLanguage();
   const [editing, setEditing] = useState(false);
   const name = creator.name.trim() || t("workspace.project.summary.unnamed");
   const progressLabel = t("workspace.project.progressLabel").replace("{done}", String(progress.done)).replace("{total}", String(progress.total));
-  const addTeacher = t("workspace.project.summary.addTeacher");
   const shown = members.slice(0, 3);
   const editDates = t("workspace.project.summary.editDates");
 
@@ -85,17 +82,6 @@ export function ProjectSummary({ project, progress, creator, members = [], onSha
               {members.length > shown.length && <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold ring-2 ring-card">+{members.length - shown.length}</span>}
             </button>
           )}
-          {canInvite && onShare && <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" aria-label={addTeacher} onClick={onShare} data-testid="project-share-plus"
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-primary/30 bg-primary/10 text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Plus className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{addTeacher}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>}
         </Property>
         <Property icon={<ChartNoAxesColumnIncreasing className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.progress")}>
           <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label={progressLabel}
