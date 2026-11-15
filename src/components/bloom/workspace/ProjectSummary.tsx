@@ -71,7 +71,8 @@ export function ProjectSummary({ project, progress, creator, members = [], onSha
           {creator.photo
             ? <img src={creator.photo} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
             : <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lilac-soft text-[10px] font-semibold text-foreground">{initials(name)}</span>}
-          <span className="line-clamp-2 min-w-0 break-words [overflow-wrap:anywhere]" title={name}>{name}</span>
+          {/* Owner name in the Bloom lilac of the avatar circle (same for every teacher; avatars have no per-teacher color). */}
+          <span className="line-clamp-2 min-w-0 break-words font-medium text-lilac [overflow-wrap:anywhere]" title={name} data-testid="project-creator-name">{name}</span>
           {shown.length > 0 && (
             <button type="button" onClick={onShare} disabled={!onShare} data-testid="project-members-avatars"
               aria-label={t("workspace.share.membersCount").replace("{count}", String(members.length))}
