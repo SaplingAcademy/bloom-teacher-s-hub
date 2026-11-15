@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { CalendarCheck, CalendarDays, CircleUser, Loader2, Pencil, Plus, TrendingUp } from "lucide-react";
+import { CalendarCheck, CalendarDays, ChartNoAxesColumnIncreasing, CircleUser, Loader2, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +70,7 @@ export function ProjectSummary({ project, progress, creator, pending, onSaveDate
             </Tooltip>
           </TooltipProvider>
         </Property>
-        <Property icon={<TrendingUp className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.progress")}>
+        <Property icon={<ChartNoAxesColumnIncreasing className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.progress")}>
           <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label={progressLabel}
             className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
             <span className="block h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress.percent}%`, backgroundColor: "var(--primary)" }} />
