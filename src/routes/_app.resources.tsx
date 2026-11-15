@@ -297,11 +297,17 @@ function ResourcesPage() {
     setReceiptOpen(false);
   }, [user?.id]);
 
+  // SOON cards for teachers: dimmed with a not-allowed cursor; opening stays blocked by loadTemplate
+  // (also by keyboard) and by the server. Admins and non-SOON resources are unchanged.
+  const soonLocked = (id: string) => library.soonLocked(librarySourceId(id));
+  const soonDim = (id: string) => (soonLocked(id) ? " opacity-55 cursor-not-allowed! [&_*]:cursor-not-allowed!" : "");
   const accessBadge = (id: string) => {
     const sourceId = librarySourceId(id);
     const soon = library.availability(sourceId) === "soon";
     const premium = library.level(sourceId) === "pro";
-    const soonBadge = <Badge variant="outline" className="text-xs font-semibold tracking-wide" data-testid="library-soon-badge">SOON</Badge>;
+    // On dimmed cards the tag uses a solid, high-contrast style so it stays legible at 55% opacity.
+    const soonBadge = <Badge variant="outline" data-testid="library-soon-badge"
+      className={`text-xs font-semibold tracking-wide${soonLocked(id) ? " border-transparent bg-foreground text-background" : ""}`}>SOON</Badge>;
     const premiumBadge = <Badge variant="secondary" className="gap-1 text-xs"><Lock className="h-3 w-3" />{translate("libraryAccess.premium")}</Badge>;
     // Teachers see only SOON on SOON resources; admins see both classifications.
     if (soon && !library.isAdmin) return soonBadge;
@@ -546,7 +552,7 @@ function ResourcesPage() {
                   title={titleOf(template)}
                   description={descriptionOf(template)}
                   icon={isReceipt(template) ? <ReceiptText className="h-4 w-4" /> : <catMeta.icon className="h-4 w-4" />}
-                  className="hover:shadow-md transition-shadow relative min-w-0"
+                  className={`hover:shadow-md transition-shadow relative min-w-0${soonDim(template.id)}`}
                   contentClassName="p-5 flex flex-col justify-between min-h-[140px]"
                 >
                   <div className="flex-1">{accessBadge(template.id)}</div>
@@ -566,6 +572,7 @@ function ResourcesPage() {
                     {isReceipt(template) ? (
                       <Button variant="ghost"
                         disabled={accessBusy}
+                        aria-disabled={soonLocked(template.id) || undefined}
                         onClick={(e) => handleUseTemplate(template, e)}
                         className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
                       >
@@ -576,6 +583,7 @@ function ResourcesPage() {
                     <div className="flex items-center gap-1.5">
                       <Button variant="ghost"
                         onClick={() => handleOpenPreview(template)}
+                        aria-disabled={soonLocked(template.id) || undefined}
                         className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground transition-all hover:bg-secondary cursor-pointer"
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -583,6 +591,7 @@ function ResourcesPage() {
                       </Button>
                       <Button variant="ghost"
                         disabled={accessBusy}
+                        aria-disabled={soonLocked(template.id) || undefined}
                         onClick={(e) => handleUseTemplate(template, e)}
                         className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/95 cursor-pointer shadow-sm"
                       >
@@ -611,7 +620,8 @@ function ResourcesPage() {
                   const temp = allTemplates.find((x) => x.id === "admin-student-contract");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                aria-disabled={soonLocked("admin-student-contract") || undefined}
+                className={`h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer${soonDim("admin-student-contract")}`}
               >
                 <div className="rounded-xl bg-primary-soft p-2.5 text-primary border border-primary/10">
                   <FileText className="h-5 w-5" />
@@ -634,7 +644,8 @@ function ResourcesPage() {
                   const temp = allTemplates.find((x) => x.id === "ped-placement-test");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                aria-disabled={soonLocked("ped-placement-test") || undefined}
+                className={`h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer${soonDim("ped-placement-test")}`}
               >
                 <div className="rounded-xl bg-warning/10 p-2.5 text-warning border border-warning/10">
                   <Target className="h-5 w-5" />
@@ -657,7 +668,8 @@ function ResourcesPage() {
                   const temp = allTemplates.find((x) => x.id === "ped-progress-report");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                aria-disabled={soonLocked("ped-progress-report") || undefined}
+                className={`h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer${soonDim("ped-progress-report")}`}
               >
                 <div className="rounded-xl bg-lilac-soft p-2.5 text-lilac border border-lilac/10">
                   <GraduationCap className="h-5 w-5" />
@@ -680,7 +692,8 @@ function ResourcesPage() {
                   const temp = allTemplates.find((x) => x.id === "ped-course-certificate");
                   if (temp) handleUseTemplate(temp, e);
                 }}
-                className="h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
+                aria-disabled={soonLocked("ped-course-certificate") || undefined}
+                className={`h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer${soonDim("ped-course-certificate")}`}
               >
                 <div className="rounded-xl bg-accent/15 p-2.5 text-accent border border-accent/10">
                   <Award className="h-5 w-5" />
@@ -848,7 +861,7 @@ function ResourcesPage() {
                     <div
                       key={template.id}
                       onClick={() => handleOpenPreview(template)}
-                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20 hover:bg-secondary/40 transition-colors cursor-pointer"
+                      className={`flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20 hover:bg-secondary/40 transition-colors cursor-pointer${soonDim(template.id)}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <catMeta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -897,7 +910,7 @@ function ResourcesPage() {
                     <div
                       key={template.id}
                       onClick={() => handleOpenPreview(template)}
-                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20 hover:bg-secondary/40 transition-colors cursor-pointer"
+                      className={`flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20 hover:bg-secondary/40 transition-colors cursor-pointer${soonDim(template.id)}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <catMeta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
