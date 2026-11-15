@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Layers, Link2, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
 import { useWorkspaceProject, useWorkspaceProjects } from "@/hooks/use-workspace-projects";
@@ -72,7 +73,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-5">
       {back}
-      <header className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+      <header className="pt-1">
         <div className="flex items-start gap-4">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `color-mix(in oklch, ${color} 16%, transparent)`, color }}><Icon className="h-6 w-6" aria-hidden /></span>
           <div className="min-w-0 flex-1">
@@ -96,7 +97,8 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="mt-5"><ProgressBar progress={computeProgress(items)} color={color} /></div>
+        {/* Overall project progress uses the Bloom green; phases keep the project color. */}
+        <div className="mt-5"><ProgressBar progress={computeProgress(items)} color="var(--primary)" /></div>
       </header>
 
       {/* Page 1 = planning (unchanged); page 2 = this project's own board. Header above stays in place. */}
@@ -104,9 +106,16 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         labels={{ next: t("workspace.project.pages.toBoard"), previous: t("workspace.project.pages.toPlanning"),
           position: (page) => t(page === 1 ? "workspace.project.pages.planning" : "workspace.project.pages.board") }}
         planning={<div className="space-y-5">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{t("workspace.project.newPhaseHint")}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button onClick={() => newItem(null)} disabled={pending}><Plus aria-hidden />{t("workspace.project.newItem")}</Button>
-            <Button variant="outline" onClick={() => setPhaseEditor({ id: crypto.randomUUID(), title: "", isNew: true })} disabled={pending}><Layers aria-hidden />{t("workspace.project.newPhase")}</Button>
           </div>
 
           <ItemContainer {...containerProps} phase={null} />
