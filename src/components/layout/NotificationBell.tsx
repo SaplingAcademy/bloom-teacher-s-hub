@@ -112,6 +112,7 @@ export function NotificationBell({ className }: { className?: string }) {
     if (!target) return;
     setOpen(false);
     if (target.to === "/community") navigate({ to: "/community", search: { post: target.post } });
+    else if (target.to === "/workspace/projects") navigate({ to: "/workspace/projects" });
     else navigate({ to: "/community/contacts", search: { tab: target.tab } });
   };
 

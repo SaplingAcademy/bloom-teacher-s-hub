@@ -13,6 +13,7 @@ import { WorkspaceGridSkeleton } from "./WorkspaceShell";
 import { ConfirmDialog, ProjectDialog } from "./ProjectDialogs";
 import { colorOf, projectIcon } from "./project-appearance";
 import { ProgressBar } from "./ProjectProgress";
+import { ProjectInvites } from "./ProjectInvites";
 
 const FILTERS: StatusFilter[] = ["active", "archived", "all"];
 
@@ -24,9 +25,18 @@ export function ProjectsList({ filter, onFilter }: { filter: StatusFilter; onFil
   const [deleting, setDeleting] = useState<WorkspaceProject | null>(null);
   const byId = new Map((summaries ?? []).map((s) => [s.project.id, s]));
   const visible = filterAndSortProjects((summaries ?? []).map((s) => s.project), filter).map((p) => byId.get(p.id)!);
+  // One list from the same query (RLS returns owned + shared once each), split only for display.
+  const owned = visible.filter((s) => s.project.user_id === user?.id);
+  const shared = visible.filter((s) => s.project.user_id !== user?.id);
+  const card = (s: ProjectSummary) => <ProjectCard key={s.project.id} summary={s} disabled={pending} isOwner={s.project.user_id === user?.id}
+    onEdit={() => setEditor({ id: s.project.id, initial: { title: s.project.title, description: s.project.description, color: s.project.color, icon: s.project.icon } })}
+    onStatus={() => void execute({ type: "setStatus", id: s.project.id, status: s.project.status === "active" ? "archived" : "active" })}
+    onDelete={() => setDeleting(s.project)} />;
+  const grid = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <section className="space-y-5" aria-label={t("workspace.tabs.projects")}>
+      <ProjectInvites />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" aria-label={t("workspace.projects.filterLabel")} className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5">
           {FILTERS.map((f) => (
@@ -50,12 +60,18 @@ export function ProjectsList({ filter, onFilter }: { filter: StatusFilter; onFil
           {!summaries?.length && <Button className="mt-5" onClick={() => setEditor({ id: crypto.randomUUID(), initial: null })} disabled={!summaries}><Plus aria-hidden />{t("workspace.projects.first")}</Button>}
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((s) => <ProjectCard key={s.project.id} summary={s} disabled={pending} isOwner={s.project.user_id === user?.id}
-            onEdit={() => setEditor({ id: s.project.id, initial: { title: s.project.title, description: s.project.description, color: s.project.color, icon: s.project.icon } })}
-            onStatus={() => void execute({ type: "setStatus", id: s.project.id, status: s.project.status === "active" ? "archived" : "active" })}
-            onDelete={() => setDeleting(s.project)} />)}
-        </ul>
+        shared.length === 0 ? <ul className={grid}>{owned.map(card)}</ul> : (
+          <div className="space-y-6">
+            {owned.length > 0 && <div className="space-y-3" data-testid="projects-owned">
+              <h2 className="text-sm font-medium text-muted-foreground">{t("workspace.projects.mine")}</h2>
+              <ul className={grid}>{owned.map(card)}</ul>
+            </div>}
+            <div className="space-y-3" data-testid="projects-shared">
+              <h2 className="text-sm font-medium text-muted-foreground">{t("workspace.projects.sharedWithMe")}</h2>
+              <ul className={grid}>{shared.map(card)}</ul>
+            </div>
+          </div>
+        )
       )}
       <ProjectDialog open={!!editor} initial={editor?.initial ?? null} pending={pending} onClose={() => setEditor(null)}
         onSave={(draft) => execute(editor!.initial ? { type: "edit", id: editor!.id, draft } : { type: "create", id: editor!.id, draft })} />

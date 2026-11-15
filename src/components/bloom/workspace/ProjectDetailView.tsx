@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProjectOwnerProfile } from "@/lib/workspace-projects-data";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Layers, Link2, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, LogOut, Users, ArrowDown, ArrowUp, ExternalLink, FileText, FolderInput, Layers, Link2, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +20,10 @@ import { ProjectSummary, projectCreator } from "./ProjectSummary";
 import { useTeacherIdentity } from "@/components/layout/TeacherAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import { NotesBoard } from "./NotesBoard";
+import { ProjectShareDialog } from "./ProjectShareDialog";
+import { useProjectMembers } from "@/hooks/use-project-members";
+import { toast } from "sonner";
+import { ShareError } from "@/lib/workspace-project-members";
 
 type ItemEditor = { id: string; isNew: boolean; initial: ItemDraft };
 type Confirm = { kind: "phase"; phase: WorkspacePhase } | { kind: "item"; item: WorkspaceItem } | { kind: "project" };
@@ -36,6 +40,10 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const [phaseEditor, setPhaseEditor] = useState<{ id: string; title: string; isNew: boolean } | null>(null);
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  // Same cache as the share dialog: accepted participants feed the summary avatars.
+  const team = useProjectMembers(projectId, Boolean(detail));
   const sharedOwnerId = detail && user && detail.project.user_id !== user.id ? detail.project.user_id : null;
   const ownerProfile = useQuery({
     queryKey: ["workspace-project-owner", sharedOwnerId], enabled: Boolean(sharedOwnerId), staleTime: 10 * 60_000,
@@ -66,6 +74,15 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   // Shared projects: participants edit while active; archiving, deleting and members stay with the owner.
   const isOwner = project.user_id === user?.id;
   const busy = pending || (!isOwner && project.status !== "active");
+  const creator = projectCreator(project.user_id, user?.id, identity, ownerProfile.data ?? null);
+  const leave = async () => {
+    setLeaving(false);
+    try {
+      await team.leave.mutateAsync();
+      toast.success(t("workspace.share.left"));
+      void navigate({ to: "/workspace/projects" });
+    } catch (cause) { toast.error(t(`workspace.share.errors.${cause instanceof ShareError ? cause.code : "generic"}`)); }
+  };
   const phases = sortPhases(detail.phases);
   const color = colorOf(project.color);
   const Icon = projectIcon(project.icon);
@@ -102,10 +119,18 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
             </div>
             {project.description && <p className="mt-1.5 whitespace-pre-line break-words text-sm text-muted-foreground">{project.description}</p>}
           </div>
+          <Button variant="outline" size="sm" className="shrink-0" onClick={() => setSharing(true)} data-testid="project-share-button">
+            <Users aria-hidden /><span className="hidden sm:inline">{t(isOwner ? "workspace.share.button" : "workspace.share.membersButton")}</span>
+            <span className="sr-only sm:hidden">{t(isOwner ? "workspace.share.button" : "workspace.share.membersButton")}</span>
+          </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("workspace.projects.actions")} disabled={busy}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("workspace.projects.actions")} disabled={pending}><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setEditingProject(true)}><Pencil aria-hidden />{t("workspace.mural.edit")}</DropdownMenuItem>
+              <DropdownMenuItem disabled={busy} onSelect={() => setEditingProject(true)}><Pencil aria-hidden />{t("workspace.mural.edit")}</DropdownMenuItem>
+              {!isOwner && <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setLeaving(true)} data-testid="project-leave"><LogOut aria-hidden />{t("workspace.share.leave")}</DropdownMenuItem>
+              </>}
               {isOwner && <>
                 <DropdownMenuItem onSelect={() => void execute({ type: "setStatus", status: project.status === "active" ? "archived" : "active" })}>
                   {project.status === "active" ? <><Archive aria-hidden />{t("workspace.projects.archive")}</> : <><ArchiveRestore aria-hidden />{t("workspace.projects.reactivate")}</>}
@@ -116,9 +141,11 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {/* Summary: creator, future collaborators, overall progress (Bloom green) and dates. Phases keep the project color. */}
+        {/* Summary: creator, participants, overall progress (Bloom green) and dates. Phases keep the project color. */}
         <ProjectSummary project={project} progress={computeProgress(items)} pending={busy}
-          creator={projectCreator(project.user_id, user?.id, identity, ownerProfile.data ?? null)}
+          creator={creator} canInvite={isOwner && project.status === "active"} onShare={() => setSharing(true)}
+          members={(team.members ?? []).filter((m) => m.status === "accepted" && m.user_id)
+            .map((m) => ({ id: m.member_id, name: m.full_name?.trim() || t("workspace.project.summary.unnamed"), photo: m.avatar_url }))}
           onSaveDates={(start, end) => execute({ type: "setDates", start_date: start, end_date: end })} />
       </header>
 
@@ -150,6 +177,10 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         board={() => <NotesBoard projectId={project.id} readOnly={project.status !== "active"} isProjectOwner={isOwner} title={t("workspace.project.pages.boardTitle")} />}
       />
 
+      <ProjectShareDialog open={sharing} onClose={() => setSharing(false)} project={project} owner={{ name: creator.name, photo: creator.photo ?? null }}
+        isOwner={isOwner} onLeft={() => void navigate({ to: "/workspace/projects" })} />
+      <ConfirmDialog open={leaving} onClose={() => setLeaving(false)} onConfirm={() => void leave()}
+        title={t("workspace.share.leaveTitle")} body={t("workspace.share.leaveBody")} confirm={t("workspace.share.leave")} />
       <ProjectDialog open={editingProject} pending={pending} onClose={() => setEditingProject(false)}
         initial={{ title: project.title, description: project.description, color: project.color, icon: project.icon }}
         onSave={(draft) => execute({ type: "editProject", draft })} />

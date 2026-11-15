@@ -13,6 +13,11 @@ interface ProjectSummaryProps {
   project: Pick<WorkspaceProject, "start_date" | "end_date">;
   progress: Progress;
   creator: { name: string; photo?: string | null };
+  /** Accepted participants (avatars beside the creator). */
+  members?: { id: string; name: string; photo: string | null }[];
+  /** Opens sharing (owner) or the participants list; the "+" is shown only when canInvite. */
+  onShare?: () => void;
+  canInvite?: boolean;
   pending: boolean;
   onSaveDates: (start: string, end: string | null) => Promise<boolean>;
 }
@@ -43,12 +48,13 @@ function Property({ icon, label, children, valueClassName }: { icon: ReactNode; 
  * Notion-like project summary (two lines on desktop, stacked on phones): creator, future
  * "add teacher" slot, short green progress, start date and the optional end date.
  */
-export function ProjectSummary({ project, progress, creator, pending, onSaveDates }: ProjectSummaryProps) {
+export function ProjectSummary({ project, progress, creator, members = [], onShare, canInvite = false, pending, onSaveDates }: ProjectSummaryProps) {
   const { t, lang } = useLanguage();
   const [editing, setEditing] = useState(false);
   const name = creator.name.trim() || t("workspace.project.summary.unnamed");
   const progressLabel = t("workspace.project.progressLabel").replace("{done}", String(progress.done)).replace("{total}", String(progress.total));
   const addTeacher = t("workspace.project.summary.addTeacher");
+  const shown = members.slice(0, 3);
   const editDates = t("workspace.project.summary.editDates");
 
   const dateButton = (value: string, testId: string) => (
@@ -69,17 +75,27 @@ export function ProjectSummary({ project, progress, creator, pending, onSaveDate
             ? <img src={creator.photo} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
             : <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lilac-soft text-[10px] font-semibold text-foreground">{initials(name)}</span>}
           <span className="line-clamp-2 min-w-0 break-words [overflow-wrap:anywhere]" title={name}>{name}</span>
-          <TooltipProvider delayDuration={200}>
+          {shown.length > 0 && (
+            <button type="button" onClick={onShare} disabled={!onShare} data-testid="project-members-avatars"
+              aria-label={t("workspace.share.membersCount").replace("{count}", String(members.length))}
+              className="flex shrink-0 items-center -space-x-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {shown.map((m) => m.photo
+                ? <img key={m.id} src={m.photo} alt="" title={m.name} className="h-6 w-6 rounded-full object-cover ring-2 ring-card" />
+                : <span key={m.id} aria-hidden title={m.name} className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-foreground ring-2 ring-card">{initials(m.name)}</span>)}
+              {members.length > shown.length && <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold ring-2 ring-card">+{members.length - shown.length}</span>}
+            </button>
+          )}
+          {canInvite && onShare && <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" aria-label={addTeacher}
+                <button type="button" aria-label={addTeacher} onClick={onShare} data-testid="project-share-plus"
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-primary/30 bg-primary/10 text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Plus className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{addTeacher}</TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </TooltipProvider>}
         </Property>
         <Property icon={<ChartNoAxesColumnIncreasing className="h-3.5 w-3.5" aria-hidden />} label={t("workspace.project.summary.progress")}>
           <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label={progressLabel}
