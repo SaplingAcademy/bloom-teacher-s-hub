@@ -33,6 +33,37 @@ export const uiTranslations = {
       "historySlide": "Tela 2 de 2: Histórico", "navigationLabel": "Navegação do Checklist", "showChecklist": "Mostrar Checklist", "showHistory": "Mostrar Histórico"
     },
     "workspace": {
+      "share": {
+        "button": "Compartilhar", "membersButton": "Participantes", "title": "Compartilhar projeto", "membersTitle": "Participantes",
+        "emailLabel": "Convidar professor pelo e-mail", "emailPlaceholder": "email@exemplo.com", "invite": "Convidar",
+        "hint": "Use o e-mail da conta Bloom do professor. Só professores com cadastro confirmado recebem o convite.",
+        "sent": "Convite registrado. Se o e-mail pertencer a um professor com cadastro confirmado no Bloom, ele verá o convite.",
+        "alreadyMember": "Este professor já participa do projeto.",
+        "cooldown": "Este professor recusou um convite recente. Você poderá convidar novamente a partir de {date}.",
+        "archived": "Projetos arquivados não recebem novos convites. Reative o projeto para convidar professores.",
+        "owner": "Proprietário", "you": "(você)", "loading": "Carregando participantes…", "loadError": "Não foi possível carregar os participantes.",
+        "empty": "Ainda não há outros participantes.", "emptyOwner": "Nenhum participante ou convite pendente ainda.",
+        "pendingInvite": "Convite pendente", "membersCount": "{count} participante(s)",
+        "status": { "accepted": "Participante", "pending": "Convite pendente", "declined": "Recusou o convite" },
+        "remove": "Remover", "removeTitle": "Remover participante?", "removeBody": "{name} perderá o acesso ao projeto imediatamente. O que essa pessoa criou continua no projeto.",
+        "removed": "Participante removido.",
+        "cancelInvite": "Cancelar convite", "cancelInviteTitle": "Cancelar convite?", "cancelInviteBody": "O convite para {name} será cancelado.",
+        "inviteCancelled": "Convite cancelado.",
+        "leave": "Sair do projeto", "leaveTitle": "Sair do projeto?", "leaveBody": "Você perderá o acesso a este projeto imediatamente. Para voltar, será preciso um novo convite do proprietário.",
+        "left": "Você saiu do projeto.",
+        "errors": {
+          "invite_invalid_email": "Informe um e-mail válido.", "invite_self": "Você não pode convidar a si mesmo.",
+          "project_member_limit": "Este projeto atingiu o limite de 50 participantes e convites ativos.",
+          "project_archived": "Este projeto está arquivado. Reative-o para continuar.", "project_not_found": "Projeto não encontrado ou sem permissão.",
+          "invite_not_found": "Este convite não está mais disponível.", "email_not_confirmed": "Confirme o seu e-mail no Bloom para aceitar convites.",
+          "member_not_found": "Participante não encontrado. A lista foi atualizada.", "owner_cannot_leave": "O proprietário não pode sair do próprio projeto.",
+          "not_authenticated": "Sua sessão expirou. Entre novamente.", "generic": "Não foi possível concluir. Tente novamente."
+        }
+      },
+      "invites": {
+        "title": "Convites recebidos", "from": "Convite de {name}", "accept": "Aceitar", "decline": "Recusar",
+        "accepted": "Convite aceito. Abrindo o projeto…", "declined": "Convite recusado.", "loadError": "Não foi possível carregar os convites."
+      },
       "title": "Workspace", "eyebrow": "Seu espaço de organização",
       "subtitle": "Organize ideias, projetos e anotações em um só lugar.",
       "infoLabel": "Sobre o Workspace",
@@ -61,7 +92,7 @@ export const uiTranslations = {
         "titleLabel": "Título", "titlePlaceholder": "Ex.: Material do semestre", "titleRequired": "Informe um título.",
         "descriptionLabel": "Descrição (opcional)", "descriptionPlaceholder": "Qual é o objetivo deste projeto?", "colorLabel": "Cor", "iconLabel": "Ícone",
         "filterLabel": "Filtrar por status", "filters": { "active": "Ativos", "archived": "Arquivados", "all": "Todos" },
-        "activeBadge": "Ativo", "archivedBadge": "Arquivado", "sharedBadge": "Compartilhado", "actions": "Ações do projeto", "archive": "Arquivar", "reactivate": "Reativar",
+        "activeBadge": "Ativo", "archivedBadge": "Arquivado", "sharedBadge": "Compartilhado", "mine": "Meus projetos", "sharedWithMe": "Compartilhados comigo", "actions": "Ações do projeto", "archive": "Arquivar", "reactivate": "Reativar",
         "deleteTitle": "Excluir este projeto?", "deleteBody": "O projeto, suas fases, tarefas, notas e links serão excluídos permanentemente.",
         "loadError": "Não foi possível carregar seus projetos.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
         "toast": { "create": "Projeto criado.", "edit": "Projeto atualizado.", "setStatus": "Status do projeto atualizado.", "delete": "Projeto excluído." },
@@ -76,7 +107,7 @@ export const uiTranslations = {
         "toast": { "create": "Caderno criado.", "edit": "Caderno atualizado.", "delete": "Caderno excluído." }
       },
       "project": {
-        "summary": { "createdBy": "Criado por", "progress": "Progresso", "start": "Início", "end": "Término", "endOptional": "Término (opcional)", "tasksDone": "{done} de {total} tarefas", "addTeacher": "Adicionar professor (em breve)", "addEnd": "Término", "editDates": "Editar datas do projeto", "datesTitle": "Datas do projeto", "removeEnd": "Remover", "startRequired": "Informe a data de início.", "endBeforeStart": "O término não pode ser anterior ao início.", "unnamed": "Professor(a)" },
+        "summary": { "createdBy": "Criado por", "progress": "Progresso", "start": "Início", "end": "Término", "endOptional": "Término (opcional)", "tasksDone": "{done} de {total} tarefas", "addTeacher": "Compartilhar projeto", "addEnd": "Término", "editDates": "Editar datas do projeto", "datesTitle": "Datas do projeto", "removeEnd": "Remover", "startRequired": "Informe a data de início.", "endBeforeStart": "O término não pode ser anterior ao início.", "unnamed": "Professor(a)" },
         "pages": { "planning": "Página 1 de 2: Planejamento", "board": "Página 2 de 2: Mural", "toBoard": "Ir para o mural do projeto", "toPlanning": "Voltar ao planejamento", "boardTitle": "Mural do projeto", "readOnly": "Projeto arquivado: o mural está disponível somente para leitura." },
         "back": "Voltar aos projetos", "title": "Projeto", "phases": "Fases", "emptyBody": "As fases e tarefas deste projeto aparecerão aqui.",
         "notFoundTitle": "Projeto não encontrado", "notFoundBody": "Este projeto não existe ou não está disponível para sua conta.",
@@ -1747,6 +1778,37 @@ export const uiTranslations = {
       "historySlide": "Slide 2 of 2: History", "navigationLabel": "Checklist navigation", "showChecklist": "Show Checklist", "showHistory": "Show History"
     },
     "workspace": {
+      "share": {
+        "button": "Share", "membersButton": "Participants", "title": "Share project", "membersTitle": "Participants",
+        "emailLabel": "Invite a teacher by e-mail", "emailPlaceholder": "email@example.com", "invite": "Invite",
+        "hint": "Use the teacher's Bloom account e-mail. Only teachers with a confirmed account receive the invite.",
+        "sent": "Invite recorded. If the e-mail belongs to a teacher with a confirmed Bloom account, they will see the invite.",
+        "alreadyMember": "This teacher is already a participant.",
+        "cooldown": "This teacher recently declined an invite. You can invite again from {date}.",
+        "archived": "Archived projects do not accept new invites. Reactivate the project to invite teachers.",
+        "owner": "Owner", "you": "(you)", "loading": "Loading participants…", "loadError": "Could not load participants.",
+        "empty": "No other participants yet.", "emptyOwner": "No participants or pending invites yet.",
+        "pendingInvite": "Pending invite", "membersCount": "{count} participant(s)",
+        "status": { "accepted": "Participant", "pending": "Pending invite", "declined": "Declined the invite" },
+        "remove": "Remove", "removeTitle": "Remove participant?", "removeBody": "{name} will lose access to the project immediately. What they created stays in the project.",
+        "removed": "Participant removed.",
+        "cancelInvite": "Cancel invite", "cancelInviteTitle": "Cancel invite?", "cancelInviteBody": "The invite to {name} will be cancelled.",
+        "inviteCancelled": "Invite cancelled.",
+        "leave": "Leave project", "leaveTitle": "Leave project?", "leaveBody": "You will lose access to this project immediately. To come back you will need a new invite from the owner.",
+        "left": "You left the project.",
+        "errors": {
+          "invite_invalid_email": "Enter a valid e-mail.", "invite_self": "You cannot invite yourself.",
+          "project_member_limit": "This project reached the limit of 50 participants and active invites.",
+          "project_archived": "This project is archived. Reactivate it to continue.", "project_not_found": "Project not found or no permission.",
+          "invite_not_found": "This invite is no longer available.", "email_not_confirmed": "Confirm your e-mail in Bloom to accept invites.",
+          "member_not_found": "Participant not found. The list was refreshed.", "owner_cannot_leave": "The owner cannot leave their own project.",
+          "not_authenticated": "Your session expired. Sign in again.", "generic": "Could not complete. Please try again."
+        }
+      },
+      "invites": {
+        "title": "Invites received", "from": "Invite from {name}", "accept": "Accept", "decline": "Decline",
+        "accepted": "Invite accepted. Opening the project…", "declined": "Invite declined.", "loadError": "Could not load invites."
+      },
       "title": "Workspace", "eyebrow": "Your organization space",
       "subtitle": "Organize ideas, projects and notes in one place.",
       "infoLabel": "About Workspace",
@@ -1775,7 +1837,7 @@ export const uiTranslations = {
         "titleLabel": "Title", "titlePlaceholder": "E.g. Semester materials", "titleRequired": "Please enter a title.",
         "descriptionLabel": "Description (optional)", "descriptionPlaceholder": "What is this project about?", "colorLabel": "Color", "iconLabel": "Icon",
         "filterLabel": "Filter by status", "filters": { "active": "Active", "archived": "Archived", "all": "All" },
-        "activeBadge": "Active", "archivedBadge": "Archived", "sharedBadge": "Shared", "actions": "Project actions", "archive": "Archive", "reactivate": "Reactivate",
+        "activeBadge": "Active", "archivedBadge": "Archived", "sharedBadge": "Shared", "mine": "My projects", "sharedWithMe": "Shared with me", "actions": "Project actions", "archive": "Archive", "reactivate": "Reactivate",
         "deleteTitle": "Delete this project?", "deleteBody": "The project and all its phases, tasks, notes and links will be permanently deleted.",
         "loadError": "Could not load your projects.", "saveError": "Could not save this change. Please try again.",
         "toast": { "create": "Project created.", "edit": "Project updated.", "setStatus": "Project status updated.", "delete": "Project deleted." },
@@ -1790,7 +1852,7 @@ export const uiTranslations = {
         "toast": { "create": "Notebook created.", "edit": "Notebook updated.", "delete": "Notebook deleted." }
       },
       "project": {
-        "summary": { "createdBy": "Created by", "progress": "Progress", "start": "Start", "end": "End", "endOptional": "End (optional)", "tasksDone": "{done} of {total} tasks", "addTeacher": "Add teacher (coming soon)", "addEnd": "End date", "editDates": "Edit project dates", "datesTitle": "Project dates", "removeEnd": "Remove", "startRequired": "Enter a start date.", "endBeforeStart": "The end date cannot be before the start date.", "unnamed": "Teacher" },
+        "summary": { "createdBy": "Created by", "progress": "Progress", "start": "Start", "end": "End", "endOptional": "End (optional)", "tasksDone": "{done} of {total} tasks", "addTeacher": "Share project", "addEnd": "End date", "editDates": "Edit project dates", "datesTitle": "Project dates", "removeEnd": "Remove", "startRequired": "Enter a start date.", "endBeforeStart": "The end date cannot be before the start date.", "unnamed": "Teacher" },
         "pages": { "planning": "Page 1 of 2: Planning", "board": "Page 2 of 2: Board", "toBoard": "Go to the project board", "toPlanning": "Back to planning", "boardTitle": "Project board", "readOnly": "Archived project: the board is read-only." },
         "back": "Back to projects", "title": "Project", "phases": "Phases", "emptyBody": "This project's phases and tasks will appear here.",
         "notFoundTitle": "Project not found", "notFoundBody": "This project doesn't exist or isn't available to your account.",

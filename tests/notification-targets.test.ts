@@ -20,4 +20,8 @@ describe("bell notification targets", () => {
     expect(parseContactsTab("incoming")).toBeUndefined();
     expect(parseContactsTab(["received"])).toBeUndefined();
   });
+  it("project invites lead to the projects area (received invites / shared list)", () => {
+    expect(notificationTarget({ type: "project_invite", post_id: null })).toEqual({ to: "/workspace/projects" });
+    expect(notificationTarget({ type: "project_invite_accepted", post_id: null })).toEqual({ to: "/workspace/projects" });
+  });
 });
