@@ -63,6 +63,31 @@ begin
              and tablename in ('workspace_projects', 'workspace_project_phases', 'workspace_project_items')) then
     raise exception 'Há políticas RESTRICTIVE em projetos/fases/itens: revisar antes de aplicar';
   end if;
+  -- Notas/imagens: as únicas RESTRICTIVE compatíveis são as do mural por projeto (todas presentes,
+  -- nenhuma outra). Uma restrição desconhecida (ex.: user_id = auth.uid()) esconderia o mural dos
+  -- participantes.
+  if (select count(*) from pg_policies where schemaname = 'public' and permissive = 'RESTRICTIVE'
+        and policyname in ('workspace_notes_project_scope_select', 'workspace_notes_project_scope_insert',
+                           'workspace_notes_project_scope_update', 'workspace_notes_project_scope_delete',
+                           'workspace_note_images_project_scope_insert', 'workspace_note_images_project_scope_update',
+                           'workspace_note_images_project_scope_delete')) <> 7 then
+    raise exception 'Políticas RESTRICTIVE do mural por projeto ausentes ou diferentes do esperado';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and permissive = 'RESTRICTIVE'
+             and tablename in ('workspace_notes', 'workspace_note_images')
+             and policyname not in ('workspace_notes_project_scope_select', 'workspace_notes_project_scope_insert',
+                                    'workspace_notes_project_scope_update', 'workspace_notes_project_scope_delete',
+                                    'workspace_note_images_project_scope_insert', 'workspace_note_images_project_scope_update',
+                                    'workspace_note_images_project_scope_delete',
+                                    'workspace_note_images_project_scope_select')) then  -- criada por esta etapa (reexecução)
+    raise exception 'Há políticas RESTRICTIVE desconhecidas em notas/imagens: revisar antes de aplicar';
+  end if;
+  -- Storage: uma RESTRICTIVE existente sobre workspace-media poderia bloquear a leitura compartilhada.
+  if exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and permissive = 'RESTRICTIVE'
+             and coalesce(qual, '') || coalesce(with_check, '') ilike '%workspace-media%'
+             and policyname not like 'workspace_media_project_scope_%') then
+    raise exception 'Há políticas RESTRICTIVE em storage.objects para workspace-media: revisar antes de aplicar';
+  end if;
   if exists (select 1 from pg_policies where policyname in (
                'workspace_projects_member_select', 'workspace_projects_member_update',
                'workspace_project_phases_member_select', 'workspace_project_phases_member_insert',
