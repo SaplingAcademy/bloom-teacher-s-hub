@@ -5,10 +5,9 @@
 -- aceitar, recusar, remover e sair. O proprietário continua sendo workspace_projects.user_id e
 -- nunca tem linha nesta tabela.
 --
--- Resposta neutra: o convite por e-mail sempre responde "enviado", exista ou não uma conta com
--- aquele e-mail. Para e-mails sem conta o convite fica pendente (sem notificação) e aparece para
--- quem se cadastrar depois com esse e-mail. Para o dono, convites pendentes aparecem pelo e-mail
--- digitado (nunca por nome), então a lista também não revela quem tem conta.
+-- Só professores com conta e perfil na Bloom podem ser convidados; o convite é ligado ao
+-- user_id encontrado. Resposta neutra: um e-mail válido sempre recebe "enviado", exista ou não
+-- uma conta; para e-mails sem conta nada é gravado e nenhuma notificação é criada.
 --
 -- NÃO concede acesso a projetos: nenhuma política, FK, função de acesso, Storage ou tabela
 -- existente é alterada. Um convite aceito só passará a dar acesso na Etapa 2.
@@ -71,8 +70,8 @@ end $$;
 create table public.workspace_project_members (
   id                       uuid primary key default gen_random_uuid(),
   project_id               uuid not null references public.workspace_projects(id) on delete cascade,
-  -- Professor convidado; NULL enquanto o e-mail convidado não corresponde a uma conta.
-  user_id                  uuid references public.profiles(id) on delete cascade,
+  -- Professor convidado (conta e perfil existentes).
+  user_id                  uuid not null references public.profiles(id) on delete cascade,
   -- E-mail digitado pelo dono (minúsculas). Visível só para o dono, apenas em convites pendentes.
   invited_email            text not null,
   invited_by               uuid not null references public.profiles(id) on delete cascade,
@@ -88,8 +87,8 @@ create table public.workspace_project_members (
   constraint workspace_project_members_email_format check (invited_email = lower(btrim(invited_email)) and position('@' in invited_email) > 1 and char_length(invited_email) <= 320),
   constraint workspace_project_members_role_check check (role in ('editor')),
   constraint workspace_project_members_status_check check (status in ('pending', 'accepted', 'declined')),
-  constraint workspace_project_members_not_self check (user_id is null or user_id <> invited_by),
-  constraint workspace_project_members_responded check (status = 'pending' or (responded_at is not null and user_id is not null))
+  constraint workspace_project_members_not_self check (user_id <> invited_by),
+  constraint workspace_project_members_responded check (status = 'pending' or responded_at is not null)
 );
 comment on table public.workspace_project_members is
   'Workspace colaborativo: convites e participantes (o dono é workspace_projects.user_id e não tem linha). Acesso só via RPCs. Etapa 1: não concede acesso ao projeto.';
@@ -138,12 +137,13 @@ begin
   return v_id;
 end $$;
 
--- 3. Convidar por e-mail exato (somente o dono, projeto ativo). Resposta neutra: 'sent' tanto
---    para contas existentes quanto para e-mails sem conta; nunca retorna nome, foto ou e-mail.
+-- 3. Convidar por e-mail exato (somente o dono, projeto ativo), apenas professores com conta e
+--    perfil. Resposta neutra: 'sent' também para e-mails sem conta (nada é gravado nesse caso);
+--    nunca retorna id, nome, foto ou e-mail (o id do convite vem de list_project_members).
 --    Após uma recusa, novo convite só depois de 5 dias ('cooldown' com a data de liberação).
 --    Ordem de locks em todas as RPCs: projeto → par (projeto, e-mail) → linha.
 create or replace function public.invite_project_member(p_project uuid, p_email text)
-returns table (member_id uuid, status text, cooldown_until timestamptz)
+returns table (status text, cooldown_until timestamptz)
 language plpgsql
 security definer
 set search_path = ''
@@ -180,29 +180,40 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended('workspace_project_members:pair:' || p_project::text || ':' || v_email, 0));
 
-  -- Conta correspondente (se houver), usada só internamente.
+  -- Conta + perfil correspondentes (e-mail exato, sem diferenciar maiúsculas), usada só aqui.
   select u.id into v_invitee
     from auth.users u join public.profiles p on p.id = u.id
    where lower(u.email) = v_email
    limit 1;
 
+  if v_invitee is null then
+    -- E-mail sem conta: mesmo retorno de um convite enviado, sem gravar nada. O limite de
+    -- convites é aplicado igual nos dois casos para não diferenciar as respostas.
+    if (select count(*) from public.workspace_project_members m
+         where m.project_id = p_project and m.status in ('pending', 'accepted')) >= 50 then
+      raise exception 'project_member_limit';
+    end if;
+    return query select 'sent'::text, null::timestamptz;
+    return;
+  end if;
+
   select m.id, m.status, m.responded_at, m.invite_notification_id
     into v_row_id, v_row_status, v_row_responded, v_row_notification
     from public.workspace_project_members m
-   where m.project_id = p_project and (m.invited_email = v_email or (v_invitee is not null and m.user_id = v_invitee))
+   where m.project_id = p_project and m.user_id = v_invitee
    for update;
 
   if v_row_id is not null then
     if v_row_status = 'accepted' then
-      return query select v_row_id, 'already_member'::text, null::timestamptz; return;
+      return query select 'already_member'::text, null::timestamptz; return;
     end if;
     if v_row_status = 'pending' then
       -- Duplicidade ativa: nada muda e nenhuma notificação é repetida.
-      return query select v_row_id, 'sent'::text, null::timestamptz; return;
+      return query select 'sent'::text, null::timestamptz; return;
     end if;
     -- Recusado: só após 5 dias (mesmo intervalo de Meus Contatos).
     if v_row_responded > now() - interval '5 days' then
-      return query select v_row_id, 'cooldown'::text, v_row_responded + interval '5 days'; return;
+      return query select 'cooldown'::text, v_row_responded + interval '5 days'; return;
     end if;
   end if;
 
@@ -217,7 +228,7 @@ begin
       delete from public.notifications n where n.id = v_row_notification and n.read = false;
     end if;
     update public.workspace_project_members m
-       set status = 'pending', invited_by = v_me, invited_email = v_email, user_id = coalesce(m.user_id, v_invitee),
+       set status = 'pending', invited_by = v_me, invited_email = v_email,
            responded_at = null, invite_notification_id = null, created_at = now(), updated_at = now()
      where m.id = v_row_id;
   else
@@ -226,15 +237,13 @@ begin
     returning id into v_row_id;
   end if;
 
-  if v_invitee is not null then
-    v_notification := public.workspace_project_members_notify(v_invitee, v_me, 'project_invite', v_title);
-    update public.workspace_project_members m set invite_notification_id = v_notification where m.id = v_row_id;
-  end if;
+  v_notification := public.workspace_project_members_notify(v_invitee, v_me, 'project_invite', v_title);
+  update public.workspace_project_members m set invite_notification_id = v_notification where m.id = v_row_id;
 
-  return query select v_row_id, 'sent'::text, null::timestamptz;
+  return query select 'sent'::text, null::timestamptz;
 end $$;
 
--- 4. Responder ao próprio convite pendente (convite ligado à conta ou ao e-mail da conta).
+-- 4. Responder ao próprio convite pendente.
 --    Aceitar exige projeto ativo; recusar continua possível. Aceite notifica o dono; recusa é
 --    silenciosa e inicia os 5 dias de espera para um novo convite.
 create or replace function public.respond_project_invite(p_member_id uuid, p_accept boolean)
@@ -245,7 +254,6 @@ set search_path = ''
 as $$
 declare
   v_me uuid := auth.uid();
-  v_my_email text;
   v_project uuid;
   v_email text;
   v_owner uuid;
@@ -256,7 +264,6 @@ declare
 begin
   if v_me is null then raise exception 'not_authenticated'; end if;
   if p_accept is null then raise exception 'invite_invalid_response'; end if;
-  select lower(u.email) into v_my_email from auth.users u where u.id = v_me;
 
   select m.project_id, m.invited_email into v_project, v_email from public.workspace_project_members m where m.id = p_member_id;
   if v_project is null then raise exception 'invite_not_found'; end if;
@@ -265,8 +272,7 @@ begin
 
   select true, m.invite_notification_id into v_found, v_notification
     from public.workspace_project_members m
-   where m.id = p_member_id and m.status = 'pending'
-     and (m.user_id = v_me or (m.user_id is null and m.invited_email = v_my_email))
+   where m.id = p_member_id and m.status = 'pending' and m.user_id = v_me
    for update;
   if not coalesce(v_found, false) then raise exception 'invite_not_found'; end if;
 
@@ -275,8 +281,7 @@ begin
   if p_accept and v_project_status is distinct from 'active' then raise exception 'project_archived'; end if;
 
   update public.workspace_project_members m
-     set user_id = v_me,
-         status = case when p_accept then 'accepted' else 'declined' end,
+     set status = case when p_accept then 'accepted' else 'declined' end,
          responded_at = now(), updated_at = now()
    where m.id = p_member_id;
 
@@ -359,7 +364,7 @@ end $$;
 
 -- 7. Participantes de um projeto (dono ou participante aceito).
 --    Aceitos/recusados: nome e foto. Pendentes (só para o dono): apenas o e-mail que o próprio
---    dono digitou, sem nome nem foto — a lista não revela se o e-mail tem conta.
+--    dono digitou, sem nome nem foto.
 create or replace function public.list_project_members(p_project uuid)
 returns table (member_id uuid, user_id uuid, full_name text, avatar_url text, invited_email text, role text,
                status text, created_at timestamptz, responded_at timestamptz)
@@ -390,14 +395,13 @@ begin
          case when m.status = 'pending' and v_owner = v_me then m.invited_email end,
          m.role, m.status, m.created_at, m.responded_at
     from public.workspace_project_members m
-    left join public.profiles p on p.id = m.user_id
+    join public.profiles p on p.id = m.user_id
    where m.project_id = p_project
      and (v_owner = v_me or m.status = 'accepted')
    order by case m.status when 'accepted' then 0 when 'pending' then 1 else 2 end, p.full_name nulls last, m.invited_email, m.id;
 end $$;
 
--- 8. Meus convites pendentes (ligados à minha conta ou ao meu e-mail): projeto, título e quem
---    convidou. Sem e-mails.
+-- 8. Meus convites pendentes: projeto, título e quem convidou. Sem e-mails.
 create or replace function public.list_my_project_invites()
 returns table (member_id uuid, project_id uuid, project_title text, invited_by uuid, inviter_name text,
                inviter_avatar text, created_at timestamptz)
@@ -409,17 +413,14 @@ as $$
 #variable_conflict use_column
 declare
   v_me uuid := auth.uid();
-  v_my_email text;
 begin
   if v_me is null then raise exception 'not_authenticated'; end if;
-  select lower(u.email) into v_my_email from auth.users u where u.id = v_me;
   return query
   select m.id, m.project_id, wp.title, m.invited_by, p.full_name, p.avatar_url, m.created_at
     from public.workspace_project_members m
     join public.workspace_projects wp on wp.id = m.project_id
     left join public.profiles p on p.id = m.invited_by
-   where m.status = 'pending'
-     and (m.user_id = v_me or (m.user_id is null and m.invited_email = v_my_email))
+   where m.status = 'pending' and m.user_id = v_me
    order by m.created_at desc, m.id;
 end $$;
 
