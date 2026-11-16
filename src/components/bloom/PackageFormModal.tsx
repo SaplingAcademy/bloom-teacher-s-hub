@@ -137,42 +137,6 @@ export function PackageFormModal({
             />
           </div>
 
-          {frequency === "Monthly" && (
-            <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
-              <div className="space-y-1">
-                <Label htmlFor="modal-pkg-duration-type" className="text-xs font-bold text-stone-700">
-                  {tr("packageForm.billingDuration")}
-                </Label>
-                <Select value={billingDurationType} onValueChange={(value) => setBillingDurationType(value as BillingDurationType)}>
-                  <SelectTrigger id="modal-pkg-duration-type" className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-xs font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="continuous">{tr("packageForm.continuousUntilCancelled")}</SelectItem>
-                    <SelectItem value="fixed">{tr("packageForm.fixedPeriod")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {billingDurationType === "fixed" && (
-                <div className="space-y-1">
-                  <Label htmlFor="modal-pkg-contract-months" className="text-xs font-bold text-stone-700">
-                    {tr("packageForm.contractDurationMonths")}
-                  </Label>
-                  <Input
-                    id="modal-pkg-contract-months"
-                    type="number"
-                    min={1}
-                    max={120}
-                    value={contractMonths}
-                    onChange={(e) => setContractMonths(sanitizeNumeric(e.target.value))}
-                    required
-                    className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Billing Model & Price */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -209,6 +173,43 @@ export function PackageFormModal({
               />
             </div>
           </div>
+
+          {/* Billing duration (only for the monthly model), right after the model and its value */}
+          {frequency === "Monthly" && (
+            <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="modal-pkg-duration-type" className="text-xs font-bold text-stone-700">
+                  {tr("packageForm.billingDuration")}
+                </Label>
+                <Select value={billingDurationType} onValueChange={(value) => setBillingDurationType(value as BillingDurationType)}>
+                  <SelectTrigger id="modal-pkg-duration-type" className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="continuous">{tr("packageForm.continuousUntilCancelled")}</SelectItem>
+                    <SelectItem value="fixed">{tr("packageForm.fixedPeriod")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {billingDurationType === "fixed" && (
+                <div className="space-y-1">
+                  <Label htmlFor="modal-pkg-contract-months" className="text-xs font-bold text-stone-700">
+                    {tr("packageForm.contractDurationMonths")}
+                  </Label>
+                  <Input
+                    id="modal-pkg-contract-months"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={contractMonths}
+                    onChange={(e) => setContractMonths(sanitizeNumeric(e.target.value))}
+                    required
+                    className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-bold"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Lessons & Duration */}
           <div className="grid grid-cols-2 gap-3">
