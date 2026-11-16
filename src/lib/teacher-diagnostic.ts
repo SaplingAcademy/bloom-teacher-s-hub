@@ -105,6 +105,27 @@ export function missingInStep(answers: Answers, step: number): string[] {
   return missing;
 }
 
+/**
+ * Overall progress: every applicable question of the 5 steps (follow-ups count only while their
+ * condition holds). A question counts as answered when it passes the same rules as the step
+ * validation (including its "Outro" detail). 100% only after a confirmed completion.
+ */
+export function diagnosticProgress(answers: Answers, completed = false): { answered: number; total: number; percent: number } {
+  let answered = 0;
+  let total = 0;
+  DIAGNOSTIC_STEPS.forEach((step, index) => {
+    const missing = missingInStep(answers, index + 1);
+    for (const question of step.questions) {
+      if (!isVisible(question, answers)) continue;
+      total += 1;
+      const keys = question.type === "multi" ? [question.id, question.otherKey] : [question.id];
+      if (!keys.some((key) => missing.includes(key))) answered += 1;
+    }
+  });
+  if (completed) return { answered: total, total, percent: 100 };
+  return { answered, total, percent: Math.min(99, Math.floor((answered / Math.max(1, total)) * 100)) };
+}
+
 /** Step of a question id (or of a "<multi>_other" key); 0 when unknown. */
 export function stepOf(key: string): number {
   const index = DIAGNOSTIC_STEPS.findIndex((step) => step.questions.some((q) => q.id === key || (q.type === "multi" && q.otherKey === key)));

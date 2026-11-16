@@ -145,6 +145,46 @@ describe("Diagnóstico Inicial flow", () => {
       student_info_tools: ["spreadsheet"], student_info_tools_other: "", payment_tracking: ["bank"], payment_tracking_other: "",
       makeup_control: "diagnostic.q.makeup_control.quick.whatsapp", admin_tools: "Planilha própria e Trello" } });
   });
+  it("progress grows gradually with answers, does not jump between steps and is 100% only after completion", async () => {
+    const percent = () => q('[data-testid="diagnostic-progress-percent"]')!.textContent;
+    rpcPlan({ get_my_teacher_diagnostic: [state({ consent_accepted_at: "c" })], save_teacher_diagnostic_step: 2 });
+    await mount();
+    expect(percent()).toBe("0%");
+    await pick("experience", "3_5");
+    expect(percent()).toBe("4%"); // 1 of 21 applicable questions
+    await pick("main_activity", "no"); // follow-up becomes applicable: 2 of 22
+    expect(percent()).toBe("9%");
+    await type("#diagnostic-other_activity", "Tradutora");
+    await pick("students", "6_10"); await pick("team", "solo");
+    expect(percent()).toBe("22%"); // 5 of 22
+    await click(q('[data-testid="diagnostic-next"]'));
+    await flush();
+    expect(q('[data-testid="diagnostic-step"]')!.getAttribute("data-step")).toBe("2");
+    expect(percent()).toBe("22%"); // no artificial jump when the step changes
+    await pick("student_info_tools", "spreadsheet");
+    expect(percent()).toBe("27%");
+    await pick("student_info_tools", "spreadsheet"); // removing the answer lowers it again
+    expect(percent()).toBe("22%");
+    await click(byText("diagnostic.back"));
+    expect(percent()).toBe("22%"); // consistent when going back
+  });
+  it("reaches 100% only when completion succeeds", async () => {
+    const answers = { experience: "3_5", main_activity: "yes", students: "6_10", team: "solo", student_info_tools: ["spreadsheet"], payment_tracking: ["bank"],
+      makeup_control: "agenda", admin_tools: "planilha", pain_points: ["payments"], eliminate_one: "cobrar", most_time: "agenda", avoided_task: "não",
+      forgot_info: "no", admin_hours: "1_2", day_organization: "agenda", prioritization: "prazo", admin_control: 6, business_view: "partly",
+      professionalism: 5, improve: "organizar", wish: "nada" };
+    rpcPlan({ get_my_teacher_diagnostic: [state({ consent_accepted_at: "c", current_step: 5, answers })], complete_teacher_diagnostic: new Error("Failed to fetch") });
+    await mount();
+    const percent = () => q('[data-testid="diagnostic-progress-percent"]')!.textContent;
+    expect(percent()).toBe("99%"); // everything answered, not yet completed
+    await click(byText("diagnostic.finish"));
+    await flush();
+    expect(percent()).toBe("99%"); // failed completion: still not 100%
+    rpcPlan({ get_my_teacher_diagnostic: [state()], complete_teacher_diagnostic: "2026-11-16T10:00:00Z" });
+    await click(q('[data-testid="diagnostic-next"]'));
+    await flush();
+    expect(percent()).toBe("100%");
+  });
   it("accounts that do not need it (exempt/completed/admin) continue without seeing it", async () => {
     rpcPlan({ get_my_teacher_diagnostic: [state({ required: false, status: "exempt" })] });
     await mount();

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase", () => ({ supabase: { rpc } }));
 import {
-  DIAGNOSTIC_STEPS, OBJECTIVE_QUESTIONS, QUICK_ANSWERS, hasQuickAnswer, toggleQuickAnswer, completeDiagnostic, diagnosticsCsv, distribution, isDiagnosticNotDeployed, missingInStep,
+  DIAGNOSTIC_STEPS, OBJECTIVE_QUESTIONS, diagnosticProgress, QUICK_ANSWERS, hasQuickAnswer, toggleQuickAnswer, completeDiagnostic, diagnosticsCsv, distribution, isDiagnosticNotDeployed, missingInStep,
   saveDiagnosticStep, stepOf, stepPayload, type DiagnosticRow,
 } from "../src/lib/teacher-diagnostic";
 
@@ -94,5 +94,24 @@ describe("quick suggestions (presentation only)", () => {
     const textIds = DIAGNOSTIC_STEPS.flatMap((s) => s.questions).filter((q) => q.type === "text").map((q) => q.id);
     for (const id of Object.keys(QUICK_ANSWERS)) expect(textIds).toContain(id);
     for (const id of ["eliminate_one", "improve", "wish"]) expect(QUICK_ANSWERS[id]).toBeUndefined();
+  });
+});
+
+describe("overall progress", () => {
+  it("counts every applicable question of the 5 steps and grows as answers are given or removed", () => {
+    expect(diagnosticProgress({})).toEqual({ answered: 0, total: 21, percent: 0 });
+    expect(diagnosticProgress({ experience: "lt1" })).toMatchObject({ answered: 1, total: 21, percent: 4 });
+    expect(diagnosticProgress({ experience: "lt1", admin_control: 5 })).toMatchObject({ answered: 2 });
+    expect(diagnosticProgress({ experience: "" })).toMatchObject({ answered: 0 }); // removed answer
+  });
+  it("follow-ups and 'Outro' count only when applicable", () => {
+    expect(diagnosticProgress({ main_activity: "no" })).toMatchObject({ answered: 1, total: 22 }); // follow-up now applicable, unanswered
+    expect(diagnosticProgress({ main_activity: "no", other_activity: "Tradutora" })).toMatchObject({ answered: 2, total: 22 });
+    expect(diagnosticProgress({ student_info_tools: ["other"] })).toMatchObject({ answered: 0 });
+    expect(diagnosticProgress({ student_info_tools: ["other"], student_info_tools_other: "Trello" })).toMatchObject({ answered: 1 });
+  });
+  it("shows 100% only after a confirmed completion", () => {
+    expect(diagnosticProgress(full)).toMatchObject({ answered: 21, total: 21, percent: 99 });
+    expect(diagnosticProgress(full, true).percent).toBe(100);
   });
 });
