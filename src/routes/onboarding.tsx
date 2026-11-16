@@ -1072,49 +1072,27 @@ export function OnboardingPage() {
 /* =========================================================================
    STEP 0 — WELCOME INTRODUCTION
    ========================================================================= */
-function Step0Welcome({ onStart, isPt }: { onStart: () => void; isPt: boolean }) {
+function Step0Welcome({ onStart }: { onStart: () => void; isPt: boolean }) {
   const { t } = useLanguage();
+  // Shown right after the Diagnóstico Inicial: short, centered and with plenty of white space.
   return (
-    <div className="space-y-4 text-center max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="h-16 w-16 mx-auto rounded-3xl bg-[#163020] flex items-center justify-center text-[#F4EBE1] font-outfit font-black text-2xl shadow-md">
-        B
-      </div>
-
-      <div className="space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-stone-900 tracking-tight">
-          {t("onboardingUi.welcomeToBloom")}
-        </h1>
-        <p className="text-base text-stone-700 font-medium leading-relaxed">
-          {t("onboardingUi.itsAPleasureYouJoined")}
-        </p>
-        <p className="text-base text-stone-700 font-medium leading-relaxed">
-          {t("onboardingUi.beforeStartingWeDLove")}
-        </p>
-      </div>
-
-      <div className="rounded-2xl border border-stone-200/80 bg-white/80 px-5 py-4 space-y-2 shadow-sm text-left">
-        <p className="text-base text-stone-900 font-bold font-outfit leading-relaxed">
-          {t("onboardingUi.itWillBeQuick")}
-        </p>
-        <p className="text-sm text-stone-600 leading-relaxed font-medium pt-2 border-t border-stone-100">
-          {t("onboardingUi.nextStepsSimpleQuestions")}
-        </p>
-      </div>
-
+    <div className="mx-auto max-w-md space-y-8 py-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-300 sm:py-16" data-testid="onboarding-welcome">
       <div className="space-y-3">
-        <p className="text-xs text-stone-500 font-semibold">
-          {t("onboardingUi.donTWorryYouCan")}
+        <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 font-outfit sm:text-4xl">
+          {t("onboardingUi.welcomeTitle")}
+        </h1>
+        <p className="text-base font-medium leading-relaxed text-stone-600">
+          {t("onboardingUi.welcomeSubtitle")}
         </p>
-
-        <button
-          type="button"
-          onClick={onStart}
-          className="w-full flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-base shadow-md transition-all cursor-pointer"
-        >
-          <span>{t("onboardingUi.customizeMyBloom")}</span>
-          <ArrowRight className="h-5 w-5" />
-        </button>
       </div>
+      <button
+        type="button"
+        onClick={onStart}
+        className="w-full flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#163020] text-[#F4EBE1] hover:bg-[#1a3825] font-bold text-base shadow-md transition-all cursor-pointer"
+      >
+        <span>{t("onboardingUi.customizeMyBloom")}</span>
+        <ArrowRight className="h-5 w-5" />
+      </button>
     </div>
   );
 }
