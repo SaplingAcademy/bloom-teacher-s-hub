@@ -109,6 +109,7 @@ const TRANSLATIONS = {
     newCertificate: "New Certificate",
     contracts: "Contracts",
     finance: "Finance",
+    receiptGenerator: "Receipt Generator",
     communication: "Communication",
     business: "Business Policies",
     placement: "Placement",
@@ -155,6 +156,7 @@ const TRANSLATIONS = {
     newCertificate: "Novo Certificado",
     contracts: "Contratos",
     finance: "Finanças",
+    receiptGenerator: "Gerador de Recibos",
     communication: "Comunicação",
     business: "Políticas Comerciais",
     placement: "Nivelamento",
@@ -377,9 +379,16 @@ function ResourcesPage() {
 
   // Combine static and custom user templates
   const allTemplates = [...LIBRARY_CATALOG, ...customTemplates];
+  // Finance shows only the receipt generator: other finance templates (and copies of them) stay in
+  // the catalog/storage but are no longer listed in search, favorites or recent items.
+  const listedInLibrary = (template: LibraryResource) => template.category !== "finance" || isReceipt(template);
+  const visibleTemplates = allTemplates.filter(listedInLibrary);
+  const receiptResource = LIBRARY_CATALOG.find(isReceipt);
+  // The "Gerador de Recibos" card opens the existing generator directly (same authorization flow).
+  const openReceiptGenerator = () => { if (receiptResource) void handleUseTemplate(receiptResource); };
 
   // Helper to search and filter templates
-  const filteredTemplates = allTemplates.filter((item) => {
+  const filteredTemplates = visibleTemplates.filter((item) => {
     const query = searchQuery.toLowerCase();
     const matchesSearch =
       item.title.toLowerCase().includes(query) ||
@@ -732,7 +741,9 @@ function ResourcesPage() {
                 },
                 {
                   id: "finance",
-                  label: t.finance,
+                  label: t.receiptGenerator,
+                  subtitle: translate("receipts.open"),
+                  onSelect: openReceiptGenerator,
                   icon: Wallet,
                   color: "from-amber-500/10 to-orange-500/10 hover:border-amber-500/30",
                 },
@@ -748,12 +759,14 @@ function ResourcesPage() {
                   icon: Briefcase,
                   color: "from-pink-500/10 to-rose-500/10 hover:border-pink-500/30",
                 },
-              ].map((cat) => {
+              ].map((cat: { id: string; label: string; icon: typeof Wallet; color: string; subtitle?: string; onSelect?: () => void }) => {
                 const count = getCategoryCount(cat.id);
                 return (
                   <Button variant="ghost"
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
+                    onClick={() => (cat.onSelect ? cat.onSelect() : setSelectedCategory(cat.id))}
+                    disabled={cat.onSelect ? accessBusy : undefined}
+                    data-testid={`resource-category-${cat.id}`}
                     className={`h-auto whitespace-normal flex items-center justify-between p-5 rounded-2xl border border-border bg-card hover:shadow-sm transition-all text-left cursor-pointer ${cat.color}`}
                   >
                     <div className="flex items-center gap-3">
@@ -765,7 +778,7 @@ function ResourcesPage() {
                           {cat.label}
                         </h3>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {count} {t.categoryTemplates}
+                          {cat.subtitle ?? `${count} ${t.categoryTemplates}`}
                         </p>
                       </div>
                     </div>
@@ -788,7 +801,7 @@ function ResourcesPage() {
                 <p className="text-xs text-muted-foreground text-center py-6">{t.noFavorites}</p>
               ) : (
                 favorites.map((favId) => {
-                  const template = allTemplates.find((x) => x.id === favId);
+                  const template = visibleTemplates.find((x) => x.id === favId);
                   if (!template) return null;
                   const catMeta = getCategoryMeta(template.category);
                   return (
@@ -836,7 +849,7 @@ function ResourcesPage() {
                 <p className="text-xs text-muted-foreground text-center py-6">{t.noRecent}</p>
               ) : (
                 recentOpened.map((recId) => {
-                  const template = allTemplates.find((x) => x.id === recId);
+                  const template = visibleTemplates.find((x) => x.id === recId);
                   if (!template) return null;
                   const catMeta = getCategoryMeta(template.category);
                   const isFav = favorites.includes(template.id);
