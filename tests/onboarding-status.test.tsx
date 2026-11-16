@@ -9,6 +9,7 @@ const sb = vi.hoisted(() => ({
   listeners: [] as ((event: string, session: any) => void)[],
   profile: { data: null as any, error: null as any },
   onboarding: { data: null as any, error: null as any },
+  diagnostic: { data: [{ required: false, status: "exempt" }] as any, error: null as any },
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -21,6 +22,7 @@ vi.mock("@/lib/supabase", () => ({
       },
       signOut: async () => { sb.session = null; sb.listeners.forEach((l) => l("SIGNED_OUT", null)); return { error: null }; },
     },
+    rpc: async (name: string) => (name === "get_my_teacher_diagnostic" ? sb.diagnostic : { data: null, error: null }),
     from: (table: string) => {
       const chain: any = {
         select: () => chain,
@@ -46,6 +48,7 @@ afterEach(() => {
   sb.listeners = [];
   sb.profile = { data: null, error: null };
   sb.onboarding = { data: null, error: null };
+  sb.diagnostic = { data: [{ required: false, status: "exempt" }], error: null };
   localStorage.clear();
   vi.restoreAllMocks();
 });
@@ -145,6 +148,29 @@ describe("AuthProvider onboarding status from Supabase", () => {
     expect(gateNow()).toBe("completed");
   });
 
+  it("new account: the Diagnóstico Inicial comes before the standard onboarding", async () => {
+    sb.session = userSession;
+    sb.profile = { data: profileRow(false), error: null };
+    sb.diagnostic = { data: [{ required: true, status: "in_progress" }], error: null };
+    await mount();
+    expect(gateNow()).toBe("diagnostic");
+    expect(postLoginDestination(gateNow())).toBe("/diagnostico");
+    expect(onboardingGate({ loading: false, error: null, profile: { onboarding_completed: false, diagnostic_required: false } })).toBe("pending");
+  });
+  it("a failed diagnostic read is an error (retry), never access", async () => {
+    sb.session = userSession;
+    sb.profile = { data: profileRow(true), error: null };
+    sb.diagnostic = { data: null, error: { message: "Failed to fetch" } };
+    await mount();
+    expect(gateNow()).toBe("error");
+  });
+  it("before the migration (function not found) the diagnostic is inactive and nothing changes", async () => {
+    sb.session = userSession;
+    sb.profile = { data: profileRow(true), error: null };
+    sb.diagnostic = { data: null, error: { code: "PGRST202", message: "Could not find the function public.get_my_teacher_diagnostic" } };
+    await mount();
+    expect(gateNow()).toBe("completed");
+  });
   it("a failed profile read is an error, never pending or completed", async () => {
     sb.session = userSession;
     sb.profile = { data: null, error: { message: "timeout" } };

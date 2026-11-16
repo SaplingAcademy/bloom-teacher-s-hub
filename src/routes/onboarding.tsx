@@ -286,10 +286,11 @@ export function OnboardingPage() {
   // A teacher who already completed the setup never sees the questionnaire again; a status read
   // error is not treated as "pending" either ("/" shows it with retry). The success screen right
   // after finishing is kept (the profile turns "completed" while it is shown).
-  const leaveOnboarding = Boolean(user) && !isSubmitting && !isSuccessView && (gate === "completed" || gate === "error");
+  const leaveOnboarding = Boolean(user) && !isSubmitting && !isSuccessView && (gate === "completed" || gate === "error" || gate === "diagnostic");
   useEffect(() => {
-    if (leaveOnboarding) navigate({ to: "/", replace: true });
-  }, [leaveOnboarding, navigate]);
+    // New accounts must finish the Diagnóstico Inicial before the standard onboarding.
+    if (leaveOnboarding) navigate({ to: gate === "diagnostic" ? "/diagnostico" : "/", replace: true });
+  }, [leaveOnboarding, gate, navigate]);
 
   const headerRef = useRef<HTMLElement>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);

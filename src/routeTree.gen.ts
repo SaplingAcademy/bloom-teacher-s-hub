@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConhecaRouteImport } from './routes/conheca'
+import { Route as DiagnosticoRouteImport } from './routes/diagnostico'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
@@ -53,6 +54,11 @@ const AuthRoute = AuthRouteImport.update({
 const ConhecaRoute = ConhecaRouteImport.update({
   id: '/conheca',
   path: '/conheca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticoRoute = DiagnosticoRouteImport.update({
+  id: '/diagnostico',
+  path: '/diagnostico',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/auth': typeof AuthRoute
   '/conheca': typeof ConhecaRoute
+  '/diagnostico': typeof DiagnosticoRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/academy': typeof AppAcademyRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/conheca': typeof ConhecaRoute
+  '/diagnostico': typeof DiagnosticoRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/academy': typeof AppAcademyRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/conheca': typeof ConhecaRoute
+  '/diagnostico': typeof DiagnosticoRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/academy': typeof AppAcademyRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/conheca'
+    | '/diagnostico'
     | '/onboarding'
     | '/sitemap.xml'
     | '/academy'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/conheca'
+    | '/diagnostico'
     | '/onboarding'
     | '/sitemap.xml'
     | '/academy'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/conheca'
+    | '/diagnostico'
     | '/onboarding'
     | '/sitemap.xml'
     | '/_app/academy'
@@ -400,6 +412,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConhecaRoute: typeof ConhecaRoute
+  DiagnosticoRoute: typeof DiagnosticoRoute
   OnboardingRoute: typeof OnboardingRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
@@ -425,6 +438,13 @@ declare module '@tanstack/react-router' {
       path: '/conheca'
       fullPath: '/conheca'
       preLoaderRoute: typeof ConhecaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnostico': {
+      id: '/diagnostico'
+      path: '/diagnostico'
+      fullPath: '/diagnostico'
+      preLoaderRoute: typeof DiagnosticoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -700,6 +720,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
   ConhecaRoute: ConhecaRoute,
+  DiagnosticoRoute: DiagnosticoRoute,
   OnboardingRoute: OnboardingRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
 }

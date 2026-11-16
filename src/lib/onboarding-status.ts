@@ -8,23 +8,27 @@
  * - "error": the profile/status could not be read → surface the error, never assume pending/done.
  * - "completed" / "skipped" → the platform; "pending" → the onboarding (resuming saved answers).
  */
-export type OnboardingGate = "loading" | "error" | "completed" | "skipped" | "pending";
+export type OnboardingGate = "loading" | "error" | "diagnostic" | "completed" | "skipped" | "pending";
 
 export function onboardingGate(input: {
   loading: boolean;
   error: unknown;
-  profile: { onboarding_completed?: unknown; onboarding_status?: unknown } | null | undefined;
+  profile: { onboarding_completed?: unknown; onboarding_status?: unknown; diagnostic_required?: unknown } | null | undefined;
 }): OnboardingGate {
   if (input.loading) return "loading";
   if (input.error) return "error";
   if (!input.profile) return "loading";
+  // New accounts answer the Diagnóstico Inicial first (decided by the database; existing accounts
+  // and super_admin are exempt). It comes before the standard onboarding.
+  if (input.profile.diagnostic_required === true) return "diagnostic";
   if (input.profile.onboarding_completed === true) return "completed";
   if (input.profile.onboarding_status === "skipped") return "skipped";
   return "pending";
 }
 
 /** Destination after sign-in once the gate is known ("/" also shows the load error with retry). */
-export function postLoginDestination(gate: OnboardingGate): "/" | "/onboarding" | null {
+export function postLoginDestination(gate: OnboardingGate): "/" | "/onboarding" | "/diagnostico" | null {
   if (gate === "loading") return null;
+  if (gate === "diagnostic") return "/diagnostico";
   return gate === "pending" ? "/onboarding" : "/";
 }

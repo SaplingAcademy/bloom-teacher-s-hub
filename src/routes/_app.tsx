@@ -83,6 +83,9 @@ function AppLayout() {
   if (gate === "loading") {
     return loadingScreen;
   }
+  if (gate === "diagnostic") {
+    return <Navigate to="/diagnostico" replace />;
+  }
   if (gate === "pending") {
     return <Navigate to="/onboarding" replace />;
   }
