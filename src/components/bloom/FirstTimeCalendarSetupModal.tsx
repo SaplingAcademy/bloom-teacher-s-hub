@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, CalendarDays, ShieldCheck } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 
 interface FirstTimeCalendarSetupModalProps {
@@ -45,7 +45,7 @@ export function FirstTimeCalendarSetupModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleSecondaryClick()}>
-      <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border-border bg-card shadow-2xl">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md gap-0 rounded-2xl p-0 overflow-hidden border-border bg-card shadow-2xl">
         {/* Header decoration */}
         <div className="bg-[#163020] text-[#F4EBE1] p-6 space-y-2 text-center relative overflow-hidden">
           <div className="mx-auto w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-400 mb-2">
@@ -54,25 +54,9 @@ export function FirstTimeCalendarSetupModal({
           <DialogTitle className="text-xl font-bold text-[#F4EBE1] font-display">
             {t("calendar.firstTimeSetupTitle")}
           </DialogTitle>
-          <DialogDescription className="text-xs text-[#F4EBE1]/80 leading-relaxed max-w-sm mx-auto">
+          <DialogDescription className="text-sm text-[#F4EBE1]/80 leading-relaxed max-w-sm mx-auto">
             {t("calendar.firstTimeSetupSubtitle")}
           </DialogDescription>
-        </div>
-
-        {/* Content Body */}
-        <div className="p-6 space-y-4 text-xs text-stone-700 dark:text-stone-300">
-          <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
-            <p className="font-semibold text-stone-800 dark:text-stone-200 leading-relaxed">
-              {t("calendar.firstTimeNotice")}
-            </p>
-          </div>
-
-          <div className="flex items-start gap-2 text-muted-foreground text-[11px]">
-            <Clock className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
-            <p>
-              {t("calendar.firstTimeLaterNotice")}
-            </p>
-          </div>
         </div>
 
         {/* Footer Actions */}
