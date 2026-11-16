@@ -33,8 +33,8 @@ interface NotesCanvasProps {
 
 /**
  * Free-positioning board (≥768px). Drag is local state only: nothing is written while the pointer
- * moves; one position command (snapped to the grid, inside the board) is sent on release. Failed
- * saves are rolled back by the notes hook, so the note simply returns to its saved place.
+ * moves; one position command (snapped to the grid, inside the board) is sent on release and shown
+ * at once. Failed saves are rolled back by the notes hook, so the note returns to its saved place.
  */
 export function NotesCanvas({ notes, pending, readOnly = false, execute, label, renderNote }: NotesCanvasProps) {
   const boardRef = useRef<HTMLDivElement>(null);
@@ -105,8 +105,9 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
     const target = snapToBoard(current.current, live.current.limitsFor(current.id));
     // Dropped back where it started: nothing to save (older notes keep their automatic slot).
     if (target.x === current.origin.x && target.y === current.origin.y) { update(null); return; }
-    update({ ...current, current: target, settling: true });
-    await live.current.execute({ type: "position", id: current.id, x: target.x, y: target.y });
+    // The notes hook applies the new position to the board synchronously and saves it in the
+    // background (rolling back on failure), so the drag ends right away without waiting.
+    void live.current.execute({ type: "position", id: current.id, x: target.x, y: target.y });
     update(null);
   };
 
