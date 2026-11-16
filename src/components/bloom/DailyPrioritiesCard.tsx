@@ -249,7 +249,11 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     );
   };
 
-  const isEmpty = !loading && items.length === 0;
+  // A Leads load failure stays in the internal log (fetchDailyPriorities) but is not shown in the
+  // notice; it still prevents "all caught up"/"no items" states that would claim leads were checked.
+  const leadsFailed = failed.includes("lead");
+  const noticeFailed = failed.filter((c) => c !== "lead");
+  const isEmpty = !loading && items.length === 0 && !leadsFailed;
 
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all xl:h-full">
@@ -338,13 +342,13 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       {/* White list area below the tinted header */}
       <div className="mt-4 space-y-4">
       {/* Per-category failure notice (never shown as zero priorities) */}
-      {failed.length > 0 && (
+      {noticeFailed.length > 0 && (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3.5 py-2.5 text-amber-900">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-px text-amber-600" />
           <p className="text-xs font-medium leading-relaxed">
             {t("today.categoryLoadError").replace(
               "{categories}",
-              failed.map((c) => t(CATEGORY_META[c].labelKey)).join(", ")
+              noticeFailed.map((c) => t(CATEGORY_META[c].labelKey)).join(", ")
             )}
           </p>
         </div>
@@ -402,7 +406,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       {!loading && visibleItems.length > 0 && filter !== "all" && (
         <ul className="divide-y divide-stone-100">{visibleItems.map(renderRow)}</ul>
       )}
-      {!loading && visibleItems.length === 0 && !isEmpty && filter !== "all" && (
+      {!loading && visibleItems.length === 0 && !isEmpty && filter !== "all" && !(filter === "lead" && leadsFailed) && (
         <p className="text-xs font-medium text-stone-500 text-center py-2">
           {t("today.noCategoryItems")}
         </p>
