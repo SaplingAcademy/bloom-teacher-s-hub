@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase", () => ({ supabase: { rpc } }));
 import {
-  DIAGNOSTIC_STEPS, OBJECTIVE_QUESTIONS, completeDiagnostic, diagnosticsCsv, distribution, isDiagnosticNotDeployed, missingInStep,
+  DIAGNOSTIC_STEPS, OBJECTIVE_QUESTIONS, QUICK_ANSWERS, hasQuickAnswer, toggleQuickAnswer, completeDiagnostic, diagnosticsCsv, distribution, isDiagnosticNotDeployed, missingInStep,
   saveDiagnosticStep, stepOf, stepPayload, type DiagnosticRow,
 } from "../src/lib/teacher-diagnostic";
 
@@ -80,5 +80,19 @@ describe("admin analysis", () => {
     expect(header.split(",")).toHaveLength(5 + 23 + 3);
     expect(line).toContain("'=HYPERLINK");
     expect(line).toContain("pain_points:payments");
+  });
+});
+
+describe("quick suggestions (presentation only)", () => {
+  it("add/remove a suggestion in free text without touching the teacher's own words", () => {
+    expect(toggleQuickAnswer("", "Planilha")).toBe("Planilha");
+    expect(toggleQuickAnswer("Planilha", "WhatsApp")).toBe("Planilha; WhatsApp");
+    expect(toggleQuickAnswer("Planilha; uso também o Trello", "planilha")).toBe("uso também o Trello");
+    expect(hasQuickAnswer("Planilha; WhatsApp", "whatsapp")).toBe(true);
+  });
+  it("only open questions get suggestions; strategic ones stay fully open", () => {
+    const textIds = DIAGNOSTIC_STEPS.flatMap((s) => s.questions).filter((q) => q.type === "text").map((q) => q.id);
+    for (const id of Object.keys(QUICK_ANSWERS)) expect(textIds).toContain(id);
+    for (const id of ["eliminate_one", "improve", "wish"]) expect(QUICK_ANSWERS[id]).toBeUndefined();
   });
 });
