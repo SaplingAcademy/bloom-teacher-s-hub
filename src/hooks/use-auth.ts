@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import { isDiagnosticNotDeployed } from "@/lib/teacher-diagnostic";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { sanitizeTeacherName, getMetadataName } from "@/lib/teacher-name";
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       syncedUserRef.current = userId;
       ensureStorageOwner(userId);
       try {
-        const [{ data: profileRow, error: profileError }, { data: onboardingRecord, error: onboardingError }] =
+        const [{ data: profileRow, error: profileError }, { data: onboardingRecord, error: onboardingError }, diagnostic] =
           await Promise.all([
             supabase
               .from("profiles")
@@ -71,7 +72,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .eq("id", userId)
               .maybeSingle(),
             supabase.from("onboarding").select("answers").eq("teacher_id", userId).maybeSingle(),
+            supabase.rpc("get_my_teacher_diagnostic"),
           ]);
+        // Diagnóstico Inicial: required only when the database says so. A read failure is an error
+        // (retry), never access; only a missing function (migration not applied) means "inactive".
+        if (diagnostic.error && !isDiagnosticNotDeployed(diagnostic.error)) throw diagnostic.error;
+        const diagnosticRow = Array.isArray(diagnostic.data) ? diagnostic.data[0] : diagnostic.data;
+        const diagnosticRequired = !diagnostic.error && (diagnosticRow as { required?: unknown } | null)?.required === true;
 
         if (profileError) throw profileError;
         // Completion may be recorded only in the onboarding answers: if they cannot be read and the
@@ -103,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           preferred_language: locale,
           onboarding_completed: isCompleted,
           onboarding_status: onboardingStatus,
+          diagnostic_required: diagnosticRequired,
           languages_taught: languagesTaught,
         };
 
