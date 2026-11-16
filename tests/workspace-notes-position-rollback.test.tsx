@@ -24,6 +24,7 @@ function Probe() { api = useWorkspaceNotes(); return null; }
 
 beforeEach(async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  Object.values(mocks).forEach((m) => m.mockReset());
   mocks.fetch.mockResolvedValue([saved]);
   client = new QueryClient();
   root = createRoot(document.createElement("div"));
@@ -51,6 +52,42 @@ describe("note position persistence", () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
     expect(mocks.fetch).toHaveBeenCalledOnce(); // no extra reads around the drop
     expect(api.notes?.[0]).toMatchObject({ pos_x: 240, pos_y: 96 });
+  });
+  it("applies the new position instantly (before the save) and keeps the board usable meanwhile", async () => {
+    let resolve!: (row: WorkspaceNote) => void;
+    mocks.persist.mockReturnValueOnce(new Promise((r) => { resolve = r; }));
+    let result!: Promise<boolean>;
+    act(() => { result = api.execute({ type: "position", id: "a", x: 312, y: 24 }); });
+    // Synchronous optimistic update: no waiting for Supabase or any refetch.
+    expect(client.getQueryData<WorkspaceNote[]>(["workspace-notes", "teacher"])?.[0]).toMatchObject({ pos_x: 312, pos_y: 24 });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(api.pending).toBe(false); // background save does not lock the other controls
+    mocks.persist.mockResolvedValueOnce({ ...saved, pos_x: 312, pos_y: 24, pinned: true });
+    let pinned = false;
+    await act(async () => { pinned = await api.execute({ type: "pin", id: "a", pinned: true }); });
+    expect(pinned).toBe(true); // another action is accepted while the move is still saving
+    await act(async () => { resolve({ ...saved, pos_x: 312, pos_y: 24, pinned: true }); await result; });
+    expect(await result).toBe(true);
+    expect(mocks.fetch).toHaveBeenCalledOnce(); // the board is never reloaded
+  });
+  it("only the latest move of a note can roll back or replace it", async () => {
+    let rejectFirst!: (error: unknown) => void;
+    let resolveSecond!: (row: WorkspaceNote) => void;
+    mocks.persist
+      .mockReturnValueOnce(new Promise((_, r) => { rejectFirst = r; }))
+      .mockReturnValueOnce(new Promise((r) => { resolveSecond = r; }));
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    act(() => { first = api.execute({ type: "position", id: "a", x: 120, y: 48 }); });
+    act(() => { second = api.execute({ type: "position", id: "a", x: 480, y: 96 }); });
+    expect(client.getQueryData<WorkspaceNote[]>(["workspace-notes", "teacher"])?.[0]).toMatchObject({ pos_x: 480, pos_y: 96 });
+    await act(async () => { rejectFirst({ message: "timeout" }); await first; });
+    expect(await first).toBe(false);
+    // The older failure does not undo the newer move nor warn the user.
+    expect(client.getQueryData<WorkspaceNote[]>(["workspace-notes", "teacher"])?.[0]).toMatchObject({ pos_x: 480, pos_y: 96 });
+    expect(mocks.error).not.toHaveBeenCalled();
+    await act(async () => { resolveSecond({ ...saved, pos_x: 480, pos_y: 96 }); await second; });
+    expect(client.getQueryData<WorkspaceNote[]>(["workspace-notes", "teacher"])?.[0]).toMatchObject({ pos_x: 480, pos_y: 96 });
   });
   it("deleting a note removes its Storage files first; if that fails the note stays", async () => {
     mocks.cleanup.mockRejectedValueOnce(new Error("storage denied"));

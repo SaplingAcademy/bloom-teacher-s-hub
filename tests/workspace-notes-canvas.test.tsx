@@ -12,7 +12,7 @@ const note = (id: string, order_index: number, extra: Partial<WorkspaceNote> = {
 
 let root: Root;
 let container: HTMLDivElement;
-let outcome: "save" | "fail";
+let outcome: "save" | "fail" | "slow";
 const execute = vi.fn();
 const opened = vi.fn();
 
@@ -22,6 +22,8 @@ function Harness({ initial }: { initial: WorkspaceNote[] }) {
   execute.mockImplementation(async (command: NoteCommand) => {
     if (outcome === "fail") return false; // the hook restores the snapshot and shows the error toast
     setNotes((current) => applyNoteCommand(current, command, "teacher", "now"));
+    // Like the real hook: the position is already applied while the save is still running.
+    if (outcome === "slow") return new Promise<boolean>(() => {});
     return true;
   });
   return createElement(NotesCanvas, {
@@ -86,6 +88,16 @@ describe("free-positioning notes board", () => {
     expect(position("a")).toBe("translate3d(120px, 48px, 0)");
     expect(position("b")).toBe("translate3d(312px, 0px, 0)"); // others keep their place
     expect(opened).not.toHaveBeenCalled(); // releasing a drag does not open the editor
+  });
+  it("ends the drag at once while the save runs in the background, so another note can move", async () => {
+    outcome = "slow";
+    await mount([note("a", 0), note("b", 1)]);
+    await dragFrom(container.querySelector('[data-open="a"]')!, 200, 100);
+    expect(position("a")).toBe("translate3d(192px, 96px, 0)");
+    expect(wrapper("a").dataset.dragging).toBeUndefined(); // released without waiting for the save
+    await dragFrom(container.querySelector('[data-open="b"]')!, 0, 200);
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenLastCalledWith({ type: "position", id: "b", x: 312, y: 192 });
   });
   it("keeps the note fully inside the board edges", async () => {
     await mount([note("a", 0)]);
