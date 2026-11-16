@@ -2123,28 +2123,6 @@ function Step5Finances({
         />
       </div>
 
-      {/* Monthly Expense Input */}
-      <div className="space-y-2 pt-8 border-t border-stone-200/70">
-        <label className={FIELD_LABEL}>
-          {t("onboardingUi.approximatelyHowMuchDoYou")}
-        </label>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-stone-400 text-sm">
-            R$
-          </span>
-          <input
-            type="text"
-            value={data.monthlyExpense}
-            onChange={(e) => updateData("monthlyExpense", e.target.value)}
-            placeholder={t("onboardingUi.optionalAmountPh")}
-            className="w-full h-12 pl-12 pr-4 rounded-2xl border border-stone-300 bg-white text-stone-800 font-semibold text-base focus:outline-none focus:ring-2 focus:ring-emerald-700"
-          />
-        </div>
-        <p className="text-xs text-stone-500 font-medium">
-          {t("onboardingUi.donTWorryIfYou")}
-        </p>
-      </div>
-
       {/* Hourly Rate Question */}
       <div className={Q_GROUP}>
         <label className={FIELD_LABEL}>
