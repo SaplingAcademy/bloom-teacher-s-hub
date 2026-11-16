@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Clock, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { onboardingGate } from "@/lib/onboarding-status";
 import { cn } from "@/lib/utils";
 import {
-  DIAGNOSTIC_STEPS, DiagnosticError, TEXT_MAX, acceptDiagnosticConsent, completeDiagnostic, fetchMyDiagnostic, isVisible,
+  DIAGNOSTIC_STEPS, DiagnosticError, FOLLOW_UP_OF, QUICK_ANSWERS, TEXT_MAX, hasQuickAnswer, toggleQuickAnswer, acceptDiagnosticConsent, completeDiagnostic, fetchMyDiagnostic, isVisible,
   missingInStep, saveDiagnosticStep, stepOf, stepPayload, type Answers, type Question,
 } from "@/lib/teacher-diagnostic";
 
@@ -37,6 +37,8 @@ export function DiagnosticFlow() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // Question being answered (highlighted); defaults to the first unanswered one of the step.
+  const [active, setActive] = useState<string | null>(null);
 
   useEffect(() => { if (!authLoading && !user) void navigate({ to: "/auth", replace: true }); }, [authLoading, user, navigate]);
   // Accounts that do not need the diagnosis (exempt, completed, super_admin) continue normally.
@@ -79,6 +81,7 @@ export function DiagnosticFlow() {
       if (step < TOTAL) {
         await saveDiagnosticStep(step + 1, stepPayload(answers, step));
         setShowErrors(false);
+        setActive(null);
         setStep(step + 1);
         window.scrollTo?.({ top: 0 });
       } else {
@@ -127,6 +130,10 @@ export function DiagnosticFlow() {
           <h1 className="font-display text-2xl font-semibold">{t("diagnostic.title")}</h1>
         </div>
         <p className="text-sm leading-relaxed text-muted-foreground">{t("diagnostic.intro")}</p>
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+          <li className="inline-flex items-center gap-2" data-testid="diagnostic-estimated-time"><Clock className="h-4 w-4 text-primary" aria-hidden />{t("diagnostic.estimatedTime")}</li>
+          <li className="inline-flex items-center gap-2"><Save className="h-4 w-4 text-primary" aria-hidden />{t("diagnostic.savedInfo")}</li>
+        </ul>
         <div className="flex items-start gap-3">
           <Checkbox id="diagnostic-consent" checked={consent} onCheckedChange={(value) => { setConsent(value === true); setConsentError(false); }} aria-invalid={consentError} />
           <label htmlFor="diagnostic-consent" className="cursor-pointer text-sm leading-snug">{t("diagnostic.consentLabel")}</label>
@@ -141,6 +148,10 @@ export function DiagnosticFlow() {
   }
 
   const current = DIAGNOSTIC_STEPS[step - 1];
+  // Follow-ups are shown inside their parent's block; the first unanswered question starts highlighted.
+  const topLevel = current.questions.filter((q) => !FOLLOW_UP_OF[q.id]);
+  const firstOpen = topLevel.find((q) => [q.id, ...(q.type === "multi" ? [q.otherKey] : []), ...Object.keys(FOLLOW_UP_OF).filter((k) => FOLLOW_UP_OF[k] === q.id)]
+    .some((k) => missing.includes(k)))?.id ?? null;
   return shell(
     <section className="space-y-6" data-testid="diagnostic-step" data-step={step}>
       <div className="space-y-2">
@@ -153,17 +164,39 @@ export function DiagnosticFlow() {
           <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${(step / TOTAL) * 100}%` }} />
         </div>
         <h1 className="pt-2 font-display text-xl font-semibold sm:text-2xl">{t(`diagnostic.steps.${current.key}`)}</h1>
+        <p className="text-xs text-muted-foreground" data-testid="diagnostic-step-count">{t("diagnostic.questionsInStep").replace("{count}", String(topLevel.length))}</p>
       </div>
-      <div className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
-        {current.questions.filter((q) => isVisible(q, answers)).map((question) => (
-          <QuestionField key={question.id} question={question} answers={answers} onChange={set} disabled={busy}
-            error={showErrors ? (missing.includes(question.id) ? "required" : question.type === "multi" && missing.includes(question.otherKey) ? "other" : null) : null} />
-        ))}
+      <div className="space-y-2 rounded-2xl border border-border bg-card p-2 shadow-sm sm:p-3">
+        {topLevel.map((question, index) => {
+          const follow = current.questions.find((q) => FOLLOW_UP_OF[q.id] === question.id && isVisible(q, answers));
+          const blockKeys = [question.id, ...(question.type === "multi" ? [question.otherKey] : []), ...(follow ? [follow.id] : [])];
+          const isActive = (active ?? firstOpen) === question.id;
+          const errorFor = (q: Question) => showErrors ? (missing.includes(q.id) ? "required" : q.type === "multi" && missing.includes(q.otherKey) ? "other" : null) : null;
+          return (
+            <div key={question.id} data-question-block={question.id} data-active={isActive || undefined}
+              onFocusCapture={() => setActive(question.id)} onPointerDown={() => setActive(question.id)}
+              className={cn("rounded-xl px-3 py-4 transition-colors sm:px-5 sm:py-5", isActive ? "bg-primary/5 ring-1 ring-primary/25" : "hover:bg-muted/40",
+                showErrors && blockKeys.some((k) => missing.includes(k)) && "ring-1 ring-destructive/40")}>
+              <div className="flex gap-3 sm:gap-4">
+                <span aria-hidden className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
+                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{index + 1}</span>
+                <div className="min-w-0 flex-1 space-y-4">
+                  <QuestionField question={question} answers={answers} onChange={set} disabled={busy} error={errorFor(question)} />
+                  {follow && (
+                    <div className="border-l-2 border-primary/30 pl-4">
+                      <QuestionField question={follow} answers={answers} onChange={set} disabled={busy} error={errorFor(follow)} compact />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
       {showErrors && missing.length > 0 && <p role="alert" className="text-sm text-destructive">{t("diagnostic.stepIncomplete")}</p>}
       {saveError && <p role="alert" className="text-sm text-destructive" data-testid="diagnostic-save-error">{saveError}</p>}
       <div className="flex items-center justify-between gap-3">
-        <Button variant="outline" onClick={() => { setStep(step - 1); setShowErrors(false); setSaveError(null); }} disabled={busy || step === 1}>{t("diagnostic.back")}</Button>
+        <Button variant="outline" onClick={() => { setStep(step - 1); setActive(null); setShowErrors(false); setSaveError(null); }} disabled={busy || step === 1}>{t("diagnostic.back")}</Button>
         <Button onClick={() => void next()} disabled={busy} data-testid="diagnostic-next">
           {busy && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />}
           {busy ? t("diagnostic.saving") : saveError ? t("diagnostic.retry") : step === TOTAL ? t("diagnostic.finish") : t("diagnostic.continue")}
@@ -173,23 +206,24 @@ export function DiagnosticFlow() {
   );
 }
 
-function QuestionField({ question, answers, onChange, error, disabled }: {
-  question: Question; answers: Answers; onChange: (id: string, value: Answers[string]) => void; error: "required" | "other" | null; disabled: boolean;
+function QuestionField({ question, answers, onChange, error, disabled, compact = false }: {
+  question: Question; answers: Answers; onChange: (id: string, value: Answers[string]) => void; error: "required" | "other" | null; disabled: boolean; compact?: boolean;
 }) {
+  const titleClass = compact ? "text-sm font-medium" : "text-[15px] font-semibold leading-snug sm:text-base";
   const { t } = useLanguage();
   const id = `diagnostic-${question.id}`;
   const label = t(`diagnostic.q.${question.id}.label`);
   const value = answers[question.id];
   const option = (o: string) => t(`diagnostic.q.${question.id}.options.${o}`);
   const errorNode = error && <p role="alert" className="text-xs text-destructive">{t(error === "other" ? "diagnostic.otherRequired" : "diagnostic.required")}</p>;
-  const choice = (selected: boolean) => cn("rounded-xl border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+  const choice = (selected: boolean) => cn("min-h-11 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
     selected ? "border-primary bg-primary/10 font-medium text-foreground" : "border-border bg-background hover:bg-muted");
 
   if (question.type === "single" || question.type === "multi") {
     const selected = question.type === "multi" ? (Array.isArray(value) ? value : []) : [];
     return (
       <fieldset className="space-y-2" data-question={question.id} aria-invalid={Boolean(error)}>
-        <legend className="mb-1 text-sm font-medium">{label}</legend>
+        <legend className={cn("mb-2", titleClass)}>{label}</legend>
         {question.type === "multi" && <p className="text-xs text-muted-foreground">{t("diagnostic.multiHint")}</p>}
         <div role={question.type === "single" ? "radiogroup" : "group"} aria-label={label} className="grid gap-2 sm:grid-cols-2">
           {question.options.map((o) => {
@@ -214,7 +248,7 @@ function QuestionField({ question, answers, onChange, error, disabled }: {
   if (question.type === "scale") {
     return (
       <fieldset className="space-y-2" data-question={question.id} aria-invalid={Boolean(error)}>
-        <legend className="mb-1 text-sm font-medium">{label}</legend>
+        <legend className={cn("mb-2", titleClass)}>{label}</legend>
         <div role="radiogroup" aria-label={label} className="grid grid-cols-6 gap-1.5 sm:grid-cols-11">
           {Array.from({ length: 11 }, (_, n) => (
             <button key={n} type="button" role="radio" aria-checked={value === n} disabled={disabled} data-option={n}
@@ -228,11 +262,25 @@ function QuestionField({ question, answers, onChange, error, disabled }: {
   }
   return (
     <div className="space-y-1.5" data-question={question.id}>
-      <label htmlFor={id} className="text-sm font-medium">{label}</label>
+      <label htmlFor={id} className={cn("block", titleClass)}>{label}</label>
+      {QUICK_ANSWERS[question.id] && (
+        <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label={t("diagnostic.quickHint")} data-quick={question.id}>
+          {QUICK_ANSWERS[question.id].map((slug) => {
+            const text = t(`diagnostic.q.${question.id}.quick.${slug}`);
+            const on = hasQuickAnswer(String(value ?? ""), text);
+            return (
+              <button key={slug} type="button" disabled={disabled} aria-pressed={on} data-quick-option={slug}
+                onClick={() => onChange(question.id, toggleQuickAnswer(String(value ?? ""), text))}
+                className={cn("rounded-full border px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+                  on ? "border-primary bg-primary/10 font-medium" : "border-border bg-background hover:bg-muted")}>{text}</button>
+            );
+          })}
+        </div>
+      )}
       {question.short
         ? <Input id={id} maxLength={TEXT_MAX} disabled={disabled} aria-invalid={Boolean(error)} value={String(value ?? "")} onChange={(e) => onChange(question.id, e.target.value)} />
         : <Textarea id={id} rows={2} maxLength={TEXT_MAX} disabled={disabled} aria-invalid={Boolean(error)} value={String(value ?? "")} onChange={(e) => onChange(question.id, e.target.value)} />}
-      <p className="text-[11px] text-muted-foreground">{t("diagnostic.textHint")}</p>
+      <p className="text-[11px] text-muted-foreground">{t(QUICK_ANSWERS[question.id] ? "diagnostic.quickHint" : "diagnostic.textHint")}</p>
       {errorNode}
     </div>
   );

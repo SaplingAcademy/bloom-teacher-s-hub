@@ -58,6 +58,33 @@ export const DIAGNOSTIC_STEPS: readonly { key: string; questions: readonly Quest
   ] },
 ];
 
+/**
+ * Presentation only (no data change): quick suggestions for some open questions. Tapping one adds
+ * its text to the answer, which stays free text (same storage and validation); teachers can keep
+ * typing their own words. Strategic open questions (eliminate_one, improve, wish) stay fully open.
+ */
+export const QUICK_ANSWERS: Readonly<Record<string, readonly string[]>> = {
+  makeup_control: ["calendar", "whatsapp", "notebook", "no_makeup", "charge_anyway"],
+  admin_tools: ["spreadsheet", "google_calendar", "whatsapp", "notebook", "app"],
+  most_time: ["scheduling", "payments", "collections", "planning", "messages"],
+  avoided_task: ["collections", "finances", "planning", "reports", "none"],
+  day_organization: ["calendar_app", "paper", "spreadsheet", "routine", "no_plan"],
+  prioritization: ["deadlines", "lessons_first", "messages_first", "payments", "no_criteria"],
+};
+const QUICK_SEPARATOR = "; ";
+/** Adds or removes a quick suggestion in a free-text answer (comparison ignores case/spaces). */
+export function toggleQuickAnswer(text: string, suggestion: string): string {
+  const parts = text.split(/;\s*/).map((part) => part.trim()).filter(Boolean);
+  const exists = parts.some((part) => part.toLocaleLowerCase() === suggestion.toLocaleLowerCase());
+  const next = exists ? parts.filter((part) => part.toLocaleLowerCase() !== suggestion.toLocaleLowerCase()) : [...parts, suggestion];
+  return next.join(QUICK_SEPARATOR);
+}
+export const hasQuickAnswer = (text: string, suggestion: string) =>
+  text.split(/;\s*/).some((part) => part.trim().toLocaleLowerCase() === suggestion.toLocaleLowerCase());
+
+/** Follow-up questions shown inside their parent's block (same data, grouped visually). */
+export const FOLLOW_UP_OF: Readonly<Record<string, string>> = { other_activity: "main_activity", forgot_info_detail: "forgot_info" };
+
 const textOk = (value: unknown) => typeof value === "string" && value.trim().length >= TEXT_MIN;
 export const isVisible = (question: Question, answers: Answers) => !question.showIf || question.showIf(answers);
 

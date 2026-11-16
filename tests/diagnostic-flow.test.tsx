@@ -109,6 +109,42 @@ describe("Diagnóstico Inicial flow", () => {
     expect(m.update).toHaveBeenCalledWith({ diagnostic_required: false });
     expect(m.navigate).toHaveBeenCalledWith({ to: "/onboarding", replace: true });
   });
+  it("intro shows the estimated time (3–5 min) and that progress is saved", async () => {
+    rpcPlan({ get_my_teacher_diagnostic: [state()] });
+    await mount();
+    expect(q('[data-testid="diagnostic-estimated-time"]')!.textContent).toBe("diagnostic.estimatedTime");
+    expect(q('[data-testid="diagnostic-intro"]')!.textContent).toContain("diagnostic.savedInfo");
+  });
+  it("groups follow-ups inside their question, numbers the blocks and highlights the current one", async () => {
+    rpcPlan({ get_my_teacher_diagnostic: [state({ consent_accepted_at: "c", answers: { experience: "3_5" } })] });
+    await mount();
+    const blocks = [...document.querySelectorAll("[data-question-block]")].map((b) => b.getAttribute("data-question-block"));
+    expect(blocks).toEqual(["experience", "main_activity", "students", "team"]); // other_activity is not a separate block
+    expect(q("[data-active]")!.getAttribute("data-question-block")).toBe("main_activity"); // first unanswered
+    await pick("main_activity", "no");
+    expect(q('[data-question-block="main_activity"] [data-question="other_activity"]')).not.toBeNull();
+    await act(async () => { q('[data-question-block="team"]')!.dispatchEvent(new Event("pointerdown", { bubbles: true })); });
+    expect(q("[data-active]")!.getAttribute("data-question-block")).toBe("team");
+  });
+  it("quick suggestions fill the free-text answer (still text, editable) and are saved as before", async () => {
+    rpcPlan({ get_my_teacher_diagnostic: [state({ consent_accepted_at: "c", current_step: 2 })], save_teacher_diagnostic_step: 3 });
+    await mount();
+    await pick("student_info_tools", "spreadsheet");
+    await pick("payment_tracking", "bank");
+    const chip = (qid: string, slug: string) => q(`[data-quick="${qid}"] [data-quick-option="${slug}"]`);
+    await click(chip("makeup_control", "calendar"));
+    await click(chip("makeup_control", "whatsapp"));
+    expect((q("#diagnostic-makeup_control") as HTMLTextAreaElement).value).toBe("diagnostic.q.makeup_control.quick.calendar; diagnostic.q.makeup_control.quick.whatsapp");
+    expect(chip("makeup_control", "calendar")!.getAttribute("aria-pressed")).toBe("true");
+    await click(chip("makeup_control", "calendar")); // toggles off
+    expect((q("#diagnostic-makeup_control") as HTMLTextAreaElement).value).toBe("diagnostic.q.makeup_control.quick.whatsapp");
+    await type("#diagnostic-admin_tools", "Planilha própria e Trello");
+    await click(q('[data-testid="diagnostic-next"]'));
+    await flush();
+    expect(m.rpc).toHaveBeenCalledWith("save_teacher_diagnostic_step", { p_step: 3, p_answers: {
+      student_info_tools: ["spreadsheet"], student_info_tools_other: "", payment_tracking: ["bank"], payment_tracking_other: "",
+      makeup_control: "diagnostic.q.makeup_control.quick.whatsapp", admin_tools: "Planilha própria e Trello" } });
+  });
   it("accounts that do not need it (exempt/completed/admin) continue without seeing it", async () => {
     rpcPlan({ get_my_teacher_diagnostic: [state({ required: false, status: "exempt" })] });
     await mount();
