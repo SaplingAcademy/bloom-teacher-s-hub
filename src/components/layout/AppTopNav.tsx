@@ -267,10 +267,20 @@ export function AppTopNav() {
               className={cn(APP_CONTAINER, "max-h-[calc(100dvh-3.5rem-2.5rem)] overflow-y-auto py-5 sm:py-6")}
             >
               <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 md:grid-cols-3 lg:gap-x-12">
-                {groups.map((group) => {
+                {groups.map((group, index) => {
                   const headingId = `${panelId}-${group.id}`;
                   return (
-                    <section key={group.id} aria-labelledby={headingId}>
+                    <section
+                      key={group.id}
+                      aria-labelledby={headingId}
+                      // Subtle 1px divider centred in the column gap, only when the three columns sit
+                      // side by side (md+); drawn as a pseudo-element so column widths stay unchanged.
+                      className={cn(
+                        "relative",
+                        index > 0 &&
+                          "md:before:absolute md:before:inset-y-1 md:before:-left-4 md:before:w-px md:before:bg-border/60 md:before:content-[''] lg:before:-left-6",
+                      )}
+                    >
                       <h2
                         id={headingId}
                         className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80"

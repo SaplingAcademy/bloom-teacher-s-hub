@@ -103,6 +103,20 @@ describe("AppTopNav mega menu", () => {
     expect(isOpen()).toBe(false);
   });
 
+  it("draws subtle vertical dividers between the three columns only from md up (stacked on mobile)", () => {
+    render();
+    click(tab());
+    const classes = [...panel().querySelectorAll("section")].map((s) => s.className);
+    expect(classes[0]).not.toContain("before:");
+    for (const c of classes.slice(1)) {
+      expect(c).toContain("md:before:w-px");
+      expect(c).toContain("md:before:bg-border/60");
+      expect(c).toContain("md:before:inset-y-1");
+      // No unprefixed divider: nothing is drawn while the columns are stacked.
+      expect(c.split(/\s+/).filter((k) => k.startsWith("before:"))).toEqual([]);
+    }
+  });
+
   it("keeps Administração out of the mega menu; it stays in the account menu only for super_admin", () => {
     const accountTrigger = () => container.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!;
     render();
