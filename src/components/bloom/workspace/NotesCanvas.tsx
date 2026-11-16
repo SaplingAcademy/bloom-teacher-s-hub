@@ -41,6 +41,9 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
   const [boardWidth, setBoardWidth] = useState(0);
   const [heights, setHeights] = useState<Record<string, number>>({});
   const [drag, setDrag] = useState<Drag | null>(null);
+  // Dropped notes keep their drop point until the notes prop shows it: the cache update reaches
+  // this component a tick after the drop, and the note must not flash back to its old place.
+  const [dropped, setDropped] = useState<Record<string, BoardPoint>>({});
   const dragRef = useRef<Drag | null>(null);
   const suppressClick = useRef(false);
   const update = (next: Drag | null) => { dragRef.current = next; setDrag(next); };
@@ -69,6 +72,18 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
   }, [notes]);
 
   const placed = useMemo(() => placeNotes(notes, heights, boardWidth), [notes, heights, boardWidth]);
+  useLayoutEffect(() => {
+    setDropped((current) => {
+      const ids = Object.keys(current);
+      if (ids.length === 0) return current;
+      const next = { ...current };
+      for (const id of ids) {
+        const note = notes.find((entry) => entry.id === id);
+        if (!note || (note.pos_x === current[id].x && note.pos_y === current[id].y)) delete next[id];
+      }
+      return Object.keys(next).length === ids.length ? current : next;
+    });
+  }, [notes]);
   const boardHeight = boardHeightFor(placed, heights, MIN_BOARD_HEIGHT);
   const layer = useMemo(() => new Map(stackingOrder(notes).map((note, index) => [note.id, index + 1])), [notes]);
   const limitsFor = (id: string) => boardLimits(boardWidth, boardHeight, heights[id] ?? DEFAULT_NOTE_HEIGHT);
@@ -107,8 +122,12 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
     if (target.x === current.origin.x && target.y === current.origin.y) { update(null); return; }
     // The notes hook applies the new position to the board synchronously and saves it in the
     // background (rolling back on failure), so the drag ends right away without waiting.
-    void live.current.execute({ type: "position", id: current.id, x: target.x, y: target.y });
+    const id = current.id;
+    setDropped((points) => ({ ...points, [id]: target }));
     update(null);
+    const saved = await live.current.execute({ type: "position", id, x: target.x, y: target.y });
+    // Refused or rolled back: let the notes prop decide (the hook restored the previous position).
+    if (!saved) setDropped((points) => { if (!(id in points)) return points; const next = { ...points }; delete next[id]; return next; });
   };
 
   const onPointerDown = (note: WorkspaceNote, event: ReactPointerEvent<HTMLDivElement>) => {
@@ -139,7 +158,7 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
     <div ref={boardRef} role="region" aria-label={label} data-testid="notes-canvas" className="relative w-full" style={{ height: boardHeight }}>
       {sortNotes(notes).map((note) => {
         const isDragged = drag?.id === note.id && (drag.active || drag.settling);
-        const point = isDragged ? drag!.current : placed[note.id];
+        const point = isDragged ? drag!.current : dropped[note.id] ?? placed[note.id];
         if (!point) return null;
         return (
           <div key={note.id} data-board-note={note.id} data-dragging={isDragged || undefined}

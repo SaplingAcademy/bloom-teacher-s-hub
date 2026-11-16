@@ -12,15 +12,26 @@ const note = (id: string, order_index: number, extra: Partial<WorkspaceNote> = {
 
 let root: Root;
 let container: HTMLDivElement;
-let outcome: "save" | "fail" | "slow";
+let outcome: "save" | "fail" | "slow" | "deferred" | "deferred-fail";
 const execute = vi.fn();
+const notesRef: { current: WorkspaceNote[] } = { current: [] };
 const opened = vi.fn();
 
 let readOnly = false;
 function Harness({ initial }: { initial: WorkspaceNote[] }) {
   const [notes, setNotes] = useState(initial);
+  notesRef.current = notes;
   execute.mockImplementation(async (command: NoteCommand) => {
     if (outcome === "fail") return false; // the hook restores the snapshot and shows the error toast
+    if (outcome === "deferred" || outcome === "deferred-fail") {
+      // Like React Query: the cache change reaches the board on a later tick, the save even later.
+      const before = notesRef.current;
+      setTimeout(() => setNotes((current) => applyNoteCommand(current, command, "teacher", "now")), 0);
+      return new Promise<boolean>((resolve) => setTimeout(() => {
+        if (outcome === "deferred-fail") setNotes(before); // rollback to the previous position
+        resolve(outcome === "deferred");
+      }, 20));
+    }
     setNotes((current) => applyNoteCommand(current, command, "teacher", "now"));
     // Like the real hook: the position is already applied while the save is still running.
     if (outcome === "slow") return new Promise<boolean>(() => {});
@@ -98,6 +109,27 @@ describe("free-positioning notes board", () => {
     await dragFrom(container.querySelector('[data-open="b"]')!, 0, 200);
     expect(execute).toHaveBeenCalledTimes(2);
     expect(execute).toHaveBeenLastCalledWith({ type: "position", id: "b", x: 312, y: 192 });
+  });
+  it("keeps a dropped note on its drop point until the board receives the new position (no flash back)", async () => {
+    outcome = "deferred";
+    await mount([note("a", 0, { pos_x: 48, pos_y: 48 }), note("b", 1)]);
+    await dragFrom(container.querySelector('[data-open="a"]')!, 200, 100);
+    // Right after the drop, before the cache update reaches the board: still at the drop point.
+    expect(position("a")).toBe("translate3d(240px, 144px, 0)");
+    expect(wrapper("a").dataset.dragging).toBeUndefined();
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(position("a")).toBe("translate3d(240px, 144px, 0)");
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(position("a")).toBe("translate3d(240px, 144px, 0)"); // saved: stays, no duplicate wrapper
+    expect(container.querySelectorAll('[data-board-note="a"]')).toHaveLength(1);
+  });
+  it("a deferred failure still returns the note to its previous place", async () => {
+    outcome = "deferred-fail";
+    await mount([note("a", 0, { pos_x: 48, pos_y: 48 })]);
+    await dragFrom(container.querySelector('[data-open="a"]')!, 200, 100);
+    expect(position("a")).toBe("translate3d(240px, 144px, 0)");
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(position("a")).toBe("translate3d(48px, 48px, 0)");
   });
   it("keeps the note fully inside the board edges", async () => {
     await mount([note("a", 0)]);
