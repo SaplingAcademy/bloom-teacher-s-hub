@@ -12,7 +12,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { onboardingGate } from "@/lib/onboarding-status";
 import { cn } from "@/lib/utils";
 import {
-  DIAGNOSTIC_STEPS, DiagnosticError, FOLLOW_UP_OF, QUICK_ANSWERS, TEXT_MAX, hasQuickAnswer, toggleQuickAnswer, acceptDiagnosticConsent, completeDiagnostic, fetchMyDiagnostic, isVisible,
+  DIAGNOSTIC_STEPS, DiagnosticError, diagnosticProgress, FOLLOW_UP_OF, QUICK_ANSWERS, TEXT_MAX, hasQuickAnswer, toggleQuickAnswer, acceptDiagnosticConsent, completeDiagnostic, fetchMyDiagnostic, isVisible,
   missingInStep, saveDiagnosticStep, stepOf, stepPayload, type Answers, type Question,
 } from "@/lib/teacher-diagnostic";
 
@@ -37,6 +37,7 @@ export function DiagnosticFlow() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [completed, setCompleted] = useState(false); // 100% only after the database confirms completion
   // Question being answered (highlighted); defaults to the first unanswered one of the step.
   const [active, setActive] = useState<string | null>(null);
 
@@ -86,6 +87,7 @@ export function DiagnosticFlow() {
         window.scrollTo?.({ top: 0 });
       } else {
         await completeDiagnostic(stepPayload(answers, step));
+        setCompleted(true);
         updateProfileState({ diagnostic_required: false });
         void navigate({ to: profile?.onboarding_completed || profile?.onboarding_status === "skipped" ? "/" : "/onboarding", replace: true });
       }
@@ -148,6 +150,8 @@ export function DiagnosticFlow() {
   }
 
   const current = DIAGNOSTIC_STEPS[step - 1];
+  // Gradual: answered applicable questions of all 5 steps, recomputed on every answer change.
+  const progress = diagnosticProgress(answers, completed);
   // Follow-ups are shown inside their parent's block; the first unanswered question starts highlighted.
   const topLevel = current.questions.filter((q) => !FOLLOW_UP_OF[q.id]);
   const firstOpen = topLevel.find((q) => [q.id, ...(q.type === "multi" ? [q.otherKey] : []), ...Object.keys(FOLLOW_UP_OF).filter((k) => FOLLOW_UP_OF[k] === q.id)]
@@ -157,11 +161,11 @@ export function DiagnosticFlow() {
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{t("diagnostic.progress").replace("{step}", String(step)).replace("{total}", String(TOTAL))}</span>
-          <span>{Math.round(((step - 1) / TOTAL) * 100)}%</span>
+          <span data-testid="diagnostic-progress-percent">{progress.percent}%</span>
         </div>
-        <div role="progressbar" aria-valuemin={1} aria-valuemax={TOTAL} aria-valuenow={step} aria-label={t("diagnostic.progress").replace("{step}", String(step)).replace("{total}", String(TOTAL))}
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label={t("diagnostic.progress").replace("{step}", String(step)).replace("{total}", String(TOTAL))}
           className="h-1.5 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${(step / TOTAL) * 100}%` }} />
+          <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress.percent}%` }} />
         </div>
         <h1 className="pt-2 font-display text-xl font-semibold sm:text-2xl">{t(`diagnostic.steps.${current.key}`)}</h1>
         <p className="text-xs text-muted-foreground" data-testid="diagnostic-step-count">{t("diagnostic.questionsInStep").replace("{count}", String(topLevel.length))}</p>
