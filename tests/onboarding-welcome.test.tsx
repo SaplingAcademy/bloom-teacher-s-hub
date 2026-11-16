@@ -47,4 +47,15 @@ describe("onboarding welcome (after the Diagnóstico Inicial)", () => {
     expect(document.querySelector('[data-testid="onboarding-welcome"]')).toBeNull();
     expect(m.upsert).toHaveBeenCalled();
   });
+  it("questionnaire steps use the shared hierarchy: one title style, wider column, footer right after the content", async () => {
+    await mount();
+    expect(document.querySelector("main")!.className).toContain("max-w-xl");
+    await act(async () => (document.querySelector('[data-testid="onboarding-welcome"] button') as HTMLButtonElement).click());
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    const main = document.querySelector("main")!;
+    expect(main.className).toContain("max-w-2xl");
+    expect(main.className).not.toContain("justify-between");
+    const label = main.querySelector("label.block")!;
+    expect(label.className).toContain("text-xl sm:text-2xl font-extrabold font-outfit text-stone-900");
+  });
 });

@@ -799,7 +799,7 @@ export function OnboardingPage() {
       )}
 
       {/* Main Form Container */}
-      <main className={`flex-1 max-w-xl w-full mx-auto px-4 flex flex-col ${isWelcomeStep && !isSuccessView ? "py-4 sm:py-5 justify-center" : "py-6 sm:py-10 justify-between"}`}>
+      <main className={`flex-1 w-full mx-auto px-4 flex flex-col ${isWelcomeStep && !isSuccessView ? "max-w-xl py-4 sm:py-5 justify-center" : "max-w-2xl py-6 sm:py-10"}`}>
         {isSuccessView ? (
           <div className="space-y-8 text-center max-w-lg mx-auto py-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 shadow-inner">
@@ -1069,6 +1069,14 @@ export function OnboardingPage() {
   );
 }
 
+/* Questionnaire visual hierarchy (steps 1–7): one style per role, applied consistently. */
+const STEP_EYEBROW = "text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit";
+const Q_TITLE = "text-xl sm:text-2xl font-extrabold font-outfit text-stone-900 tracking-tight leading-snug";
+const Q_HELP = "text-sm text-stone-500 leading-relaxed";
+const FIELD_LABEL = "block text-sm font-semibold text-stone-700";
+const Q_GROUP = "space-y-4 pt-8 border-t border-stone-200/70";
+const ANSWER_BUTTON = "flex min-h-12 items-center justify-between gap-3 px-4 py-3 rounded-2xl border text-sm sm:text-base font-semibold";
+
 /* =========================================================================
    STEP 0 — WELCOME INTRODUCTION
    ========================================================================= */
@@ -1125,7 +1133,7 @@ function Step1AboutYou({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
@@ -1137,7 +1145,7 @@ function Step1AboutYou({
       <div data-onboarding-error-region className="space-y-2">
         <label
           htmlFor="onboarding-preferred-name"
-          className="block text-lg sm:text-xl font-extrabold font-outfit text-stone-900"
+          className={`block ${Q_TITLE}`}
         >
           {t("onboardingUi.whatWouldYouLikeTo")}
         </label>
@@ -1157,10 +1165,10 @@ function Step1AboutYou({
       </div>
 
       <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
+        <h2 className={Q_TITLE}>
           {t("onboardingUi.whatLanguageSDoYou")}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.selectAllLanguagesYouTeach")}
         </p>
       </div>
@@ -1174,7 +1182,7 @@ function Step1AboutYou({
               key={langId}
               type="button"
               onClick={() => toggleLanguage(langId)}
-              className={`flex items-center justify-between p-3.5 rounded-2xl border text-sm font-semibold transition-all cursor-pointer ${
+              className={`${ANSWER_BUTTON} transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                   : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
@@ -1196,7 +1204,7 @@ function Step1AboutYou({
       {/* If "Other" is checked */}
       {data.languages.includes("Other") && (
         <div className="pt-1">
-          <label className="block text-xs font-bold text-stone-700 mb-1.5">
+          <label className={`${FIELD_LABEL} mb-1.5`}>
             {t("onboardingUi.specifyOtherLanguage")}
           </label>
           <input
@@ -1210,12 +1218,12 @@ function Step1AboutYou({
       )}
 
       {/* Second Question: Management Tools Multi-Selection */}
-      <div className="space-y-4 pt-4 border-t border-stone-200/70">
+      <div className={Q_GROUP}>
         <div className="space-y-1">
-          <h3 className="text-lg font-bold font-outfit text-stone-900">
+          <h3 className={Q_TITLE}>
             {t("onboarding.managementToolTitle")}
           </h3>
-          <p className="text-xs text-stone-500">
+          <p className={Q_HELP}>
             {t("onboarding.managementToolSubtitle")}
           </p>
         </div>
@@ -1251,7 +1259,7 @@ function Step1AboutYou({
                 key={toolId}
                 type="button"
                 onClick={() => toggleTool(toolId)}
-                className={`flex items-center justify-between p-3.5 rounded-2xl border text-sm font-semibold transition-all text-left cursor-pointer ${
+                className={`${ANSWER_BUTTON} transition-all text-left cursor-pointer ${
                   selected
                     ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                     : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
@@ -1273,7 +1281,7 @@ function Step1AboutYou({
         {/* Conditional Field 1: "Outra plataforma" (another_platform) */}
         {(data.managementTools || []).includes("another_platform") && (
           <div className="pt-2 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-            <label className="block text-xs font-bold text-stone-700 font-outfit">
+            <label className={FIELD_LABEL}>
               {t("onboarding.otherPlatformLabel")}
             </label>
             <input
@@ -1289,7 +1297,7 @@ function Step1AboutYou({
         {/* Conditional Field 2: "Outro" (other) */}
         {(data.managementTools || []).includes("other") && (
           <div className="pt-2 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-            <label className="block text-xs font-bold text-stone-700 font-outfit">
+            <label className={FIELD_LABEL}>
               {t("onboarding.otherManagementLabel")}
             </label>
             <textarea
@@ -1320,16 +1328,16 @@ function Step2YourBusiness({
 }) {
   const { lang, t } = useLanguage();
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {t("onboardingUi.step2YourBusiness")}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
+        <h2 className={Q_TITLE}>
           {t("onboardingUi.howManyActiveStudentsDo")}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.thisConfiguresYourDashboardVolume")}
         </p>
       </div>
@@ -1343,7 +1351,7 @@ function Step2YourBusiness({
               key={rangeId}
               type="button"
               onClick={() => updateData("studentRange", rangeId)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl border text-base font-semibold transition-all cursor-pointer ${
+              className={`w-full ${ANSWER_BUTTON} transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-md scale-[1.01]"
                   : "bg-white text-stone-800 border-stone-200 hover:border-stone-300 hover:bg-stone-50"
@@ -1419,7 +1427,7 @@ function Step3YourSchedule({
     <div className="space-y-6">
       {/* Title */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold font-display text-foreground">
+        <h2 className={STEP_EYEBROW}>
           {t("onboardingUi.step3YourSchedule")}
         </h2>
       </div>
@@ -1430,10 +1438,10 @@ function Step3YourSchedule({
         className={`space-y-4 rounded-lg border p-4 sm:p-5 transition-colors ${hasChosenAvailability ? "border-border/70 bg-card/40" : "border-primary/20 bg-primary-soft/30"}`}
       >
         <div className="space-y-1.5">
-          <h3 id="onboarding-working-days" className="text-lg sm:text-xl font-bold font-display text-foreground">
+          <h3 id="onboarding-working-days" className={Q_TITLE}>
             {t("onboardingUi.selectYourWorkingDays")}
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className={Q_HELP}>
             {t("onboardingUi.checkTheDaysYouUsually")}
           </p>
         </div>
@@ -1466,10 +1474,10 @@ function Step3YourSchedule({
       {data.workingDays.length > 0 && (
         <section aria-labelledby="onboarding-same-hours" className="space-y-4 px-1 pb-6 border-b border-border/70">
           <div className="space-y-1.5">
-            <h3 id="onboarding-same-hours" className="text-lg font-bold font-display text-foreground">
+            <h3 id="onboarding-same-hours" className={Q_TITLE}>
               {t("onboardingUi.doYouUsuallyHaveThe")}
             </h3>
-            <p className="text-sm text-muted-foreground">{t("onboardingUi.sameAvailabilityHelp")}</p>
+            <p className={Q_HELP}>{t("onboardingUi.sameAvailabilityHelp")}</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Button
@@ -1512,7 +1520,7 @@ function Step3YourSchedule({
 
       {data.workingDays.length > 0 && hasChosenAvailability && (
         <section id="onboarding-hours" aria-labelledby="onboarding-hours-title" className="space-y-4 rounded-lg border border-primary/20 bg-primary-soft/20 p-4 sm:p-5">
-          <h3 id="onboarding-hours-title" className="text-lg font-bold font-display text-foreground">
+          <h3 id="onboarding-hours-title" className={Q_TITLE}>
             {t(data.sameAvailabilityAllDays ? "onboardingUi.standardTimeForAllDays" : "onboardingUi.configureEachDaySeparately")}
           </h3>
           {/* Unified availability editor */}
@@ -1641,16 +1649,16 @@ function RestBlocksSection({
   };
 
   return (
-    <div className="space-y-4 pt-6 border-t border-stone-200/70">
+    <div className={Q_GROUP}>
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
+            <h3 className={Q_TITLE}>
               {t("onboardingUi.recurringBreaks")}
             </h3>
             <OptionalBadge isPt={isPt} />
           </div>
-          <p className="text-sm text-stone-500">
+          <p className={Q_HELP}>
             {t("onboardingUi.fixedWeeklyBreaksLikeLunch")}
           </p>
         </div>
@@ -1770,15 +1778,15 @@ function TimeOffSection({
   };
 
   return (
-    <div className="space-y-4 pt-6 border-t border-stone-200/70">
+    <div className={Q_GROUP}>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <h3 className="text-base sm:text-lg font-bold font-outfit text-stone-900">
+          <h3 className={Q_TITLE}>
             {t("onboardingUi.vacationsDaysOff")}
           </h3>
           <OptionalBadge isPt={isPt} />
         </div>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.periodsWhenYouWonT")}
         </p>
       </div>
@@ -1931,16 +1939,16 @@ function Step4PlansPackages({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {t("onboardingUi.step4PlansPackages")}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
+        <h2 className={Q_TITLE}>
           {t("onboardingUi.whatTypeOfLessonsDo")}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.selectAllLessonModalities")}
         </p>
       </div>
@@ -1954,7 +1962,7 @@ function Step4PlansPackages({
               key={typeId}
               type="button"
               onClick={() => toggleLessonType(typeId)}
-              className={`p-3.5 rounded-2xl border text-center font-bold text-sm transition-all cursor-pointer ${
+              className={`flex min-h-12 items-center justify-center px-4 py-3 rounded-2xl border text-center font-semibold text-sm sm:text-base transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                   : "bg-white text-stone-700 border-stone-200 hover:border-stone-300"
@@ -1967,13 +1975,13 @@ function Step4PlansPackages({
       </div>
 
       {/* Packages Builder */}
-      <div className="space-y-5 pt-4 border-t border-stone-200/70">
+      <div className={Q_GROUP}>
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h3 className="text-lg font-bold font-outfit text-stone-900">
+            <h3 className={Q_TITLE}>
               {t("onboarding.packagesStepTitle")}
             </h3>
-            <p className="text-xs text-stone-500">
+            <p className={Q_HELP}>
               {t("onboarding.packagesStepSubtitle")}
             </p>
           </div>
@@ -2087,16 +2095,16 @@ function Step5Finances({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {t("onboardingUi.step5Finances")}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
+        <h2 className={Q_TITLE}>
           {t("onboardingUi.whatIsYourMonthlyIncome")}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.setAGoalToTrack")}
         </p>
       </div>
@@ -2116,8 +2124,8 @@ function Step5Finances({
       </div>
 
       {/* Monthly Expense Input */}
-      <div className="space-y-2 pt-4 border-t border-stone-200/70">
-        <label className="block text-sm font-bold text-stone-800 font-outfit">
+      <div className="space-y-2 pt-8 border-t border-stone-200/70">
+        <label className={FIELD_LABEL}>
           {t("onboardingUi.approximatelyHowMuchDoYou")}
         </label>
         <div className="relative">
@@ -2138,8 +2146,8 @@ function Step5Finances({
       </div>
 
       {/* Hourly Rate Question */}
-      <div className="space-y-4 pt-4 border-t border-stone-200/70">
-        <label className="block text-sm font-bold text-stone-800 font-outfit">
+      <div className={Q_GROUP}>
+        <label className={FIELD_LABEL}>
           {t("onboardingUi.doYouKnowYourHourly")}
         </label>
 
@@ -2147,7 +2155,7 @@ function Step5Finances({
           <button
             type="button"
             onClick={() => updateData("knowsHourlyRate", true)}
-            className={`flex-1 py-3 px-4 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
+            className={`flex-1 min-h-12 py-3 px-4 rounded-xl border text-sm sm:text-base font-semibold transition-all cursor-pointer ${
               data.knowsHourlyRate === true
                 ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
                 : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
@@ -2158,7 +2166,7 @@ function Step5Finances({
           <button
             type="button"
             onClick={() => updateData("knowsHourlyRate", false)}
-            className={`flex-1 py-3 px-4 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
+            className={`flex-1 min-h-12 py-3 px-4 rounded-xl border text-sm sm:text-base font-semibold transition-all cursor-pointer ${
               data.knowsHourlyRate === false
                 ? "bg-[#163020] text-[#F4EBE1] border-[#163020]"
                 : "bg-white text-stone-700 border-stone-300 hover:bg-stone-50"
@@ -2211,16 +2219,16 @@ function Step6Payments({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {t("onboardingUi.step6Payments")}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
+        <h2 className={Q_TITLE}>
           {t("onboardingUi.howDoYourStudentsUsually")}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.weWillAutomaticallyCreatePayment")}
         </p>
       </div>
@@ -2234,7 +2242,7 @@ function Step6Payments({
               key={methodId}
               type="button"
               onClick={() => togglePaymentMethod(methodId)}
-              className={`flex items-center justify-between p-4 rounded-2xl border text-sm font-bold transition-all cursor-pointer ${
+              className={`${ANSWER_BUTTON} transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-sm"
                   : "bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50"
@@ -2279,16 +2287,16 @@ function Step7Contracts({
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-emerald-800 tracking-wider uppercase font-outfit">
           {t("onboardingUi.step7Contracts")}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold font-outfit text-stone-900 tracking-tight">
+        <h2 className={Q_TITLE}>
           {t("onboardingUi.doYouUseLessonContracts")}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className={Q_HELP}>
           {t("onboardingUi.bloomIncludesReadyMadeTemplates")}
         </p>
       </div>
@@ -2302,7 +2310,7 @@ function Step7Contracts({
               key={optKey}
               type="button"
               onClick={() => updateData("contractsPreference", optKey)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl border text-base font-bold transition-all cursor-pointer ${
+              className={`w-full ${ANSWER_BUTTON} transition-all cursor-pointer ${
                 selected
                   ? "bg-[#163020] text-[#F4EBE1] border-[#163020] shadow-md scale-[1.01]"
                   : "bg-white text-stone-800 border-stone-200 hover:border-stone-300 hover:bg-stone-50"
