@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { BookText, FolderKanban, StickyNote, type LucideIcon } from "lucide-react";
+import { FolderKanban, StickyNote, type LucideIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { to: "/workspace/mural", key: "workspace.tabs.mural", icon: StickyNote },
   { to: "/workspace/projects", key: "workspace.tabs.projects", icon: FolderKanban },
-  { to: "/workspace/notebooks", key: "workspace.tabs.notebooks", icon: BookText },
 ] as const;
 
 export function WorkspaceTabs() {
@@ -69,7 +68,7 @@ export function WorkspaceDetailSkeleton() {
   );
 }
 
-export function WorkspaceBackLink({ to, children }: { to: "/workspace/projects" | "/workspace/notebooks"; children: ReactNode }) {
+export function WorkspaceBackLink({ to, children }: { to: "/workspace/projects"; children: ReactNode }) {
   return (
     <Link to={to} className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground">
       ← {children}

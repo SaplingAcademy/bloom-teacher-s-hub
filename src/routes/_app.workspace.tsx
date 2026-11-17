@@ -8,9 +8,9 @@ export const Route = createFileRoute("/_app/workspace")({
   head: () => ({
     meta: [
       { title: "Workspace · Bloom" },
-      { name: "description", content: "Organize ideas, projects and notebooks in your Bloom Workspace." },
+      { name: "description", content: "Organize ideas and projects in your Bloom Workspace." },
       { property: "og:title", content: "Workspace · Bloom" },
-      { property: "og:description", content: "Organize ideas, projects and notebooks in your Bloom Workspace." },
+      { property: "og:description", content: "Organize ideas and projects in your Bloom Workspace." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

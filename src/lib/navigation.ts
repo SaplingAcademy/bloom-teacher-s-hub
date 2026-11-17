@@ -76,7 +76,7 @@ export const navSections: NavSection[] = [
         label: "Workspace",
         to: "/workspace",
         icon: LayoutGrid,
-        description: "Board, projects and notebooks",
+        description: "Board and projects",
       },
       {
         id: "growth",
