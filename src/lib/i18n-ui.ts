@@ -1,6 +1,13 @@
 // UI strings migrated from inline pt/en ternaries. Add a new language by adding a dictionary with the same keys.
 export const uiTranslations = {
   "pt": {
+    "planUpgrade": {
+      "badge": "UPGRADE CONCLUÍDO",
+      "title": "Seu Bloom agora é {plan}!",
+      "description": "Você acaba de desbloquear uma nova experiência. Aproveite todos os recursos do seu novo plano!",
+      "explore": "Explorar meu Bloom",
+      "planNames": { "pro": "PRO" }
+    },
     "lessonPlanGeneration": {
       "shortageTitle": "Período insuficiente", "shortageBody": "Você solicitou {requested} aulas, mas o período selecionado permite apenas {possible} aulas, considerando a frequência e as datas indisponíveis.",
       "requested": "Aulas solicitadas", "possible": "Aulas possíveis", "missing": "Aulas faltantes",
@@ -1743,6 +1750,13 @@ export const uiTranslations = {
     }
   },
   "en": {
+    "planUpgrade": {
+      "badge": "UPGRADE COMPLETE",
+      "title": "Your Bloom is now {plan}!",
+      "description": "You have just unlocked a new experience. Enjoy every feature of your new plan!",
+      "explore": "Explore my Bloom",
+      "planNames": { "pro": "PRO" }
+    },
     "lessonPlanGeneration": {
       "shortageTitle": "Insufficient period", "shortageBody": "You requested {requested} lessons, but the selected period allows only {possible} lessons, considering the weekly schedule and unavailable dates.",
       "requested": "Lessons requested", "possible": "Lessons possible", "missing": "Lessons missing",
