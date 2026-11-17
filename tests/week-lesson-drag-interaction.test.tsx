@@ -26,7 +26,7 @@ function Harness({ onDrop }: { onDrop: (id: string, position: WeekDropPosition) 
     createElement("span", null, "Julia · English"),
     createElement("span", { "data-calendar-event-time": "" }, "10:00–11:00"),
   ),
-    createElement("div", { id: "target", "data-calendar-drop-cell": "", "data-date": "2026-11-06", "data-hour": "16:00" }),
+    createElement("div", { id: "target", "data-calendar-drop-cell": "", "data-calendar-snap": "", "data-date": "2026-11-06", "data-hour": "16:00" }),
     createElement("output", { id: "phase" }, drag.preview?.phase || "idle"),
     createElement(WeekLessonDragPreview, {
       preview: drag.preview,
@@ -122,10 +122,11 @@ describe("week drag presentation lifecycle", () => {
     await act(async () => { flushRaf(); flushRaf(); });
     expect(area.scrollTop).toBe(20);
     await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 290 }); });
-    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ startTime: "23:30" }));
+    // Card top = 290 − 20 (grab offset) = 270 → first quarter of the newly revealed 23h cell.
+    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ startTime: "23:00" }));
     expect(rafCallbacks.size).toBe(0);
   });
-  it("clones the original lesson, follows the pointer and returns after a cancelled save", async () => {
+  it("clones the original lesson, snaps magnetically to quarter hours and returns after a cancelled save", async () => {
     let rejectDrop!: (success: boolean) => void;
     const onDrop = vi.fn(() => new Promise<boolean>((resolve) => { rejectDrop = resolve; }));
     await act(async () => { root.render(createElement(Harness, { onDrop })); });
@@ -138,24 +139,27 @@ describe("week drag presentation lifecycle", () => {
     await startMouseDrag();
     const preview = document.querySelector<HTMLElement>("[data-calendar-drag-preview]")!;
     expect(preview.textContent).toContain("Julia · English");
-    expect(preview.textContent).toContain("16:30–17:30");
+    // Grabbed 20px below its top; card top 112 → 8px into the cell → snaps to :15 (13.5px per quarter).
+    expect(preview.textContent).toContain("16:15–17:15");
     expect(preview.textContent).not.toContain("2026-11-06");
     expect(preview.textContent).not.toContain("60 min");
-    expect(preview.style.transform).toBe("translate3d(300px, 112px, 0)");
+    expect(preview.style.transform).toBe("translate3d(304px, 117.5px, 0)"); // the card itself sits on :15
 
     await act(async () => { pointer(window, "pointermove", { clientX: 310, clientY: 148 }); });
     await act(async () => { flushRaf(); });
-    expect(preview.textContent).toContain("16:45–17:45");
+    expect(preview.textContent).toContain("16:30–17:30");
+    expect(preview.style.transform).toBe("translate3d(304px, 131px, 0)"); // jumped to :30
 
     await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 148 }); });
-    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ date: "2026-11-06", startTime: "16:45" }));
+    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ date: "2026-11-06", startTime: "16:30" }));
+    expect(preview.style.transform).toBe("translate3d(304px, 131px, 0)"); // stays where it was shown
     expect(preview.dataset.dragPhase).toBe("pending");
     expect(preview.textContent).toContain("Saving new time...");
 
     await act(async () => { rejectDrop(false); });
     expect(preview.dataset.dragPhase).toBe("returning");
     expect(preview.textContent).toContain("10:00–11:00");
-    expect(preview.textContent).not.toContain("16:45–17:45");
+    expect(preview.textContent).not.toContain("16:30–17:30");
     expect(preview.style.transform).toBe("translate3d(100px, 100px, 0)");
     expect(preview.style.transition).toContain(`${WEEK_DRAG_TRANSITION_MS}ms`);
     await act(async () => { vi.advanceTimersByTime(WEEK_DRAG_TRANSITION_MS); });

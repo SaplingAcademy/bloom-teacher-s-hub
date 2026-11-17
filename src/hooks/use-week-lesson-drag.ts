@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { CALENDAR_CELL_PAD_PX, minuteOffsetPx, snapMinutesInCell } from "@/lib/calendar-grid";
 
 export interface WeekDropPosition {
   date: string;
@@ -39,11 +40,21 @@ interface WeekDragGesture {
 export const WEEK_DRAG_TRANSITION_MS = 180;
 export const WEEK_DRAG_TOUCH_HOLD_MS = 450;
 
-/** Translate the existing hour cell into a quarter-hour target; no booking rules. */
-export function weekDropPosition(date: string, hour: string, y: number, top: number, height: number): WeekDropPosition {
-  const fraction = Math.max(0, Math.min(1, (y - top) / Math.max(1, height)));
-  const minutes = Math.min(45, Math.round(fraction * 4) * 15);
+/**
+ * Translate the dragged card's top edge inside an hour cell into a quarter-hour target (:00, :15,
+ * :30, :45); no booking rules. `cardTop` and `cellTop` are viewport coordinates.
+ */
+export function weekDropPosition(date: string, hour: string, cardTop: number, cellTop: number): WeekDropPosition {
+  const minutes = snapMinutesInCell(cardTop - cellTop - CALENDAR_CELL_PAD_PX);
   return { date, startTime: `${hour.slice(0, 2)}:${String(minutes).padStart(2, "0")}` };
+}
+
+/** Where the dragged card is drawn for a target: magnetically aligned to its quarter inside the cell. */
+export function weekSnappedCardPoint(cell: { left: number; top: number }, startTime: string): { x: number; y: number } {
+  return {
+    x: cell.left + CALENDAR_CELL_PAD_PX,
+    y: cell.top + CALENDAR_CELL_PAD_PX + minuteOffsetPx(Number(startTime.slice(3, 5))),
+  };
 }
 
 function sameTarget(a: WeekDropTarget | null, b: WeekDropTarget | null) {
@@ -136,21 +147,37 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     finishTimer.current = setTimeout(clearPreview, current.reducedMotion ? 0 : WEEK_DRAG_TRANSITION_MS);
   }, [clearPreview, paint, setPreview]);
 
-  const updateTarget = useCallback((active: WeekDragGesture, clientX: number, clientY: number) => {
-    const cell = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-calendar-drop-cell]");
+  /**
+   * Resolves the target from the card's top edge (pointer minus grab offset), so the card keeps its
+   * place under the pointer. Returns where the card snaps to, or null when there is no target.
+   */
+  const updateTarget = useCallback((active: WeekDragGesture, clientX: number, clientY: number): { x: number; y: number } | null => {
+    const cardTop = clientY - active.grabY;
+    const hit = (y: number) => document.elementFromPoint(clientX, y)?.closest<HTMLElement>("[data-calendar-drop-cell]") ?? null;
+    const cell = hit(cardTop + 1) ?? hit(clientY);
     if (!cell?.dataset.date || !cell.dataset.hour) {
       active.target = null;
       targetRef.current = null;
       setTarget(null);
-      return;
+      return null;
     }
     const rect = cell.getBoundingClientRect();
-    const position = weekDropPosition(cell.dataset.date, cell.dataset.hour, clientY, rect.top, rect.height);
+    // Lane cells (week view) snap the card itself; other cells keep the free-following card.
+    const snaps = cell.dataset.calendarSnap !== undefined;
+    const position = weekDropPosition(cell.dataset.date, cell.dataset.hour, snaps ? cardTop : clientY - active.grabY, rect.top);
     const next = { ...position, hour: cell.dataset.hour };
     active.target = next;
     targetRef.current = next;
     setTarget((current) => sameTarget(current, next) ? current : next);
+    return snaps ? weekSnappedCardPoint(rect, next.startTime) : null;
   }, []);
+
+  /** Draws the card at its magnetic position when it has one, otherwise where the pointer carries it. */
+  const paintCard = useCallback((active: WeekDragGesture, clientX: number, clientY: number) => {
+    const snapped = updateTarget(active, clientX, clientY);
+    if (snapped) paint(snapped.x, snapped.y);
+    else paint(clientX - active.grabX, clientY - active.grabY);
+  }, [paint, updateTarget]);
 
   const beginPreview = useCallback((active: WeekDragGesture, clientX: number, clientY: number) => {
     active.moved = true;
@@ -166,8 +193,8 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       reducedMotion: active.reducedMotion,
     });
     paint(x, y);
-    updateTarget(active, clientX, clientY);
-  }, [paint, setPreview, updateTarget]);
+    paintCard(active, clientX, clientY);
+  }, [paint, paintCard, setPreview]);
 
   const scrollAtEdge = useCallback((active: WeekDragGesture) => {
     const area = active.element.closest<HTMLElement>("[data-calendar-scroll-area]");
@@ -179,9 +206,9 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
     const before = area.scrollTop;
     area.scrollTop = Math.max(0, Math.min(area.scrollHeight - area.clientHeight, before + delta));
     if (area.scrollTop === before) return false;
-    updateTarget(active, active.latestX, active.latestY);
+    paintCard(active, active.latestX, active.latestY);
     return true;
-  }, [updateTarget]);
+  }, [paintCard]);
 
   useEffect(() => {
     mounted.current = true;
@@ -208,7 +235,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
           const tick = () => {
             frame.current = null;
             if (gesture.current !== active) return;
-            paint(active.latestX - active.grabX, active.latestY - active.grabY);
+            paintCard(active, active.latestX, active.latestY);
             if (scrollAtEdge(active)) frame.current = requestAnimationFrame(tick);
           };
           tick();
@@ -228,7 +255,8 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       const nextTarget = active.target;
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;
-      paint(active.latestX - active.grabX, active.latestY - active.grabY);
+      // The card stays exactly where it was last shown (its snapped slot) while the save runs.
+      paintCard(active, active.latestX, active.latestY);
       releaseGesture();
       const current = preview.current;
       if (current) setPreview({ ...current, phase: "pending" });
@@ -264,7 +292,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("blur", cancel);
     };
-  }, [beginPreview, paint, releaseGesture, scrollAtEdge, setPreview, settle, updateTarget]);
+  }, [beginPreview, paintCard, releaseGesture, scrollAtEdge, setPreview, settle, updateTarget]);
 
   const start = (event: ReactPointerEvent<HTMLElement>, id: string) => {
     if (event.button !== 0 || !event.isPrimary || gesture.current || preview.current) return;
