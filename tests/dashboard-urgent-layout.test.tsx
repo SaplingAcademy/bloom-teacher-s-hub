@@ -59,7 +59,7 @@ describe("Home layout", () => {
     expect(document.querySelectorAll("[data-testid='urgent']")).toHaveLength(1);
     // Checklist slot sized so the compact list shows ~2 tasks (validated in the browser); tighter gaps.
     expect(checklistSlot.className).toContain("xl:h-[20rem]");
-    expect(right.className).toContain("gap-4");
+    expect(right.className).toContain("gap-2.5");
   });
 
   it("the Checklist expands into a modal with the same component in its expanded view, and closes with Esc", async () => {

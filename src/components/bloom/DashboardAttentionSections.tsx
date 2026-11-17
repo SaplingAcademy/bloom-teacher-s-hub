@@ -61,7 +61,7 @@ export function DashboardPrioritiesSection({ teacherId, refreshKey, aside }: Das
   return (
     <div ref={gridRef} className={ATTENTION_GRID} data-fit={fill || undefined} style={fill ? { height: fitHeight } : undefined}>
       <DailyPrioritiesCard key={`priorities-${refreshKey}`} teacherId={teacherId} fillHeight={fill} />
-      <div className={fill ? "flex h-full min-h-0 min-w-0 flex-col gap-2.5" : "flex min-w-0 flex-col gap-4"} data-testid="dashboard-right-column">
+      <div className={fill ? "flex h-full min-h-0 min-w-0 flex-col gap-2" : "flex min-w-0 flex-col gap-2.5"} data-testid="dashboard-right-column">
         <ChecklistPanel teacherId={teacherId} fill={fill} />
         {aside}
         <UrgentWidget key={`urgent-${refreshKey}`} teacherId={teacherId} />
