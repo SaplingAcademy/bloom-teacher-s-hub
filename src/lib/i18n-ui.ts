@@ -82,6 +82,12 @@ export const uiTranslations = {
       "tabs": { "mural": "Meu Mural", "projects": "Projetos" },
       "loading": "Carregando Workspace…", "soon": "Disponível em breve",
       "mural": {
+        "connections": {
+          "connect": "Conectar a outra nota", "remove": "Remover conexão com “{note}”",
+          "banner": "Clique em outra nota para conectar.", "cancel": "Cancelar", "cancelHint": "ou pressione Esc",
+          "connected": "Notas conectadas.", "removed": "Conexão removida.", "exists": "Essas notas já estão conectadas.",
+          "saveError": "Não foi possível salvar a conexão. Tente novamente."
+        },
         "title": "Meu Mural", "emptyTitle": "Seu mural está vazio", "emptyBody": "Um espaço para suas ideias e lembretes.",
         "newNote": "Nova nota", "firstNote": "Criar minha primeira nota", "editNote": "Editar nota", "titleLabel": "Título (opcional)",
         "titlePlaceholder": "Dê um título à sua nota", "contentLabel": "Conteúdo", "contentPlaceholder": "O que você quer lembrar?",
@@ -1818,6 +1824,12 @@ export const uiTranslations = {
       "tabs": { "mural": "My Board", "projects": "Projects" },
       "loading": "Loading Workspace…", "soon": "Coming soon",
       "mural": {
+        "connections": {
+          "connect": "Connect to another note", "remove": "Remove connection to “{note}”",
+          "banner": "Click another note to connect.", "cancel": "Cancel", "cancelHint": "or press Esc",
+          "connected": "Notes connected.", "removed": "Connection removed.", "exists": "These notes are already connected.",
+          "saveError": "Could not save the connection. Please try again."
+        },
         "title": "My Board", "emptyTitle": "Your board is empty", "emptyBody": "A space for your ideas and reminders.",
         "newNote": "New note", "firstNote": "Create my first note", "editNote": "Edit note", "titleLabel": "Title (optional)",
         "titlePlaceholder": "Give your note a title", "contentLabel": "Content", "contentPlaceholder": "What would you like to remember?",

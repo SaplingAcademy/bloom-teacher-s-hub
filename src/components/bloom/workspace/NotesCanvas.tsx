@@ -4,6 +4,7 @@ import {
   BOARD_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, boardHeightFor, boardLimits, clampToBoard, placeNotes, snapToBoard, stackingOrder,
   type BoardPoint,
 } from "@/lib/workspace-notes-layout";
+import { connectorLine, visibleConnections, type NoteConnection } from "@/lib/workspace-note-connections";
 import { cn } from "@/lib/utils";
 
 /** Pointer travel (px) before a press becomes a drag; below it the press stays a normal click. */
@@ -29,6 +30,10 @@ interface NotesCanvasProps {
   execute: (command: NoteCommand) => Promise<boolean>;
   label: string;
   renderNote: (note: WorkspaceNote) => ReactNode;
+  /** Arrows between notes (personal board). Drawn behind the notes from their live positions. */
+  connections?: readonly NoteConnection[];
+  /** Connect mode: a click picks the target note, so dragging is paused. */
+  connecting?: boolean;
 }
 
 /**
@@ -36,7 +41,7 @@ interface NotesCanvasProps {
  * moves; one position command (snapped to the grid, inside the board) is sent on release and shown
  * at once. Failed saves are rolled back by the notes hook, so the note returns to its saved place.
  */
-export function NotesCanvas({ notes, pending, readOnly = false, execute, label, renderNote }: NotesCanvasProps) {
+export function NotesCanvas({ notes, pending, readOnly = false, execute, label, renderNote, connections = [], connecting = false }: NotesCanvasProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [boardWidth, setBoardWidth] = useState(0);
   const [heights, setHeights] = useState<Record<string, number>>({});
@@ -133,7 +138,7 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
   const onPointerDown = (note: WorkspaceNote, event: ReactPointerEvent<HTMLDivElement>) => {
     suppressClick.current = false;
     // Mouse/pen only, primary button, never from the note's own controls, locked notes stay put.
-    if (event.pointerType === "touch" || event.button !== 0 || note.pinned || readOnly || pending || dragRef.current) return;
+    if (event.pointerType === "touch" || event.button !== 0 || note.pinned || readOnly || pending || connecting || dragRef.current) return;
     if ((event.target as HTMLElement).closest("[data-no-drag]")) return;
     const origin = placed[note.id];
     if (!origin) return;
@@ -154,16 +159,47 @@ export function NotesCanvas({ notes, pending, readOnly = false, execute, label, 
     };
   };
 
+  // One source of truth for where a note is drawn (dragged, just dropped, saved or automatic slot);
+  // arrows use it too, so they follow the notes live, including while one is being dragged.
+  const pointOf = (id: string): BoardPoint | undefined => {
+    const isDragged = drag?.id === id && (drag.active || drag.settling);
+    return isDragged ? drag!.current : dropped[id] ?? placed[id];
+  };
+  const noteIds = useMemo(() => new Set(notes.map((note) => note.id)), [notes]);
+  const lines = visibleConnections(connections, noteIds).flatMap((connection) => {
+    const a = pointOf(connection.from_note_id);
+    const b = pointOf(connection.to_note_id);
+    if (!a || !b) return [];
+    const rect = (id: string, point: BoardPoint) => ({ ...point, width: BOARD_NOTE_WIDTH, height: heights[id] ?? DEFAULT_NOTE_HEIGHT });
+    const line = connectorLine(rect(connection.from_note_id, a), rect(connection.to_note_id, b));
+    return line ? [{ id: connection.id, ...line }] : [];
+  });
+
   return (
     <div ref={boardRef} role="region" aria-label={label} data-testid="notes-canvas" className="relative w-full" style={{ height: boardHeight }}>
+      {lines.length > 0 && (
+        // Behind every note (notes start at z-index 1) and never a target for clicks, drags or menus.
+        <svg data-testid="note-connections" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible text-primary/45"
+          style={{ zIndex: 0 }}>
+          <defs>
+            <marker id="note-connection-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor" />
+            </marker>
+          </defs>
+          {lines.map((line) => (
+            <line key={line.id} data-connection={line.id} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+              stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" markerEnd="url(#note-connection-arrow)" />
+          ))}
+        </svg>
+      )}
       {sortNotes(notes).map((note) => {
         const isDragged = drag?.id === note.id && (drag.active || drag.settling);
-        const point = isDragged ? drag!.current : dropped[note.id] ?? placed[note.id];
+        const point = pointOf(note.id);
         if (!point) return null;
         return (
           <div key={note.id} data-board-note={note.id} data-dragging={isDragged || undefined}
             className={cn("absolute left-0 top-0 select-none",
-              note.pinned || readOnly ? "cursor-default" : "cursor-grab active:cursor-grabbing",
+              connecting ? "cursor-pointer" : note.pinned || readOnly ? "cursor-default" : "cursor-grab active:cursor-grabbing",
               drag?.active && drag.id === note.id && "[&_article]:shadow-lg")}
             style={{ width: BOARD_NOTE_WIDTH, transform: `translate3d(${point.x}px, ${point.y}px, 0)`, zIndex: isDragged ? notes.length + 1 : layer.get(note.id) }}
             onPointerDown={(event) => onPointerDown(note, event)}
