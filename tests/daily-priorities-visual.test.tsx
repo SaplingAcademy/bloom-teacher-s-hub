@@ -71,6 +71,19 @@ describe("Today priorities: visual cleanup", () => {
     expect(rows.some((li) => /\bborder\b|rounded-lg/.test(li.className))).toBe(false);
     expect(document.querySelector("ul.divide-y")).toBeNull(); // no full-width lines across the icons
   });
+  it("light green-white header (alternative C): dark green title, medium green icons, green active filter", () => {
+    render(items);
+    const header = document.querySelector<HTMLElement>("[data-testid=priorities-header]")!;
+    expect(header.className).toContain("bg-[#F8FAF8]");
+    expect(header.className).not.toContain("bg-sidebar");
+    expect(header.querySelector("h2")!.className).toContain("text-[#1E3A2C]");
+    expect(header.querySelector("[data-testid=expand-panel]")!.className).toContain("text-[#4A6B58]");
+    const filters = [...header.querySelectorAll<HTMLButtonElement>("[data-testid=priorities-filters-dark] button")];
+    const active = filters.find((b) => b.getAttribute("aria-pressed") === "true")!;
+    expect(active.className).toContain("bg-[#2F5D45]");
+    expect(active.className).toContain("text-white");
+    expect(filters.filter((b) => b !== active).every((b) => b.className.includes("bg-white") && b.className.includes("border-[#D9E3D9]"))).toBe(true);
+  });
   it("category as coloured text only, with the neutral grey icon in its own column next to the title", () => {
     render(items);
     const attendance = row("Título a");
