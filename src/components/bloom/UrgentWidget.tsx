@@ -143,7 +143,7 @@ export function UrgentWidget({ teacherId, layoutClassName }: UrgentWidgetProps) 
     return (
       <div className={cn(layoutClassName)}>
         <div role="status" aria-busy="true" aria-label={t("today.urgentTitle")} data-testid="urgent-skeleton"
-          className="flex items-center gap-3 rounded-2xl border border-stone-200/80 bg-card p-4 shadow-sm">
+          className="flex items-center gap-3 rounded-2xl border border-stone-200/80 bg-card px-4 py-3 shadow-sm">
           <Skeleton className="h-9 w-9 rounded-full" />
           <div className="flex-1 space-y-1.5"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-40" /></div>
         </div>
@@ -154,7 +154,7 @@ export function UrgentWidget({ teacherId, layoutClassName }: UrgentWidgetProps) 
   return (
     <div className={cn(layoutClassName)}>
       <button type="button" data-testid="urgent-card" aria-haspopup="dialog" onClick={() => setOpen(true)}
-        className="group flex w-full items-center gap-3 rounded-2xl border border-stone-200/80 bg-card p-4 text-left shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer">
+        className="group flex w-full items-center gap-3 rounded-2xl border border-stone-200/80 bg-card px-4 py-3 text-left shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer">
         <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", count > 0 ? "bg-rose-500/10 text-rose-600" : "bg-primary-soft text-primary")}>
           {count > 0 ? <ShieldAlert className="h-4.5 w-4.5" aria-hidden="true" /> : <ShieldCheck className="h-4.5 w-4.5" aria-hidden="true" />}
         </span>

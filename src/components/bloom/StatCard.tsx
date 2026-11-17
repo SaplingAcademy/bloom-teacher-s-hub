@@ -38,15 +38,16 @@ export function StatCard({
 }: StatCardProps) {
   const forest = appearance === "forest";
   const shell = cn(
-    "flex flex-col gap-3 rounded-2xl border shadow-[var(--shadow-sm)] text-left w-full",
-    compact ? "@container h-full p-4" : "p-5",
+    "flex flex-col rounded-2xl border shadow-[var(--shadow-sm)] text-left w-full",
+    // compact (home only): lower card, same numbers, colors and layout.
+    compact ? "@container h-full gap-1.5 px-4 py-3" : "gap-3 p-5",
     forest ? "border-sidebar-border bg-sidebar text-sidebar-accent-foreground" : "border-border bg-card",
     onClick && "group cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
   );
   const content = (
     <>
       <div className="flex items-center justify-between">
-        <span className={cn("grid h-10 w-10 place-items-center rounded-xl", forest ? "bg-sidebar-accent text-sidebar-accent-foreground" : toneMap[tone])}>
+        <span className={cn("grid place-items-center rounded-xl", compact ? "h-9 w-9" : "h-10 w-10", forest ? "bg-sidebar-accent text-sidebar-accent-foreground" : toneMap[tone])}>
           <Icon className="h-5 w-5" />
         </span>
         {trend && (

@@ -236,7 +236,7 @@ export function ChecklistCard({ expanded = false, onExpand }: { expanded?: boole
     <TooltipProvider delayDuration={350}>
       <section aria-label={t("checklist.title")} data-checklist-view={expanded ? "expanded" : "compact"}
         className={expanded ? "flex h-full min-w-0 flex-col overflow-hidden bg-card" : "flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm xl:h-full"}>
-        <header className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 sm:px-5 ${expanded ? "py-4 pr-12" : "py-3"}`}>
+        <header className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 sm:px-5 ${expanded ? "py-4 pr-12" : "py-2.5"}`}>
           <div className="flex min-w-0 items-center gap-1">
             <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
               {selected === 0 ? <ListChecks className="h-5 w-5 shrink-0" aria-hidden="true" /> : <History className="h-5 w-5 shrink-0" aria-hidden="true" />}
@@ -295,9 +295,9 @@ export function ChecklistCard({ expanded = false, onExpand }: { expanded?: boole
                 </div>
                 {current.length === 0 ? <p className="flex flex-1 items-center justify-center px-5 py-8 text-center text-sm text-muted-foreground">{t("checklist.empty")}</p>
                   : taskList(current)}
-                {completedCount > 0 && <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 sm:px-5">
+                {completedCount > 0 && <footer className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 sm:px-5 ${expanded ? "py-2" : "py-1"}`}>
                   {pendingCount === 0 && <span className="flex items-center gap-1.5 text-xs text-primary"><CheckCheck className="h-4 w-4" />{t("checklist.allDone")}</span>}
-                  <Button variant="ghost" size="sm" className="ml-auto whitespace-normal text-muted-foreground" disabled={pending || Boolean(editing)}
+                  <Button variant="ghost" size="sm" className={`ml-auto whitespace-normal text-muted-foreground ${expanded ? "" : "h-7"}`} disabled={pending || Boolean(editing)}
                     onClick={() => setClearIds(current.filter((item) => item.completed).map((item) => item.id))}><Trash2 />{t("checklist.clear")}</Button>
                 </footer>}
               </div>
@@ -314,10 +314,10 @@ export function ChecklistCard({ expanded = false, onExpand }: { expanded?: boole
             </div>
           </div>}
 
-          <div className={`mt-auto flex shrink-0 items-center justify-center gap-2 px-4 ${expanded ? "py-3" : "py-2"}`} aria-label={t("checklist.navigationLabel")}>
+          <div className={`mt-auto flex shrink-0 items-center justify-center gap-2 px-4 ${expanded ? "py-3" : "py-1"}`} aria-label={t("checklist.navigationLabel")}>
             {[0, 1].map((index) => <Button key={index} type="button" variant="ghost" size="icon" disabled={unavailable}
               aria-label={t(index === 0 ? "checklist.showChecklist" : "checklist.showHistory")} aria-current={selected === index ? "page" : undefined}
-              onClick={() => goTo(index)} className="h-7 w-7 rounded-full p-0 hover:bg-transparent">
+              onClick={() => goTo(index)} className={`${expanded ? "h-7 w-7" : "h-6 w-6"} rounded-full p-0 hover:bg-transparent`}>
               <span className={`block h-2 rounded-full transition-all duration-200 motion-reduce:transition-none ${selected === index ? "w-5 bg-primary" : "w-2 bg-muted-foreground/30"}`} />
             </Button>)}
           </div>
