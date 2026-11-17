@@ -12,15 +12,19 @@ interface Props {
 }
 
 /** Tudo + the five topics + "Ajude outro professor". Scrolls sideways on phones, wraps from sm up. */
+/** Label of a filter/category, shared by the filter bar and the "Blocos" view. */
+export function communityFilterLabel(f: CommunityFilter, t: (key: string) => string): string {
+  return f === "all"
+    ? t("communityV1.filterAll")
+    : f === "help"
+      ? t("communityV1.filterHelp")
+      : f === "saved"
+        ? t("communityV1.filterSaved")
+        : t(`communityV1.topics.${f}`);
+}
+
 export function CommunityFilterBar({ value, onChange, helpCount, t, filters = COMMUNITY_FILTERS }: Props) {
-  const label = (f: CommunityFilter) =>
-    f === "all"
-      ? t("communityV1.filterAll")
-      : f === "help"
-        ? t("communityV1.filterHelp")
-        : f === "saved"
-          ? t("communityV1.filterSaved")
-          : t(`communityV1.topics.${f}`);
+  const label = (f: CommunityFilter) => communityFilterLabel(f, t);
   return (
     <div
       role="group"

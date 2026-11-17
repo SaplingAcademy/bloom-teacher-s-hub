@@ -63,6 +63,14 @@ export function filterCommunityPosts<T extends FilterablePost>(posts: T[], filte
   );
 }
 
+/**
+ * Posts per filter for the "Blocos" view: the same filters and matching as the filter bar (and the
+ * current search), so a block's number is exactly what the feed shows after clicking it.
+ */
+export function communityFilterCounts<T extends FilterablePost>(posts: T[], filters: readonly CommunityFilter[], search: string): Record<string, number> {
+  return Object.fromEntries(filters.map((f) => [f, filterCommunityPosts(posts, f, search).length]));
+}
+
 /** Number of unanswered questions (badge on the "Ajude outro professor" filter). */
 export function countNeedsHelp(posts: Pick<FilterablePost, "topic" | "commentCount">[]): number {
   return posts.filter(needsHelp).length;
