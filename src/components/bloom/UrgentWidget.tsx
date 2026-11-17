@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/hooks/use-language";
 import { refreshTodayQueues, useUrgentQueueQuery } from "@/hooks/use-urgent-queue-query";
 import { useInvalidateFinanceData } from "@/hooks/use-finance-query";
-import { ShieldAlert, ShieldCheck, AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ShieldAlert, ShieldCheck, CircleCheck, AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PriorityResolutionPanel } from "@/components/bloom/PriorityResolutionPanel";
 import { PriorityModuleActions, type PriorityModuleAction } from "@/components/bloom/PriorityModuleActions";
@@ -127,9 +127,39 @@ export function UrgentPendingList({ teacherId, items }: { teacherId: string; ite
   );
 }
 
+type CardTone = "urgent" | "clear" | "neutral";
+
+/** Full-card colour per state: soft terracotta with urgencies, soft green when all caught up. */
+const CARD_TONES: Record<CardTone, { card: string; icon: string; title: string; count: string; hint: string; arrow: string }> = {
+  urgent: {
+    card: "border-[#F3CDBF] bg-[#FCE8E1] hover:border-[#EBB9A7] hover:bg-[#FADFD5] dark:border-[#5A2C20] dark:bg-[#3A1E17] dark:hover:bg-[#432219]",
+    icon: "bg-white/70 text-[#A8351C] dark:bg-black/20 dark:text-[#F0A48C]",
+    title: "text-[#6E2414] dark:text-[#FBD9CE]",
+    count: "bg-[#A8351C] text-white dark:bg-[#F0A48C] dark:text-[#3A1E17]",
+    hint: "text-[#8A3B27] dark:text-[#F1C1B2]",
+    arrow: "text-[#A8351C] dark:text-[#F0A48C]",
+  },
+  clear: {
+    card: "border-[#C8E6C9] bg-[#E8F5E9] hover:border-[#B5DCB7] hover:bg-[#DFF1E0] dark:border-[#24452A] dark:bg-[#16301B] dark:hover:bg-[#1B3820]",
+    icon: "bg-white/70 text-[#2E7D32] dark:bg-black/20 dark:text-[#8FD694]",
+    title: "text-[#1B5E20] dark:text-[#CDEFD0]",
+    count: "",
+    hint: "text-[#2F6B33] dark:text-[#B4E0B8]",
+    arrow: "text-[#2E7D32] dark:text-[#8FD694]",
+  },
+  neutral: {
+    card: "border-stone-200/80 bg-card hover:border-stone-300 hover:bg-stone-50/60",
+    icon: "bg-primary-soft text-primary",
+    title: "text-foreground",
+    count: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    hint: "text-muted-foreground",
+    arrow: "text-muted-foreground",
+  },
+};
+
 /**
- * Urgent indicator on the home page: one summary card with the real count (red only as a detail when
- * there are items, neutral "all clear" otherwise). Clicking opens the full list in a modal where each
+ * Urgent indicator on the home page: one summary card with the real count (soft terracotta when there
+ * are items, soft green "all caught up" otherwise). Clicking opens the full list in a modal where each
  * item is resolved with its existing flow.
  */
 export function UrgentWidget({ teacherId, layoutClassName }: UrgentWidgetProps) {
@@ -138,6 +168,10 @@ export function UrgentWidget({ teacherId, layoutClassName }: UrgentWidgetProps) 
   const urgentItems = data ?? [];
   const [open, setOpen] = useState(false);
   const count = urgentItems.length;
+  // Appearance only, from the count already computed above. A failed read is neither "urgent" nor
+  // "all caught up": it keeps the neutral card with the load-error message.
+  const tone: CardTone = isError ? "neutral" : count > 0 ? "urgent" : "clear";
+  const style = CARD_TONES[tone];
 
   if (teacherId && isPending) {
     return (
@@ -153,21 +187,21 @@ export function UrgentWidget({ teacherId, layoutClassName }: UrgentWidgetProps) 
 
   return (
     <div className={cn(layoutClassName)}>
-      <button type="button" data-testid="urgent-card" aria-haspopup="dialog" onClick={() => setOpen(true)}
-        className="group flex w-full items-center gap-3 rounded-2xl border border-stone-200/80 bg-card px-4 py-3 text-left shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer">
-        <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", count > 0 ? "bg-rose-500/10 text-rose-600" : "bg-primary-soft text-primary")}>
-          {count > 0 ? <ShieldAlert className="h-4.5 w-4.5" aria-hidden="true" /> : <ShieldCheck className="h-4.5 w-4.5" aria-hidden="true" />}
+      <button type="button" data-testid="urgent-card" data-urgent-state={tone} aria-haspopup="dialog" onClick={() => setOpen(true)}
+        className={cn("group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer", style.card)}>
+        <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", style.icon)}>
+          {tone === "clear" ? <CircleCheck className="h-4.5 w-4.5" aria-hidden="true" /> : <ShieldAlert className="h-4.5 w-4.5" aria-hidden="true" />}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="font-outfit text-base font-extrabold text-foreground">{t("today.urgentTitle")}</span>
-            {count > 0 && <span data-testid="urgent-count" className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-bold tabular-nums text-rose-700 dark:text-rose-300">{count}</span>}
+            <span className={cn("font-outfit text-base font-extrabold", style.title)}>{tone === "clear" ? t("today.allClearCardTitle") : t("today.urgentTitle")}</span>
+            {count > 0 && <span data-testid="urgent-count" className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums", style.count)}>{count}</span>}
           </span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {isError ? t("today.urgentLoadError") : count > 0 ? t("today.urgentCardHint") : t("today.allClearTitle")}
+          <span className={cn("block truncate text-xs", style.hint)}>
+            {isError ? t("today.urgentLoadError") : count > 0 ? t("today.urgentCardHint") : t("today.allClearCardHint")}
           </span>
         </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        <ChevronRight className={cn("h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5", style.arrow)} aria-hidden="true" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

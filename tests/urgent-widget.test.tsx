@@ -26,6 +26,9 @@ vi.mock("@/hooks/use-language", () => ({
       "today.resolveAction": "Resolve",
       "today.allClearTitle": "All clear",
       "today.allClearSubtitle": "No urgent issues",
+      "today.allClearCardTitle": "All caught up!",
+      "today.allClearCardHint": "No urgent items need your attention.",
+      "today.urgentCardHint": "You have pending items that need your attention.",
     })[key] ?? key,
   }),
 }));
@@ -93,6 +96,9 @@ describe("Urgent summary card", () => {
     expect(container.querySelector("[data-testid=urgent-skeleton]")).toBeNull();
     expect(card()!.textContent).toContain("Urgent");
     expect(count()).toBe("1"); // only high urgency
+    expect(card()!.dataset.urgentState).toBe("urgent");
+    expect(card()!.className).toContain("bg-[#FCE8E1]");
+    expect(card()!.textContent).toContain("You have pending items that need your attention.");
     expect(card()!.getAttribute("aria-haspopup")).toBe("dialog");
     expect(container.textContent).not.toContain("Occurrence urgent"); // the list lives in the modal
   });
@@ -110,12 +116,16 @@ describe("Urgent summary card", () => {
     expect(dialog()).toBeNull();
   });
 
-  it("without urgent items shows a neutral, discreet all-clear card (no red counter)", async () => {
+  it("without urgent items shows the soft green all-caught-up card (no red counter)", async () => {
     mocks.fetch.mockResolvedValue([item("ordinary", "medium"), item("later", "low")]);
     await mount();
-    expect(card()!.textContent).toContain("All clear");
+    expect(card()!.dataset.urgentState).toBe("clear");
+    expect(card()!.className).toContain("bg-[#E8F5E9]");
+    expect(card()!.textContent).toContain("All caught up!");
+    expect(card()!.textContent).toContain("No urgent items need your attention.");
+    expect(card()!.textContent).not.toContain("Urgent");
     expect(count()).toBeNull();
-    expect(card()!.innerHTML).not.toContain("text-rose-600");
+    expect(card()!.innerHTML).not.toContain("rose");
   });
 
   it("after a refresh confirms the resolution, the modal and the count update", async () => {
