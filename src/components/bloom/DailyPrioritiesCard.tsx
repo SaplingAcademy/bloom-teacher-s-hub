@@ -31,6 +31,8 @@ import { useInvalidateFinanceData } from "@/hooks/use-finance-query";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
+  /** Desktop home fitted to the screen: fill the given height; the list scrolls inside. */
+  fillHeight?: boolean;
 }
 
 type CategoryFilter = "all" | DailyPriorityCategory;
@@ -89,7 +91,7 @@ function fill(template: string, params: Record<string, string | number>): string
   );
 }
 
-export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
+export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrioritiesCardProps) {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
   const [filter, setFilter] = useState<CategoryFilter>("all");
@@ -374,7 +376,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       </div>
 
       {/* White list area below the tinted header */}
-      <div className="mt-4 space-y-4">
+      <div className={fillHeight ? "mt-3 flex min-h-0 flex-1 flex-col gap-3" : "mt-4 space-y-4"}>
       {/* Per-category failure notice (never shown as zero priorities) */}
       {noticeFailed.length > 0 && (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3.5 py-2.5 text-amber-900">
@@ -392,7 +394,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           card while the forest header, filters and card borders stay in place. */}
       <div
         data-testid="priorities-scroll"
-        className="-mx-1.5 max-h-[22rem] min-h-0 space-y-3 overflow-y-auto overscroll-contain px-1.5"
+        className={`-mx-1.5 min-h-0 space-y-3 overflow-y-auto overscroll-contain px-1.5 ${fillHeight ? "flex-1" : "max-h-[22rem]"}`}
       >
       {/* Loading */}
       {loading && (
