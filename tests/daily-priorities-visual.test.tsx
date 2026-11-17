@@ -61,11 +61,32 @@ describe("Today priorities: visual cleanup", () => {
     render([...items, item("k", "contract", "upcoming", "contract_ending_30d", "2026-12-07", { packageName: "Intensivo", daysRemaining: 20, endDate: "2026-12-07" })]);
     expect(row("Título k").querySelector("p")!.textContent).toBe("Contrato Intensivo termina em 20 dias");
   });
-  it("soft divider between actions, no individual cards", () => {
+  it("soft divider between actions starting at the text column, no individual cards", () => {
     render(items);
-    const lists = [...document.querySelectorAll("ul.divide-y")];
-    expect(lists.length).toBeGreaterThan(0);
-    expect(lists.every((ul) => ul.className.includes("divide-stone-200/60"))).toBe(true);
+    const rows = [...document.querySelectorAll<HTMLElement>("ul[data-priority-list] > li")];
+    expect(rows.length).toBeGreaterThan(1);
+    // The line is drawn above every item but the first, offset past the icon column.
+    expect(rows.every((li) => li.className.includes("not-first:before:bg-stone-200/60"))).toBe(true);
+    expect(rows.every((li) => li.className.includes("not-first:before:left-9"))).toBe(true);
+    expect(rows.some((li) => /\bborder\b|rounded-lg/.test(li.className))).toBe(false);
+    expect(document.querySelector("ul.divide-y")).toBeNull(); // no full-width lines across the icons
+  });
+  it("category as coloured text only, with the neutral grey icon in its own column next to the title", () => {
+    render(items);
+    const attendance = row("Título a");
+    const label = attendance.querySelector<HTMLElement>("[data-priority-category]")!;
+    expect(label.textContent).toBe("Presença");
+    expect(label.className).toContain("text-sky-700");
+    expect(label.className).not.toMatch(/\bbg-|border|rounded|px-/);
+    expect(label.querySelector("svg")).toBeNull(); // no icon inside the category
+    const icons = [...document.querySelectorAll<SVGElement>("[data-priority-icon]")];
+    expect(icons.length).toBeGreaterThan(1);
+    expect(icons.every((icon) => icon.getAttribute("class")!.includes("text-stone-400"))).toBe(true);
+    // Same grid row as the title (not the category line).
+    const icon = attendance.querySelector("[data-priority-icon]")!;
+    expect(icon.getAttribute("class")).toContain("row-start-2");
+    expect(icon.getAttribute("class")).toContain("col-start-1");
+    expect(attendance.querySelector("h4")!.className).toContain("row-start-2");
   });
 
   describe("redundant 'vence hoje' under the Hoje heading", () => {
@@ -99,20 +120,22 @@ describe("Today priorities: visual cleanup", () => {
     const sections = () => [...document.querySelectorAll<HTMLElement>("[data-urgency-section]")];
     it("a soft line before each heading that has content above; none before the first group", () => {
       render(grouped);
-      expect(sections().map((el) => [el.dataset.urgencySection, el.className.includes("border-t")])).toEqual([
+      expect(sections().map((el) => [el.dataset.urgencySection, el.className.includes("before:h-px")])).toEqual([
         ["critical", false], ["today", true], ["stale", true],
       ]);
-      expect(sections()[1].className).toContain("border-stone-200/60");
+      // The group line also starts at the text column (none across the icon column).
+      expect(sections()[1].className).toContain("before:bg-stone-200/60");
+      expect(sections()[1].className).toContain("before:left-9");
     });
     it("no leading line when the list starts with a headed group", () => {
       render(grouped.filter((i) => i.urgency !== "critical"));
-      expect(sections()[0].className).not.toContain("border-t");
+      expect(sections()[0].className).not.toContain("before:h-px");
     });
     it("item dividers stay inside each group (no doubled line at the group boundary)", () => {
       render(grouped);
       const lists = sections().map((el) => el.querySelector("ul")!);
-      expect(lists.every((ul) => ul.className.includes("divide-y"))).toBe(true);
-      // divide-y draws only between items, so the last item of a group adds no line of its own.
+      expect(lists.every((ul) => ul.hasAttribute("data-priority-list"))).toBe(true);
+      // Lines are drawn only above items after the first, so the last item of a group adds none.
       expect(lists[0].querySelectorAll("li")).toHaveLength(2);
     });
   });

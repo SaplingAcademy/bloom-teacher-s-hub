@@ -17,7 +17,6 @@ import type {
   DailyPriorityItem,
   DailyPriorityUrgency,
 } from "@/lib/daily-priorities";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { refreshTodayQueues } from "@/hooks/use-urgent-queue-query";
@@ -40,34 +39,42 @@ type CategoryFilter = "all" | DailyPriorityCategory;
 
 const CATEGORY_META: Record<
   DailyPriorityCategory,
-  { labelKey: string; icon: typeof CalendarCheck; badgeClass: string }
+  { labelKey: string; icon: typeof CalendarCheck; labelClass: string }
 > = {
   attendance: {
     labelKey: "today.filterAttendance",
     icon: CalendarCheck,
-    badgeClass: "bg-sky-100 text-sky-900 border-sky-200/80",
+    labelClass: "text-sky-700",
   },
   payment: {
     labelKey: "today.filterPayments",
     icon: CreditCard,
-    badgeClass: "bg-amber-100 text-amber-900 border-amber-200/80",
+    labelClass: "text-amber-700",
   },
   contract: {
     labelKey: "today.filterContracts",
     icon: FileClock,
-    badgeClass: "bg-rose-100 text-rose-900 border-rose-200/80",
+    labelClass: "text-rose-700",
   },
   task: {
     labelKey: "today.filterTasks",
     icon: House,
-    badgeClass: "bg-emerald-100 text-emerald-900 border-emerald-200/80",
+    labelClass: "text-emerald-700",
   },
   lead: {
     labelKey: "today.filterLeads",
     icon: UserPlus,
-    badgeClass: "bg-purple-100 text-purple-900 border-purple-200/80",
+    labelClass: "text-purple-700",
   },
 };
+
+/**
+ * Offset of the text column inside a list row (row padding + 1rem icon column + gap): dividers start
+ * there, so the icon column reads as one continuous strip with no lines crossing it.
+ */
+const TEXT_COLUMN_LINE = "before:absolute before:right-0 before:top-0 before:left-9 before:h-px before:bg-stone-200/60 sm:before:left-10";
+/** Compact list row: a soft divider above every item but the first, starting at the text column. */
+const PRIORITY_ROW_DIVIDER = "relative py-1 first:pt-0 last:pb-0 not-first:before:absolute not-first:before:right-0 not-first:before:top-0 not-first:before:left-9 not-first:before:h-px not-first:before:bg-stone-200/60 sm:not-first:before:left-10";
 
 const CATEGORY_ORDER: DailyPriorityCategory[] = ["attendance", "payment", "contract", "task", "lead"];
 
@@ -200,7 +207,7 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
       else handleItemClick(item);
     };
     return (
-      <li key={item.id} data-priority-item={item.id} className={card ? "rounded-lg border border-stone-200/80 bg-white" : "py-1 first:pt-0 last:pb-0"}>
+      <li key={item.id} data-priority-item={item.id} className={card ? "rounded-lg border border-stone-200/80 bg-white" : PRIORITY_ROW_DIVIDER}>
       <div
         role="button"
         tabIndex={0}
@@ -211,34 +218,24 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
           e.preventDefault();
           activate();
         }}
-        className={`group flex items-start gap-3 ${card ? "p-3 rounded-lg [&_h4]:text-sm" : "py-2 px-2 sm:px-3 rounded-xl"} hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none`}
+        className={`group grid grid-cols-[1rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 ${card ? "p-3 rounded-lg [&_h4]:text-sm" : "py-2 px-2 sm:px-3 rounded-xl"} hover:bg-stone-50 transition-colors cursor-pointer select-none`}
       >
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant="outline"
-              className={`text-[10px] py-0.5 px-2 font-bold rounded-md flex items-center gap-1.5 border ${meta.badgeClass}`}
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span>{t(meta.labelKey)}</span>
-            </Badge>
-            {item.date && (
-              <span className="text-[11px] font-semibold text-stone-400">
-                {formatDate(item.date)}
-                {item.time ? ` · ${item.time.slice(0, 5)}` : ""}
-              </span>
-            )}
-          </div>
-          <h4 className="break-words text-xs sm:text-sm font-bold text-stone-900 group-hover:text-emerald-950 transition-colors leading-snug">
-            {item.title}
-          </h4>
-          {description && (
-            <p className="break-words text-[11px] font-medium text-stone-500 leading-snug">
-              {description}
-            </p>
+        {/* Line 1: category (coloured text only) and date, in the text column. */}
+        <div className="col-start-2 col-end-4 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span data-priority-category={item.category} className={`text-[11px] font-bold ${meta.labelClass}`}>{t(meta.labelKey)}</span>
+          {item.date && (
+            <span className="text-[11px] font-semibold text-stone-400">
+              {formatDate(item.date)}
+              {item.time ? ` · ${item.time.slice(0, 5)}` : ""}
+            </span>
           )}
         </div>
-        <div className="shrink-0 text-stone-400 group-hover:text-stone-700 transition-colors pt-1">
+        {/* Icon column: neutral grey for every category, aligned with the title's first line. */}
+        <Icon data-priority-icon="" className={`col-start-1 row-start-2 h-4 w-4 text-stone-400 ${card ? "mt-0.5" : "sm:mt-0.5"}`} aria-hidden="true" />
+        <h4 className="col-start-2 row-start-2 break-words text-xs sm:text-sm font-bold text-stone-900 group-hover:text-emerald-950 transition-colors leading-snug">
+          {item.title}
+        </h4>
+        <div className="col-start-3 row-start-2 text-stone-400 group-hover:text-stone-700 transition-colors">
           {resolvable ? (
             <span className="flex items-center gap-1 text-[11px] font-semibold">
               <span className="hidden sm:inline">{expanded ? t("today.resolve.collapse") : t("today.resolve.expand")}</span>
@@ -250,6 +247,11 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
             <ExternalLink className="h-4 w-4" />
           )}
         </div>
+        {description && (
+          <p className="col-start-2 col-end-4 row-start-3 break-words text-[11px] font-medium text-stone-500 leading-snug">
+            {description}
+          </p>
+        )}
       </div>
       {expanded && (
         <div className="mx-3 mb-3 space-y-3 rounded-xl border border-stone-200 bg-white p-3">
@@ -436,21 +438,21 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
             return (
               // A soft line separates groups when something comes before; items keep their own dividers
               // and the last item of a group has none, so lines never double up.
-              <div key={section.key} data-urgency-section={section.key} className={index > 0 ? "border-t border-stone-200/60 pt-3" : undefined}>
+              <div key={section.key} data-urgency-section={section.key} className={index > 0 ? `relative pt-3 ${TEXT_COLUMN_LINE}` : undefined}>
                 {/* Critical items lead the list without a heading (urgency has its own classification). */}
                 {section.key !== "critical" && (
-                  <p className="text-[11px] font-extrabold text-stone-400 uppercase tracking-wider px-1 pb-1">
+                  <p className="pb-1 pl-9 pr-1 text-[11px] font-extrabold uppercase tracking-wider text-stone-400 sm:pl-10">
                     {t(section.labelKey)}
                   </p>
                 )}
-                <ul className="divide-y divide-stone-200/60">{sectionItems.map((item) => renderRow(item, section.key === "today"))}</ul>
+                <ul data-priority-list="">{sectionItems.map((item) => renderRow(item, section.key === "today"))}</ul>
               </div>
             );
           })}
         </div>
       )}
       {!loading && visibleItems.length > 0 && filter !== "all" && (
-        <ul className="divide-y divide-stone-200/60">{visibleItems.map((item) => renderRow(item))}</ul>
+        <ul data-priority-list="">{visibleItems.map((item) => renderRow(item))}</ul>
       )}
       {!loading && visibleItems.length === 0 && !isEmpty && filter !== "all" && !(filter === "lead" && leadsFailed) && (
         <p className="text-xs font-medium text-stone-500 text-center py-2">
