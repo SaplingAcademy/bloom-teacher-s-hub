@@ -203,12 +203,16 @@ export function NotesBoard({ projectId = null, readOnly = false, isProjectOwner 
             <AlertDialogDescription>{t("workspace.mural.deleteBody")}</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <Button variant="ghost" disabled={pending} onClick={() => setDeleting(null)}>{t("workspace.mural.cancel")}</Button>
-            <Button variant="destructive" disabled={pending} onClick={async () => {
-              if (deleting && await execute({ type: "delete", id: deleting.id })) {
-                setDeleting(null);
+            <Button variant="destructive" disabled={pending} onClick={() => {
+              if (!deleting) return;
+              // Optimistic: the note leaves the board at once and the dialog closes without waiting;
+              // the delete finishes in the background (a failure restores the note with a message).
+              const id = deleting.id;
+              setDeleting(null);
+              void execute({ type: "delete", id }).then((deleted) => {
                 // The database removed this note's connections (cascade); refresh the cached list.
-                if (connectionsOn) void noteConnections.refresh();
-              }
+                if (deleted && connectionsOn) void noteConnections.refresh();
+              });
             }}><Trash2 aria-hidden />{t("workspace.mural.delete")}</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
