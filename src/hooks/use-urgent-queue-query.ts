@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { fetchAttentionQueue, type AttentionItem } from "@/lib/attention-queue";
 import { runInactiveLeadCheckOnLoad } from "@/lib/inactive-lead-automation";
 import { invalidateAfterFirstRead } from "@/lib/query-refresh";
@@ -7,6 +7,18 @@ import { invalidateAfterFirstRead } from "@/lib/query-refresh";
 /** Teacher-scoped root of the Urgent block's cache (all languages). */
 export const urgentQueueRootKey = (teacherId: string) => ["attention-queue", teacherId] as const;
 export const urgentQueueQueryKey = (teacherId: string, lang: string) => [...urgentQueueRootKey(teacherId), lang] as const;
+
+/**
+ * After a confirmed resolution, re-read both Today queues from their sources (Urgent and Today's
+ * priorities share sources such as attendance, tasks, leads and renewals), so the item leaves both
+ * and the counts follow. Nothing is hidden locally.
+ */
+export function refreshTodayQueues(queryClient: QueryClient, teacherId: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: urgentQueueRootKey(teacherId) }),
+    queryClient.invalidateQueries({ queryKey: ["daily-priorities", teacherId] }),
+  ]);
+}
 
 const onlyHighUrgency = (items: AttentionItem[]) => items.filter((item) => item.urgency === "high");
 

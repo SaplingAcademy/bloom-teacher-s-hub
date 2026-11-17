@@ -26,6 +26,11 @@ export interface AttentionItem {
   studentId?: string;
   taskId?: string;
   automationEventId?: string;
+  /** Calendar occurrence behind attendance / trial items (lets the Urgent block act on it). */
+  eventId?: string;
+  classId?: string;
+  /** Student display name for renewal items (the renewal modal needs it). */
+  studentName?: string;
   dueDate?: string;
   urgency: "high" | "medium" | "low";
   targetUrl: string;
@@ -88,6 +93,8 @@ async function attendanceSection(teacherId: string, now: Date, language: Languag
             : `Lesson from ${candidate.lessonDate} has no attendance record`,
           recommendedAction: language === "pt" ? "Registrar presença da aula" : "Record lesson attendance",
           studentId: candidate.studentId,
+          eventId: candidate.eventId,
+          classId: candidate.classId || undefined,
           dueDate: candidate.lessonDate,
           urgency: "high",
           targetUrl: candidate.classId
@@ -115,6 +122,7 @@ async function renewalSection(teacherId: string): Promise<AttentionItem[]> {
         reason: alert.alertMessage,
         recommendedAction: "Clique em Renovar Pacote para abrir o fluxo de renovação",
         studentId: alert.studentId,
+        studentName: alert.studentName,
         dueDate: alert.endDate,
         urgency: alert.alertLevel === "expired" || alert.alertLevel === "warning" ? "high" : "medium",
         targetUrl: `/finance?studentId=${alert.studentId}&action=renew`,
@@ -194,9 +202,11 @@ async function trialSection(teacherId: string, todayStr: string): Promise<Attent
         reason: `Agendada para ${evt.date} às ${evt.start_time?.substring(0, 5)}`,
         recommendedAction: "Enviar confirmação e material preparatório",
         leadId: evt.lead_id || undefined,
+        eventId: evt.id,
         dueDate: `${evt.date}T${evt.start_time}`,
         urgency: "high",
-        targetUrl: "/calendar",
+        // Opens this lesson in the Agenda (was the bare calendar).
+        targetUrl: `/calendar?eventId=${evt.id}`,
       });
     }
   }
