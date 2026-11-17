@@ -65,6 +65,8 @@ async function mount(list: AttentionItem[]) {
   m.fetch.mockResolvedValue(list);
   await act(async () => root.render(createElement(QueryClientProvider, { client }, createElement(UrgentWidget, { teacherId: "t-1" }))));
   await settle();
+  // The list and its resolutions live in the Urgent modal, opened from the summary card.
+  await act(async () => document.querySelector<HTMLButtonElement>("[data-testid=urgent-card]")!.click());
 }
 const row = (category: string) => document.querySelector<HTMLElement>(`[data-urgent-item="${category}"]`)!;
 const resolveButton = (category: string) => row(category).querySelector<HTMLButtonElement>("button")!;
@@ -90,7 +92,8 @@ describe("Urgent block", () => {
     await act(async () => { await m.panelSaved!(); });
     await settle();
     expect(refreshedBoth()).toBe(true);
-    expect(document.querySelector("[data-testid=urgent-widget]")).toBeNull(); // gone, from the source
+    expect(row("attendance_pending")).toBeNull(); // gone, from the source
+    expect(document.querySelector("[data-testid=urgent-count]")).toBeNull(); // card count follows
   });
   it("renewal opens the existing renewal modal; a completed renewal refreshes finance and both queues", async () => {
     await mount([items.renewal]);

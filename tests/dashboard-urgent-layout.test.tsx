@@ -11,11 +11,17 @@ vi.mock("@/components/bloom/UrgentWidget", () => ({
 vi.mock("@/components/bloom/DailyPrioritiesCard", () => ({
   DailyPrioritiesCard: () => createElement("section", { "data-testid": "priorities" }),
 }));
+// The real ChecklistCard shares one hook/cache between views; here it reports how it was rendered.
 vi.mock("@/components/bloom/ChecklistCard", () => ({
-  ChecklistCard: () => createElement("section", { "data-testid": "checklist" }),
+  ChecklistCard: ({ expanded, onExpand }: { expanded?: boolean; onExpand?: () => void }) =>
+    createElement("section", { "data-testid": expanded ? "checklist-expanded" : "checklist" },
+      createElement("button", { "data-testid": expanded ? "info-expanded" : "info" }, "i"),
+      createElement("input", { "data-testid": expanded ? "add-expanded" : "add" }),
+      onExpand ? createElement("button", { "data-testid": "expand-checklist", onClick: onExpand }, "expand") : null),
 }));
+vi.mock("@/hooks/use-language", () => ({ useLanguage: () => ({ t: (k: string) => k, lang: "pt" }) }));
 
-import { DashboardPrioritiesSection, DashboardUrgentSection } from "../src/components/bloom/DashboardAttentionSections";
+import { DashboardPrioritiesSection } from "../src/components/bloom/DashboardAttentionSections";
 
 let root: Root;
 let container: HTMLDivElement;
@@ -32,57 +38,56 @@ afterEach(async () => {
   container.remove();
 });
 
-describe("Dashboard attention section order", () => {
-  it("renders Priorities with Checklist + indicators in the right column, and one Urgent section after", async () => {
-    // Same order as the Overview: priorities block, then Urgent later (after the indicators).
-    await act(async () => {
-      root.render(
-        createElement("div", null,
-          createElement(DashboardPrioritiesSection, {
-            teacherId: "teacher",
-            refreshKey: 0,
-            aside: createElement("div", { "data-testid": "indicators" }),
-          }),
-          createElement(DashboardUrgentSection, { teacherId: "teacher", refreshKey: 0 }),
-        ),
-      );
-    });
-    const urgent = container.querySelectorAll("[data-testid='urgent']");
-    const priorities = container.querySelector("[data-testid='priorities']");
-    const checklist = container.querySelector("[data-testid='checklist']");
+const render = () => act(async () => {
+  root.render(createElement(DashboardPrioritiesSection, { teacherId: "teacher", refreshKey: 0, aside: createElement("div", { "data-testid": "indicators" }) }));
+});
+const q = (id: string) => document.querySelector(`[data-testid='${id}']`);
+const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-    expect(urgent).toHaveLength(1);
-    expect(priorities!.compareDocumentPosition(urgent[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const indicators = container.querySelector("[data-testid='indicators']");
-    // Right column: Checklist slot on top, indicators right below it; Priorities is its sibling.
-    const rightColumn = checklist?.parentElement?.parentElement;
-    expect(priorities?.parentElement).toBe(rightColumn?.parentElement);
-    expect(indicators?.parentElement).toBe(rightColumn);
-    expect(priorities?.compareDocumentPosition(checklist!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(checklist?.compareDocumentPosition(indicators!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // The Checklist no longer stretches to the priorities height (no absolute full-height column).
-    expect(checklist?.parentElement?.className).not.toContain("absolute");
-    expect(urgent[0].parentElement).not.toBe(priorities?.parentElement);
+describe("Home layout", () => {
+  it("Priorities on the left; right column: Checklist on top, indicators below, Urgent across the column", async () => {
+    await render();
+    const right = q("dashboard-right-column")!;
+    const priorities = q("priorities")!;
+    expect(priorities.parentElement).toBe(right.parentElement);
+    const [checklistSlot, indicators, urgent] = [q("checklist-slot")!, q("indicators")!, q("urgent")!];
+    expect(checklistSlot.parentElement).toBe(right);
+    expect(indicators.parentElement).toBe(right);
+    expect(urgent.parentElement).toBe(right); // full width of the right column
+    expect(follows(checklistSlot, indicators)).toBe(true);
+    expect(follows(indicators, urgent)).toBe(true);
+    expect(document.querySelectorAll("[data-testid='urgent']")).toHaveLength(1);
+    // Checklist slot sized so the compact list shows ~2 tasks (validated in the browser); tighter gaps.
+    expect(checklistSlot.className).toContain("xl:h-[20rem]");
+    expect(right.className).toContain("gap-4");
+  });
+
+  it("the Checklist expands into a modal with the same component in its expanded view, and closes with Esc", async () => {
+    await render();
+    expect(q("checklist-expanded")).toBeNull();
+    await act(async () => (q("expand-checklist") as HTMLButtonElement).click());
+    expect(q("checklist-dialog")).not.toBeNull();
+    expect(q("checklist-expanded")).not.toBeNull();
+    expect(q("checklist")).not.toBeNull(); // compact view stays (same data, updated together)
+    // Focus starts on the "add task" field (not the info icon, whose tooltip would swallow the first Esc).
+    expect(document.activeElement).toBe(q("add-expanded"));
+    await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect(q("checklist-dialog")).toBeNull();
   });
 });
 
 describe("Overview section order", () => {
-  it("renders greeting, then Priorities + Checklist + indicators, then Urgent; no redundant indicators", () => {
+  it("renders greeting, then Priorities (with Checklist, indicators and Urgent inside); no separate Urgent section", () => {
     const source = readFileSync(resolve(__dirname, "../src/routes/_app.index.tsx"), "utf8");
     const at = (marker: string) => {
       const index = source.indexOf(marker);
       expect(index, `missing ${marker}`).toBeGreaterThan(-1);
       return index;
     };
-    const greeting = at("<PageHeader");
-    const priorities = at("<DashboardPrioritiesSection");
-    const lessons = at("<TodayLessonsCard");
-    const revenue = at("label={t.thisMonth}");
-    const urgent = at("<DashboardUrgentSection");
-    expect(greeting).toBeLessThan(priorities);
-    expect(priorities).toBeLessThan(lessons);
-    expect(lessons).toBeLessThan(revenue);
-    expect(revenue).toBeLessThan(urgent);
+    expect(at("<PageHeader")).toBeLessThan(at("<DashboardPrioritiesSection"));
+    expect(at("<DashboardPrioritiesSection")).toBeLessThan(at("<TodayLessonsCard"));
+    expect(at("<TodayLessonsCard")).toBeLessThan(at("label={t.thisMonth}"));
+    expect(source).not.toContain("DashboardUrgentSection");
     expect(source).not.toContain("label={t.activeStudents}");
     expect(source).not.toContain("label={t.newLeads}");
   });

@@ -26,7 +26,7 @@ export const uiTranslations = {
     },
     "checklist": {
       "info": "Anote o que precisa fazer e acompanhe suas tarefas pendentes.",
-      "title": "Checklist", "pending": "{count} pendentes", "pendingOne": "1 pendente", "completed": "Concluídas",
+      "expand": "Expandir checklist", "title": "Checklist", "pending": "{count} pendentes", "pendingOne": "1 pendente", "completed": "Concluídas",
       "add": "Adicionar tarefa", "titleLabel": "Tarefa", "placeholder": "Nova tarefa…", "edit": "Editar tarefa", "delete": "Excluir tarefa",
       "save": "Salvar", "cancel": "Cancelar", "complete": "Concluir: {title}", "reopen": "Desmarcar: {title}",
       "empty": "Nenhuma tarefa por aqui.", "allDone": "Tudo concluído!", "clear": "Limpar concluídas",
@@ -1768,7 +1768,7 @@ export const uiTranslations = {
     },
     "checklist": {
       "info": "Write down what you need to do and keep track of your pending tasks.",
-      "title": "Checklist", "pending": "{count} pending", "pendingOne": "1 pending", "completed": "Completed",
+      "expand": "Expand checklist", "title": "Checklist", "pending": "{count} pending", "pendingOne": "1 pending", "completed": "Completed",
       "add": "Add task", "titleLabel": "Task", "placeholder": "New task…", "edit": "Edit task", "delete": "Delete task",
       "save": "Save", "cancel": "Cancel", "complete": "Complete: {title}", "reopen": "Uncheck: {title}",
       "empty": "No tasks here yet.", "allDone": "All done!", "clear": "Clear completed",

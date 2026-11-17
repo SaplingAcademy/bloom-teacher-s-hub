@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { refreshTodayQueues } from "@/hooks/use-urgent-queue-query";
 import { InfoTooltip } from "@/components/bloom/InfoTooltip";
+import { ExpandPanelButton } from "@/components/bloom/ExpandPanelButton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
 import { PriorityResolutionPanel, isInlineResolvable } from "@/components/bloom/PriorityResolutionPanel";
 import { PriorityModuleActions, moduleActionFor, type PriorityModuleAction } from "@/components/bloom/PriorityModuleActions";
@@ -66,6 +68,13 @@ const CATEGORY_META: Record<
 
 const CATEGORY_ORDER: DailyPriorityCategory[] = ["attendance", "payment", "contract", "task", "lead"];
 
+/** Kanban columns (same urgency groups as the compact list); undated items get their own section. */
+const KANBAN_COLUMNS: { key: DailyPriorityUrgency; labelKey: string }[] = [
+  { key: "critical", labelKey: "today.kanbanOverdue" },
+  { key: "today", labelKey: "today.kanbanToday" },
+  { key: "upcoming", labelKey: "today.kanbanUpcoming" },
+];
+
 const URGENCY_SECTIONS: { key: DailyPriorityUrgency; labelKey: string }[] = [
   { key: "critical", labelKey: "today.urgencyCritical" },
   { key: "today", labelKey: "today.urgencyToday" },
@@ -85,6 +94,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const { t, lang } = useLanguage();
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [kanbanOpen, setKanbanOpen] = useState(false);
   const queryClient = useQueryClient();
   // After a successful inline save, re-read priorities from their sources; only items
   // whose condition is really resolved disappear, and counters follow automatically.
@@ -172,20 +182,22 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     });
   };
 
-  const renderRow = (item: DailyPriorityItem, underTodayHeading = false) => {
+  const renderRow = (item: DailyPriorityItem, underTodayHeading = false, card = false) => {
     const description = describeItem(item, underTodayHeading);
     const meta = CATEGORY_META[item.category];
     const Icon = meta.icon;
     const resolvable = isInlineResolvable(item);
-    const expanded = resolvable && expandedId === item.id;
+    // The compact list and the Kanban expand independently (one inline panel at a time per view).
+    const expandKey = card ? `kanban:${item.id}` : item.id;
+    const expanded = resolvable && expandedId === expandKey;
     const moduleTarget = resolvable ? null : moduleActionFor(item);
     const activate = () => {
-      if (resolvable) setExpandedId(expanded ? null : item.id);
+      if (resolvable) setExpandedId(expanded ? null : expandKey);
       else if (moduleTarget) setModuleAction(moduleTarget);
       else handleItemClick(item);
     };
     return (
-      <li key={item.id} className="py-1.5 first:pt-0 last:pb-0">
+      <li key={item.id} data-priority-item={item.id} className={card ? "rounded-lg border border-stone-200/80 bg-white" : "py-1 first:pt-0 last:pb-0"}>
       <div
         role="button"
         tabIndex={0}
@@ -196,7 +208,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           e.preventDefault();
           activate();
         }}
-        className="group flex items-start gap-3 py-2.5 px-2 sm:px-3 rounded-xl hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none"
+        className={`group flex items-start gap-3 ${card ? "p-3 rounded-lg [&_h4]:text-sm" : "py-2 px-2 sm:px-3 rounded-xl"} hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none`}
       >
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -264,30 +276,17 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const noticeFailed = failed.filter((c) => c !== "lead");
   const isEmpty = !loading && items.length === 0 && !leadsFailed;
 
-  return (
-    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 sm:p-6 shadow-sm font-figtree transition-all xl:h-full">
-      {/* Forest header + filters area; priority content stays on the white card surface */}
-      <div className="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 rounded-t-2xl border-b border-sidebar-border bg-sidebar px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-sidebar-accent-foreground">
-              {t("today.prioritiesTitle")}
-            </h2>
-            {/* The former fixed subtitle now lives in this tooltip (hover, focus or tap). */}
-            <InfoTooltip
-              label={t("today.prioritiesInfoLabel")}
-              text={t("today.prioritiesSubtitle")}
-              className="-ml-1 text-sidebar-accent-foreground"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Category filter chips (local filtering, no refetch) */}
-      {!loading && (
-        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+  // Category filter chips (local filtering, no refetch); the same filter drives the compact list and the Kanban.
+  const renderFilters = (tone: "dark" | "light") => {
+    const chip = tone === "dark"
+      ? { active: "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar",
+          idle: "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          badgeActive: "bg-sidebar/10 text-sidebar", badgeIdle: "bg-sidebar-foreground/10 text-sidebar-foreground" }
+      : { active: "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+          idle: "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+          badgeActive: "bg-primary-foreground/15 text-primary-foreground", badgeIdle: "bg-muted text-foreground" };
+    return (
+        <div className={`flex flex-wrap items-center gap-1.5 ${tone === "dark" ? "mt-3" : ""}`} data-testid={`priorities-filters-${tone}`}>
           <Button
             type="button"
             variant="outline"
@@ -296,14 +295,14 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             onClick={() => setFilter("all")}
             className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
               filter === "all"
-                ? "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar"
-                : "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? chip.active
+                : chip.idle
             }`}
           >
             {t("today.filterAll")}
             <span
               className={`text-[10px] font-extrabold rounded-full px-1.5 py-px ${
-                filter === "all" ? "bg-sidebar/10 text-sidebar" : "bg-sidebar-foreground/10 text-sidebar-foreground"
+                filter === "all" ? chip.badgeActive : chip.badgeIdle
               }`}
             >
               {items.length}
@@ -324,8 +323,8 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                 onClick={() => setFilter(cat)}
                 className={`h-auto gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-none ${
                   filter === cat
-                    ? "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar"
-                    : "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    ? chip.active
+                    : chip.idle
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -335,7 +334,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
                 ) : (
                   <span
                     className={`text-[10px] font-extrabold rounded-full px-1.5 py-px ${
-                      filter === cat ? "bg-sidebar/10 text-sidebar" : "bg-sidebar-foreground/10 text-sidebar-foreground"
+                      filter === cat ? chip.badgeActive : chip.badgeIdle
                     }`}
                   >
                     {count}
@@ -345,7 +344,33 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             );
           })}
         </div>
-      )}
+    );
+  };
+
+  return (
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-sm font-figtree transition-all xl:h-full">
+      {/* Forest header + filters area; priority content stays on the white card surface */}
+      <div className="-mx-4 sm:-mx-5 -mt-4 sm:-mt-5 rounded-t-2xl border-b border-sidebar-border bg-sidebar px-4 sm:px-5 pt-4 sm:pt-5 pb-3 sm:pb-4">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 sm:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-sidebar-accent-foreground">
+              {t("today.prioritiesTitle")}
+            </h2>
+            {/* The former fixed subtitle now lives in this tooltip (hover, focus or tap). */}
+            <InfoTooltip
+              label={t("today.prioritiesInfoLabel")}
+              text={t("today.prioritiesSubtitle")}
+              className="-ml-1 text-sidebar-accent-foreground"
+            />
+          </div>
+        </div>
+        <ExpandPanelButton label={t("today.expandPriorities")} onClick={() => setKanbanOpen(true)}
+          className="self-end text-sidebar-accent-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground sm:self-auto" />
+      </div>
+
+      {!loading && renderFilters("dark")}
       </div>
 
       {/* White list area below the tinted header */}
@@ -367,7 +392,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           card while the forest header, filters and card borders stay in place. */}
       <div
         data-testid="priorities-scroll"
-        className="-mx-1.5 max-h-[26rem] min-h-0 space-y-4 overflow-y-auto overscroll-contain px-1.5"
+        className="-mx-1.5 max-h-[22rem] min-h-0 space-y-3 overflow-y-auto overscroll-contain px-1.5"
       >
       {/* Loading */}
       {loading && (
@@ -426,6 +451,49 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       )}
       </div>
       </div>
+      {/* Kanban: a larger view of the same items (same query, filter and resolution flows). No dragging. */}
+      <Dialog open={kanbanOpen} onOpenChange={setKanbanOpen}>
+        <DialogContent closeLabel={t("common.close")} data-testid="priorities-kanban"
+          className="flex h-[min(88dvh,860px)] w-[calc(100%-1.5rem)] max-w-6xl flex-col gap-0 overflow-hidden rounded-xl p-0">
+          <DialogHeader className="space-y-3 border-b border-border px-4 py-4 text-left sm:px-5">
+            <DialogTitle className="pr-8 font-outfit text-lg font-extrabold">{t("today.prioritiesTitle")}</DialogTitle>
+            <DialogDescription className="sr-only">{t("today.prioritiesSubtitle")}</DialogDescription>
+            {!loading && renderFilters("light")}
+          </DialogHeader>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 sm:p-4">
+            <div className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-contain md:grid md:snap-none md:grid-cols-3 md:overflow-x-visible">
+              {KANBAN_COLUMNS.map((column) => {
+                const columnItems = grouped.get(column.key) || [];
+                return (
+                  <section key={column.key} data-kanban-column={column.key} aria-label={t(column.labelKey)}
+                    className="flex min-h-0 w-[85%] shrink-0 snap-start flex-col rounded-lg border border-stone-200/80 bg-stone-50/60 md:w-auto">
+                    <header className="flex items-center justify-between border-b border-stone-200/70 px-3 py-2.5">
+                      <h3 className="text-sm font-bold text-foreground">{t(column.labelKey)}</h3>
+                      <span data-kanban-count="" className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground">{columnItems.length}</span>
+                    </header>
+                    <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
+                      {columnItems.length === 0
+                        ? <li className="px-1 py-6 text-center text-xs text-muted-foreground">{t("today.kanbanEmpty")}</li>
+                        : columnItems.map((item) => renderRow(item, column.key === "today", true))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+            {(grouped.get("stale") || []).length > 0 && (
+              <section data-kanban-column="stale" aria-label={t("today.urgencyStale")} className="flex max-h-[30%] shrink-0 flex-col rounded-lg border border-stone-200/80 bg-stone-50/60">
+                <header className="flex items-center justify-between border-b border-stone-200/70 px-3 py-2">
+                  <h3 className="text-sm font-bold text-foreground">{t("today.urgencyStale")}</h3>
+                  <span data-kanban-count="" className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground">{(grouped.get("stale") || []).length}</span>
+                </header>
+                <ul className="grid min-h-0 gap-2 overflow-y-auto overscroll-contain p-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {(grouped.get("stale") || []).map((item) => renderRow(item, false, true))}
+                </ul>
+              </section>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       {moduleAction && (
         <PriorityModuleActions
           key={JSON.stringify(moduleAction)}
