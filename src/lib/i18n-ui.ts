@@ -79,7 +79,7 @@ export const uiTranslations = {
       "subtitle": "Organize ideias, projetos e anotações em um só lugar.",
       "infoLabel": "Sobre o Workspace",
       "tabsLabel": "Seções do Workspace",
-      "tabs": { "mural": "Meu Mural", "projects": "Projetos", "notebooks": "Cadernos" },
+      "tabs": { "mural": "Meu Mural", "projects": "Projetos" },
       "loading": "Carregando Workspace…", "soon": "Disponível em breve",
       "mural": {
         "title": "Meu Mural", "emptyTitle": "Seu mural está vazio", "emptyBody": "Um espaço para suas ideias e lembretes.",
@@ -110,13 +110,6 @@ export const uiTranslations = {
         "colors": { "forest": "Verde", "terracotta": "Terracota", "lilac": "Lilás", "sky": "Azul", "amber": "Âmbar", "slate": "Ardósia" },
         "icons": { "folder": "Pasta", "book-open": "Livro", "graduation-cap": "Formatura", "lightbulb": "Ideia", "calendar": "Calendário", "megaphone": "Divulgação", "target": "Meta", "palette": "Criatividade" }
       },
-      "notebooks": {
-        "emptyTitle": "Nenhum caderno ainda", "emptyBody": "Seus cadernos pessoais.", "new": "Novo caderno", "first": "Criar meu primeiro caderno", "edit": "Editar caderno", "actions": "Ações do caderno",
-        "titleLabel": "Título", "titleRequired": "Informe um título.", "descriptionLabel": "Descrição (opcional)", "colorLabel": "Cor", "iconLabel": "Ícone", "pageCount": "{count} páginas",
-        "deleteTitle": "Excluir este caderno?", "deleteBody": "O caderno e todas as suas páginas serão excluídos permanentemente. Esta ação não pode ser desfeita.",
-        "loadError": "Não foi possível carregar seus cadernos.", "saveError": "Não foi possível salvar a alteração. Tente novamente.",
-        "toast": { "create": "Caderno criado.", "edit": "Caderno atualizado.", "delete": "Caderno excluído." }
-      },
       "project": {
         "summary": { "createdBy": "Criado por", "progress": "Progresso", "start": "Início", "end": "Término", "endOptional": "Término (opcional)", "tasksDone": "{done} de {total} tarefas", "addEnd": "Término", "editDates": "Editar datas do projeto", "datesTitle": "Datas do projeto", "removeEnd": "Remover", "startRequired": "Informe a data de início.", "endBeforeStart": "O término não pode ser anterior ao início.", "unnamed": "Professor(a)" },
         "pages": { "planning": "Página 1 de 2: Planejamento", "board": "Página 2 de 2: Mural", "toBoard": "Ir para o mural do projeto", "toPlanning": "Voltar ao planejamento", "boardTitle": "Mural do projeto", "readOnly": "Projeto arquivado: o mural está disponível somente para leitura." },
@@ -134,16 +127,6 @@ export const uiTranslations = {
         "complete": "Concluir {title}", "reopen": "Reabrir {title}",
         "types": { "task": "Tarefa", "checklist": "Checklist", "note": "Nota", "link": "Link" }
       },
-      "notebook": {
-        "back": "Voltar aos cadernos", "title": "Caderno", "pages": "Páginas", "noPages": "Nenhuma página", "emptyBody": "Selecione ou crie uma página para começar a escrever.",
-        "newPage": "Nova página", "untitled": "Sem título", "pageTitle": "Título da página", "rename": "Renomear página", "duplicate": "Duplicar página", "copySuffix": "cópia", "pin": "Fixar página", "unpin": "Desafixar página", "actions": "Ações da página",
-        "deleteTitle": "Excluir esta página?", "deleteBody": "Todo o conteúdo desta página será excluído permanentemente.", "notFound": "Caderno não encontrado", "notFoundBody": "Este caderno não existe ou não está disponível para sua conta.",
-        "loadError": "Não foi possível carregar este caderno.", "invalidDocument": "Uma página contém um documento não reconhecido. O conteúdo original não foi alterado.", "contentLabel": "Conteúdo da página", "formatting": "Formatação do texto", "created": "Criada", "updated": "Atualizada",
-        "save": { "saved": "Salvo", "saving": "Salvando…", "error": "Erro ao salvar" }, "saveErrorBody": "Suas alterações continuam neste editor. Tente novamente antes de sair.",
-        "pendingTitle": "Alterações ainda não salvas", "pendingBody": "Aguarde a confirmação do salvamento antes de sair. Se houver um erro, tente novamente; seu texto permanece no editor.", "stay": "Continuar editando", "saveAndLeave": "Salvar e sair",
-        "linkLabel": "Endereço do link", "invalidLink": "Informe um link válido começando com https:// ou http://.", "removeLink": "Remover link", "applyLink": "Aplicar link",
-        "tools": { "bold": "Negrito", "italic": "Itálico", "underline": "Sublinhado", "bulletList": "Lista com marcadores", "orderedList": "Lista numerada", "taskList": "Checklist", "link": "Link", "undo": "Desfazer", "redo": "Refazer", "style": "Estilo do texto", "h0": "Texto normal", "h1": "Título 1", "h2": "Título 2", "h3": "Título 3" }
-      }
     },
     "academy": {
       "nav": "Bloom Academy", "soonBadge": "Em breve",
@@ -1832,7 +1815,7 @@ export const uiTranslations = {
       "subtitle": "Organize ideas, projects and notes in one place.",
       "infoLabel": "About Workspace",
       "tabsLabel": "Workspace sections",
-      "tabs": { "mural": "My Board", "projects": "Projects", "notebooks": "Notebooks" },
+      "tabs": { "mural": "My Board", "projects": "Projects" },
       "loading": "Loading Workspace…", "soon": "Coming soon",
       "mural": {
         "title": "My Board", "emptyTitle": "Your board is empty", "emptyBody": "A space for your ideas and reminders.",
@@ -1863,13 +1846,6 @@ export const uiTranslations = {
         "colors": { "forest": "Green", "terracotta": "Terracotta", "lilac": "Lilac", "sky": "Blue", "amber": "Amber", "slate": "Slate" },
         "icons": { "folder": "Folder", "book-open": "Book", "graduation-cap": "Graduation", "lightbulb": "Idea", "calendar": "Calendar", "megaphone": "Outreach", "target": "Goal", "palette": "Creativity" }
       },
-      "notebooks": {
-        "emptyTitle": "No notebooks yet", "emptyBody": "Your personal notebooks.", "new": "New notebook", "first": "Create my first notebook", "edit": "Edit notebook", "actions": "Notebook actions",
-        "titleLabel": "Title", "titleRequired": "Please enter a title.", "descriptionLabel": "Description (optional)", "colorLabel": "Color", "iconLabel": "Icon", "pageCount": "{count} pages",
-        "deleteTitle": "Delete this notebook?", "deleteBody": "This notebook and all its pages will be permanently deleted. This action cannot be undone.",
-        "loadError": "Could not load your notebooks.", "saveError": "Could not save this change. Please try again.",
-        "toast": { "create": "Notebook created.", "edit": "Notebook updated.", "delete": "Notebook deleted." }
-      },
       "project": {
         "summary": { "createdBy": "Created by", "progress": "Progress", "start": "Start", "end": "End", "endOptional": "End (optional)", "tasksDone": "{done} of {total} tasks", "addEnd": "End date", "editDates": "Edit project dates", "datesTitle": "Project dates", "removeEnd": "Remove", "startRequired": "Enter a start date.", "endBeforeStart": "The end date cannot be before the start date.", "unnamed": "Teacher" },
         "pages": { "planning": "Page 1 of 2: Planning", "board": "Page 2 of 2: Board", "toBoard": "Go to the project board", "toPlanning": "Back to planning", "boardTitle": "Project board", "readOnly": "Archived project: the board is read-only." },
@@ -1887,16 +1863,6 @@ export const uiTranslations = {
         "complete": "Complete {title}", "reopen": "Reopen {title}",
         "types": { "task": "Task", "checklist": "Checklist", "note": "Note", "link": "Link" }
       },
-      "notebook": {
-        "back": "Back to notebooks", "title": "Notebook", "pages": "Pages", "noPages": "No pages", "emptyBody": "Select or create a page to start writing.",
-        "newPage": "New page", "untitled": "Untitled", "pageTitle": "Page title", "rename": "Rename page", "duplicate": "Duplicate page", "copySuffix": "copy", "pin": "Pin page", "unpin": "Unpin page", "actions": "Page actions",
-        "deleteTitle": "Delete this page?", "deleteBody": "All content on this page will be permanently deleted.", "notFound": "Notebook not found", "notFoundBody": "This notebook doesn't exist or isn't available to your account.",
-        "loadError": "Could not load this notebook.", "invalidDocument": "A page contains an unrecognized document. The original content has not been changed.", "contentLabel": "Page content", "formatting": "Text formatting", "created": "Created", "updated": "Updated",
-        "save": { "saved": "Saved", "saving": "Saving…", "error": "Error saving" }, "saveErrorBody": "Your changes are still in this editor. Try again before leaving.",
-        "pendingTitle": "Changes not saved yet", "pendingBody": "Wait for saving to be confirmed before leaving. If there's an error, try again; your text remains in the editor.", "stay": "Keep editing", "saveAndLeave": "Save and leave",
-        "linkLabel": "Link address", "invalidLink": "Enter a valid link starting with https:// or http://.", "removeLink": "Remove link", "applyLink": "Apply link",
-        "tools": { "bold": "Bold", "italic": "Italic", "underline": "Underline", "bulletList": "Bulleted list", "orderedList": "Numbered list", "taskList": "Checklist", "link": "Link", "undo": "Undo", "redo": "Redo", "style": "Text style", "h0": "Normal text", "h1": "Heading 1", "h2": "Heading 2", "h3": "Heading 3" }
-      }
     },
     "academy": {
       "nav": "Bloom Academy", "soonBadge": "Coming Soon",

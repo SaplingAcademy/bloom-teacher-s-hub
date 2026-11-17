@@ -77,7 +77,7 @@ export const landingTranslations = {
               { title: "Agenda", text: "Visões de dia, semana e mês, com aulas individuais, turmas e remarcações." },
               { title: "Leads", text: "Do primeiro contato à aula experimental e à matrícula, sem perder ninguém." },
               { title: "Financeiro e contratos", text: "Pacotes, mensalidades, recebimentos, despesas e contratos dos alunos." },
-              { title: "Workspace", text: "Mural, projetos e cadernos para planejar aulas e organizar ideias." },
+              { title: "Workspace", text: "Mural e projetos para planejar aulas e organizar ideias." },
             ],
           },
           {
@@ -294,7 +294,7 @@ export const landingTranslations = {
               { title: "Schedule", text: "Day, week and month views with one-to-one lessons, groups and reschedules." },
               { title: "Leads", text: "From first contact to trial lesson and enrollment, without losing anyone." },
               { title: "Finances and contracts", text: "Packages, monthly fees, payments, expenses and student contracts." },
-              { title: "Workspace", text: "Board, projects and notebooks to plan lessons and organize ideas." },
+              { title: "Workspace", text: "Board and projects to plan lessons and organize ideas." },
             ],
           },
           {
