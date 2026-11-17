@@ -438,11 +438,10 @@ function CommunityPage() {
           : "bg-muted text-muted-foreground";
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-12">
       <PageHeader
         // Phones: one column, so the title shows in full and the button sits below it.
         className="grid-cols-1"
-        eyebrow={t("communityV1.eyebrow")}
         title={t("communityV1.title")}
         titleAddon={<InfoTooltip label={`${t("globalUi.aboutPage")} ${t("communityV1.title")}`} text={t("communityV1.description")} className="text-muted-foreground" />}
         actions={contactsView ? undefined : (
@@ -569,11 +568,13 @@ function CommunityPage() {
               <article
                 key={post.id}
                 id={`post-${post.id}`}
-                className={`rounded-2xl border bg-card p-5 space-y-3 scroll-mt-24 transition-shadow ${focusPost === post.id ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+                data-community-post=""
+                className={`rounded-2xl border bg-card px-4 pt-4 pb-2 sm:px-5 sm:pt-5 scroll-mt-24 transition-shadow ${focusPost === post.id ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
               >
+                {/* 1–2. Author (avatar, name + date together) and the category on the right. */}
                 <header className="flex items-center gap-3">
                   <Avatar name={post.author?.full_name} url={post.author?.avatar_url} />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 leading-tight">
                     <p className="text-sm font-medium truncate">{post.author?.full_name || t("communityV1.unnamed")}</p>
                     <p className="text-xs text-muted-foreground">{fmtDate(post.created_at)}</p>
                   </div>
@@ -581,20 +582,25 @@ function CommunityPage() {
                     <Badge variant="outline" className="shrink-0 font-semibold">{t(`communityV1.topics.${post.topic}`)}</Badge>
                   )}
                 </header>
-                <h3 className="font-display font-semibold text-lg leading-snug">{post.title}</h3>
-                <p className="text-sm text-foreground/90 whitespace-pre-line">{post.content}</p>
+                {/* 3–4. Title (most prominent) close to its content. */}
+                <div className="mt-3 space-y-1.5">
+                  <h3 className="font-display font-semibold text-lg leading-snug">{post.title}</h3>
+                  <p className="text-sm leading-relaxed text-foreground/85 whitespace-pre-line">{post.content}</p>
+                </div>
+                {/* 5. Tags. */}
                 {post.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {post.tags.map((tag) => (
                       <Badge key={tag} variant="secondary" className="font-normal">#{tag}</Badge>
                     ))}
                   </div>
                 )}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
+                {/* 6. Actions: secondary, after a very soft divider, still easy to click. */}
+                <div data-community-actions="" className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-border/50 pt-2">
                   <Button
-                    variant={post.wateredByMe ? "default" : "outline"}
+                    variant="ghost"
                     size="sm"
-                    className="gap-1.5"
+                    className={`gap-1.5 ${post.wateredByMe ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary" : "text-muted-foreground hover:text-foreground"}`}
                     disabled={busyWater.has(post.id)}
                     onClick={() => toggleWater(post)}
                     aria-pressed={post.wateredByMe}
@@ -603,7 +609,7 @@ function CommunityPage() {
                     {post.wateredByMe ? t("communityV1.watered") : t("communityV1.water")}
                     <span className="tabular-nums">· {post.waterCount}</span>
                   </Button>
-                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => toggleComments(post.id)}>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => toggleComments(post.id)}>
                     <MessageSquare className="w-4 h-4" />
                     {openComments === post.id ? t("communityV1.hideComments") : t("communityV1.comments")}
                     <span className="tabular-nums">· {post.commentCount}</span>
@@ -621,7 +627,7 @@ function CommunityPage() {
                 </div>
 
                 {openComments === post.id && (
-                  <div className="border-t border-border pt-3 space-y-3">
+                  <div className="mt-2 mb-2 border-t border-border/50 pt-3 space-y-3">
                     {commentsLoading ? (
                       <p className="text-xs text-muted-foreground">{t("communityV1.loading")}</p>
                     ) : comments.length === 0 ? (

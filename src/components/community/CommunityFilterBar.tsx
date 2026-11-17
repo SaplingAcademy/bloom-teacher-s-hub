@@ -39,8 +39,8 @@ export function CommunityFilterBar({ value, onChange, helpCount, t, filters = CO
               active
                 ? "border-primary bg-primary text-primary-foreground"
                 : f === "help"
-                  ? "border-accent/40 bg-accent/10 text-foreground hover:bg-accent/20"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  ? "border-accent/25 bg-accent/10 text-foreground hover:bg-accent/20"
+                  : "border-border/50 bg-card text-muted-foreground hover:border-border hover:text-foreground"
             }`}
           >
             {f === "help" && <HandHelping className="h-3.5 w-3.5" aria-hidden="true" />}
