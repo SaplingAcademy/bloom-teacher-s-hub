@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useScheduledContractActivation } from "@/hooks/use-scheduled-contract-activation";
 import { visitorRedirectTarget } from "@/lib/public-landing";
 import { onboardingGate } from "@/lib/onboarding-status";
+import { PlanUpgradeCelebration } from "@/components/bloom/PlanUpgradeCelebration";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -99,6 +100,8 @@ function AppLayout() {
           <Outlet />
         </div>
       </main>
+      {/* Celebrates a confirmed plan upgrade once per event (database-recorded). */}
+      <PlanUpgradeCelebration teacherId={user.id} />
     </div>
   );
 }
