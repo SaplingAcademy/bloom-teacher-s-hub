@@ -135,7 +135,10 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       time: p.time || "",
       amount: formatAmount(Number(p.amountCents || 0)),
     };
-    return fill(t(`today.reason.${item.reason}`), vars);
+    // The date (and time) is already shown once, next to the category: use the dateless wording.
+    const compactKey = `today.reasonCompact.${item.reason}`;
+    const compact = item.date ? t(compactKey) : compactKey;
+    return fill(compact !== compactKey ? compact : t(`today.reason.${item.reason}`), vars);
   };
 
   const counts = useMemo(() => {
@@ -178,7 +181,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       else handleItemClick(item);
     };
     return (
-      <li key={item.id} className="py-0.5">
+      <li key={item.id} className="py-1.5 first:pt-0 last:pb-0">
       <div
         role="button"
         tabIndex={0}
@@ -189,7 +192,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           e.preventDefault();
           activate();
         }}
-        className="group flex items-start gap-3.5 py-3 px-3 rounded-xl hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none"
+        className="group flex items-start gap-3 py-2.5 px-2 sm:px-3 rounded-xl hover:bg-stone-50 transition-all cursor-pointer border border-transparent hover:border-stone-200/60 select-none"
       >
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -210,7 +213,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           <h4 className="break-words text-xs sm:text-sm font-bold text-stone-900 group-hover:text-emerald-950 transition-colors leading-snug">
             {item.title}
           </h4>
-          <p className="break-words text-[11px] font-medium text-stone-500 leading-tight">
+          <p className="break-words text-[11px] font-medium text-stone-500 leading-snug">
             {describeItem(item)}
           </p>
         </div>
@@ -394,17 +397,20 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
             if (sectionItems.length === 0) return null;
             return (
               <div key={section.key}>
-                <p className="text-[11px] font-extrabold text-stone-400 uppercase tracking-wider px-1 pb-1">
-                  {t(section.labelKey)}
-                </p>
-                <ul className="divide-y divide-stone-100">{sectionItems.map(renderRow)}</ul>
+                {/* Critical items lead the list without a heading (urgency has its own classification). */}
+                {section.key !== "critical" && (
+                  <p className="text-[11px] font-extrabold text-stone-400 uppercase tracking-wider px-1 pb-1">
+                    {t(section.labelKey)}
+                  </p>
+                )}
+                <ul className="divide-y divide-stone-200/60">{sectionItems.map(renderRow)}</ul>
               </div>
             );
           })}
         </div>
       )}
       {!loading && visibleItems.length > 0 && filter !== "all" && (
-        <ul className="divide-y divide-stone-100">{visibleItems.map(renderRow)}</ul>
+        <ul className="divide-y divide-stone-200/60">{visibleItems.map(renderRow)}</ul>
       )}
       {!loading && visibleItems.length === 0 && !isEmpty && filter !== "all" && !(filter === "lead" && leadsFailed) && (
         <p className="text-xs font-medium text-stone-500 text-center py-2">
