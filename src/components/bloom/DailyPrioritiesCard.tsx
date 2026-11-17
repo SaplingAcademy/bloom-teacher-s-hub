@@ -120,7 +120,7 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     new Intl.NumberFormat(locale, { style: "currency", currency: "BRL" }).format(cents / 100);
 
   // Reason codes + raw params -> localized, human-readable context line.
-  const describeItem = (item: DailyPriorityItem): string => {
+  const describeItem = (item: DailyPriorityItem, underTodayHeading = false): string => {
     const p = item.params;
     const date = formatDate(typeof p.date === "string" ? p.date : undefined);
     const dueDate = formatDate(typeof p.dueDate === "string" ? p.dueDate : undefined);
@@ -135,6 +135,12 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
       time: p.time || "",
       amount: formatAmount(Number(p.amountCents || 0)),
     };
+    // Under the "Hoje" heading, "vence hoje" only repeats the group: keep just the extra context.
+    if (underTodayHeading) {
+      const todayKey = `today.reasonUnderToday.${item.reason}`;
+      const underToday = t(todayKey);
+      if (underToday !== todayKey) return fill(underToday, vars);
+    }
     // The date (and time) is already shown once, next to the category: use the dateless wording.
     const compactKey = `today.reasonCompact.${item.reason}`;
     const compact = item.date ? t(compactKey) : compactKey;
@@ -169,7 +175,8 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
     });
   };
 
-  const renderRow = (item: DailyPriorityItem) => {
+  const renderRow = (item: DailyPriorityItem, underTodayHeading = false) => {
+    const description = describeItem(item, underTodayHeading);
     const meta = CATEGORY_META[item.category];
     const Icon = meta.icon;
     const resolvable = isInlineResolvable(item);
@@ -213,9 +220,11 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
           <h4 className="break-words text-xs sm:text-sm font-bold text-stone-900 group-hover:text-emerald-950 transition-colors leading-snug">
             {item.title}
           </h4>
-          <p className="break-words text-[11px] font-medium text-stone-500 leading-snug">
-            {describeItem(item)}
-          </p>
+          {description && (
+            <p className="break-words text-[11px] font-medium text-stone-500 leading-snug">
+              {description}
+            </p>
+          )}
         </div>
         <div className="shrink-0 text-stone-400 group-hover:text-stone-700 transition-colors pt-1">
           {resolvable ? (
@@ -391,26 +400,27 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
 
       {/* Priority list: grouped by urgency in "Todas", flat sorted list per category */}
       {!loading && visibleItems.length > 0 && filter === "all" && (
-        <div className="space-y-4">
-          {URGENCY_SECTIONS.map((section) => {
+        <div className="space-y-3">
+          {URGENCY_SECTIONS.filter((section) => (grouped.get(section.key) || []).length > 0).map((section, index) => {
             const sectionItems = grouped.get(section.key) || [];
-            if (sectionItems.length === 0) return null;
             return (
-              <div key={section.key}>
+              // A soft line separates groups when something comes before; items keep their own dividers
+              // and the last item of a group has none, so lines never double up.
+              <div key={section.key} data-urgency-section={section.key} className={index > 0 ? "border-t border-stone-200/60 pt-3" : undefined}>
                 {/* Critical items lead the list without a heading (urgency has its own classification). */}
                 {section.key !== "critical" && (
                   <p className="text-[11px] font-extrabold text-stone-400 uppercase tracking-wider px-1 pb-1">
                     {t(section.labelKey)}
                   </p>
                 )}
-                <ul className="divide-y divide-stone-200/60">{sectionItems.map(renderRow)}</ul>
+                <ul className="divide-y divide-stone-200/60">{sectionItems.map((item) => renderRow(item, section.key === "today"))}</ul>
               </div>
             );
           })}
         </div>
       )}
       {!loading && visibleItems.length > 0 && filter !== "all" && (
-        <ul className="divide-y divide-stone-200/60">{visibleItems.map(renderRow)}</ul>
+        <ul className="divide-y divide-stone-200/60">{visibleItems.map((item) => renderRow(item))}</ul>
       )}
       {!loading && visibleItems.length === 0 && !isEmpty && filter !== "all" && !(filter === "lead" && leadsFailed) && (
         <p className="text-xs font-medium text-stone-500 text-center py-2">

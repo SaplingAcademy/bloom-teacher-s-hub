@@ -380,6 +380,12 @@ export const translations: Record<Language, TranslationDictionary> = {
         lead_trial_soon: "Aula experimental agendada",
         lead_proposal_pending: "Proposta enviada aguardando resposta",
       },
+      // Under the "Hoje" group heading "vence hoje" is redundant: keep only what adds context ("" = no line).
+      reasonUnderToday: {
+        payment_due_today: "Cobrança de {amount}",
+        task_due_today: "",
+        lead_task_due_today: "",
+      },
       allCaughtUp: "Tudo em dia 🌱",
       allCaughtUpSubtitle: "Você não tem pendências normais para hoje. Excelente trabalho!",
       completedProgress: "{completed} de {total} concluídas",
@@ -1392,6 +1398,11 @@ export const translations: Record<Language, TranslationDictionary> = {
         lead_task_overdue: "Follow-up overdue",
         lead_trial_soon: "Trial lesson scheduled",
         lead_proposal_pending: "Proposal sent, awaiting reply",
+      },
+      reasonUnderToday: {
+        payment_due_today: "Charge of {amount}",
+        task_due_today: "",
+        lead_task_due_today: "",
       },
       allCaughtUp: "All caught up 🌱",
       allCaughtUpSubtitle: "You have no routine pending tasks for today. Great job!",
