@@ -15,7 +15,7 @@ export function CommunitySaveButton({ saved, busy, onToggle, t }: Props) {
     <Button
       variant="ghost"
       size="sm"
-      className={`gap-1.5 ${saved ? "text-primary" : ""}`}
+      className={`gap-1.5 ${saved ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
       disabled={busy}
       onClick={onToggle}
       aria-pressed={saved}
