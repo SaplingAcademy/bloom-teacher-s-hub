@@ -3,10 +3,14 @@ export const uiTranslations = {
   "pt": {
     "planUpgrade": {
       "badge": "UPGRADE CONCLUÍDO",
-      "title": "Seu Bloom agora é {plan}!",
-      "description": "Você acaba de desbloquear uma nova experiência. Aproveite todos os recursos do seu novo plano!",
       "explore": "Explorar meu Bloom",
-      "planNames": { "pro": "PRO" }
+      "planNames": { "pro": "PREMIUM" },
+      "scenarios": {
+        "after_free": { "title": "Você deu o próximo passo!", "description": "Sua Bloom agora é {plan}! Não vemos a hora de ajudar seu negócio a florescer." },
+        "early": { "title": "Boa! Obrigada por confiar em nosso trabalho!", "description": "Sua Bloom já é {plan}! Prepare-se para organizar suas aulas com ainda mais possibilidades." },
+        "admin_gift": { "title": "Você recebeu um presente nosso: agora você é {plan}!", "description": "Sua conta foi atualizada para {plan}. Aproveite os recursos que acabaram de ser liberados para você!" },
+        "default": { "title": "Seu Bloom agora é {plan}!", "description": "Você acaba de desbloquear uma nova experiência. Aproveite todos os recursos do seu novo plano!" }
+      }
     },
     "lessonPlanGeneration": {
       "shortageTitle": "Período insuficiente", "shortageBody": "Você solicitou {requested} aulas, mas o período selecionado permite apenas {possible} aulas, considerando a frequência e as datas indisponíveis.",
@@ -1752,10 +1756,14 @@ export const uiTranslations = {
   "en": {
     "planUpgrade": {
       "badge": "UPGRADE COMPLETE",
-      "title": "Your Bloom is now {plan}!",
-      "description": "You have just unlocked a new experience. Enjoy every feature of your new plan!",
       "explore": "Explore my Bloom",
-      "planNames": { "pro": "PRO" }
+      "planNames": { "pro": "PREMIUM" },
+      "scenarios": {
+        "after_free": { "title": "You took the next step!", "description": "Your Bloom is now {plan}! We can't wait to help your business flourish." },
+        "early": { "title": "Great! Thank you for trusting our work!", "description": "Your Bloom is already {plan}! Get ready to organize your lessons with even more possibilities." },
+        "admin_gift": { "title": "You received a gift from us: you are now {plan}!", "description": "Your account was upgraded to {plan}. Enjoy the features that have just been unlocked for you!" },
+        "default": { "title": "Your Bloom is now {plan}!", "description": "You have just unlocked a new experience. Enjoy every feature of your new plan!" }
+      }
     },
     "lessonPlanGeneration": {
       "shortageTitle": "Insufficient period", "shortageBody": "You requested {requested} lessons, but the selected period allows only {possible} lessons, considering the weekly schedule and unavailable dates.",

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Crown } from "lucide-react";
+import { Crown, Gift } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useLanguage } from "@/hooks/use-language";
 import { PLAN_QUERY_KEY } from "@/hooks/use-plan";
-import { acknowledgePlanUpgrade, fetchPendingPlanUpgrade, planDisplayName, type PendingPlanUpgrade } from "@/lib/plan-upgrade";
+import { acknowledgePlanUpgrade, fetchPendingPlanUpgrade, planDisplayName, upgradeScenario, type PendingPlanUpgrade } from "@/lib/plan-upgrade";
 
 /** Same teacher-scoped "plan" key family as usePlan, so invalidating the plan also refreshes this. */
 export const PLAN_UPGRADE_QUERY_KEY = (teacherId: string | undefined) => [...PLAN_QUERY_KEY(teacherId), "upgrade"] as const;
@@ -47,25 +47,30 @@ export function PlanUpgradeCelebration({ teacherId }: { teacherId: string }) {
   };
 
   const planName = shown ? planDisplayName(shown.plan, t) : "";
+  // The message is chosen automatically from the recorded event (origin + facts), never manually.
+  const scenario = shown ? upgradeScenario(shown) : "default";
+  const Icon = scenario === "admin_gift" ? Gift : Crown;
+  const fill = (key: string) => t(`planUpgrade.scenarios.${scenario}.${key}`).replace("{plan}", planName);
 
   return (
     <Dialog open={Boolean(shown)} onOpenChange={(open) => !open && close()}>
       <DialogContent
         data-testid="plan-upgrade-celebration"
+        data-scenario={scenario}
         className="w-[calc(100%-2rem)] max-w-md gap-0 overflow-hidden rounded-2xl border-[#C9A961]/40 bg-[#163020] p-0 text-[#F4EBE1] shadow-2xl"
       >
         <div className="flex flex-col items-center px-6 pb-6 pt-9 text-center sm:px-8">
           <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-[#C9A961]/50 bg-[#C9A961]/10">
-            <Crown className="h-7 w-7 text-[#D9BC78]" aria-hidden="true" />
+            <Icon className="h-7 w-7 text-[#D9BC78]" aria-hidden="true" />
           </div>
           <span className="mb-3 rounded-full border border-[#C9A961]/50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#D9BC78]">
             {t("planUpgrade.badge")}
           </span>
           <DialogTitle className="font-outfit text-2xl font-extrabold leading-tight tracking-tight text-[#F4EBE1] sm:text-[1.7rem]">
-            {t("planUpgrade.title").replace("{plan}", planName)}
+            {fill("title")}
           </DialogTitle>
           <DialogDescription className="mt-3 max-w-sm text-sm leading-relaxed text-[#F4EBE1]/80">
-            {t("planUpgrade.description")}
+            {fill("description")}
           </DialogDescription>
           <button
             type="button"
