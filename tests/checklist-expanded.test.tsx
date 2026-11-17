@@ -55,4 +55,18 @@ describe("Checklist compact + expanded", () => {
     expect(view("compact").textContent).toContain("Tarefa b");
     expect(view("expanded").textContent).toContain("Tarefa b");
   });
+  it("compact view: the deadline row appears only while typing a task; the expanded view always shows it", async () => {
+    m.items = [row("a")];
+    await renderBoth();
+    // The new-task form's deadline selector (edit rows are not open, so this is the only one).
+    const deadline = (name: string) => view(name).querySelector('form [aria-label="checklist.deadlineLabel"]');
+    expect(deadline("compact")).toBeNull();
+    expect(deadline("expanded")).not.toBeNull();
+    const input = view("compact").querySelector<HTMLInputElement>("form input")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "Nova");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(deadline("compact")).not.toBeNull();
+  });
 });

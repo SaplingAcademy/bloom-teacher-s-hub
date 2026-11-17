@@ -285,8 +285,12 @@ export function ChecklistCard({ expanded = false, onExpand }: { expanded?: boole
                         {adding ? <Loader2 className="motion-safe:animate-spin" /> : <Plus />}
                       </Button></Tool>
                     </div>
-                    <ChecklistDeadlineFields id={`${idPrefix}new-checklist-deadline`} value={newDeadline} today={today} preventPast disabled={unavailable || adding}
-                      onChange={(deadline) => { setNewDeadline(deadline); createId.current = null; }} />
+                    {/* Compact view: the deadline row appears once a task is being typed (or a deadline was chosen),
+                        leaving room for the list; the expanded view always shows it. */}
+                    {(expanded || title.trim() || newDeadline.deadline_type !== "none") && (
+                      <ChecklistDeadlineFields id={`${idPrefix}new-checklist-deadline`} value={newDeadline} today={today} preventPast disabled={unavailable || adding}
+                        onChange={(deadline) => { setNewDeadline(deadline); createId.current = null; }} />
+                    )}
                   </form>
                 </div>
                 {current.length === 0 ? <p className="flex flex-1 items-center justify-center px-5 py-8 text-center text-sm text-muted-foreground">{t("checklist.empty")}</p>

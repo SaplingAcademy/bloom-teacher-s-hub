@@ -15,6 +15,8 @@ vi.mock("@/components/bloom/DailyPrioritiesCard", () => ({
 vi.mock("@/components/bloom/ChecklistCard", () => ({
   ChecklistCard: ({ expanded, onExpand }: { expanded?: boolean; onExpand?: () => void }) =>
     createElement("section", { "data-testid": expanded ? "checklist-expanded" : "checklist" },
+      createElement("button", { "data-testid": expanded ? "info-expanded" : "info" }, "i"),
+      createElement("input", { "data-testid": expanded ? "add-expanded" : "add" }),
       onExpand ? createElement("button", { "data-testid": "expand-checklist", onClick: onExpand }, "expand") : null),
 }));
 vi.mock("@/hooks/use-language", () => ({ useLanguage: () => ({ t: (k: string) => k, lang: "pt" }) }));
@@ -55,8 +57,8 @@ describe("Home layout", () => {
     expect(follows(checklistSlot, indicators)).toBe(true);
     expect(follows(indicators, urgent)).toBe(true);
     expect(document.querySelectorAll("[data-testid='urgent']")).toHaveLength(1);
-    // A little less vertical space: shorter Checklist slot and tighter gaps.
-    expect(checklistSlot.className).toContain("xl:h-[17rem]");
+    // Checklist slot sized so the compact list shows ~2 tasks (validated in the browser); tighter gaps.
+    expect(checklistSlot.className).toContain("xl:h-[20rem]");
     expect(right.className).toContain("gap-4");
   });
 
@@ -67,6 +69,8 @@ describe("Home layout", () => {
     expect(q("checklist-dialog")).not.toBeNull();
     expect(q("checklist-expanded")).not.toBeNull();
     expect(q("checklist")).not.toBeNull(); // compact view stays (same data, updated together)
+    // Focus starts on the "add task" field (not the info icon, whose tooltip would swallow the first Esc).
+    expect(document.activeElement).toBe(q("add-expanded"));
     await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
     expect(q("checklist-dialog")).toBeNull();
   });

@@ -22,11 +22,17 @@ function ChecklistPanel({ teacherId }: { teacherId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <div data-testid="checklist-slot" className="min-w-0 xl:h-[17rem]">
+      <div data-testid="checklist-slot" className="min-w-0 xl:h-[20rem]">
         <ChecklistCard key={`checklist-${teacherId}`} onExpand={() => setOpen(true)} />
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent closeLabel={t("common.close")} data-testid="checklist-dialog"
+          // Start on the "add task" field: the default first focusable is the info icon, whose tooltip
+          // opens on focus and would swallow the first Esc (the dialog then needed Esc twice).
+          onOpenAutoFocus={(event) => {
+            const input = document.querySelector<HTMLInputElement>('[data-testid="checklist-dialog"] input');
+            if (input) { event.preventDefault(); input.focus(); }
+          }}
           className="flex h-[min(85dvh,760px)] w-[calc(100%-1.5rem)] max-w-xl flex-col gap-0 overflow-hidden rounded-xl p-0">
           <DialogTitle className="sr-only">{t("checklist.title")}</DialogTitle>
           <DialogDescription className="sr-only">{t("checklist.info")}</DialogDescription>
