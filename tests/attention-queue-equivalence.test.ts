@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AttentionItem } from "../src/lib/attention-queue";
 
 /**
  * Equivalence of the optimized fetchAttentionQueue (parallel sections + grouped hot-lead task read)
@@ -106,6 +107,16 @@ function baseScenario(overrides: Record<string, any> = {}) {
   };
 }
 
+/**
+ * The Urgent block now carries the occurrence/student it acts on (eventId, classId, studentName) and
+ * opens a trial lesson directly; the frozen legacy fixture predates that. The equivalence being
+ * checked (same items, same order, same reads) ignores only those additions.
+ */
+function comparable(items: AttentionItem[]) {
+  return items.map(({ eventId: _e, classId: _c, studentName: _s, ...rest }) =>
+    rest.category === "trial_soon" ? { ...rest, targetUrl: "/calendar" } : rest);
+}
+
 async function run(fn: typeof fetchAttentionQueue, lang: "pt" | "en" = "pt") {
   env.log = [];
   env.t0 = Date.now();
@@ -126,7 +137,7 @@ describe("fetchAttentionQueue optimization: same items as before", () => {
       env.scenario = baseScenario();
       const legacy = await run(fetchAttentionQueueLegacy, lang);
       const optimized = await run(fetchAttentionQueue, lang);
-      expect(optimized.items).toEqual(legacy.items);
+      expect(comparable(optimized.items)).toEqual(comparable(legacy.items));
       expect(optimized.items.map((i) => i.category)).toEqual([
         "attendance_pending", "attendance_pending", "package_renewal", "package_renewal",
         "overdue_followup", "overdue_followup", "trial_soon", "pending_proposal", "pending_proposal",
@@ -144,7 +155,7 @@ describe("fetchAttentionQueue optimization: same items as before", () => {
     });
     const legacy = await run(fetchAttentionQueueLegacy);
     const optimized = await run(fetchAttentionQueue);
-    expect(optimized.items).toEqual(legacy.items);
+    expect(comparable(optimized.items)).toEqual(comparable(legacy.items));
     expect(optimized.items.filter((i) => i.category === "hot_no_action")).toHaveLength(3);
   });
 
@@ -158,7 +169,7 @@ describe("fetchAttentionQueue optimization: same items as before", () => {
     });
     const legacy = await run(fetchAttentionQueueLegacy);
     const optimized = await run(fetchAttentionQueue);
-    expect(optimized.items).toEqual(legacy.items);
+    expect(comparable(optimized.items)).toEqual(comparable(legacy.items));
     expect(optimized.items.at(-1)?.category).toBe("trial_soon");
   });
 
@@ -171,7 +182,7 @@ describe("fetchAttentionQueue optimization: same items as before", () => {
     });
     const legacy = await run(fetchAttentionQueueLegacy);
     const optimized = await run(fetchAttentionQueue);
-    expect(optimized.items).toEqual(legacy.items);
+    expect(comparable(optimized.items)).toEqual(comparable(legacy.items));
     expect(optimized.items.some((i) => i.category === "attendance_pending")).toBe(false);
     expect(optimized.items.filter((i) => i.category === "overdue_followup")).toHaveLength(3); // relevance failure keeps all
   });
@@ -184,7 +195,7 @@ describe("fetchAttentionQueue optimization: same items as before", () => {
     });
     const legacy = await run(fetchAttentionQueueLegacy);
     const optimized = await run(fetchAttentionQueue);
-    expect(optimized.items).toEqual(legacy.items);
+    expect(comparable(optimized.items)).toEqual(comparable(legacy.items));
     expect(env.log.some((e) => e.table === "tasks" && has(e.filters, "in:"))).toBe(false);
   });
 });

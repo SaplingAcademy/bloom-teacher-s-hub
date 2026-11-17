@@ -104,6 +104,21 @@ export async function createLeadTask(teacherId: string, leadId: string, draft: L
   return data as LeadTask;
 }
 
+/**
+ * Completes a task that has no lead (shown in Urgent). Same update as completeLeadTask, scoped by
+ * teacher and task; a missing row is an error so the item is never treated as resolved.
+ */
+export async function completeTeacherTask(teacherId: string, taskId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({ status: "completed", updated_at: new Date().toISOString() })
+    .eq("id", taskId)
+    .eq("teacher_id", teacherId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) throw error ?? new Error("Task not updated");
+}
+
 export async function completeLeadTask(teacherId: string, leadId: string, taskId: string): Promise<LeadTask> {
   const { data, error } = await supabase
     .from("tasks")

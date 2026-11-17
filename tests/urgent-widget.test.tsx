@@ -87,7 +87,7 @@ describe("Urgent dashboard visibility", () => {
     await mount();
     const skeleton = container.querySelector("[data-testid=urgent-skeleton]");
     expect(skeleton?.getAttribute("aria-busy")).toBe("true");
-    expect(skeleton?.querySelectorAll(".h-\\[58px\\]").length).toBe(2);
+    expect(skeleton?.querySelectorAll(".h-11").length).toBe(2);
 
     await act(async () => { resolveFetch([item("urgent"), item("ordinary", "medium")]); });
     await settle();

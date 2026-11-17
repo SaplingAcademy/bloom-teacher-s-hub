@@ -20,7 +20,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { urgentQueueRootKey } from "@/hooks/use-urgent-queue-query";
+import { refreshTodayQueues } from "@/hooks/use-urgent-queue-query";
 import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
 import { PriorityResolutionPanel, isInlineResolvable } from "@/components/bloom/PriorityResolutionPanel";
@@ -88,11 +88,8 @@ export function DailyPrioritiesCard({ teacherId }: DailyPrioritiesCardProps) {
   const queryClient = useQueryClient();
   // After a successful inline save, re-read priorities from their sources; only items
   // whose condition is really resolved disappear, and counters follow automatically.
-  const refreshPriorities = () => {
-    // The Urgent block reads the same sources (attendance, tasks, leads, payments): refresh it too.
-    void queryClient.invalidateQueries({ queryKey: urgentQueueRootKey(teacherId) });
-    return queryClient.invalidateQueries({ queryKey: ["daily-priorities", teacherId] });
-  };
+  // The Urgent block reads the same sources (attendance, tasks, leads, payments): one shared refresh.
+  const refreshPriorities = () => refreshTodayQueues(queryClient, teacherId);
   // Leads, Contracts and Payments open their module's existing component in place.
   const [moduleAction, setModuleAction] = useState<PriorityModuleAction | null>(null);
   const invalidateFinanceData = useInvalidateFinanceData(teacherId);
