@@ -136,7 +136,7 @@ export function CalendarRowsSkeleton({
   return (
     <Status label={label} className={cn("divide-y divide-border/60", className)}>
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="grid min-h-[64px]" style={{ gridTemplateColumns: `80px repeat(${columns}, 1fr)` }}>
+        <div key={i} className="grid min-h-[54px]" style={{ gridTemplateColumns: `80px repeat(${columns}, 1fr)` }}>
           <div className="flex items-start justify-end border-r border-border bg-secondary/5 p-2 pt-1">
             <Skeleton className="h-3 w-8" />
           </div>

@@ -105,7 +105,9 @@ import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { calendarEventsQueryKey, calendarEventsRootKey, calendarEventsWindow } from "@/lib/calendar-events-window";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
-import { calendarGridHours } from "@/lib/calendar-grid";
+import { calendarGridHours, currentTimeMarker, minuteFraction } from "@/lib/calendar-grid";
+import { useCurrentMinute } from "@/hooks/use-current-minute";
+import { CalendarNowLine } from "@/components/bloom/CalendarNowLine";
 import { useCalendarGridScroll } from "@/hooks/use-calendar-grid-scroll";
 import { LessonStudentsSelect, LessonTagsSelect } from "@/components/bloom/LessonSchedulingSelections";
 import { lessonDuration, saveManualLessons, manualLessonErrorKey, ManualLessonPlanError, LESSON_QUICK_TAGS, type ManualLessonInput, type SavedManualEvent } from "@/lib/manual-lesson-scheduling";
@@ -625,6 +627,8 @@ function CalendarPage() {
     loadWorkingAvailability();
   }, [fetchStudents, loadWorkingAvailability]);
 
+  // Current-time indicator (today only), refreshed every minute.
+  const nowMarker = currentTimeMarker(useCurrentMinute());
   const weekDrag = useWeekLessonDrag(async (eventId, position) => {
     const event = events.find((item) => item.id === eventId);
     if (!event || pendingMoves.current.has(eventId)) return false;
@@ -1420,7 +1424,7 @@ function CalendarPage() {
               ) : (
               <div className="divide-y divide-border/60">
                 {gridHours.map((hour) => (
-                  <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[64px]">
+                  <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[54px]">
                     {/* Hour cell */}
                     <div className="p-2 border-r border-border text-right text-[11px] font-semibold text-muted-foreground bg-secondary/5 shrink-0 flex justify-end items-start pt-1">
                       {hour}
@@ -1445,12 +1449,25 @@ function CalendarPage() {
                           data-hour={hour}
                           onClick={(event) => createFromCell(event, dateStr, hour)}
                           title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
-                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[64px] min-w-0 overflow-hidden ${
+                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[54px] min-w-0 overflow-hidden ${
                             unavailable
                               ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
                               : "bg-card hover:bg-secondary/10"
-                          } ${weekDrag.target?.date === dateStr && weekDrag.target.hour === hour ? "ring-2 ring-inset ring-primary bg-primary-soft/30" : ""}`}
+                          }`}
                         >
+                          {weekDrag.target?.date === dateStr && weekDrag.target.hour === hour && (
+                            <>
+                              {/* Drop target: rounded like the event cards, behind them, never catching the pointer. */}
+                              <div aria-hidden="true" data-calendar-drop-highlight="" className="pointer-events-none absolute inset-0.5 rounded-xl bg-primary-soft/30 ring-2 ring-inset ring-primary" />
+                              {/* Destination already snapped to the quarter hour (:00, :15, :30, :45). */}
+                              <div aria-hidden="true" data-calendar-drop-guide={weekDrag.target.startTime}
+                                className="pointer-events-none absolute inset-x-1 z-[2] h-0.5 rounded-full bg-primary"
+                                style={{ top: `${minuteFraction(Number(weekDrag.target.startTime.slice(3, 5))) * 100}%` }} />
+                            </>
+                          )}
+                          {nowMarker.date === dateStr && nowMarker.hour === hour && (
+                            <CalendarNowLine fraction={nowMarker.fraction} className="left-1 right-0" />
+                          )}
                           {cellEvents.map((evt) => {
                             const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
                             const colorMeta = eventColor(evt);
@@ -1468,7 +1485,7 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`relative min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
@@ -1533,8 +1550,11 @@ function CalendarPage() {
                     data-date={dateStr}
                     data-hour={hour}
                     onClick={(event) => createFromCell(event, dateStr, hour)}
-                    className={`grid grid-cols-[100px_1fr] p-2 min-h-[64px] items-center ${unavailable ? "bg-muted/50" : ""}`}
+                    className={`relative grid grid-cols-[100px_1fr] p-2 min-h-[54px] items-center ${unavailable ? "bg-muted/50" : ""}`}
                   >
+                    {nowMarker.date === dateStr && nowMarker.hour === hour && (
+                      <CalendarNowLine fraction={nowMarker.fraction} className="left-[100px] right-0" />
+                    )}
                     <div className="text-right pr-4 text-xs font-bold text-muted-foreground">
                       {hour}
                     </div>
