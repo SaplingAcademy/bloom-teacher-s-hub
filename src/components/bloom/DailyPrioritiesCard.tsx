@@ -286,9 +286,9 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
   // Category filter chips (local filtering, no refetch); the same filter drives the compact list and the Kanban.
   const renderFilters = (tone: "dark" | "light") => {
     const chip = tone === "dark"
-      ? { active: "border-sidebar-accent-foreground bg-sidebar-accent-foreground text-sidebar hover:bg-sidebar-accent-foreground/90 hover:text-sidebar",
-          idle: "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          badgeActive: "bg-sidebar/10 text-sidebar", badgeIdle: "bg-sidebar-foreground/10 text-sidebar-foreground" }
+      ? { active: "border-[#2F5D45] bg-[#2F5D45] text-white hover:bg-[#2F5D45]/90 hover:text-white",
+          idle: "border-[#D9E3D9] bg-white text-[#2C4A3A] hover:bg-[#F0F5EF] hover:text-[#1E3A2C]",
+          badgeActive: "bg-white/20 text-white", badgeIdle: "bg-[#1E3A2C]/[0.08] text-[#1E3A2C]" }
       : { active: "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
           idle: "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
           badgeActive: "bg-primary-foreground/15 text-primary-foreground", badgeIdle: "bg-muted text-foreground" };
@@ -356,25 +356,25 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
 
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-sm font-figtree transition-all xl:h-full">
-      {/* Forest header + filters area; priority content stays on the white card surface */}
-      <div className="-mx-4 sm:-mx-5 -mt-4 sm:-mt-5 rounded-t-2xl border-b border-sidebar-border bg-sidebar px-4 sm:px-5 pt-4 sm:pt-5 pb-3 sm:pb-4">
+      {/* Light green-white header + filters area; priority content stays on the white card surface */}
+      <div data-testid="priorities-header" className="-mx-4 sm:-mx-5 -mt-4 sm:-mt-5 rounded-t-2xl border-b border-[#E2E9E2] bg-[#F8FAF8] px-4 sm:px-5 pt-4 sm:pt-5 pb-3 sm:pb-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 sm:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-sidebar-accent-foreground">
+            <h2 className="min-w-0 break-words font-outfit text-xl font-extrabold text-[#1E3A2C]">
               {t("today.prioritiesTitle")}
             </h2>
             {/* The former fixed subtitle now lives in this tooltip (hover, focus or tap). */}
             <InfoTooltip
               label={t("today.prioritiesInfoLabel")}
               text={t("today.prioritiesSubtitle")}
-              className="-ml-1 text-sidebar-accent-foreground"
+              className="-ml-1 text-[#4A6B58]"
             />
           </div>
         </div>
         <ExpandPanelButton label={t("today.expandPriorities")} onClick={() => setKanbanOpen(true)}
-          className="self-end text-sidebar-accent-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground sm:self-auto" />
+          className="self-end text-[#4A6B58] hover:bg-[#1E3A2C]/[0.06] hover:text-[#1E3A2C] sm:self-auto" />
       </div>
 
       {!loading && renderFilters("dark")}
