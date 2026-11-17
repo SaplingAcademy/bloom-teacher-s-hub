@@ -96,7 +96,7 @@ describe("note position persistence", () => {
     expect(ok).toBe(false);
     expect(mocks.persist).not.toHaveBeenCalled();
     expect(client.getQueryData<WorkspaceNote[]>(["workspace-notes", "teacher"])).toHaveLength(1);
-    expect(mocks.error).toHaveBeenCalledWith("workspace.mural.saveError", expect.anything());
+    expect(mocks.error).toHaveBeenCalledWith("workspace.mural.deleteError", expect.anything());
     mocks.cleanup.mockResolvedValueOnce(undefined);
     mocks.persist.mockResolvedValueOnce(null);
     await act(async () => { ok = await api.execute({ type: "delete", id: "a" }); });

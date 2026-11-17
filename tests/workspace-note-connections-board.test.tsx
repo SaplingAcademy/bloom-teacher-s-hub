@@ -139,6 +139,31 @@ describe("Meu Mural: connecting notes", () => {
     expect(document.querySelectorAll('[data-testid="note-connections"] line')).toHaveLength(1);
     expect(menuItems("a").filter((b) => b.textContent!.startsWith("workspace.mural.connections.remove"))).toHaveLength(1);
   });
+  for (const projectId of [undefined, "p1"]) {
+    it(`optimistic delete (${projectId ?? "Meu Mural"}): the dialog closes at once; connections refresh only after the delete succeeds`, async () => {
+      m.connections.connections = [{ id: "ab", from_note_id: "a", to_note_id: "b" }];
+      let finish!: (ok: boolean) => void;
+      m.execute.mockImplementationOnce(() => new Promise<boolean>((r) => { finish = r; }));
+      await render(projectId ? { projectId } : {});
+      await click(item("a", "workspace.mural.delete"));
+      const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button')].find((b) => b.textContent === "workspace.mural.delete")!;
+      await click(confirm);
+      expect(m.execute).toHaveBeenCalledWith({ type: "delete", id: "a" });
+      expect(document.querySelector('[role="alertdialog"]')).toBeNull(); // no waiting on the server
+      expect(m.connections.refresh).not.toHaveBeenCalled();
+      await act(async () => { finish(true); });
+      expect(m.connections.refresh).toHaveBeenCalledTimes(1);
+    });
+  }
+  it("optimistic delete: a failed delete does not refresh connections (the note and its arrows come back)", async () => {
+    m.connections.connections = [{ id: "ab", from_note_id: "a", to_note_id: "b" }];
+    m.execute.mockImplementationOnce(async () => false);
+    await render();
+    await click(item("a", "workspace.mural.delete"));
+    await click([...document.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button')].find((b) => b.textContent === "workspace.mural.delete")!);
+    expect(m.connections.refresh).not.toHaveBeenCalled();
+    expect(document.querySelectorAll('[data-testid="note-connections"] line')).toHaveLength(1);
+  });
   it("hidden while the migration is not applied", async () => {
     m.connections.available = false;
     await render();

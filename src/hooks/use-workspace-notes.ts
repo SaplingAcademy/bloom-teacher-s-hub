@@ -22,16 +22,22 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
   // Position saves run in the background on their own key: they never mark the board as busy.
   const positionKey = [...key, "position"] as const;
   const positionSaving = useIsMutating({ mutationKey: positionKey }) > 0;
+  // Deletes also run in the background on their own key (optimistic, concurrent, never `pending`).
+  const deleteKey = [...key, "delete"] as const;
+  const deleteSaving = useIsMutating({ mutationKey: deleteKey }) > 0;
+  // Notes whose delete is still in flight: never shown again by a read or a rollback meanwhile.
+  const pendingDeletes = useRef(new Set<string>());
+  const withoutPendingDeletes = (notes: WorkspaceNote[]) =>
+    pendingDeletes.current.size ? notes.filter((note) => !pendingDeletes.current.has(note.id)) : notes;
   const latestPosition = useRef(new Map<string, number>());
   const lock = useRef(false);
   const quiet = useRef(false);
-  const deleteAuthor = useRef<string | null>(null);
   const query = useQuery({
-    queryKey: key, enabled: authenticated && !pending && !positionSaving, staleTime: 60_000,
+    queryKey: key, enabled: authenticated && !pending && !positionSaving && !deleteSaving, staleTime: 60_000,
     refetchOnWindowFocus: false,
     queryFn: ({ signal }) => {
       if (!owner || !authenticated) throw new Error("authentication_changed");
-      return fetchWorkspaceNotes(owner, signal, projectId);
+      return fetchWorkspaceNotes(owner, signal, projectId).then(withoutPendingDeletes);
     },
   });
   const mutation = useMutation({
@@ -39,10 +45,6 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
     retry: false,
     mutationFn: async (command: NoteCommand) => {
       if (!owner || !authenticated) throw new Error("authentication_changed");
-      // Files go first: if any cannot be removed, the note stays (no orphaned files in Storage).
-      // On a project board the files live in the note author's folder (the owner may delete them).
-      // The optimistic update removes the note first, so its author is captured in execute().
-      if (command.type === "delete") await deleteAllNoteImages(owner, command.id, deleteAuthor.current ?? owner);
       return persistNoteCommand(owner, command, client.getQueryData<WorkspaceNote[]>(key) ?? [], projectId);
     },
     onMutate: async (command) => {
@@ -56,14 +58,13 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
       client.setQueryData<WorkspaceNote[]>(key, (notes = []) => sortNotes(
         saved ? notes.map((note) => note.id === saved.id ? saved : note) : notes.filter((note) => note.id !== command.id),
       ));
-      if (command.type === "delete") void client.invalidateQueries({ queryKey: workspaceNoteImagesKey(owner) });
-      if (!quiet.current && (command.type === "create" || command.type === "edit" || command.type === "delete")) {
-        toast.success(t(command.type === "delete" ? "workspace.mural.deleted" : "workspace.mural.saved"), { id: "workspace-notes-feedback", duration: 1800 });
+      if (!quiet.current && (command.type === "create" || command.type === "edit")) {
+        toast.success(t("workspace.mural.saved"), { id: "workspace-notes-feedback", duration: 1800 });
       }
     },
-    onError: (_error, command, context) => {
-      if (command.type === "delete") void client.invalidateQueries({ queryKey: workspaceNoteImagesKey(owner) });
-      if (context) client.setQueryData(key, context.before);
+    onError: (_error, _command, context) => {
+      // Roll back this command only; notes deleted meanwhile stay removed.
+      if (context) client.setQueryData(key, withoutPendingDeletes(context.before));
       toast.error(t("workspace.mural.saveError"), { id: "workspace-notes-feedback" });
       // Only failures need a list reconciliation (e.g. a response lost after a commit).
       void client.invalidateQueries({ queryKey: key });
@@ -91,6 +92,45 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
       toast.error(t("workspace.mural.saveError"), { id: "workspace-notes-feedback" });
     },
   });
+  /**
+   * Optimistic delete: the note leaves the board at once and the delete runs in the background on its
+   * own mutation key, so several notes can be deleted in a row without waiting. Files go first (as
+   * before; if any cannot be removed the note stays). A failure restores only that note.
+   */
+  const deleteMutation = useMutation({
+    mutationKey: deleteKey,
+    retry: false,
+    mutationFn: async ({ command, note }: { command: Extract<NoteCommand, { type: "delete" }>; note: WorkspaceNote }) => {
+      if (!owner || !authenticated) throw new Error("authentication_changed");
+      // On a project board the files live in the note author's folder (the owner may delete them).
+      await deleteAllNoteImages(owner, command.id, note.user_id ?? owner);
+      return persistNoteCommand(owner, command, client.getQueryData<WorkspaceNote[]>(key) ?? [], projectId);
+    },
+    onSuccess: (_saved, { command }) => {
+      pendingDeletes.current.delete(command.id);
+      client.setQueryData<WorkspaceNote[]>(key, (notes = []) => notes.filter((note) => note.id !== command.id));
+      void client.invalidateQueries({ queryKey: workspaceNoteImagesKey(owner) });
+      toast.success(t("workspace.mural.deleted"), { id: "workspace-notes-feedback", duration: 1800 });
+    },
+    onError: (_error, { command, note }) => {
+      pendingDeletes.current.delete(command.id);
+      client.setQueryData<WorkspaceNote[]>(key, (notes = []) => notes.some((entry) => entry.id === note.id) ? notes : sortNotes([...notes, note]));
+      void client.invalidateQueries({ queryKey: workspaceNoteImagesKey(owner) });
+      toast.error(t("workspace.mural.deleteError"), { id: "workspace-notes-feedback" });
+    },
+  });
+  async function deleteNote(command: Extract<NoteCommand, { type: "delete" }>): Promise<boolean> {
+    const before = client.getQueryData<WorkspaceNote[]>(key);
+    const note = before?.find((entry) => entry.id === command.id);
+    if (readOnly || !authenticated || !owner || !before || !note || pendingDeletes.current.has(command.id)) return false;
+    // Stop in-flight reads without reverting, so a stale response cannot bring the note back.
+    void client.cancelQueries({ queryKey: key }, { revert: false, silent: true });
+    pendingDeletes.current.add(command.id);
+    client.setQueryData<WorkspaceNote[]>(key, (notes = []) => notes.filter((entry) => entry.id !== command.id));
+    try { await deleteMutation.mutateAsync({ command, note }); return true; }
+    catch { return false; }
+  }
+
   async function savePosition(command: Extract<NoteCommand, { type: "position" }>): Promise<boolean> {
     const before = client.getQueryData<WorkspaceNote[]>(key);
     const note = before?.find((entry) => entry.id === command.id);
@@ -107,14 +147,14 @@ export function useWorkspaceNotes(projectId: string | null = null, { readOnly = 
   /** `quiet` skips the success toast when the caller reports the final outcome itself (note + images). */
   async function execute(command: NoteCommand, options: { quiet?: boolean } = {}): Promise<boolean> {
     if (command.type === "position") return savePosition(command);
+    if (command.type === "delete") return deleteNote(command);
     // Synchronous latch also catches two clicks before React's pending render.
     if (readOnly || lock.current || client.isMutating({ mutationKey: key, exact: true }) || !authenticated || !query.data) return false;
     lock.current = true;
     quiet.current = Boolean(options.quiet);
-    deleteAuthor.current = command.type === "delete" ? query.data.find((note) => note.id === command.id)?.user_id ?? null : null;
     try { await mutation.mutateAsync(command); return true; }
     catch { return false; }
-    finally { lock.current = false; quiet.current = false; deleteAuthor.current = null; }
+    finally { lock.current = false; quiet.current = false; }
   }
   return { notes: authenticated ? query.data : undefined, isLoading: loading || (authenticated && query.isPending),
     error: authenticated ? query.error : null, pending, execute, refetch: query.refetch };
