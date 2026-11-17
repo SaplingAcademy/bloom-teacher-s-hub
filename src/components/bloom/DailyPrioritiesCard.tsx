@@ -28,6 +28,7 @@ import { useDailyPrioritiesQuery } from "@/hooks/use-daily-priorities-query";
 import { PriorityResolutionPanel, isInlineResolvable } from "@/components/bloom/PriorityResolutionPanel";
 import { PriorityModuleActions, moduleActionFor, type PriorityModuleAction } from "@/components/bloom/PriorityModuleActions";
 import { useInvalidateFinanceData } from "@/hooks/use-finance-query";
+import { useScrollFade } from "@/hooks/use-scroll-fade";
 
 interface DailyPrioritiesCardProps {
   teacherId: string;
@@ -277,6 +278,8 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
   const leadsFailed = failed.includes("lead");
   const noticeFailed = failed.filter((c) => c !== "lead");
   const isEmpty = !loading && items.length === 0 && !leadsFailed;
+  // Visual hint that the list continues below (re-checked when the shown content changes).
+  const listFade = useScrollFade<HTMLDivElement>(`${loading}|${filter}|${visibleItems.length}|${expandedId}`);
 
   // Category filter chips (local filtering, no refetch); the same filter drives the compact list and the Kanban.
   const renderFilters = (tone: "dark" | "light") => {
@@ -393,7 +396,10 @@ export function DailyPrioritiesCard({ teacherId, fillHeight = false }: DailyPrio
       {/* Scrollable list area: grows with the content up to a fixed height, then scrolls inside the
           card while the forest header, filters and card borders stay in place. */}
       <div
+        ref={listFade.ref}
         data-testid="priorities-scroll"
+        data-fade={listFade.fade || undefined}
+        style={listFade.style}
         className={`-mx-1.5 min-h-0 space-y-3 overflow-y-auto overscroll-contain px-1.5 ${fillHeight ? "flex-1" : "max-h-[22rem]"}`}
       >
       {/* Loading */}

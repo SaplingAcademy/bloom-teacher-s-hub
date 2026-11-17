@@ -236,9 +236,9 @@ export function ChecklistCard({ expanded = false, onExpand }: { expanded?: boole
     <TooltipProvider delayDuration={350}>
       <section aria-label={t("checklist.title")} data-checklist-view={expanded ? "expanded" : "compact"}
         className={expanded ? "flex h-full min-w-0 flex-col overflow-hidden bg-card" : "flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm xl:h-full"}>
-        <header className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 sm:px-5 ${expanded ? "py-4 pr-12" : "py-2.5"}`}>
+        <header className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 sm:px-5 ${expanded ? "py-4 pr-12" : "py-1"}`}>
           <div className="flex min-w-0 items-center gap-1">
-            <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
+            <h2 className={`flex items-center gap-2 font-display font-extrabold leading-none text-primary ${expanded ? "text-xl" : "text-lg"}`}>
               {selected === 0 ? <ListChecks className="h-5 w-5 shrink-0" aria-hidden="true" /> : <History className="h-5 w-5 shrink-0" aria-hidden="true" />}
               {t(selected === 0 ? "checklist.title" : "checklist.history")}
             </h2>
