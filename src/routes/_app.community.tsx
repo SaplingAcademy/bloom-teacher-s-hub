@@ -7,6 +7,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
 import { reportUserError } from "@/lib/user-error";
 import {
+  communityFilterCounts,
   countNeedsHelp,
   filterCommunityPosts,
   normalizeCommunityTopic,
@@ -18,6 +19,7 @@ import { fetchCommunityPostRows } from "@/lib/community-feed";
 import { CommunityFilterBar } from "@/components/community/CommunityFilterBar";
 import { CommunityTopicPicker } from "@/components/community/CommunityTopicPicker";
 import { CommunitySaveButton } from "@/components/community/CommunitySaveButton";
+import { CommunityBlocks, CommunityLayoutToggle, type CommunityLayout } from "@/components/community/CommunityBlocks";
 import { fetchSavedPostIds, savePost, unsavePost } from "@/lib/community-saved";
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { InfoTooltip } from "@/components/bloom/InfoTooltip";
@@ -413,8 +415,11 @@ function CommunityPage() {
   };
 
   const visible = useMemo(() => filterCommunityPosts(posts, filter, search), [posts, filter, search]);
+  // "Blocos" (categories as tiles) or "Feed" (posts list); switching never reloads anything.
+  const [layout, setLayout] = useState<CommunityLayout>("feed");
   const helpCount = useMemo(() => countNeedsHelp(posts), [posts]);
   const filters = useMemo(() => visibleCommunityFilters({ topics: topicsEnabled, saved: savedEnabled }), [topicsEnabled, savedEnabled]);
+  const blockCounts = useMemo(() => communityFilterCounts(posts, filters, search), [posts, filters, search]);
   // A filter that is no longer available (e.g. saved table missing) falls back to "Tudo".
   useEffect(() => {
     if (!filters.includes(filter)) setFilter("all");
@@ -451,76 +456,7 @@ function CommunityPage() {
         )}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr] items-start">
-        <div className="space-y-4 lg:sticky lg:top-4">
-        {/* Leaderboard */}
-        <aside className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-accent" />
-            <h2 className="font-display font-semibold text-sm">{t("communityV1.highlights")}</h2>
-          </div>
-          <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
-            {periods.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPeriod(p)}
-                className={`rounded-lg py-1 text-xs font-medium transition-colors ${
-                  period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t(`communityV1.${p}`)}
-              </button>
-            ))}
-          </div>
-          {leadersLoading ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">{t("communityV1.loading")}</p>
-          ) : leaders.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">{t("communityV1.leaderboardEmpty")}</p>
-          ) : (
-            <ol className="space-y-1.5">
-              {leaders.map((l) => {
-                const me = l.teacherId === userId;
-                return (
-                  <li
-                    key={l.teacherId}
-                    className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 ${me ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
-                  >
-                    <span className={`h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 ${medal(l.position)}`}>
-                      {l.position}
-                    </span>
-                    <Avatar name={l.name} url={l.avatar} size={7} />
-                    <span className="flex-1 truncate text-sm">
-                      {l.name || t("communityV1.unnamed")}
-                      {me && <span className="ml-1 text-xs text-primary font-medium">({t("communityV1.you")})</span>}
-                    </span>
-                    <span className="text-xs font-semibold tabular-nums">
-                      {l.points} {t("communityV1.points")}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </aside>
-
-        {/* Community tabs, below the leaderboard: posts or My Contacts (same page, ?view=contacts). */}
-        <nav aria-label={t("communityV1.sectionsLabel")} className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1 lg:grid-cols-1" data-testid="community-tabs">
-          {([
-            { id: "feed", icon: Newspaper, label: t("communityV1.postsTab"), active: !contactsView, search: {} },
-            { id: "contacts", icon: Contact, label: t("contacts.title"), active: contactsView, search: { view: "contacts" as const } },
-          ]).map((item) => (
-            <button key={item.id} type="button" aria-current={item.active ? "page" : undefined} data-testid={`community-tab-${item.id}`}
-              onClick={() => { if (!item.active) void navigate({ search: item.search }); }}
-              className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors lg:justify-start ${
-                item.active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}>
-              <item.icon className="h-4 w-4 shrink-0" aria-hidden /> <span className="truncate">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        </div>
-
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] items-start">
         {contactsView ? (
           <section className="min-w-0" data-testid="community-contacts">
             <MyContactsPage embedded tab={contactsTab ?? "contacts"} onTabChange={(next) => void navigate({ search: { view: "contacts", tab: next }, replace: true })} />
@@ -528,16 +464,24 @@ function CommunityPage() {
         ) : (
         /* Feed */
         <section className="space-y-4 min-w-0">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={t("communityV1.searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-card"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={t("communityV1.searchPlaceholder")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-card"
+              />
+            </div>
+            {filters.length > 1 && <CommunityLayoutToggle value={layout} onChange={setLayout} t={t} />}
           </div>
 
+          {/* Blocos: the categories as tiles (the filter bar would repeat them, so it is hidden here). */}
+          {layout === "blocks" && filters.length > 1 && !loading && !loadError ? (
+            <CommunityBlocks filters={filters} counts={blockCounts} active={filter} t={t}
+              onOpen={(next) => { setFilter(next); setLayout("feed"); }} />
+          ) : (<>
           {filters.length > 1 && (
             <CommunityFilterBar value={filter} onChange={setFilter} helpCount={helpCount} t={t} filters={filters} />
           )}
@@ -569,7 +513,7 @@ function CommunityPage() {
                 key={post.id}
                 id={`post-${post.id}`}
                 data-community-post=""
-                className={`rounded-2xl border bg-card px-4 pt-4 pb-2 sm:px-5 sm:pt-5 scroll-mt-24 transition-shadow ${focusPost === post.id ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+                className={`rounded-xl border bg-card px-4 pt-4 pb-2 sm:px-5 sm:pt-5 scroll-mt-24 transition-shadow ${focusPost === post.id ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
               >
                 {/* 1–2. Author (avatar, name + date together) and the category on the right. */}
                 <header className="flex items-center gap-3">
@@ -681,8 +625,84 @@ function CommunityPage() {
               </article>
             ))
           )}
+          </>)}
         </section>
         )}
+
+        {/* Right column: Top contributors, then the Posts / My Contacts switch. */}
+        {/* Phones: the Posts / My Contacts switch goes first and the ranking after the content; desktop: one sticky column. */}
+        <div className="contents lg:block lg:space-y-4 lg:sticky lg:top-4" data-testid="community-sidebar">
+        {/* Leaderboard */}
+        <aside className="rounded-xl border border-border bg-card p-4 space-y-3" data-testid="community-top-contributors">
+          <div>
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-accent" />
+              <h2 className="font-display font-semibold text-sm">{t("communityV1.highlights")}</h2>
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("communityV1.highlightsSubtitle")}</p>
+          </div>
+          <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+            {periods.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPeriod(p)}
+                className={`rounded-lg py-1 text-xs font-medium transition-colors ${
+                  period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t(`communityV1.${p}`)}
+              </button>
+            ))}
+          </div>
+          {leadersLoading ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">{t("communityV1.loading")}</p>
+          ) : leaders.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">{t("communityV1.leaderboardEmpty")}</p>
+          ) : (
+            <ol className="space-y-1.5">
+              {leaders.map((l) => {
+                const me = l.teacherId === userId;
+                return (
+                  <li
+                    key={l.teacherId}
+                    className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 ${me ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+                  >
+                    <span className={`h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 ${medal(l.position)}`}>
+                      {l.position}
+                    </span>
+                    <Avatar name={l.name} url={l.avatar} size={7} />
+                    <span className="flex-1 truncate text-sm">
+                      {l.name || t("communityV1.unnamed")}
+                      {me && <span className="ml-1 text-xs text-primary font-medium">({t("communityV1.you")})</span>}
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums">
+                      {l.points} {t("communityV1.points")}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </aside>
+
+        {/* Community tabs, below the leaderboard: posts or My Contacts (same page, ?view=contacts). */}
+        <nav aria-label={t("communityV1.sectionsLabel")} className="order-first grid grid-cols-2 gap-1 rounded-xl border border-border bg-card p-1 lg:order-none lg:grid-cols-1" data-testid="community-tabs">
+          {([
+            { id: "feed", icon: Newspaper, label: t("communityV1.postsTab"), active: !contactsView, search: {} },
+            { id: "contacts", icon: Contact, label: t("contacts.title"), active: contactsView, search: { view: "contacts" as const } },
+          ]).map((item) => (
+            <button key={item.id} type="button" aria-current={item.active ? "page" : undefined} data-testid={`community-tab-${item.id}`}
+              onClick={() => { if (!item.active) void navigate({ search: item.search }); }}
+              className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors lg:justify-start ${
+                item.active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}>
+              <item.icon className="h-4 w-4 shrink-0" aria-hidden /> <span className="truncate">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        </div>
+
       </div>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
