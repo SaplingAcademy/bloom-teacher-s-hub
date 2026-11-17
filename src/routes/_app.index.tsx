@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { DashboardPrioritiesSection, DashboardUrgentSection } from "@/components/bloom/DashboardAttentionSections";
+import { DashboardPrioritiesSection } from "@/components/bloom/DashboardAttentionSections";
 import { t as i18nT } from "@/lib/i18n";
 
 /**
@@ -907,9 +907,6 @@ function TodayPage() {
           </button>
         </div>
       )}
-
-      {/* URGENT SECTION */}
-      {user?.id && <DashboardUrgentSection teacherId={user.id} refreshKey={refreshKey} />}
 
       {/* ADD/EDIT TASK MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

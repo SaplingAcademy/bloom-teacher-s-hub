@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChecklistDeadlineFields } from "./ChecklistDeadlineFields";
 import { InfoTooltip } from "./InfoTooltip";
+import { ExpandPanelButton } from "./ExpandPanelButton";
 
 const NO_DEADLINE: ChecklistDeadline = { deadline_type: "none", due_date: null };
 
@@ -57,9 +58,15 @@ function useReducedMotion() {
   return reduced;
 }
 
-export function ChecklistCard() {
+/**
+ * `expanded`: the same checklist (same hook, cache and operations) rendered in the large modal view;
+ * `onExpand`: shows the header button that opens it. Both views share one query, so changes appear at once.
+ */
+export function ChecklistCard({ expanded = false, onExpand }: { expanded?: boolean; onExpand?: () => void } = {}) {
   const { t, lang } = useLanguage();
   const { items, isLoading, error, isFetching, pending, isItemPending, execute, refetch } = useTeacherChecklist();
+  // Unique element ids when the compact and expanded views are mounted together.
+  const idPrefix = expanded ? "expanded-" : "";
   const today = useTeacherLocalDay();
   const reducedMotion = useReducedMotion();
   const [title, setTitle] = useState("");
@@ -179,7 +186,7 @@ export function ChecklistCard() {
           onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.preventDefault(); setEditing(null); } }}
           className="h-9 min-w-0 text-sm" />
         <div className="flex min-w-0 flex-wrap items-end gap-2">
-          <div className="min-w-0 flex-1"><ChecklistDeadlineFields id={`edit-${item.id}-date`} value={editing.deadline} today={today ?? ""}
+          <div className="min-w-0 flex-1"><ChecklistDeadlineFields id={`${idPrefix}edit-${item.id}-date`} value={editing.deadline} today={today ?? ""}
             disabled={busy} onChange={(deadline) => setEditing({ ...editing, deadline })} /></div>
           <Tool label={t("checklist.saveEdit")}><Button type="submit" size="icon" variant="ghost" aria-label={t("checklist.saveEdit")}
             disabled={busy || !editing.title.trim() || (editing.deadline.deadline_type === "specific" && !editing.deadline.due_date)}><Check /></Button></Tool>
@@ -217,7 +224,7 @@ export function ChecklistCard() {
 
   function taskList(list: TeacherChecklistItem[], fromHistory = false) {
     return <div role="region" aria-label={t(fromHistory ? "checklist.historyListLabel" : "checklist.listLabel")} tabIndex={0}
-      data-no-carousel-drag className="max-h-72 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring sm:px-5 xl:max-h-none">
+      data-no-carousel-drag className={`${expanded ? "" : "max-h-64 xl:max-h-none"} min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring sm:px-5`}>
       <ul className="divide-y divide-border/60">{list.map((item, index) => <Fragment key={item.id}>
         {!fromHistory && item.completed && !list[index - 1]?.completed && <li aria-hidden="true" className="mb-1 mt-1 list-none text-xs font-semibold text-muted-foreground">{t("checklist.completed")}</li>}
         {renderItem(item, fromHistory)}
@@ -227,8 +234,9 @@ export function ChecklistCard() {
 
   return (
     <TooltipProvider delayDuration={350}>
-      <section aria-label={t("checklist.title")} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm xl:h-full">
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 py-4 sm:px-5">
+      <section aria-label={t("checklist.title")} data-checklist-view={expanded ? "expanded" : "compact"}
+        className={expanded ? "flex h-full min-w-0 flex-col overflow-hidden bg-card" : "flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm xl:h-full"}>
+        <header className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/10 bg-primary-soft/40 px-4 sm:px-5 ${expanded ? "py-4 pr-12" : "py-3"}`}>
           <div className="flex min-w-0 items-center gap-1">
             <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
               {selected === 0 ? <ListChecks className="h-5 w-5 shrink-0" aria-hidden="true" /> : <History className="h-5 w-5 shrink-0" aria-hidden="true" />}
@@ -242,11 +250,14 @@ export function ChecklistCard() {
               />
             )}
           </div>
-          {!unavailable && <span aria-live="polite" className="text-xs font-semibold text-muted-foreground">
-            {selected === 0
-              ? t(pendingCount === 1 ? "checklist.pendingOne" : "checklist.pending").replace("{count}", String(pendingCount))
-              : t(history.length === 1 ? "checklist.overdueOne" : "checklist.overdueCount").replace("{count}", String(history.length))}
-          </span>}
+          <div className="flex items-center gap-1">
+            {!unavailable && <span aria-live="polite" className="text-xs font-semibold text-muted-foreground">
+              {selected === 0
+                ? t(pendingCount === 1 ? "checklist.pendingOne" : "checklist.pending").replace("{count}", String(pendingCount))
+                : t(history.length === 1 ? "checklist.overdueOne" : "checklist.overdueCount").replace("{count}", String(history.length))}
+            </span>}
+            {onExpand && !expanded && <ExpandPanelButton label={t("checklist.expand")} onClick={onExpand} className="-mr-1.5 text-primary/70 hover:text-primary" />}
+          </div>
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col">
@@ -259,11 +270,11 @@ export function ChecklistCard() {
               {isFetching && <Loader2 className="motion-safe:animate-spin" />}{t("checklist.retry")}
             </Button>
           </div> : <div ref={carouselRef} role="region" aria-roledescription="carousel" aria-label={t("checklist.carouselLabel")}
-            tabIndex={0} onKeyDown={carouselKeys} className="min-h-0 overflow-hidden focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring xl:flex-1">
+            tabIndex={0} onKeyDown={carouselKeys} className={`min-h-0 overflow-hidden focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring ${expanded ? "flex-1" : "xl:flex-1"}`}>
             <div className="flex h-full touch-pan-y">
               <div role="group" aria-roledescription="slide" aria-label={t("checklist.currentSlide")} aria-hidden={selected !== 0} inert={selected !== 0 ? true : undefined}
                 className="flex min-h-0 min-w-0 flex-[0_0_100%] flex-col">
-                <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5">
+                <div className={`shrink-0 px-4 sm:px-5 ${expanded ? "pb-3 pt-4" : "pb-2 pt-3"}`}>
                   <form onSubmit={add} className="space-y-2">
                     <div className="flex min-w-0 items-center gap-2">
                       <Input ref={input} aria-label={t("checklist.add")} placeholder={t("checklist.placeholder")} value={title}
@@ -274,7 +285,7 @@ export function ChecklistCard() {
                         {adding ? <Loader2 className="motion-safe:animate-spin" /> : <Plus />}
                       </Button></Tool>
                     </div>
-                    <ChecklistDeadlineFields id="new-checklist-deadline" value={newDeadline} today={today} preventPast disabled={unavailable || adding}
+                    <ChecklistDeadlineFields id={`${idPrefix}new-checklist-deadline`} value={newDeadline} today={today} preventPast disabled={unavailable || adding}
                       onChange={(deadline) => { setNewDeadline(deadline); createId.current = null; }} />
                   </form>
                 </div>
@@ -299,7 +310,7 @@ export function ChecklistCard() {
             </div>
           </div>}
 
-          <div className="mt-auto flex shrink-0 items-center justify-center gap-2 px-4 py-3" aria-label={t("checklist.navigationLabel")}>
+          <div className={`mt-auto flex shrink-0 items-center justify-center gap-2 px-4 ${expanded ? "py-3" : "py-2"}`} aria-label={t("checklist.navigationLabel")}>
             {[0, 1].map((index) => <Button key={index} type="button" variant="ghost" size="icon" disabled={unavailable}
               aria-label={t(index === 0 ? "checklist.showChecklist" : "checklist.showHistory")} aria-current={selected === index ? "page" : undefined}
               onClick={() => goTo(index)} className="h-7 w-7 rounded-full p-0 hover:bg-transparent">
@@ -330,7 +341,7 @@ export function ChecklistCard() {
           </DialogHeader>
           {recovering && <form onSubmit={recover} className="space-y-4">
             <p className="break-words text-sm font-medium text-foreground">{recovering.item.title}</p>
-            <ChecklistDeadlineFields id="recover-checklist-deadline" value={recovering.deadline} today={today ?? ""} preventPast disabled={recoveryPending}
+            <ChecklistDeadlineFields id={`${idPrefix}recover-checklist-deadline`} value={recovering.deadline} today={today ?? ""} preventPast disabled={recoveryPending}
               onChange={(deadline) => setRecovering({ ...recovering, deadline })} />
             <DialogFooter><Button type="button" variant="outline" disabled={recoveryPending} onClick={() => setRecovering(null)}>{t("checklist.cancel")}</Button>
               <Button type="submit" disabled={recoveryPending || (recovering.deadline.deadline_type === "specific" && !recovering.deadline.due_date)}>

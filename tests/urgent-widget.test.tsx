@@ -76,66 +76,59 @@ async function mount(key = "a") {
   await settle();
 }
 
-function refreshButton() {
-  return container.querySelector<HTMLButtonElement>("button[title='Refresh urgent items']");
-}
 
-describe("Urgent dashboard visibility", () => {
-  it("shows a stable skeleton on first load, then renders only the real urgent occurrence", async () => {
+const card = () => container.querySelector<HTMLButtonElement>("[data-testid=urgent-card]");
+const count = () => container.querySelector("[data-testid=urgent-count]")?.textContent ?? null;
+const dialog = () => document.querySelector<HTMLElement>("[data-testid=urgent-dialog]");
+async function openDialog() { await act(async () => card()!.click()); }
+
+describe("Urgent summary card", () => {
+  it("shows a compact skeleton on first load, then the card with the real count of urgent items only", async () => {
     let resolveFetch!: (items: AttentionItem[]) => void;
     mocks.fetch.mockReturnValue(new Promise<AttentionItem[]>((resolve) => { resolveFetch = resolve; }));
     await mount();
-    const skeleton = container.querySelector("[data-testid=urgent-skeleton]");
-    expect(skeleton?.getAttribute("aria-busy")).toBe("true");
-    expect(skeleton?.querySelectorAll(".h-11").length).toBe(2);
-
+    expect(container.querySelector("[data-testid=urgent-skeleton]")?.getAttribute("aria-busy")).toBe("true");
     await act(async () => { resolveFetch([item("urgent"), item("ordinary", "medium")]); });
     await settle();
     expect(container.querySelector("[data-testid=urgent-skeleton]")).toBeNull();
-    expect(container.textContent).toContain("Urgent");
-    // No item counter; the description lives in the Info tooltip, not under the title.
-    expect(container.textContent).not.toContain("1 item");
-    expect(container.textContent).not.toContain("Immediate attention");
-    expect(container.querySelector('button[aria-label$="Urgent"]')).not.toBeNull();
-    expect(container.textContent).toContain("Occurrence urgent");
-    expect(container.textContent).not.toContain("Occurrence ordinary");
-
-    const resolve = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Resolve"));
-    await act(async () => { resolve?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/leads?leadId=urgent" });
+    expect(card()!.textContent).toContain("Urgent");
+    expect(count()).toBe("1"); // only high urgency
+    expect(card()!.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(container.textContent).not.toContain("Occurrence urgent"); // the list lives in the modal
   });
 
-  it("renders every urgent occurrence once, without an item counter", async () => {
+  it("opens the full list in a modal, each item with a clear action; closes with Esc", async () => {
     mocks.fetch.mockResolvedValue([item("one"), item("two")]);
     await mount();
-    expect(container.textContent).not.toContain("2 items");
-    // Info tooltip + refresh + one Resolve per occurrence.
-    expect(container.querySelectorAll("button").length).toBe(4);
-    expect(container.textContent).toContain("Occurrence one");
-    expect(container.textContent).toContain("Occurrence two");
+    await openDialog();
+    expect(dialog()!.textContent).toContain("Occurrence one");
+    expect(dialog()!.textContent).toContain("Occurrence two");
+    const resolve = [...dialog()!.querySelectorAll("button")].find((button) => button.textContent?.includes("Resolve"))!;
+    await act(async () => resolve.click());
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/leads?leadId=one" });
+    await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect(dialog()).toBeNull();
   });
 
-  it("renders nothing when there are no urgent occurrences, including no all-clear placeholder", async () => {
+  it("without urgent items shows a neutral, discreet all-clear card (no red counter)", async () => {
     mocks.fetch.mockResolvedValue([item("ordinary", "medium"), item("later", "low")]);
     await mount();
-    expect(container.childElementCount).toBe(0);
-    expect(container.textContent).not.toContain("All clear");
-    expect(container.textContent).not.toContain("No urgent issues");
+    expect(card()!.textContent).toContain("All clear");
+    expect(count()).toBeNull();
+    expect(card()!.innerHTML).not.toContain("text-rose-600");
   });
 
-  it("removes the card after a refresh confirms the urgent occurrence was resolved", async () => {
-    mocks.fetch
-      .mockResolvedValueOnce([item("resolved")])
-      .mockResolvedValueOnce([]);
+  it("after a refresh confirms the resolution, the modal and the count update", async () => {
+    mocks.fetch.mockResolvedValueOnce([item("resolved")]).mockResolvedValueOnce([]);
     await mount();
-    expect(container.textContent).toContain("Occurrence resolved");
-
-    await act(async () => {
-      refreshButton()?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    expect(count()).toBe("1");
+    await openDialog();
+    const refresh = document.querySelector<HTMLButtonElement>("[data-testid=urgent-dialog] button[title='Refresh urgent items']")!;
+    await act(async () => refresh.click());
     await settle();
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
-    expect(container.childElementCount).toBe(0);
+    expect(count()).toBeNull();
+    expect(dialog()!.textContent).not.toContain("Occurrence resolved");
   });
 
   it("reads the queue without waiting for the inactive-lead automation, which still runs once", async () => {
@@ -146,10 +139,8 @@ describe("Urgent dashboard visibility", () => {
     await settle();
     expect(mocks.automate).toHaveBeenCalledTimes(1);
     expect(mocks.automate).toHaveBeenCalledWith("teacher");
-    expect(mocks.fetch).toHaveBeenCalledTimes(1); // started before the automation finished
-    expect(container.textContent).toContain("Occurrence urgent");
-
-    // Nothing processed: no extra read.
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(count()).toBe("1");
     await act(async () => { finishAutomation({ processedCount: 0 }); });
     await settle();
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
@@ -157,15 +148,15 @@ describe("Urgent dashboard visibility", () => {
 
   it("reads again when the automation processed something", async () => {
     mocks.automate.mockResolvedValue({ processedCount: 2 });
-    mocks.fetch.mockResolvedValueOnce([item("before")]).mockResolvedValueOnce([item("after")]);
+    mocks.fetch.mockResolvedValueOnce([item("before")]).mockResolvedValueOnce([item("after"), item("after-2")]);
     await mount();
     await settle();
     await settle();
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
-    expect(container.textContent).toContain("Occurrence after");
+    expect(count()).toBe("2");
   });
 
-  it("returning to Today shows the cached items at once (no skeleton) and revalidates", async () => {
+  it("returning to Today shows the cached count at once (no skeleton) and revalidates", async () => {
     mocks.fetch.mockResolvedValueOnce([item("cached")]);
     await mount("first");
     await settle();
@@ -174,21 +165,21 @@ describe("Urgent dashboard visibility", () => {
     await act(async () => root.render(createElement("div")));
     await mount("second");
     expect(container.querySelector("[data-testid=urgent-skeleton]")).toBeNull();
-    expect(container.textContent).toContain("Occurrence cached");
+    expect(count()).toBe("1");
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
-    await act(async () => { resolveSecond([item("fresh")]); });
+    await act(async () => { resolveSecond([item("fresh"), item("fresh-2")]); });
     await settle();
-    expect(container.textContent).toContain("Occurrence fresh");
+    expect(count()).toBe("2");
   });
 
-  it("refreshes when Priorities invalidates the Urgent cache after a change", async () => {
+  it("updates when Priorities (or the Kanban) invalidates the Urgent cache after a change", async () => {
     mocks.fetch.mockResolvedValueOnce([item("pending")]).mockResolvedValueOnce([]);
     await mount();
     await settle();
-    expect(container.textContent).toContain("Occurrence pending");
+    expect(count()).toBe("1");
     await act(async () => { await client.invalidateQueries({ queryKey: urgentQueueRootKey("teacher") }); });
     await settle();
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
-    expect(container.childElementCount).toBe(0);
+    expect(count()).toBeNull();
   });
 });
