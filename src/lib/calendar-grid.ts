@@ -21,6 +21,26 @@ export function calendarInitialHour(days: readonly CalendarScrollAvailability[])
 /** Minimum height of one hour row in the week/day grids (64px reduced by ~15%). Display only. */
 export const CALENDAR_HOUR_ROW_PX = 54;
 
+/** Inner padding of a week-view hour cell (Tailwind p-1); event cards start below it. */
+export const CALENDAR_CELL_PAD_PX = 4;
+
+/**
+ * Magnetic quarter-hour snapping inside an hour cell. `offset` is the card's top edge measured from
+ * the cell's content top; the result is 0, 15, 30 or 45 (a later quarter belongs to the next cell).
+ */
+export function snapMinutesInCell(offset: number): number {
+  const quarter = CALENDAR_HOUR_ROW_PX / 4;
+  return Math.max(0, Math.min(45, Math.round(offset / quarter) * 15));
+}
+
+/**
+ * Vertical offset of a card starting `minutes` past the hour, inside its cell. The same value is used
+ * for the dragged card and for the saved card, so the drop lands exactly where the card was shown.
+ */
+export function minuteOffsetPx(minutes: number): number {
+  return (Math.max(0, Math.min(59, minutes)) / 60) * CALENDAR_HOUR_ROW_PX;
+}
+
 /** Where a minute falls inside its hour row, as a fraction (0 = top, 1 = bottom). */
 export function minuteFraction(minutes: number): number {
   return Math.max(0, Math.min(59, minutes)) / 60;

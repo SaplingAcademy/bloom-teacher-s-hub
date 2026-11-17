@@ -51,6 +51,8 @@ export function WeekLessonDragPreview({
     clone.classList.add("pointer-events-none", "shadow-xl");
     clone.style.opacity = "1";
     clone.style.transform = "none";
+    // The in-cell minute offset belongs to the grid; the floating card is positioned by the drag itself.
+    clone.style.marginTop = "0";
     clone.style.transition = "none";
     clone.querySelectorAll<HTMLElement>("[id]").forEach((element) => element.removeAttribute("id"));
     originalTime.current = clone.querySelector<HTMLElement>("[data-calendar-event-time]")?.textContent ?? "";

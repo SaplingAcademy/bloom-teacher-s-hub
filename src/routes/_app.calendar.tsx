@@ -105,7 +105,7 @@ import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { calendarEventsQueryKey, calendarEventsRootKey, calendarEventsWindow } from "@/lib/calendar-events-window";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
-import { calendarGridHours, currentTimeMarker, minuteFraction } from "@/lib/calendar-grid";
+import { calendarGridHours, currentTimeMarker, minuteOffsetPx } from "@/lib/calendar-grid";
 import { useCurrentMinute } from "@/hooks/use-current-minute";
 import { CalendarNowLine } from "@/components/bloom/CalendarNowLine";
 import { useCalendarGridScroll } from "@/hooks/use-calendar-grid-scroll";
@@ -1434,10 +1434,11 @@ function CalendarPage() {
                     {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
                       const dateStr = getWeekdayDateStr(dayIdx);
                       // Find events for this date that start within this hour slot
+                      // Ordered by start so the first card can sit at its minute inside the hour.
                       const cellEvents = filteredEvents.filter(
                         (evt) =>
                           evt.date === dateStr && evt.startTime.startsWith(hour.substring(0, 3)),
-                      );
+                      ).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
                       const unavailable = !isHourAvailable(dateStr, hour);
 
@@ -1445,6 +1446,7 @@ function CalendarPage() {
                         <div
                           key={dayIdx}
                           data-calendar-drop-cell=""
+                          data-calendar-snap=""
                           data-date={dateStr}
                           data-hour={hour}
                           onClick={(event) => createFromCell(event, dateStr, hour)}
@@ -1459,17 +1461,16 @@ function CalendarPage() {
                             <>
                               {/* Drop target: rounded like the event cards, behind them, never catching the pointer. */}
                               <div aria-hidden="true" data-calendar-drop-highlight="" className="pointer-events-none absolute inset-0.5 rounded-xl bg-primary-soft/30 ring-2 ring-inset ring-primary" />
-                              {/* Destination already snapped to the quarter hour (:00, :15, :30, :45). */}
-                              <div aria-hidden="true" data-calendar-drop-guide={weekDrag.target.startTime}
-                                className="pointer-events-none absolute inset-x-1 z-[2] h-0.5 rounded-full bg-primary"
-                                style={{ top: `${minuteFraction(Number(weekDrag.target.startTime.slice(3, 5))) * 100}%` }} />
                             </>
                           )}
                           {nowMarker.date === dateStr && nowMarker.hour === hour && (
                             <CalendarNowLine fraction={nowMarker.fraction} className="left-1 right-0" />
                           )}
-                          {cellEvents.map((evt) => {
+                          {cellEvents.map((evt, evtIndex) => {
                             const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
+                            // The first card sits at its start minute (same offset as the magnetic drag), so a
+                            // dropped card stays exactly where it was shown; later cards stack below it.
+                            const minuteOffset = evtIndex === 0 ? minuteOffsetPx(Number(evt.startTime.slice(3, 5))) : 0;
                             const colorMeta = eventColor(evt);
                             return (
                               <div
@@ -1477,6 +1478,7 @@ function CalendarPage() {
                                 data-calendar-event=""
                                 data-calendar-event-id={evt.id}
                                 aria-busy={movingIds.has(evt.id)}
+                                style={minuteOffset ? { marginTop: minuteOffset } : undefined}
                                 onPointerDown={(event) => {
                                   if (canDrag && !pendingMoves.current.has(evt.id)) weekDrag.start(event, evt.id);
                                 }}

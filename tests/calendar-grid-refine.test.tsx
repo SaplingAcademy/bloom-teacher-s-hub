@@ -18,23 +18,20 @@ describe("compact grid", () => {
 });
 
 describe("15-minute snapping on the compact rows", () => {
-  it("snaps to :00, :15, :30 and :45 using the real row height", () => {
+  const cardAt = (top: number, minutes: number) => top + 4 + (minutes / 60) * ROW;
+  it("snaps the card's top to :00, :15, :30 and :45 (nearest quarter)", () => {
     const top = 300;
-    const at = (offsetMinutes: number) => weekDropPosition("2026-11-18", "10:00", top + (offsetMinutes / 60) * ROW, top, ROW).startTime;
+    const at = (minutes: number) => weekDropPosition("2026-11-18", "10:00", cardAt(top, minutes), top).startTime;
     expect([0, 15, 30, 45].map(at)).toEqual(["10:00", "10:15", "10:30", "10:45"]);
-    expect(at(6)).toBe("10:00");  // nearest quarter
+    expect(at(6)).toBe("10:00");
     expect(at(8)).toBe("10:15");
     expect(at(37)).toBe("10:30");
     expect(at(59)).toBe("10:45"); // stays in this hour row (existing rule)
   });
   it("works after scrolling: only the cell's on-screen position matters", () => {
-    // Same pointer offset inside the row, whatever the cell's current top after scroll.
     for (const top of [-860, 0, 412]) {
-      expect(weekDropPosition("2026-11-18", "14:00", top + ROW / 2, top, ROW).startTime).toBe("14:30");
+      expect(weekDropPosition("2026-11-18", "14:00", cardAt(top, 30), top).startTime).toBe("14:30");
     }
-  });
-  it("a row that grew with its events still maps by its real height", () => {
-    expect(weekDropPosition("2026-11-18", "09:00", 100 + 90, 100, 120).startTime).toBe("09:45");
   });
   it("keeps the original duration in the destination shown while dragging", () => {
     expect(weekLessonPreviewTimeRange("10:15", 50)).toBe("10:15–11:05");
