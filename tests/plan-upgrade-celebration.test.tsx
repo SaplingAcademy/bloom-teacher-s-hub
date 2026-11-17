@@ -42,9 +42,13 @@ describe("event classification (pure)", () => {
     expect(s("purchase", DAY - 1, 0)).toBe("early");
     expect(s("purchase", 3 * DAY, 10)).toBe("after_free");
   });
-  it("purchase before 3 students (and not after 24 h on Free) is early; otherwise default", () => {
+  it("early (B) needs BOTH <24 h effective on Free and <3 students; otherwise default", () => {
     expect(s("purchase", 3600, 2)).toBe("early");
-    expect(s("purchase", 3600, 3)).toBe("default");
+    expect(s("purchase", 0, 0)).toBe("early");
+    expect(s("purchase", DAY - 1, 2)).toBe("early");
+    expect(s("purchase", 3600, 3)).toBe("default"); // <24 h but 3 students
+    expect(s("purchase", null, 2)).toBe("default"); // effective Free time unknown: never B
+    expect(s("purchase", 3600, null)).toBe("default"); // students unknown: never B
     expect(s("purchase", null, null)).toBe("default"); // missing facts never qualify for A or B
   });
   it("an unknown origin is never treated as a purchase", () => {

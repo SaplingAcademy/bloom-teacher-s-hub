@@ -56,15 +56,21 @@ export function pendingPlanUpgrade(row: PlanUpgradeRow | null | undefined): Pend
 }
 
 /**
- * Pure classification, in priority order: admin grant → purchase after ≥24 h effective on Free →
- * purchase before 3 students → default. Only a confirmed purchase can reach A or B; an unknown
- * origin always gets the default message, and missing facts never qualify for A or B.
+ * Pure classification, in priority order:
+ *  C admin grant (any time on Free, any students) →
+ *  A confirmed purchase with ≥24 h effective on Free →
+ *  B confirmed purchase with <24 h effective on Free AND <3 registered students →
+ *  default (other purchases and unknown origins).
+ * Only a confirmed purchase can reach A or B, and missing facts never qualify for A or B.
  */
 export function upgradeScenario(event: Pick<PendingPlanUpgrade, "source" | "freeSeconds" | "studentCount">): UpgradeScenario {
   if (event.source === "admin_grant") return "admin_gift";
   if (event.source !== "purchase") return "default";
   if (event.freeSeconds !== null && event.freeSeconds >= AFTER_FREE_MIN_SECONDS) return "after_free";
-  if (event.studentCount !== null && event.studentCount < EARLY_MAX_STUDENTS) return "early";
+  if (
+    event.freeSeconds !== null && event.freeSeconds < AFTER_FREE_MIN_SECONDS &&
+    event.studentCount !== null && event.studentCount < EARLY_MAX_STUDENTS
+  ) return "early";
   return "default";
 }
 
