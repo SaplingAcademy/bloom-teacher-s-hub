@@ -73,7 +73,7 @@ export async function fetchTeacherTimezone(teacherId: string): Promise<string> {
  */
 export async function getTeacherAvailability(
   teacherId: string,
-  opts: { force?: boolean } = {}
+  opts: { force?: boolean; strict?: boolean } = {}
 ): Promise<TeacherAvailabilitySnapshot> {
   const empty: TeacherAvailabilitySnapshot = {
     teacherId,
@@ -93,7 +93,8 @@ export async function getTeacherAvailability(
   }
 
   const [days, restBlocks, timeOff, timezone, settingsRes] = await Promise.all([
-    fetchTeacherWorkingAvailability(teacherId),
+    // strict: a failed read rejects (and nothing is cached) instead of looking "not configured".
+    fetchTeacherWorkingAvailability(teacherId, { strict: opts.strict }),
     fetchTeacherRestBlocks(teacherId),
     fetchTeacherTimeOff(teacherId),
     fetchTeacherTimezone(teacherId),
@@ -117,6 +118,20 @@ export async function getTeacherAvailability(
 
   cache.set(teacherId, snapshot);
   return snapshot;
+}
+
+/** Read state of the teacher's working hours in the Agenda. */
+export type AvailabilityLoadState = "loading" | "ready" | "error";
+
+/**
+ * Which notice the Agenda shows: nothing while loading or when configured, "not_configured" only
+ * after a successful read with no enabled day, and "error" when the read failed (never mistaken for
+ * "not configured").
+ */
+export function availabilityNotice(state: AvailabilityLoadState, days: readonly { enabled: boolean }[]): "none" | "not_configured" | "error" {
+  if (state === "error") return "error";
+  if (state === "loading") return "none";
+  return days.some((day) => day.enabled) ? "none" : "not_configured";
 }
 
 export function timeToMinutes(t?: string): number {
