@@ -65,6 +65,8 @@ import {
 } from "@/lib/calendar-sync";
 import {
   getTeacherAvailability,
+  availabilityNotice,
+  type AvailabilityLoadState,
   invalidateTeacherAvailability,
   isSlotAvailable,
   weekdayKeyFromDate,
@@ -337,6 +339,9 @@ function CalendarPage() {
   const [timeOffList, setTimeOffList] = useState<TeacherTimeOff[]>([]);
   const [availabilitySnapshot, setAvailabilitySnapshot] = useState<TeacherAvailabilitySnapshot | null>(null);
   const [availabilityWarning, setAvailabilityWarning] = useState<string | null>(null);
+  // Working hours read state: "not configured" is only decided after a successful read.
+  const [availabilityState, setAvailabilityState] = useState<AvailabilityLoadState>("loading");
+  const notice = availabilityNotice(availabilityState, availability);
   const [isFirstTimeSetupOpen, setIsFirstTimeSetupOpen] = useState(false);
   const [isNonWorkingModalOpen, setIsNonWorkingModalOpen] = useState(false);
   const [conflictTimeOff, setConflictTimeOff] = useState<TeacherTimeOff | null>(null);
@@ -426,6 +431,8 @@ function CalendarPage() {
     },
   });
   const isLoadingEvents = eventsQuery.isLoading;
+  // The grid keeps its skeleton until working hours are known too (no flash of an empty schedule).
+  const isLoadingCalendar = (eventsQuery.isLoading && events.length === 0) || availabilityState === "loading";
   const isEventsError = eventsQuery.isError && !eventsQuery.data;
   const { scrollRef: calendarScrollRef, onScroll: handleCalendarScroll } = useCalendarGridScroll({
     teacherId: user?.id,
@@ -600,9 +607,16 @@ function CalendarPage() {
 
   const loadWorkingAvailability = useCallback(async () => {
     if (!user?.id) return;
-    const snapshot = await getTeacherAvailability(user.id, { force: true });
-    setAvailabilitySnapshot(snapshot);
-    setAvailability(snapshot.days);
+    try {
+      const snapshot = await getTeacherAvailability(user.id, { force: true, strict: true });
+      setAvailabilitySnapshot(snapshot);
+      setAvailability(snapshot.days);
+      setAvailabilityState("ready");
+    } catch (error) {
+      console.error("[Calendar] Failed to load working availability:", error);
+      // A failed first read is an error state, never "not configured"; a failed refresh keeps the data shown.
+      setAvailabilityState((state) => (state === "ready" ? "ready" : "error"));
+    }
   }, [user]);
 
   // Initial load
@@ -1192,10 +1206,23 @@ function CalendarPage() {
         </div>
       )}
 
-      {/* UNCONFIGURED AVAILABILITY BANNER */}
+      {notice === "error" && (
+        <div role="alert" data-testid="availability-load-error" className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 flex items-center justify-between gap-3 text-destructive">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-semibold">{t("calendarUi.availabilityLoadError")}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { setAvailabilityState("loading"); void loadWorkingAvailability(); }}
+            className="h-8 border-destructive/30 text-destructive hover:bg-destructive/20">
+            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+            {t("auditUi.retry")}
+          </Button>
+        </div>
+      )}
+
+      {/* UNCONFIGURED AVAILABILITY BANNER: only after a successful read confirms there are no working hours. */}
       {(() => {
-        const enabledDays = availability.filter((a) => a.enabled);
-        if (enabledDays.length === 0) {
+        if (notice === "not_configured") {
           return (
             <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3">
@@ -1388,7 +1415,7 @@ function CalendarPage() {
               </div>
 
               {/* Time rows */}
-              {isLoadingEvents && events.length === 0 ? (
+              {isLoadingCalendar ? (
                 <CalendarRowsSkeleton label={t("auditUi.loading")} />
               ) : (
               <div className="divide-y divide-border/60">
@@ -1487,7 +1514,7 @@ function CalendarPage() {
 
           {/* DAY VIEW */}
           {viewMode === "day" && (
-            isLoadingEvents && events.length === 0 ? (
+            isLoadingCalendar ? (
               <CalendarRowsSkeleton label={t("auditUi.loading")} columns={1} />
             ) : (
             <div className="divide-y divide-border">
@@ -1588,7 +1615,7 @@ function CalendarPage() {
               </div>
 
               {/* Month dates grid (35 dynamic cells for current month) */}
-              {isLoadingEvents && events.length === 0 ? (
+              {isLoadingCalendar ? (
                 <MonthGridSkeleton label={t("auditUi.loading")} />
               ) : (
               <div className="grid grid-cols-7 gap-1">

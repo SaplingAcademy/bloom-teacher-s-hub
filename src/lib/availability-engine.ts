@@ -57,8 +57,13 @@ export function convertOnboardingToWorkingAvailability(data: any): WorkingAvaila
  * operational source: no browser cache, no backfill from onboarding answers.
  * Returns [] when the teacher has not configured it yet.
  */
+/**
+ * `strict` (Agenda): a read failure throws instead of returning [], so it is never mistaken for
+ * "not configured". Other callers keep the lenient behavior.
+ */
 export async function fetchTeacherWorkingAvailability(
-  teacherId: string
+  teacherId: string,
+  { strict = false }: { strict?: boolean } = {}
 ): Promise<WorkingAvailability[]> {
   if (!teacherId) return [];
   // Drop the legacy per-teacher cache so it can never shadow the server value.
@@ -73,11 +78,13 @@ export async function fetchTeacherWorkingAvailability(
       .maybeSingle();
     if (error) {
       console.warn("[availability-engine] fetch error:", error.message);
+      if (strict) throw error;
       return [];
     }
     const avail = data?.working_availability;
     return Array.isArray(avail) ? (avail as WorkingAvailability[]) : [];
   } catch (err) {
+    if (strict) throw err;
     console.warn("[availability-engine] fetch unexpected error:", err);
     return [];
   }
