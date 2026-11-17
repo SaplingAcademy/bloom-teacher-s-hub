@@ -73,6 +73,12 @@ describe("connections on the free board", () => {
     expect(after[3]).toBeGreaterThan(60);
     expect(container.querySelectorAll("line[data-connection]")).toHaveLength(1);
   });
+  it("follows a position changed by someone else (new notes data from the board)", async () => {
+    await mount({ initial: notes(), connections: [link("ab", "a", "b")] });
+    expect(coords("ab")).toEqual([288 + 6, 60, 480 - 6, 60]);
+    await act(async () => setters.notes!(notes().map((n) => n.id === "b" ? { ...n, pos_x: 720, pos_y: 0 } : n)));
+    expect(coords("ab")).toEqual([288 + 6, 60, 720 - 6, 60]);
+  });
   it("hides the arrows of a deleted note and draws nothing without connections", async () => {
     await mount({ initial: notes(), connections: [link("ab", "a", "b"), link("bc", "b", "c")] });
     await act(async () => setters.notes!(notes().filter((n) => n.id !== "b")));

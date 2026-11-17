@@ -5,7 +5,7 @@ vi.mock("@/lib/supabase", () => ({ supabase: {
   auth: { getUser: async () => ({ data: { user: { id: "teacher" } }, error: null }) },
   from: (table: string) => {
     const chain: Record<string, unknown> = {};
-    for (const op of ["select", "eq", "order", "insert", "delete", "abortSignal"]) chain[op] = (...args: unknown[]) => { m.calls.push([table, op, ...args]); return chain; };
+    for (const op of ["select", "eq", "is", "order", "insert", "delete", "abortSignal"]) chain[op] = (...args: unknown[]) => { m.calls.push([table, op, ...args]); return chain; };
     chain.single = async () => m.result;
     chain.then = (resolve: (v: unknown) => void) => resolve(m.result);
     return chain;
@@ -47,17 +47,26 @@ describe("connection rules (pure)", () => {
 });
 
 describe("persistence (Supabase, by note IDs only)", () => {
-  it("reads only the teacher's connections", async () => {
+  it("Meu Mural reads only the teacher's personal-board connections", async () => {
     m.result = { data: [c("1", "a", "b")], error: null };
     expect(await fetchNoteConnections("teacher")).toEqual([c("1", "a", "b")]);
     expect(m.calls).toContainEqual(["workspace_note_connections", "select", "id,from_note_id,to_note_id"]);
     expect(m.calls).toContainEqual(["workspace_note_connections", "eq", "user_id", "teacher"]);
+    expect(m.calls).toContainEqual(["workspace_note_connections", "is", "project_id", null]);
+  });
+  it("a project board reads every connection of that project (shared by its participants)", async () => {
+    await fetchNoteConnections("teacher", undefined, "p1");
+    expect(m.calls).toContainEqual(["workspace_note_connections", "eq", "project_id", "p1"]);
+    expect(m.calls.some(([, op, col]) => op === "eq" && col === "user_id")).toBe(false);
   });
   it("creates with the client UUID and the authenticated owner — no coordinates", async () => {
     m.result = { data: c("u1", "a", "b"), error: null };
     await createNoteConnection("teacher", c("u1", "a", "b"));
     const insert = m.calls.find(([, op]) => op === "insert")!;
-    expect(insert[2]).toEqual({ id: "u1", user_id: "teacher", from_note_id: "a", to_note_id: "b" });
+    expect(insert[2]).toEqual({ id: "u1", user_id: "teacher", project_id: null, from_note_id: "a", to_note_id: "b" });
+    m.calls.length = 0;
+    await createNoteConnection("teacher", c("u2", "x", "y"), "p1");
+    expect(m.calls.find(([, op]) => op === "insert")![2]).toMatchObject({ project_id: "p1", from_note_id: "x", to_note_id: "y" });
     expect(Object.keys(insert[2] as object).some((k) => /pos|x|y/.test(k) && k !== "id")).toBe(false);
   });
   it("removes one connection by id, filtered by owner (notes untouched)", async () => {
@@ -65,6 +74,10 @@ describe("persistence (Supabase, by note IDs only)", () => {
     expect(m.calls.filter(([table]) => table !== "workspace_note_connections")).toEqual([]);
     expect(m.calls).toContainEqual(["workspace_note_connections", "eq", "user_id", "teacher"]);
     expect(m.calls).toContainEqual(["workspace_note_connections", "eq", "id", "u1"]);
+    m.calls.length = 0;
+    await deleteNoteConnection("teacher", "u2", "p1"); // any authorized participant of the project
+    expect(m.calls).toContainEqual(["workspace_note_connections", "eq", "project_id", "p1"]);
+    expect(m.calls).toContainEqual(["workspace_note_connections", "eq", "id", "u2"]);
   });
   it("reports 'unavailable' while the manual migration is not applied", async () => {
     m.result = { data: null, error: { code: "PGRST205", message: "Could not find the table 'public.workspace_note_connections'" } };

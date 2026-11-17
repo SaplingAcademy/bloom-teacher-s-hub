@@ -2,10 +2,12 @@ import { supabase } from "@/lib/supabase";
 import type { BoardPoint } from "./workspace-notes-layout";
 
 /**
- * Arrows between notes of the personal board ("Meu Mural"), stored only by note IDs in
- * public.workspace_note_connections (docs/migrations/20261118120000_workspace_note_connections_manual.sql).
- * Positions always come from the notes themselves, so arrows follow the notes wherever they move.
- * RLS allows only the teacher's own personal notes; deleting a note removes its connections (FK cascade).
+ * Arrows between notes of ONE board — the personal board ("Meu Mural", projectId = null) or a
+ * project's board — stored only by note IDs in public.workspace_note_connections
+ * (docs/migrations/20261118120000_workspace_note_connections_manual.sql). Positions always come from
+ * the notes themselves, so arrows follow the notes wherever they move (also when another participant
+ * moves them). The database keeps each board's connections apart (same-board trigger) and applies the
+ * board's permissions (RLS); deleting a note removes its connections (FK cascade).
  */
 export interface NoteConnection {
   id: string;
@@ -13,7 +15,9 @@ export interface NoteConnection {
   to_note_id: string;
 }
 
-export const noteConnectionsKey = (userId: string | undefined) => ["workspace-note-connections", userId] as const;
+/** Same scope as the notes cache: one list per board. */
+export const noteConnectionsKey = (userId: string | undefined, projectId: string | null = null) =>
+  ["workspace-note-connections", userId, projectId ?? "personal"] as const;
 
 /** Same pair in either direction counts once (one arrow per pair, mirrored by a unique index). */
 const samePair = (connection: NoteConnection, a: string, b: string) =>
@@ -87,27 +91,34 @@ export function isConnectionsTableMissing(error: { code?: string; message?: stri
 
 export const CONNECTIONS_UNAVAILABLE = "connections_unavailable";
 
-export async function fetchNoteConnections(expectedId: string, signal?: AbortSignal): Promise<NoteConnection[]> {
+/** Personal board: the teacher's own connections; project board: every connection of that project (RLS decides). */
+export async function fetchNoteConnections(expectedId: string, signal?: AbortSignal, projectId: string | null = null): Promise<NoteConnection[]> {
   const owner = await authenticatedOwner(expectedId);
-  let query = supabase.from("workspace_note_connections").select("id,from_note_id,to_note_id").eq("user_id", owner).order("created_at").order("id");
+  const base = supabase.from("workspace_note_connections").select("id,from_note_id,to_note_id");
+  let query = (projectId ? base.eq("project_id", projectId) : base.eq("user_id", owner).is("project_id", null)).order("created_at").order("id");
   if (signal) query = query.abortSignal(signal);
   const { data, error } = await query;
   if (error) throw isConnectionsTableMissing(error) ? new Error(CONNECTIONS_UNAVAILABLE) : error;
   return (data ?? []) as NoteConnection[];
 }
 
-/** The client UUID is kept, so the optimistic arrow and the saved row are the same connection. */
-export async function createNoteConnection(expectedId: string, connection: NoteConnection): Promise<NoteConnection> {
+/**
+ * The client UUID is kept, so the optimistic arrow and the saved row are the same connection. The
+ * board (project_id) is set by the database from the notes; it is sent only as a hint.
+ */
+export async function createNoteConnection(expectedId: string, connection: NoteConnection, projectId: string | null = null): Promise<NoteConnection> {
   const owner = await authenticatedOwner(expectedId);
   const { data, error } = await supabase.from("workspace_note_connections")
-    .insert({ id: connection.id, user_id: owner, from_note_id: connection.from_note_id, to_note_id: connection.to_note_id })
+    .insert({ id: connection.id, user_id: owner, project_id: projectId, from_note_id: connection.from_note_id, to_note_id: connection.to_note_id })
     .select("id,from_note_id,to_note_id").single();
   if (error) throw error;
   return data as NoteConnection;
 }
 
-export async function deleteNoteConnection(expectedId: string, id: string): Promise<void> {
+/** Personal: filtered by owner; project: filtered by the project (any authorized participant, RLS decides). */
+export async function deleteNoteConnection(expectedId: string, id: string, projectId: string | null = null): Promise<void> {
   const owner = await authenticatedOwner(expectedId);
-  const { error } = await supabase.from("workspace_note_connections").delete().eq("user_id", owner).eq("id", id);
+  const base = supabase.from("workspace_note_connections").delete();
+  const { error } = await (projectId ? base.eq("project_id", projectId) : base.eq("user_id", owner)).eq("id", id);
   if (error) throw error;
 }

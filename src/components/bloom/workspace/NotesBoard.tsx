@@ -83,11 +83,12 @@ export function NotesBoard({ projectId = null, readOnly = false, isProjectOwner 
   };
   const freeBoard = useSyncExternalStore(subscribeFreeBoard, isFreeBoard, () => false);
   const allNotes = notes ?? [];
-  // Connections exist only on the personal board ("Meu Mural"); project boards are unchanged.
-  const noteConnections = useNoteConnections(!projectId);
+  // Same connection logic on the personal board and on project boards, each with its own list.
+  // Archived (read-only) boards still show the arrows, without any connection control.
+  const noteConnections = useNoteConnections(projectId, { readOnly });
   const connectionsOn = noteConnections.available && !readOnly;
   const noteIds = new Set(allNotes.map((note) => note.id));
-  const connections = connectionsOn ? visibleConnections(noteConnections.connections, noteIds) : [];
+  const connections = noteConnections.available ? visibleConnections(noteConnections.connections, noteIds) : [];
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const connecting = connectionsOn && freeBoard && connectingFrom !== null && noteIds.has(connectingFrom);
   const noteLabel = (id: string) => {
