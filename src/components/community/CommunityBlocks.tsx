@@ -1,6 +1,7 @@
 import { Bookmark, HandHelping, LayoutGrid, List } from "lucide-react";
-import type { CommunityFilter } from "@/lib/community-topics";
+import { isCommunityTopic, type CommunityFilter } from "@/lib/community-topics";
 import { communityFilterLabel } from "./CommunityFilterBar";
+import { HelpArt, TopicCover } from "./CommunityCovers";
 
 export type CommunityLayout = "blocks" | "feed";
 
@@ -13,28 +14,68 @@ interface BlocksProps {
 }
 
 /**
- * "Blocos": the existing categories/filters as larger tiles. A tile shows the same number of posts the
- * feed shows after clicking it (same filter + search); clicking opens that filter in the feed.
+ * "Blocos": the existing filters, organized by role.
+ * - "Tudo" / "Salvos" are navigation, not subjects: discreet links, no cover.
+ * - "Ajude outro professor": a featured horizontal block above the subjects.
+ * - The subjects (topics): tiles with an abstract cover, title, short description and post count.
+ * Every count is the same number the feed shows after clicking (same filter + search).
  */
 export function CommunityBlocks({ filters, counts, active, onOpen, t }: BlocksProps) {
   const countLabel = (n: number) => (n === 1 ? t("communityV1.blockCountOne") : t("communityV1.blockCount").replace("{count}", String(n)));
+  const nav = filters.filter((f) => f === "all" || f === "saved");
+  const topics = filters.filter(isCommunityTopic);
+  const help = filters.includes("help");
   return (
-    <div role="list" aria-label={t("communityV1.filtersLabel")} data-testid="community-blocks" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {filters.map((f) => (
-        <div role="listitem" key={f}>
-          <button type="button" data-community-block={f} onClick={() => onOpen(f)}
-            className={`flex h-full w-full flex-col items-start gap-1.5 rounded-lg border bg-card p-4 text-left transition-colors cursor-pointer hover:border-primary/50 hover:bg-primary/5 ${
-              active === f ? "border-primary/60" : "border-border/70"
-            }`}>
-            <span className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
-              {f === "help" && <HandHelping className="h-4 w-4 text-accent" aria-hidden="true" />}
-              {f === "saved" && <Bookmark className="h-4 w-4 text-primary" aria-hidden="true" />}
+    <div data-testid="community-blocks" className="space-y-4">
+      {nav.length > 0 && (
+        <nav aria-label={t("communityV1.filtersLabel")} className="flex flex-wrap items-center gap-1" data-testid="community-blocks-nav">
+          {nav.map((f) => (
+            <button key={f} type="button" data-community-block={f} aria-pressed={active === f} onClick={() => onOpen(f)}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors cursor-pointer ${
+                active === f ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}>
+              {f === "saved" && <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />}
               {communityFilterLabel(f, t)}
+              {counts[f] !== undefined && <span className="tabular-nums text-xs opacity-70">· {counts[f]}</span>}
+            </button>
+          ))}
+        </nav>
+      )}
+
+      {help && (
+        <button type="button" data-community-block="help" data-community-featured="" onClick={() => onOpen("help")}
+          className="group relative flex min-h-[7.5rem] w-full items-center overflow-hidden rounded-lg bg-primary text-left text-primary-foreground transition-shadow cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <span className="relative z-[1] max-w-[62%] space-y-1.5 p-5 sm:max-w-[58%]">
+            <span className="flex items-center gap-2 font-display text-lg font-semibold">
+              <HandHelping className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {t("communityV1.filterHelp")}
             </span>
-            {counts[f] !== undefined && <span className="text-xs text-muted-foreground tabular-nums">{countLabel(counts[f])}</span>}
-          </button>
+            <span className="block text-sm leading-relaxed text-primary-foreground/85">{t("communityV1.helpBlockDescription")}</span>
+            {counts.help !== undefined && <span className="block text-xs tabular-nums text-primary-foreground/70">{countLabel(counts.help)}</span>}
+          </span>
+          <span className="absolute inset-y-0 right-0 w-1/2 sm:w-[45%]"><HelpArt /></span>
+        </button>
+      )}
+
+      {topics.length > 0 && (
+        <div role="list" aria-label={t("communityV1.subjectsLabel")} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {topics.map((topic) => (
+            <div role="listitem" key={topic}>
+              <button type="button" data-community-block={topic} onClick={() => onOpen(topic)}
+                className={`flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card text-left transition-colors cursor-pointer hover:border-primary/50 ${
+                  active === topic ? "border-primary/60" : "border-border/70"
+                }`}>
+                <TopicCover topic={topic} />
+                <span className="flex flex-1 flex-col gap-1 p-4">
+                  <span className="font-display text-base font-semibold text-foreground">{communityFilterLabel(topic, t)}</span>
+                  <span className="text-sm leading-snug text-muted-foreground">{t(`communityV1.topicDescriptions.${topic}`)}</span>
+                  {counts[topic] !== undefined && <span className="mt-auto pt-1 text-xs text-muted-foreground tabular-nums">{countLabel(counts[topic])}</span>}
+                </span>
+              </button>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

@@ -33,7 +33,7 @@ describe("Blocos view", () => {
     const filters = visibleCommunityFilters({ topics: true, saved: false });
     await act(async () => root.render(createElement(CommunityBlocks, { filters, counts: communityFilterCounts(posts, filters, ""), active: "all", onOpen, t })));
     const blocks = [...document.querySelectorAll<HTMLButtonElement>("[data-community-block]")];
-    expect(blocks.map((b) => b.dataset.communityBlock)).toEqual(filters);
+    expect(blocks.map((b) => b.dataset.communityBlock).sort()).toEqual([...filters].sort()); // every filter stays reachable
     const questions = blocks.find((b) => b.dataset.communityBlock === "questions")!;
     expect(questions.textContent).toContain("2 publicações");
     expect(blocks.find((b) => b.dataset.communityBlock === "materials")!.textContent).toContain("1 publicação");
@@ -60,5 +60,58 @@ describe("Top contributors copy", () => {
   it("renamed with its subtitle", () => {
     expect(t("communityV1.highlights")).toBe("Maiores Contribuidores");
     expect(t("communityV1.highlightsSubtitle")).toBe("Professores que fazem a comunidade florescer");
+  });
+});
+
+describe("Blocos with personality", () => {
+  const filters = visibleCommunityFilters({ topics: true, saved: true });
+  const render = async (onOpen = vi.fn()) => {
+    await act(async () => root.render(createElement(CommunityBlocks, { filters, counts: communityFilterCounts(posts, filters, ""), active: "all", onOpen, t })));
+    return onOpen;
+  };
+  const block = (f: string) => document.querySelector<HTMLButtonElement>(`[data-community-block="${f}"]`)!;
+  it("each subject has an abstract decorative cover, its title, short description and count", async () => {
+    await render();
+    const expected = {
+      questions: "Pergunte, compartilhe e encontre respostas.",
+      lesson_ideas: "Inspirações para aulas mais criativas.",
+      materials: "Recursos para facilitar sua rotina.",
+      management: "Organize seu trabalho com mais leveza.",
+      achievements: "Compartilhe suas pequenas e grandes vitórias.",
+    };
+    for (const [topic, description] of Object.entries(expected)) {
+      const tile = block(topic);
+      const cover = tile.querySelector<HTMLElement>(`[data-community-cover="${topic}"]`)!;
+      expect(cover.getAttribute("aria-hidden")).toBe("true");
+      expect(cover.className).toContain("pointer-events-none");
+      expect(cover.querySelector("svg")).not.toBeNull();
+      expect(cover.querySelector("image, img")).toBeNull(); // no photos / external images
+      expect(tile.textContent).toContain(description);
+    }
+    expect(block("questions").textContent).toContain("2 publicações");
+    // Covers vary discreetly between subjects.
+    const backgrounds = Object.keys(expected).map((topic) => block(topic).querySelector<HTMLElement>("[data-community-cover]")!.className);
+    expect(new Set(backgrounds).size).toBe(5);
+  });
+  it("'Ajude outro professor' is a featured horizontal block above the subjects, opening the help feed", async () => {
+    const onOpen = await render();
+    const help = block("help");
+    expect(help.hasAttribute("data-community-featured")).toBe(true);
+    expect(help.textContent).toContain("Ajude outro professor");
+    expect(help.textContent).toContain("Sua experiência pode fazer a diferença na rotina de outro professor.");
+    expect(help.querySelector("[data-community-help-art]")!.getAttribute("aria-hidden")).toBe("true");
+    expect(help.closest('[role="list"]')).toBeNull(); // not inside the subjects grid
+    expect(help.compareDocumentPosition(block("questions")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await act(async () => help.click());
+    expect(onOpen).toHaveBeenCalledWith("help");
+  });
+  it("'Tudo' and 'Salvos' stay reachable as discreet navigation, without covers", async () => {
+    const onOpen = await render();
+    for (const f of ["all", "saved"]) {
+      expect(block(f).closest('[data-testid="community-blocks-nav"]')).not.toBeNull();
+      expect(block(f).querySelector("[data-community-cover]")).toBeNull();
+    }
+    await act(async () => block("saved").click());
+    expect(onOpen).toHaveBeenCalledWith("saved");
   });
 });
