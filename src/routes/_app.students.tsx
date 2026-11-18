@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { coursePeriodFromStudent } from "@/lib/lesson-plan-period";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { t as i18nT } from "@/lib/i18n";
 import { usePlan } from "@/hooks/use-plan";
 import { canAddActiveStudent, countActiveStudents, isFreePlanLimitError } from "@/lib/plans";
@@ -73,6 +74,8 @@ import {
   UserX,
   Receipt,
   UserCheck,
+  ChevronDown,
+  Pencil,
   RefreshCw,
 } from "lucide-react";
 import { PageHeader } from "@/components/bloom/PageHeader";
@@ -2149,7 +2152,7 @@ function StudentsPage() {
         /* 1. INDIVIDUAL STUDENT HUB PANEL VIEW */
         <div className="space-y-6">
           {/* HUB HEADER */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+          <div data-testid="student-hub-header" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
@@ -2207,51 +2210,53 @@ function StudentsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {selectedStudent.status?.toLowerCase() === "inactive" ? (
+            {/* One "Configurações" button; its menu reuses the existing edit, (in)activation and delete flows. */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl text-xs h-9 font-bold bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 cursor-pointer gap-1.5"
-                  onClick={() => handleReactivateStudent(selectedStudent.id)}
+                  data-testid="student-actions-trigger"
+                  aria-label={`${t.tabSettings} — ${tr("students.studentActionsLabel")}`}
+                  className="self-start rounded-xl text-xs h-9 cursor-pointer gap-1.5 hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground sm:self-auto"
                 >
-                  <UserCheck className="h-3.5 w-3.5" />
-                  {t.reactivateStudent}
+                  <Settings className="h-3.5 w-3.5" />
+                  {t.tabSettings}
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl text-xs h-9 text-amber-700 dark:text-amber-400 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950 cursor-pointer gap-1.5"
-                  onClick={() => {
-                    setStudentToInactivate(selectedStudent);
-                    setIsInactivateModalOpen(true);
-                  }}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52" data-testid="student-actions-menu">
+                <DropdownMenuItem className="cursor-pointer gap-2 text-xs" onSelect={() => handleOpenEditModal(selectedStudent)}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tr("students.editStudentAction")}
+                </DropdownMenuItem>
+                {selectedStudent.status?.toLowerCase() === "inactive" ? (
+                  <DropdownMenuItem className="cursor-pointer gap-2 text-xs" onSelect={() => handleReactivateStudent(selectedStudent.id)}>
+                    <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    {tr("students.markActiveAction")}
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2 text-xs"
+                    onSelect={() => {
+                      setStudentToInactivate(selectedStudent);
+                      setIsInactivateModalOpen(true);
+                    }}
+                  >
+                    <UserX className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t.markInactive}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-xs text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  onSelect={() => void handleDeleteStudent(selectedStudent.id)}
                 >
-                  <UserX className="h-3.5 w-3.5" />
-                  {t.markInactive}
-                </Button>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl text-xs h-9 cursor-pointer"
-                onClick={() => handleOpenEditModal(selectedStudent)}
-              >
-                <Settings className="h-3.5 w-3.5 mr-1.5" />
-                {t.tabSettings}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="rounded-xl text-xs h-9 cursor-pointer"
-                onClick={() => handleDeleteStudent(selectedStudent.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                {t.deleteStudent}
-              </Button>
-            </div>
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tr("students.deleteStudentAction")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* HUB TABS */}
