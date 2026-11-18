@@ -385,33 +385,40 @@ export function StudentLessonPlanTable({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Plan actions: two minimal text actions and a soft "complete" button; on small screens they
+              wrap below the title row instead of overlapping it. Flows are the existing handlers. */}
+          <div data-testid="lesson-plan-actions" className="flex flex-wrap items-center gap-1.5 md:justify-end">
             <Button
-              variant="outline"
+              type="button"
+              variant="ghost"
               size="sm"
               onClick={() => setIsHistoryOpen(true)}
-              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+              title={t("students.planHistoryTitle")}
+              className="h-9 gap-1.5 rounded-lg px-3 text-xs font-semibold text-muted-foreground shadow-none hover:bg-muted/70 hover:text-foreground"
             >
-              <History className="w-3.5 h-3.5" />
-              Histórico de Planos
+              <History className="w-3.5 h-3.5" aria-hidden="true" />
+              {t("students.planHistoryAction")}
             </Button>
             <Button
-              variant="outline"
+              type="button"
+              variant="ghost"
               size="sm"
               onClick={() => setIsAvailabilityConfirmationOpen(true)}
-              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+              title={t("students.regeneratePlan")}
+              className="h-9 gap-1.5 rounded-lg px-3 text-xs font-semibold text-muted-foreground shadow-none hover:bg-muted/70 hover:text-foreground"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              {t("students.regeneratePlan")}
+              <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+              {t("students.regeneratePlanAction")}
             </Button>
             <Button
+              type="button"
               size="sm"
               onClick={handleCompletePlan}
               disabled={isCompletingPlan}
-              className="gap-2 text-xs h-9 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+              className="h-9 gap-1.5 rounded-lg border-0 bg-primary-soft px-3.5 text-xs font-semibold text-primary shadow-none hover:bg-primary/15 hover:text-primary"
             >
-              <CheckCheck className="w-3.5 h-3.5" />
-              {isCompletingPlan ? "Concluindo..." : "Concluir Plano"}
+              <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
+              {isCompletingPlan ? t("students.completingPlan") : t("students.completePlanAction")}
             </Button>
           </div>
         </div>
