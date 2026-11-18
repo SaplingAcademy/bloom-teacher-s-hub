@@ -152,7 +152,7 @@ import { StudentContractRegistrationFields } from "@/components/bloom/StudentCon
 import { createCurrentStudentContract, uploadContractDocument } from "@/lib/student-contracts";
 import {
   StudentLesson,
-  fetchStudentLessons,
+  fetchStudentLessonsOrThrow,
   ensureStudentLessonPlanInitialized,
 } from "@/lib/lesson-plan-sync";
 
@@ -844,19 +844,33 @@ function StudentsPage() {
   const [studentTimeline, setStudentTimeline] = useState<FinancialTimelineEvent[]>([]);
   const [isStudentRenewalModalOpen, setIsStudentRenewalModalOpen] = useState<boolean>(false);
 
-  // Load lesson plan when a student is selected
+  // Load the selected student's lesson plan (read-only). It depends only on the student id and the
+  // teacher — never on the students list having loaded, so a refresh/direct link with ?studentId
+  // still reads the plan. "Create a plan" is offered only after a successful read confirms there is
+  // no active plan; while loading or after a failure the table shows loading / error + retry.
+  const [lessonPlanLoad, setLessonPlanLoad] = useState<"loading" | "error" | "success">("loading");
+  const [lessonPlanReload, setLessonPlanReload] = useState(0);
+  const teacherUserId = user?.id;
   useEffect(() => {
-    if (!selectedStudentId || !user) return;
-    const selectedStudent = students.find((s) => s.id === selectedStudentId);
-    if (!selectedStudent) return;
-
-    const loadLessonPlan = async () => {
-      const lessons = await fetchStudentLessons(selectedStudent.id, user.id);
-      setCurrentStudentLessons(lessons);
+    if (!selectedStudentId || !teacherUserId) return;
+    let cancelled = false; // a newer student/attempt replaces this read
+    setLessonPlanLoad("loading");
+    setCurrentStudentLessons([]);
+    fetchStudentLessonsOrThrow(selectedStudentId, teacherUserId)
+      .then((lessons) => {
+        if (cancelled) return;
+        setCurrentStudentLessons(lessons);
+        setLessonPlanLoad("success");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("[Students] Lesson plan read failed:", error);
+        setLessonPlanLoad("error");
+      });
+    return () => {
+      cancelled = true;
     };
-
-    loadLessonPlan();
-  }, [selectedStudentId, user]);
+  }, [selectedStudentId, teacherUserId, lessonPlanReload]);
 
   // Load comprehensive financial summary, alerts, package history, payment history & timeline
   const loadStudentFinancialData = async () => {
@@ -2389,6 +2403,8 @@ function StudentsPage() {
               studentName={selectedStudent.name}
               teacherId={user?.id || ""}
               lessons={currentStudentLessons}
+              loadState={lessonPlanLoad}
+              onRetryLoad={() => setLessonPlanReload((n) => n + 1)}
               startDateStr={selectedStudent.courseStartDate || ""}
               endDateStr={selectedStudent.courseEndDate || ""}
               onLessonsChange={(updated) => setCurrentStudentLessons(updated)}

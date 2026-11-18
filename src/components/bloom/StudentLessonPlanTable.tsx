@@ -60,6 +60,12 @@ interface Props {
   endDateStr?: string;
   totalPackageLessons?: number;
   lessons: StudentLesson[];
+  /**
+   * Result of reading the saved plan. Only "success" with no lessons means there is no active plan;
+   * while "loading" or after an "error" the empty "create a plan" state is never shown.
+   */
+  loadState?: "loading" | "error" | "success";
+  onRetryLoad?: () => void;
   onLessonsChange: (updatedLessons: StudentLesson[]) => void;
 }
 
@@ -76,6 +82,8 @@ export function StudentLessonPlanTable({
   endDateStr = "",
   totalPackageLessons = 23,
   lessons,
+  loadState = "success",
+  onRetryLoad,
   onLessonsChange,
 }: Props) {
   const { t, formatStatus } = useLanguage();
@@ -267,6 +275,38 @@ export function StudentLessonPlanTable({
   // ----------------------------------------------------
   // REQUIRED EMPTY STATE (When student has no lesson plan yet)
   // ----------------------------------------------------
+  if (loadState === "loading" && lessons.length === 0) {
+    return (
+      <div role="status" aria-busy="true" aria-label={t("students.lessonPlanLoading")} data-testid="lesson-plan-loading"
+        className="space-y-4 rounded-2xl border border-border bg-card px-6 py-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 animate-pulse rounded-xl bg-muted" />
+          <div className="h-5 w-56 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-2 w-full animate-pulse rounded bg-muted" />
+        <div className="h-40 w-full animate-pulse rounded-xl bg-muted/70" />
+      </div>
+    );
+  }
+
+  if (loadState === "error" && lessons.length === 0) {
+    return (
+      <div role="alert" data-testid="lesson-plan-error"
+        className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+          <p className="text-sm font-medium text-foreground">{t("students.lessonPlanLoadError")}</p>
+        </div>
+        {onRetryLoad && (
+          <Button type="button" variant="outline" size="sm" onClick={onRetryLoad} className="h-9 shrink-0 gap-2 text-xs font-semibold">
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("common.tryAgain")}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (!lessons || lessons.length === 0) {
     return (
       <div className="space-y-6">

@@ -5,6 +5,7 @@ import { setUserItem } from "./user-storage";
 import { formatTimeHHMMSS, calculateEndTime, CEFRLevel, CourseFocus } from "./calendar-sync";
 import {
   fetchLessonPlans,
+  fetchLessonPlansOrThrow,
   saveLessonPlans,
   fetchAttendanceForEvents,
   saveAttendanceRecords,
@@ -288,6 +289,62 @@ export async function fetchStudentScheduleInputs(
   }
 }
 
+/** Maps active lesson_plans rows (+ attendance) to the student plan display shape. Pure. */
+function toStudentLessons(
+  plans: LessonPlan[],
+  attendanceMap: Record<string, { student_id: string; status: string }[]>,
+  studentId: string,
+): StudentLesson[] {
+  return plans
+    .map((p, idx) => {
+      const att = (attendanceMap[p.event_id] || []).find((a) => a.student_id === studentId);
+      let attendance_status: StudentLesson["attendance_status"] = null;
+      if (p.event_status === "Cancelled") attendance_status = "Cancelled";
+      else if (p.event_status === "Rescheduled") attendance_status = "Rescheduled";
+      else if (att?.status === "present" || att?.status === "late") attendance_status = "Present";
+      else if (att?.status === "absent" || att?.status === "excused") attendance_status = "Absent";
+
+      return {
+        id: p.id,
+        event_id: p.event_id,
+        teacher_id: p.teacher_id,
+        student_id: studentId,
+        schedule_id: null,
+        lesson_number: p.lesson_number || idx + 1,
+        scheduled_date: p.scheduled_date,
+        start_time: p.start_time,
+        end_time: p.end_time,
+        duration: p.duration,
+        content: p.content,
+        homework: p.homework,
+        homework_posted: p.homework_posted ?? null,
+        attendance_status,
+        completed: p.completed,
+        notes: p.notes,
+        attachments: p.attachments as LessonAttachment[],
+        original_date: p.original_date ?? null,
+        original_start_time: p.original_start_time ?? null,
+      } as StudentLesson;
+    })
+    .sort((a, b) =>
+      `${a.scheduled_date} ${String(a.start_time).slice(0, 5)}`.localeCompare(
+        `${b.scheduled_date} ${String(b.start_time).slice(0, 5)}`
+      )
+    );
+}
+
+/**
+ * Read-only load of a student's active plan for display. Unlike fetchStudentLessons it never turns
+ * a failed query into "no plan" and never falls back to the browser cache: it resolves to the
+ * saved lessons (possibly none, confirmed by a successful read) or throws.
+ */
+export async function fetchStudentLessonsOrThrow(studentId: string, teacherId: string): Promise<StudentLesson[]> {
+  const plans = await fetchLessonPlansOrThrow({ studentId });
+  if (plans.length === 0) return [];
+  const attendanceMap = await fetchAttendanceForEvents(plans.map((p) => p.event_id), teacherId);
+  return toStudentLessons(plans, attendanceMap, studentId);
+}
+
 export async function fetchStudentLessons(
   studentId: string,
   teacherId?: string
@@ -298,42 +355,7 @@ export async function fetchStudentLessons(
     if (plans.length > 0) {
       const attendanceMap = await fetchAttendanceForEvents(plans.map((p) => p.event_id));
 
-      const mapped: StudentLesson[] = plans
-        .map((p, idx) => {
-          const att = (attendanceMap[p.event_id] || []).find((a) => a.student_id === studentId);
-          let attendance_status: StudentLesson["attendance_status"] = null;
-          if (p.event_status === "Cancelled") attendance_status = "Cancelled";
-          else if (p.event_status === "Rescheduled") attendance_status = "Rescheduled";
-          else if (att?.status === "present" || att?.status === "late") attendance_status = "Present";
-          else if (att?.status === "absent" || att?.status === "excused") attendance_status = "Absent";
-
-          return {
-            id: p.id,
-            event_id: p.event_id,
-            teacher_id: p.teacher_id,
-            student_id: studentId,
-            schedule_id: null,
-            lesson_number: p.lesson_number || idx + 1,
-            scheduled_date: p.scheduled_date,
-            start_time: p.start_time,
-            end_time: p.end_time,
-            duration: p.duration,
-            content: p.content,
-            homework: p.homework,
-            homework_posted: p.homework_posted ?? null,
-            attendance_status,
-            completed: p.completed,
-            notes: p.notes,
-            attachments: p.attachments as LessonAttachment[],
-            original_date: p.original_date ?? null,
-            original_start_time: p.original_start_time ?? null,
-          } as StudentLesson;
-        })
-        .sort((a, b) =>
-          `${a.scheduled_date} ${String(a.start_time).slice(0, 5)}`.localeCompare(
-            `${b.scheduled_date} ${String(b.start_time).slice(0, 5)}`
-          )
-        );
+      const mapped = toStudentLessons(plans, attendanceMap, studentId);
 
       localStorage.setItem(`bloom.student_lessons.${studentId}`, JSON.stringify(mapped));
       return mapped;
