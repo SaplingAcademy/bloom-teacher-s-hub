@@ -331,13 +331,7 @@ function mapPlanRow(row: any): LessonPlan {
 /**
  * Fetches lesson plans for a student or for a class, ordered by lesson number/date.
  */
-export async function fetchLessonPlans(params: {
-  studentId?: string;
-  classId?: string;
-}): Promise<LessonPlan[]> {
-  const { studentId, classId } = params;
-  if (!studentId && !classId) return [];
-
+function activeLessonPlansQuery(studentId: string | undefined, classId: string | undefined) {
   let query = supabase
     .from("lesson_plans")
     .select("*, calendar_events:event_id (status, original_date, original_start_time, rescheduled_at)")
@@ -346,13 +340,33 @@ export async function fetchLessonPlans(params: {
     .order("scheduled_date", { ascending: true })
     .order("start_time", { ascending: true });
 
-  query = studentId ? query.eq("student_id", studentId) : query.eq("class_id", classId!);
+  return studentId ? query.eq("student_id", studentId) : query.eq("class_id", classId!);
+}
 
-  const { data, error } = await query;
+export async function fetchLessonPlans(params: {
+  studentId?: string;
+  classId?: string;
+}): Promise<LessonPlan[]> {
+  const { studentId, classId } = params;
+  if (!studentId && !classId) return [];
+
+  const { data, error } = await activeLessonPlansQuery(studentId, classId);
   if (error) {
     console.warn("[lesson-plans] fetch error:", error.message);
     return [];
   }
+  return (data || []).map(mapPlanRow);
+}
+
+/**
+ * Same read as fetchLessonPlans, but a failed query throws instead of looking like "no plan".
+ * Display code uses it so an error is never shown as the empty "create a plan" state. Read-only.
+ */
+export async function fetchLessonPlansOrThrow(params: { studentId?: string; classId?: string }): Promise<LessonPlan[]> {
+  const { studentId, classId } = params;
+  if (!studentId && !classId) return [];
+  const { data, error } = await activeLessonPlansQuery(studentId, classId);
+  if (error) throw error;
   return (data || []).map(mapPlanRow);
 }
 
