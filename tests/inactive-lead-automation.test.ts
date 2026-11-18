@@ -246,7 +246,7 @@ describe("Today and attention share contact-based settings", () => {
   });
   it("unavailable settings mark Today Leads failed without discarding other task priorities", async () => {
     db.rows.automation_settings = [];
-    db.rows.tasks = [{ id: "task", teacher_id: "teacher", title: "Task", status: "pending", due_date: "2026-11-03T12:00:00Z" }];
+    db.rows.tasks = [{ id: "task", teacher_id: "teacher", lead_id: "lead", title: "Task", status: "pending", due_date: "2026-11-03T12:00:00Z" }];
     const result = await fetchDailyPriorities("teacher", now);
     expect(result.failed).toContain("lead");
     expect(result.items.map((i) => i.id)).toContain("task:task");
