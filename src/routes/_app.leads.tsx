@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { useTeacherLanguages } from "@/hooks/use-teacher-languages";
@@ -158,14 +158,16 @@ function LeadsPage() {
   const [duplicateAckKey, setDuplicateAckKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  // The open lead lives in the URL (?leadId), so a refresh, a direct link or back/forward reopens its
+  // panel. Opening/closing the panel updates the URL in place; the URL then drives the panel.
   const { leadId: requestedLeadId } = Route.useSearch();
-  const openedRequestedLead = useRef<string | null>(null);
   useEffect(() => {
-    if (!requestedLeadId || openedRequestedLead.current === requestedLeadId) return;
+    if (!requestedLeadId) {
+      setSelectedLead(null);
+      return;
+    }
     const target = leads.find((lead) => lead.id === requestedLeadId);
-    if (!target) return;
-    openedRequestedLead.current = requestedLeadId;
-    setSelectedLead(target);
+    if (target) setSelectedLead((prev) => (prev?.id === target.id ? prev : target));
   }, [leads, requestedLeadId]);
   const [interactionLead, setInteractionLead] = useState<Lead | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
@@ -207,6 +209,20 @@ function LeadsPage() {
     course_start_date: "",
   });
   const navigate = useNavigate();
+  const openLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    void navigate({ to: "/leads", search: { leadId: lead.id }, replace: true });
+  };
+  const closeLead = () => {
+    setSelectedLead(null);
+    if (requestedLeadId) void navigate({ to: "/leads", search: {}, replace: true });
+  };
+  // A lead from the URL that does not exist (deleted, other account) is dropped only once the list
+  // has loaded, never while it is still loading.
+  useEffect(() => {
+    if (loading || !requestedLeadId || leads.some((lead) => lead.id === requestedLeadId)) return;
+    void navigate({ to: "/leads", search: {}, replace: true });
+  }, [loading, requestedLeadId, leads, navigate]);
 
   const teacherId = user?.id;
   const stageConfirmation = useLeadStageConfirmation(teacherId, (fresh) => {
@@ -514,7 +530,7 @@ function LeadsPage() {
           });
         }
         setIsConvertOpen(false);
-        setSelectedLead(null);
+        closeLead();
         loadData();
       } else {
         console.error("[Leads] Conversion error:", res.error);
@@ -633,7 +649,7 @@ function LeadsPage() {
                     stageLeads.map((lead) => (
                       <div
                         key={lead.id}
-                        onClick={() => setSelectedLead(lead)}
+                        onClick={() => openLead(lead)}
                         className="bg-card border border-border hover:border-muted-foreground/30 hover:bg-card min-w-0 break-words hover:relative hover:z-20 hover:-translate-y-[3px] hover:scale-[1.02] hover:shadow-[0_12px_28px_-10px_oklch(0_0_0/0.28),0_2px_6px_-2px_oklch(0_0_0/0.12)] transition-all duration-[180ms] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 rounded-lg p-3.5 shadow-sm cursor-pointer space-y-2 group"
                       >
                         <div className="flex items-start justify-between">
@@ -707,7 +723,7 @@ function LeadsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredLeads.map((lead) => (
-                  <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="hover:bg-muted/30 transition-colors cursor-pointer">
+                  <tr key={lead.id} onClick={() => openLead(lead)} className="hover:bg-muted/30 transition-colors cursor-pointer">
                     <td className="p-3.5 font-medium text-card-foreground">
                       <div>{lead.full_name}</div>
                       <div className="mt-1"><PendingContactBadge lead={lead} now={now} /></div>
@@ -729,7 +745,7 @@ function LeadsPage() {
                     </td>
                     <td className="p-3.5 text-xs capitalize">{lead.source || "-"}</td>
                     <td className="p-3.5 text-right">
-                      <Button size="sm" variant="outline" onClick={() => setSelectedLead(lead)} className="h-8 text-xs">
+                      <Button size="sm" variant="outline" onClick={() => openLead(lead)} className="h-8 text-xs">
                         {t("leadsUi.viewDetails")}
                       </Button>
                     </td>
@@ -795,7 +811,7 @@ function LeadsPage() {
         lead={selectedLead}
         packages={packages}
         historyRefreshKey={historyRefreshKey}
-        onClose={() => setSelectedLead(null)}
+        onClose={closeLead}
         onSaveProfile={handleSaveLeadProfile}
         teacherId={teacherId}
         onTasksChanged={loadLeadTasks}

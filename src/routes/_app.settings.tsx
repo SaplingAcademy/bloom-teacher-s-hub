@@ -1,4 +1,4 @@
-import { createFileRoute, useBlocker } from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { UnsavedChangesDialog } from "@/components/bloom/UnsavedChangesDialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,7 +44,13 @@ import {
   saveAutomationSettings,
 } from "@/lib/automation-engine";
 
+const SETTINGS_TABS = ["automations", "profile", "teaching"] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
 export const Route = createFileRoute("/_app/settings")({
+  // ?tab keeps the open tab across a refresh and makes it linkable (default: automations).
+  validateSearch: (search: Record<string, unknown>): { tab?: Exclude<SettingsTab, "automations"> } =>
+    search.tab === "profile" || search.tab === "teaching" ? { tab: search.tab } : {},
   head: () => ({
     meta: [
       { title: "Settings · Bloom" },
@@ -64,7 +70,18 @@ function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const automationSave = useSaveFeedback();
-  const [tab, setTab] = useState("automations");
+  const { tab: requestedTab } = Route.useSearch();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<string>(() => requestedTab ?? "automations");
+  // URL → tab (refresh, links, back/forward); tab → URL (in place), only when the tab itself changes.
+  useEffect(() => {
+    setTab(requestedTab ?? "automations");
+  }, [requestedTab]);
+  useEffect(() => {
+    if ((requestedTab ?? "automations") === tab) return;
+    void navigate({ to: "/settings", search: tab === "automations" ? {} : { tab: tab as Exclude<SettingsTab, "automations"> }, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally tab-driven only
+  }, [tab]);
   const [teachingDirty, setTeachingDirty] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const blocker = useBlocker({ shouldBlockFn: () => teachingDirty, enableBeforeUnload: () => teachingDirty, withResolver: true });

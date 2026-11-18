@@ -81,6 +81,7 @@ import {
 import { PageHeader } from "@/components/bloom/PageHeader";
 import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { CardsGridSkeleton } from "@/components/bloom/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -622,15 +623,10 @@ function StudentsPage() {
   const { catalogOptions } = useCatalogOptions();
   const { plan } = usePlan();
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!requestedStudentId || students.length === 0) return;
-    if (students.some((item) => item.id === requestedStudentId)) {
-      setSelectedClassId(null);
-      setSelectedStudentId(requestedStudentId);
-    }
-  }, [requestedStudentId, students]);
+  // The open student, class and hub tab live in the URL (?studentId, ?classId, ?tab), so a refresh,
+  // a direct link or back/forward reopens the same view. Initial state comes from the URL (no flash
+  // of the list); the effects below keep URL and state in step in both directions.
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(() => requestedStudentId ?? null);
 
   // Loaded packages and ledger from localStorage
   const [packages, setPackages] = useState<Package[]>([]);
@@ -665,7 +661,7 @@ function StudentsPage() {
   // Classes & Groups States
   const [activeViewTab, setActiveViewTab] = useState<"all_students" | "individual_students" | "classes" | "inactive">("all_students");
   const [activeMemberStudentIds, setActiveMemberStudentIds] = useState<Set<string>>(new Set());
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(() => (requestedStudentId ? null : requestedClassId ?? null));
   const [previousClassId, setPreviousClassId] = useState<string | null>(null);
   const [isAddSelectionOpen, setIsAddSelectionOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
@@ -702,13 +698,6 @@ function StudentsPage() {
   };
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (!requestedClassId || classesList.length === 0) return;
-    if (classesList.some((item) => item.id === requestedClassId)) {
-      setSelectedStudentId(null);
-      setSelectedClassId(requestedClassId);
-    }
-  }, [classesList, requestedClassId]);
   const [formName, setFormName] = useState("");
   const [formWhatsApp, setFormWhatsApp] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -823,11 +812,30 @@ function StudentsPage() {
   const [editLinkedGroupId, setEditLinkedGroupId] = useState("");
 
   // Hub Active Tab State & Financial Engine States
-  const [hubTab, setHubTab] = useState<string>("Overview");
-  // A deep-linked tab applies once the requested student is open.
+  const [hubTab, setHubTab] = useState<string>(() => (requestedStudentId && requestedTab ? requestedTab : "Overview"));
+
+  // URL → state: deep links (Today, Urgente, Calendar), back/forward and the menu link back to the
+  // list. Runs only when the URL changes; on mount it matches the initial state (no-op).
   useEffect(() => {
-    if (requestedTab && requestedStudentId && selectedStudentId === requestedStudentId) setHubTab(requestedTab);
-  }, [requestedTab, requestedStudentId, selectedStudentId]);
+    setSelectedStudentId(requestedStudentId ?? null);
+    setSelectedClassId(requestedStudentId ? null : requestedClassId ?? null);
+    setHubTab(requestedStudentId && requestedTab ? requestedTab : "Overview");
+  }, [requestedStudentId, requestedClassId, requestedTab]);
+
+  // State → URL: opening a student/class or switching the hub tab updates the address in place
+  // (replace), so refreshing keeps the current view. Runs only when the selection changes, never
+  // when the URL changes, so it cannot undo a navigation started elsewhere.
+  useEffect(() => {
+    const current = { studentId: requestedStudentId, classId: requestedClassId, tab: requestedTab };
+    const next: { studentId?: string; classId?: string; tab?: string; eventId?: string } = selectedStudentId
+      ? { studentId: selectedStudentId, ...(hubTab !== "Overview" ? { tab: hubTab } : {}) }
+      : selectedClassId
+        ? { classId: selectedClassId, ...(requestedEventId && requestedClassId === selectedClassId ? { eventId: requestedEventId } : {}) }
+        : {};
+    if (next.studentId === current.studentId && next.classId === current.classId && next.tab === current.tab) return;
+    void navigate({ to: "/students", search: next, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally state-driven only
+  }, [selectedStudentId, selectedClassId, hubTab]);
   const [currentStudentLessons, setCurrentStudentLessons] = useState<StudentLesson[]>([]);
   const [financialSummary, setFinancialSummary] = useState<StudentFinancialSummary | null>(null);
   const [studentRenewalAlert, setStudentRenewalAlert] = useState<PackageRenewalAlert | null>(null);
@@ -1541,6 +1549,17 @@ function StudentsPage() {
   useEffect(() => {
     if (classesQuery.data) setClassesList(classesQuery.data);
   }, [classesQuery.data]);
+
+  // A student/class from the URL that does not exist (deleted, other account) is dropped only after
+  // its list has loaded, which returns to the list legitimately; never while data is still loading.
+  useEffect(() => {
+    if (!selectedStudentId || !studentsQuery.isSuccess) return;
+    if (!(studentsQuery.data as { id: string }[]).some((row) => row.id === selectedStudentId)) setSelectedStudentId(null);
+  }, [selectedStudentId, studentsQuery.isSuccess, studentsQuery.data]);
+  useEffect(() => {
+    if (!selectedClassId || selectedStudentId || !classesQuery.isSuccess) return;
+    if (!(classesQuery.data ?? []).some((item) => item.id === selectedClassId)) setSelectedClassId(null);
+  }, [selectedClassId, selectedStudentId, classesQuery.isSuccess, classesQuery.data]);
 
   useEffect(() => {
     if (classMembersQuery.data) setActiveMemberStudentIds(classMembersQuery.data);
@@ -2652,6 +2671,13 @@ function StudentsPage() {
               </form>
             </div>
           )}
+        </div>
+      ) : (selectedStudentId && !selectedStudent) || (selectedClassId && !selectedClass) ? (
+        /* The record from the URL is still loading: wait here instead of showing the list. */
+        <div role="status" aria-busy="true" aria-label={tr("common.loading")} data-testid="students-record-loading" className="space-y-4">
+          <Skeleton className="h-10 w-64 rounded-xl" />
+          <Skeleton className="h-9 w-full max-w-lg rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
         </div>
       ) : selectedClassId && selectedClass ? (
         /* 2. DEDICATED CLASS DETAILS VIEW */

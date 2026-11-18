@@ -1,6 +1,6 @@
 import { formatOnboardingPaymentMethod, t as i18nT } from "@/lib/i18n";
 import { toUserMessage } from "@/lib/user-error";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
@@ -150,7 +150,13 @@ function SafeNumberInput({
   );
 }
 
+type FinanceTab = "Ledger" | "Packages" | "Expenses";
+const FINANCE_TAB_PARAM: Record<FinanceTab, "packages" | "expenses" | undefined> = { Ledger: undefined, Packages: "packages", Expenses: "expenses" };
+
 export const Route = createFileRoute("/_app/finance")({
+  // ?tab keeps the open tab across a refresh and makes it linkable (default: the ledger).
+  validateSearch: (search: Record<string, unknown>): { tab?: "packages" | "expenses" } =>
+    search.tab === "packages" || search.tab === "expenses" ? { tab: search.tab } : {},
   head: () => ({
     meta: [
       { title: "Finance · Bloom" },
@@ -405,7 +411,21 @@ function FinancePage() {
   const { user } = useAuth();
   const { lang, t: tr } = useLanguage();
   const t = translations[lang];
-  const [activeTab, setActiveTab] = useState<"Ledger" | "Packages" | "Expenses">("Ledger");
+  const { tab: requestedTab } = Route.useSearch();
+  const navigate = useNavigate();
+  const tabFromUrl = (): FinanceTab => (requestedTab === "packages" ? "Packages" : requestedTab === "expenses" ? "Expenses" : "Ledger");
+  const [activeTab, setActiveTab] = useState<FinanceTab>(tabFromUrl);
+  // URL → tab (refresh, links, back/forward); tab → URL (in place), only when the tab itself changes.
+  useEffect(() => {
+    setActiveTab(tabFromUrl());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedTab]);
+  useEffect(() => {
+    if (FINANCE_TAB_PARAM[activeTab] === requestedTab) return;
+    const param = FINANCE_TAB_PARAM[activeTab];
+    void navigate({ to: "/finance", search: param ? { tab: param } : {}, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally tab-driven only
+  }, [activeTab]);
   const [ledgerStudentId, setLedgerStudentId] = useState<string | null>(null);
   const [ledgerStatus, setLedgerStatus] = useState<ReceivableStatusFilter>("all");
   const [ledgerMonth, setLedgerMonth] = useState<string>("current");
