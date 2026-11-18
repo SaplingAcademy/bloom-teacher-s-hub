@@ -1,4 +1,5 @@
 import { currentLanguage, reportUserError, toUserMessage } from "@/lib/user-error";
+import { InfoTooltip } from "@/components/bloom/InfoTooltip";
 import { t as i18nT } from "@/lib/i18n";
 import React, { useState, useMemo } from "react";
 import { StudentLesson, saveStudentLessons, LessonScheduleInput } from "@/lib/lesson-plan-sync";
@@ -357,24 +358,30 @@ export function StudentLessonPlanTable({
   return (
     <div className="space-y-6">
       {/* 1. PROGRESS HEADER CARD */}
-      <div className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-4">
+      <div className="px-6 py-5 rounded-2xl bg-card border border-border shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10 text-primary">
               <BookOpen className="w-6 h-6" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                  {t("students.lessonPlanTitle")}
-                </h3>
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-xs">
-                  {t("students.completedCount").replace("{completed}", String(completedCount)).replace("{total}", String(totalLessons))}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {t("students.lessonPlanSubtitle")}
-              </p>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                {t("students.lessonPlanTitle")}
+              </h3>
+              {/* The former fixed subtitle now lives in this tooltip (hover, focus, click or tap). */}
+              <InfoTooltip
+                label={t("students.lessonPlanInfoLabel")}
+                text={t("students.lessonPlanSubtitle")}
+                className="-ml-1 text-muted-foreground"
+              />
+              <span
+                data-testid="lesson-plan-completed-count"
+                title={t("students.completedCount").replace("{completed}", String(completedCount)).replace("{total}", String(totalLessons))}
+                className="text-sm font-semibold tabular-nums text-muted-foreground"
+              >
+                <span className="sr-only">{t("students.completedCount").replace("{completed}", String(completedCount)).replace("{total}", String(totalLessons))}</span>
+                <span aria-hidden="true">{t("students.completedCountCompact").replace("{completed}", String(completedCount)).replace("{total}", String(totalLessons))}</span>
+              </span>
             </div>
           </div>
 
