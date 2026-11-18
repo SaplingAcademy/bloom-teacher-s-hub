@@ -2424,93 +2424,29 @@ function StudentsPage() {
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {tr("auditUi.activePackage")}
-                  </span>
-                  <div className="text-base font-bold text-foreground flex items-center gap-2 flex-wrap">
-                    <span>{financialSummary?.packageName || (studentPkg ? studentPkg.name : t.financeNoPkg)}</span>
-                    {financialSummary?.isInstallment ? (
-                      <Badge variant="outline" className="text-[9px] py-0.5 px-1.5 font-extrabold text-stone-600 bg-stone-100 border-stone-300">
-                        {financialSummary.progressLabel}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[9px] py-0.5 px-1.5 font-bold text-emerald-700 bg-emerald-50 border-emerald-200">
-                        Mensalidade
-                      </Badge>
-                    )}
+              {/* PACOTE ATUAL & PACOTES ANTERIORES — one bordered block; packages sit on its background,
+                  separated by subtle dividers. The remaining balance (same value and calculation as the
+                  former summary card) sits at the top right of the header. */}
+              <div data-testid="student-agreements" className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
+                <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
+                  <h4 className="min-w-0 font-display text-sm font-bold text-foreground flex items-center gap-2">
+                    <Tag className="w-4 h-4 shrink-0 text-emerald-600" />
+                    {tr("auditUi.packageAgreementsHistory")}
+                  </h4>
+                  <div data-testid="student-remaining-balance" className="shrink-0 text-right leading-tight">
+                    <span className="block text-[11px] font-semibold text-muted-foreground">{tr("auditUi.remainingBalance")}</span>
+                    <span className="text-base font-bold tabular-nums text-foreground">
+                      {financialSummary?.remainingBalanceFormatted || "R$ 0,00"}
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {financialSummary?.isInstallment
-                      ? `${financialSummary.installmentCount}x de ${formatCentsToBRL(financialSummary.installmentAmountCents)}`
-                      : studentPkg ? `${formatReaisToBRL(studentPkg.price)} / mês` : "Sem plano"}
-                  </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {tr("auditUi.paymentProgress")}
-                  </span>
-                  <div className="text-base font-bold text-foreground">
-                    {financialSummary?.currentInstallmentLabel || "Mensalidade"}
-                  </div>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {financialSummary?.progressLabel || "Mensalidade"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {tr("auditUi.nextDueDate")}
-                  </span>
-                  <div className="text-base font-bold text-foreground">
-                    {financialSummary?.nextDueDate
-                      ? new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.nextDueDate}T00:00:00Z`))
-                      : (tr("auditUi.upToDate"))}
-                  </div>
-                  {financialSummary?.lastPaymentDate && (
-                    <p className="text-[11px] text-muted-foreground font-medium">
-                      {tr("auditUi.lastPaid")} {new Intl.DateTimeFormat(lang === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }).format(new Date(`${financialSummary.lastPaymentDate}T00:00:00Z`))}
-                    </p>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {tr("auditUi.remainingBalance")}
-                  </span>
-                  <div className="text-xl font-extrabold text-foreground">
-                    {financialSummary?.remainingBalanceFormatted || "R$ 0,00"}
-                  </div>
-                  {financialSummary?.isInstallment && (
-                    <p className="text-[10px] text-stone-500 font-semibold">
-                      {tr("auditUi.totalAgreementValue")}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* PACOTE ATUAL & PACOTES ANTERIORES */}
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] space-y-4">
-                <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-emerald-600" />
-                  {tr("auditUi.packageAgreementsHistory")}
-                </h4>
-
-                <div className="space-y-4">
+                <div className="divide-y divide-border/60">
                   {studentAgreements.map((sp) => (
-                    <div
-                      key={sp.id}
-                      className={`p-4 rounded-xl border space-y-2 text-xs ${
-                        sp.isCurrent
-                          ? "border-emerald-600/40 bg-emerald-50/40 dark:bg-emerald-950/20"
-                          : "border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
+                    <div key={sp.id} data-agreement-current={sp.isCurrent || undefined} className="space-y-3 py-4 text-xs last:pb-0">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider block">
+                          <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-wider block">
                             {sp.isCurrent ? tr("auditUi.currentPackage") : tr("auditUi.previousPackage")}
                           </span>
                           <strong className="text-sm font-bold text-foreground">{sp.packageName}</strong>
@@ -2532,7 +2468,7 @@ function StudentsPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60 text-[11px]">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 text-[11px]">
                         <div>
                           <span className="text-muted-foreground block">{tr("auditUi.agreementTotalValue")}</span>
                           <strong>{sp.totalAmountFormatted}</strong>
