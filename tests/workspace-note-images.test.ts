@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => {
 });
 vi.mock("@/lib/supabase", () => ({ supabase: { auth: { getUser: mocks.getUser }, from: mocks.from, storage: { from: mocks.storageFrom } } }));
 import {
-  deleteAllNoteImages, deleteNoteImage, fitWithin, groupNoteImages, noteImagePath, signNoteImageUrls, uploadNoteImage, validateImageFile,
+  deleteAllNoteImages, deleteNoteImage, describeImageError, fitWithin, groupNoteImages, noteImagePath, signNoteImageUrls, uploadNoteImage, validateImageFile,
   type NoteImage,
 } from "../src/lib/workspace-note-images";
 
@@ -80,7 +80,8 @@ describe("note image persistence", () => {
   });
   it("removes the uploaded file when metadata fails, so no orphan remains", async () => {
     mocks.single.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "rls" } });
-    await expect(uploadNoteImage(OWNER, NOTE, { id: IMG, blob: webp(), width: 1, height: 1 }, 0)).rejects.toEqual({ code: "42501", message: "rls" });
+    const error = await uploadNoteImage(OWNER, NOTE, { id: IMG, blob: webp(), width: 1, height: 1 }, 0).catch((e) => e);
+    expect(describeImageError(error)).toEqual({ step: "metadata_insert", status: undefined, code: "42501", message: "rls" });
     expect(mocks.storage.remove).toHaveBeenCalledWith([PATH]);
   });
   it("never uploads non-WebP or oversized blobs", async () => {
@@ -94,7 +95,7 @@ describe("note image persistence", () => {
     expect(mocks.eq).toHaveBeenCalledWith("user_id", OWNER);
     calls.length = 0;
     mocks.storage.remove.mockResolvedValueOnce({ data: null, error: { message: "denied" } });
-    await expect(deleteNoteImage(OWNER, { id: IMG, note_id: NOTE })).rejects.toEqual({ message: "denied" });
+    expect(describeImageError(await deleteNoteImage(OWNER, { id: IMG, note_id: NOTE }).catch((e) => e)).step).toBe("storage_remove");
     expect(calls).not.toContain("deleteRows");
   });
   it("note deletion removes every file in the note folder (rows and leftovers), then the rows", async () => {
@@ -117,5 +118,16 @@ describe("note image persistence", () => {
     expect(await signNoteImageUrls([PATH])).toEqual({ [PATH]: "https://signed/1" });
     expect(mocks.storage.createSignedUrls).toHaveBeenCalledWith([PATH], 3600);
     expect(await signNoteImageUrls([])).toEqual({});
+  });
+  it("keeps the original Storage upload error and identifies the step without exposing paths or ids", async () => {
+    mocks.storage.upload.mockResolvedValueOnce({ data: null, error: { statusCode: "403", error: "Unauthorized",
+      message: `new row violates row-level security policy for ${PATH}`, details: `Failing row contains (${OWNER})` } });
+    const error = await uploadNoteImage(OWNER, NOTE, { id: IMG, blob: webp(), width: 1, height: 1 }, 0).catch((e) => e);
+    const summary = describeImageError(error);
+    expect(summary).toMatchObject({ step: "storage_upload", status: "403", code: "Unauthorized" });
+    expect(summary.message).toContain("row-level security");
+    expect(JSON.stringify(summary)).not.toContain(OWNER);
+    expect(JSON.stringify(summary)).not.toContain(IMG);
+    expect(mocks.insert).not.toHaveBeenCalled();
   });
 });
