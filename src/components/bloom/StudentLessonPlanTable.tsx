@@ -21,7 +21,6 @@ import {
   Clock,
   BookOpen,
   Calendar,
-  Search,
   Filter,
   RefreshCw,
   FileText,
@@ -85,7 +84,6 @@ export function StudentLessonPlanTable({
       ? { ...lesson, homework_posted: statuses[lesson.event_id] }
       : lesson));
   });
-  const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "present" | "absent" | "rescheduled">("all");
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -214,17 +212,6 @@ export function StudentLessonPlanTable({
   const sequence = useMemo(() => lessonSequenceMap(lessons), [lessons]);
   const filteredLessons = useMemo(() => {
     return lessons.filter((l) => {
-      // Search filter
-      const matchesSearch =
-        !searchTerm ||
-        `Lesson ${l.lesson_number}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        l.scheduled_date.includes(searchTerm) ||
-        (l.content && l.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (l.homework && l.homework.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (l.notes && l.notes.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      if (!matchesSearch) return false;
-
       // Status filter
       if (filterStatus === "completed") return l.completed;
       if (filterStatus === "pending") return !l.completed;
@@ -234,7 +221,7 @@ export function StudentLessonPlanTable({
 
       return true;
     });
-  }, [lessons, searchTerm, filterStatus]);
+  }, [lessons, filterStatus]);
 
   // Handle cell edit
   const handleCellChange = async (index: number, field: keyof StudentLesson, value: any) => {
@@ -385,33 +372,40 @@ export function StudentLessonPlanTable({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Plan actions: two minimal text actions and a soft "complete" button; on small screens they
+              wrap below the title row instead of overlapping it. Flows are the existing handlers. */}
+          <div data-testid="lesson-plan-actions" className="flex flex-wrap items-center gap-1.5 md:justify-end">
             <Button
-              variant="outline"
+              type="button"
+              variant="ghost"
               size="sm"
               onClick={() => setIsHistoryOpen(true)}
-              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+              title={t("students.planHistoryTitle")}
+              className="h-9 gap-1.5 rounded-lg px-3 text-xs font-semibold text-muted-foreground shadow-none hover:bg-muted/70 hover:text-foreground"
             >
-              <History className="w-3.5 h-3.5" />
-              Histórico de Planos
+              <History className="w-3.5 h-3.5" aria-hidden="true" />
+              {t("students.planHistoryAction")}
             </Button>
             <Button
-              variant="outline"
+              type="button"
+              variant="ghost"
               size="sm"
               onClick={() => setIsAvailabilityConfirmationOpen(true)}
-              className="gap-2 text-xs h-9 border-border hover:bg-muted font-semibold"
+              title={t("students.regeneratePlan")}
+              className="h-9 gap-1.5 rounded-lg px-3 text-xs font-semibold text-muted-foreground shadow-none hover:bg-muted/70 hover:text-foreground"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              {t("students.regeneratePlan")}
+              <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+              {t("students.regeneratePlanAction")}
             </Button>
             <Button
+              type="button"
               size="sm"
               onClick={handleCompletePlan}
               disabled={isCompletingPlan}
-              className="gap-2 text-xs h-9 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+              className="h-9 gap-1.5 rounded-lg border-0 bg-primary-soft px-3.5 text-xs font-semibold text-primary shadow-none hover:bg-primary/15 hover:text-primary"
             >
-              <CheckCheck className="w-3.5 h-3.5" />
-              {isCompletingPlan ? "Concluindo..." : "Concluir Plano"}
+              <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
+              {isCompletingPlan ? t("students.completingPlan") : t("students.completePlanAction")}
             </Button>
           </div>
         </div>
@@ -508,18 +502,8 @@ export function StudentLessonPlanTable({
         </div>
       )}
 
-      {/* 2. FILTER & SEARCH CONTROLS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("students.searchLessonPlaceholder")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 text-sm bg-card border-border"
-          />
-        </div>
-
+      {/* 2. STATUS FILTER (right-aligned; the row sits closer to the plan card and the table) */}
+      <div data-testid="lesson-plan-filters" className="-mt-2 mb-4 flex items-center justify-end">
         <div className="flex items-center gap-2">
           <Select
             value={filterStatus}
