@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/hooks/use-language";
+import { nextTodayLesson } from "@/lib/next-today-lesson";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardPrioritiesSection } from "@/components/bloom/DashboardAttentionSections";
@@ -187,6 +188,7 @@ const translations = {
     newLeads: "New leads",
     thisMonth: "This month",
     nextAt: "Next at {time}",
+    allLessonsPassed: "All of today's classes have already passed",
     scheduleTitle: "Today's schedule",
     classesCount: "1 class today",
     classesCountPlural: "{count} classes today",
@@ -245,6 +247,7 @@ const translations = {
     newLeads: "Novos contatos",
     thisMonth: "Este mês",
     nextAt: "Próxima às {time}",
+    allLessonsPassed: "Todas as aulas de hoje já passaram",
     scheduleTitle: "Agenda de hoje",
     classesCount: "1 aula hoje",
     classesCountPlural: "{count} aulas hoje",
@@ -794,6 +797,8 @@ function TodayPage() {
   const allCompleted = totalTasks > 0 && completedTasks === totalTasks;
 
   const t = translations[lang];
+  // Recomputed on every render; the existing 30s `tick` timer keeps it current through the day.
+  const nextLesson = nextTodayLesson(todayEvents, new Date());
 
   const firstName = getTeacherFirstName(profile, user);
   const currentHour = new Date().getHours();
@@ -852,7 +857,9 @@ function TodayPage() {
               title={tr("today.classesPopoverTitle")}
               hint={
                 !metricsError && todayEvents.length > 0
-                  ? t.nextAt.replace("{time}", todayEvents[0].startTime)
+                  ? nextLesson
+                    ? t.nextAt.replace("{time}", nextLesson.startTime)
+                    : t.allLessonsPassed
                   : undefined
               }
               emptyLabel={tr("today.noClassesToday")}
