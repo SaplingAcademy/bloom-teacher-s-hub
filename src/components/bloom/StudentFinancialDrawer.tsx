@@ -113,17 +113,17 @@ export function StudentFinancialDrawer({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl p-0 border-border bg-card shadow-2xl">
         {/* Header */}
-        <div className="bg-[#163020] text-[#F4EBE1] p-6 sticky top-0 z-10">
+        <div className="bg-primary-soft text-foreground p-6 sticky top-0 z-10 border-b border-primary/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-white/10 text-emerald-400">
+              <div className="p-2.5 rounded-xl bg-card text-primary shadow-sm">
                 <Wallet className="w-6 h-6" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-[#F4EBE1]">
+                <DialogTitle className="text-lg font-bold text-foreground">
                   {lang === "pt" ? "Histórico Financeiro" : "Financial History"} — {studentName}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-[#F4EBE1]/80 mt-0.5">
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   {lang === "pt"
                     ? "Registro contínuo de pagamentos, pacotes contratados e linha do tempo financeira"
                     : "Continuous ledger of payments, package agreements, and financial timeline"}
@@ -147,9 +147,9 @@ export function StudentFinancialDrawer({
 
           {/* Renewal Alert Banner if applicable */}
           {renewalAlert && (
-            <div className="mt-4 p-3 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-between text-xs text-amber-200">
+            <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span>{renewalAlert.alertMessage}</span>
               </div>
               <button
@@ -157,7 +157,7 @@ export function StudentFinancialDrawer({
                   onClose();
                   onOpenRenewalModal();
                 }}
-                className="underline font-bold text-white hover:text-emerald-300 text-[11px] cursor-pointer shrink-0"
+                className="underline font-bold text-primary hover:text-primary/80 text-[11px] cursor-pointer shrink-0"
               >
                 {lang === "pt" ? "Renovar agora →" : "Renew now →"}
               </button>
@@ -165,13 +165,13 @@ export function StudentFinancialDrawer({
           )}
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center gap-2 mt-5 border-t border-white/10 pt-4 flex-wrap">
+          <div className="flex items-center gap-2 mt-5 border-t border-primary/15 pt-4 flex-wrap">
             <button
               onClick={() => setActiveTab("charges")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "charges"
-                  ? "bg-[#F4EBE1] text-[#163020]"
-                  : "text-[#F4EBE1]/80 hover:bg-white/10"
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-foreground/70 hover:bg-card/60 hover:text-foreground"
               }`}
             >
               {lang === "pt" ? "Cobranças" : "Charges"}
@@ -181,8 +181,8 @@ export function StudentFinancialDrawer({
               onClick={() => setActiveTab("history")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "history"
-                  ? "bg-[#F4EBE1] text-[#163020]"
-                  : "text-[#F4EBE1]/80 hover:bg-white/10"
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-foreground/70 hover:bg-card/60 hover:text-foreground"
               }`}
             >
               {lang === "pt" ? "Histórico de Pagamentos" : "Payment History"} ({payments.length})
@@ -192,8 +192,8 @@ export function StudentFinancialDrawer({
               onClick={() => setActiveTab("agreements")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "agreements"
-                  ? "bg-[#F4EBE1] text-[#163020]"
-                  : "text-[#F4EBE1]/80 hover:bg-white/10"
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-foreground/70 hover:bg-card/60 hover:text-foreground"
               }`}
             >
               {lang === "pt" ? "Histórico de Pacotes" : "Package Agreements"} ({agreements.length})
@@ -203,8 +203,8 @@ export function StudentFinancialDrawer({
               onClick={() => setActiveTab("timeline")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "timeline"
-                  ? "bg-[#F4EBE1] text-[#163020]"
-                  : "text-[#F4EBE1]/80 hover:bg-white/10"
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-foreground/70 hover:bg-card/60 hover:text-foreground"
               }`}
             >
               {lang === "pt" ? "Linha do Tempo" : "Financial Timeline"} ({timeline.length})

@@ -142,54 +142,60 @@ export function ManageChargesTable({
     <div className="space-y-6">
       {groups.map((g) => (
         <div key={g.studentPackageId || "unlinked"} className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <h4 className="font-display text-sm font-bold text-foreground">{g.studentPackageId ? g.packageName : (pt ? "Cobranças sem contrato" : "Charges without contract")}</h4>
-            {g.isActive && <Badge className="text-[10px]">{pt ? "Contrato ativo" : "Active contract"}</Badge>}
             {g.startedAt && <span className="text-[11px] text-muted-foreground">{pt ? "desde" : "since"} {formatChargeDate(g.startedAt, lang)}</span>}
           </div>
           {g.charges.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">{pt ? "Sem cobranças neste contrato." : "No charges in this contract."}</p>
           ) : (
-            <div className="rounded-xl border border-border divide-y divide-border/60">
+            <div className="divide-y divide-border/60">
               {g.charges.map((c) => {
                 const busy = busyId === c.id;
                 const editing = edit?.id === c.id;
                 return (
-                  <div key={c.id} className="p-3 text-xs space-y-2">
-                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-center">
-                      <span className="font-bold text-foreground sm:col-span-2">{chargeLabel(c, lang)}</span>
-                      <span className="text-muted-foreground">{pt ? "Venc." : "Due"} {formatChargeDate(c.dueDate, lang)}</span>
-                      <span className="font-semibold text-foreground">{money(formatCentsToBRL(c.amountCents))}</span>
-                      <StatusBadge status={c.status} dueDate={c.dueDate} lang={lang} />
-                      <span className="text-muted-foreground">{c.paymentDate ? `${pt ? "Pago em" : "Paid"} ${formatChargeDate(c.paymentDate, lang)}` : "—"}</span>
+                  <div key={c.id} className="py-4 first:pt-2 last:pb-1 text-xs space-y-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-foreground">{chargeLabel(c, lang)}</span>
+                          <StatusBadge status={c.status} dueDate={c.dueDate} lang={lang} />
+                        </div>
+                        <p className="text-base font-bold leading-tight text-foreground tabular-nums">{money(formatCentsToBRL(c.amountCents))}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {pt ? "Venc." : "Due"} {formatChargeDate(c.dueDate, lang)}
+                          {c.paymentDate ? ` · ${pt ? "Pago em" : "Paid"} ${formatChargeDate(c.paymentDate, lang)}` : ""}
+                        </p>
+                      </div>
+                      {!editing && c.status !== "cancelled" && (
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:shrink-0">
+                          <Button size="sm" variant="ghost" className="h-8 text-[11px] gap-1 text-muted-foreground hover:text-foreground" disabled={busy} onClick={() => setEdit({ id: c.id, kind: "due", value: c.dueDate })}>
+                            <CalendarClock className="w-3 h-3" />{pt ? "Editar vencimento" : "Edit due date"}
+                          </Button>
+                          {c.status === "paid" ? (
+                            <>
+                              <Button size="sm" variant="outline" className="h-8 rounded-full text-[11px] gap-1" disabled={busy} onClick={() => setEdit({ id: c.id, kind: "payDate", value: c.paymentDate || localDateString() })}>
+                                <Pencil className="w-3 h-3" />{pt ? "Editar data do pagamento" : "Edit payment date"}
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 rounded-full text-[11px] gap-1" disabled={busy}
+                                onClick={() => run(c.id, () => undoInvoicePayment(c.id, teacherId), pt ? "Pagamento desfeito." : "Payment undone.")}>
+                                <Undo2 className="w-3 h-3" />{pt ? "Desfazer pagamento" : "Undo payment"}
+                              </Button>
+                            </>
+                          ) : (
+                            <Button size="sm" className="h-8 rounded-full border-0 bg-primary-soft px-3.5 text-xs font-semibold text-primary shadow-none gap-1.5 hover:bg-primary/15" disabled={busy} onClick={() => setEdit({ id: c.id, kind: "pay", value: localDateString() })}>
+                              <CheckCircle2 className="w-3.5 h-3.5" />{pt ? "Marcar como paga" : "Mark as paid"}
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {editing ? (
+                    {editing && (
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-muted-foreground">{editLabel}</span>
                         <Input type="date" value={edit.value} onChange={(e) => setEdit({ ...edit, value: e.target.value })} className="h-8 w-40 text-xs" />
                         <Button size="sm" className="h-8" disabled={busy || !edit.value} onClick={() => confirmEdit(c)}>{pt ? "Salvar" : "Save"}</Button>
                         <Button size="sm" variant="ghost" className="h-8" disabled={busy} onClick={() => setEdit(null)}>{pt ? "Cancelar" : "Cancel"}</Button>
-                      </div>
-                    ) : c.status !== "cancelled" && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {c.status === "paid" ? (
-                          <>
-                            <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" disabled={busy} onClick={() => setEdit({ id: c.id, kind: "payDate", value: c.paymentDate || localDateString() })}>
-                              <Pencil className="w-3 h-3" />{pt ? "Editar data do pagamento" : "Edit payment date"}
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" disabled={busy}
-                              onClick={() => run(c.id, () => undoInvoicePayment(c.id, teacherId), pt ? "Pagamento desfeito." : "Payment undone.")}>
-                              <Undo2 className="w-3 h-3" />{pt ? "Desfazer pagamento" : "Undo payment"}
-                            </Button>
-                          </>
-                        ) : (
-                          <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" disabled={busy} onClick={() => setEdit({ id: c.id, kind: "pay", value: localDateString() })}>
-                            <CheckCircle2 className="w-3 h-3" />{pt ? "Marcar como paga" : "Mark as paid"}
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost" className="h-7 text-[11px] gap-1" disabled={busy} onClick={() => setEdit({ id: c.id, kind: "due", value: c.dueDate })}>
-                          <CalendarClock className="w-3 h-3" />{pt ? "Editar vencimento" : "Edit due date"}
-                        </Button>
                       </div>
                     )}
                   </div>
