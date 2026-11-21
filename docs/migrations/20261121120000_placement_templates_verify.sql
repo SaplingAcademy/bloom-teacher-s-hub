@@ -44,6 +44,16 @@ select 'regras de tipo por habilidade e gabarito', (
      and conname in ('placement_items_skill_type_check', 'placement_items_answer_key_rule',
                      'placement_items_options_rule', 'placement_items_screening_rule')) = 4
 union all
+select 'padrões não publicados visíveis só para super_admin (política e readable)',
+       (select coalesce(qual, '') from pg_policies where schemaname = 'public' and tablename = 'placement_templates'
+          and policyname = 'placement_templates_select') like '%published%'
+       and (select prosrc from pg_proc where oid = to_regprocedure('public.placement_template_readable(uuid)')) like '%published%'
+union all
+select 'triggers de versões publicadas congeladas (3)', (
+  select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid
+   where c.relname in ('placement_templates', 'placement_sections', 'placement_items')
+     and t.tgname like 'placement_%_protect_published' and not t.tgisinternal) = 3
+union all
 select 'triggers de identidade (3)', (
   select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid
    where c.relname in ('placement_templates', 'placement_sections', 'placement_items')

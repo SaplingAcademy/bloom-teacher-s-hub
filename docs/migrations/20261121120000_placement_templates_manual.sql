@@ -13,7 +13,8 @@
 --   respostas, resultados, RPCs públicas ou buckets — etapas seguintes):
 --   * public.placement_templates — modelo de teste. teacher_id NULL = modelo padrão
 --     do sistema (somente leitura para professores; mantido por super_admin).
---     Professores editam padrões apenas por cópia (source_template_id registra a origem).
+--     Professores veem só os padrões PUBLICADOS (rascunhos e arquivados: só super_admin)
+--     e editam padrões apenas por cópia (source_template_id registra a origem).
 --   * public.placement_sections — uma seção por habilidade do modelo:
 --     grammar, vocabulary, reading, listening, speaking, writing.
 --   * public.placement_items — questões com nível CEFR (A1–C2), metadados para o
@@ -26,6 +27,12 @@
 --   (a mesma regra de can_access_academy), encapsulada em public.placement_access_allowed().
 --   Toda leitura e escrita das três tabelas exige essa regra na RLS: esconder o menu
 --   não basta. Um professor que volta ao Free perde o acesso, mas nada é apagado.
+--
+-- VERSÕES PUBLICADAS
+--   Só rascunhos ('draft') aceitam mudanças de conteúdo. Publicado ou arquivado =
+--   congelado (modelo, seções e questões), inclusive para super_admin; mudar = nova
+--   versão por cópia. Modelo publicado não pode ser excluído (arquive antes).
+--   As aplicações (próxima etapa) devem guardar uma cópia congelada do modelo no envio.
 --
 -- GABARITOS
 --   anon não recebe nenhum privilégio nem política: as tabelas (incluindo answer_key
@@ -276,10 +283,80 @@ create trigger placement_items_keep_identity before update on public.placement_i
   for each row execute function public.placement_keep_identity();
 
 -- ----------------------------------------------------------------------------
+-- Versões publicadas congeladas (vale para todos, inclusive super_admin)
+--   * Modelo novo nasce em rascunho ('draft'); só rascunho aceita mudanças de conteúdo.
+--   * 'published' e 'archived': conteúdo congelado — no modelo só o status muda
+--     (published <-> archived; nunca de volta a draft) e seções/questões não aceitam
+--     INSERT, UPDATE nem DELETE. Mudanças = nova versão por cópia (source_template_id).
+--   * Modelo publicado não pode ser excluído (arquive antes). Rascunho e arquivado podem,
+--     levando seções e questões em cascata.
+-- Erros com o marcador PLACEMENT_TEMPLATE_LOCKED para a interface identificar o caso.
+-- ----------------------------------------------------------------------------
+
+create or replace function public.placement_protect_published()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_template uuid;
+  v_status text;
+begin
+  if tg_table_name = 'placement_templates' then
+    if tg_op = 'INSERT' then
+      if new.status <> 'draft' then
+        raise exception 'PLACEMENT_TEMPLATE_LOCKED: um modelo novo deve começar como rascunho (draft).' using errcode = 'P0001';
+      end if;
+      return new;
+    elsif tg_op = 'UPDATE' then
+      if old.status <> 'draft' then
+        if new.status = 'draft' then
+          raise exception 'PLACEMENT_TEMPLATE_LOCKED: modelo publicado ou arquivado não volta a rascunho; crie uma nova versão por cópia.' using errcode = 'P0001';
+        end if;
+        if (to_jsonb(new) - 'status' - 'updated_at') is distinct from (to_jsonb(old) - 'status' - 'updated_at') then
+          raise exception 'PLACEMENT_TEMPLATE_LOCKED: modelo publicado ou arquivado é somente leitura; crie uma nova versão por cópia.' using errcode = 'P0001';
+        end if;
+      end if;
+      return new;
+    else -- DELETE
+      if old.status = 'published' then
+        raise exception 'PLACEMENT_TEMPLATE_LOCKED: modelo publicado não pode ser excluído; arquive-o antes.' using errcode = 'P0001';
+      end if;
+      return old;
+    end if;
+  end if;
+
+  -- Seções e questões: o modelo dono precisa estar em rascunho.
+  v_template := case when tg_op = 'INSERT' then new.template_id else old.template_id end;
+  select t.status into v_status from public.placement_templates t where t.id = v_template;
+  -- Modelo inexistente: é a exclusão em cascata de um rascunho/arquivado (o publicado é
+  -- barrado acima) ou um vínculo inválido, que a própria FK recusa.
+  if v_status is not null and v_status <> 'draft' then
+    raise exception 'PLACEMENT_TEMPLATE_LOCKED: seções e questões de modelo publicado ou arquivado não podem ser alteradas; crie uma nova versão por cópia.' using errcode = 'P0001';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+revoke all on function public.placement_protect_published() from public, anon, authenticated;
+
+create trigger placement_templates_protect_published
+  before insert or update or delete on public.placement_templates
+  for each row execute function public.placement_protect_published();
+create trigger placement_sections_protect_published
+  before insert or update or delete on public.placement_sections
+  for each row execute function public.placement_protect_published();
+create trigger placement_items_protect_published
+  before insert or update or delete on public.placement_items
+  for each row execute function public.placement_protect_published();
+
+-- ----------------------------------------------------------------------------
 -- Acesso aos modelos (usado pelas políticas de seções e questões)
 -- ----------------------------------------------------------------------------
 
--- Ler: modelos próprios e padrões do sistema, com acesso Pro.
+-- Ler: modelos próprios e padrões do sistema PUBLICADOS, com acesso Pro.
+-- Padrões em rascunho ou arquivados ficam visíveis apenas para super_admin.
 create or replace function public.placement_template_readable(p_template uuid)
 returns boolean
 language sql
@@ -290,7 +367,10 @@ as $$
   select public.placement_access_allowed() and exists (
     select 1 from public.placement_templates t
      where t.id = p_template
-       and (t.teacher_id = (select auth.uid()) or t.teacher_id is null)
+       and (t.teacher_id = (select auth.uid())
+            or (t.teacher_id is null
+                and (t.status = 'published'
+                     or public.has_role((select auth.uid()), 'super_admin'::public.app_role))))
   );
 $$;
 
@@ -334,9 +414,17 @@ grant all on public.placement_sections to service_role;
 grant all on public.placement_items to service_role;
 
 -- Modelos
+-- Próprios; padrões do sistema publicados; super_admin vê todos os padrões (qualquer status).
 create policy placement_templates_select on public.placement_templates
   for select to authenticated
-  using (public.placement_access_allowed() and (teacher_id = (select auth.uid()) or teacher_id is null));
+  using (
+    public.placement_access_allowed() and (
+      teacher_id = (select auth.uid())
+      or (teacher_id is null
+          and (status = 'published'
+               or public.has_role((select auth.uid()), 'super_admin'::public.app_role)))
+    )
+  );
 
 create policy placement_templates_insert on public.placement_templates
   for insert to authenticated
@@ -408,5 +496,6 @@ commit;
 -- drop function if exists public.placement_template_writable(uuid);
 -- drop function if exists public.placement_template_readable(uuid);
 -- drop function if exists public.placement_keep_identity();
+-- drop function if exists public.placement_protect_published();
 -- drop function if exists public.placement_access_allowed();
 -- commit;
