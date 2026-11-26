@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Contact, Droplets, MessageSquare, Newspaper, Plus, Search, Send, Sprout, Trash2, Trophy } from "lucide-react";
+import { Bookmark, Contact, Droplets, MessageSquare, Newspaper, Plus, Search, Send, Sprout, Trash2, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { supabase } from "@/lib/supabase";
@@ -49,12 +49,14 @@ export const Route = createFileRoute("/_app/community")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  // ?post= focuses a post; ?view=contacts opens the My Contacts tab (?tab= selects its list).
-  validateSearch: (search: Record<string, unknown>): { post?: string; view?: "contacts"; tab?: ContactsUrlTab } => {
+  // ?post= focuses a post; ?view=contacts opens the My Contacts tab (?tab= selects its list);
+  // ?view=saved opens the teacher's saved posts (same feed, filtered by the existing saves).
+  validateSearch: (search: Record<string, unknown>): { post?: string; view?: "contacts" | "saved"; tab?: ContactsUrlTab } => {
     if (search.view === "contacts") {
       const tab = parseContactsTab(search.tab);
       return { view: "contacts", ...(tab ? { tab } : {}) };
     }
+    if (search.view === "saved") return { view: "saved" };
     return typeof search.post === "string" && search.post ? { post: search.post } : {};
   },
   component: CommunityPage,
@@ -345,6 +347,8 @@ function CommunityPage() {
   const { post: focusPost, view, tab: contactsTab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const contactsView = view === "contacts";
+  // "Salvos" is a section of the side menu: the same feed and posts, filtered by the saves already loaded.
+  const savedView = view === "saved";
   const [handledFocus, setHandledFocus] = useState<string | null>(null);
   useEffect(() => {
     if (!focusPost || loading || handledFocus === focusPost) return;
@@ -414,21 +418,26 @@ function CommunityPage() {
     loadPosts();
   };
 
-  const visible = useMemo(() => filterCommunityPosts(posts, filter, search), [posts, filter, search]);
+  const visible = useMemo(() => filterCommunityPosts(posts, savedView ? "saved" : filter, search), [posts, filter, search, savedView]);
   // "Blocos" (categories as tiles) or "Feed" (posts list); switching never reloads anything.
   const [layout, setLayout] = useState<CommunityLayout>("feed");
   const helpCount = useMemo(() => countNeedsHelp(posts), [posts]);
-  const filters = useMemo(() => visibleCommunityFilters({ topics: topicsEnabled, saved: savedEnabled }), [topicsEnabled, savedEnabled]);
+  // "Salvos" lives in the side menu (not in the category bar or the "Blocos" tiles).
+  const filters = useMemo(() => visibleCommunityFilters({ topics: topicsEnabled, saved: false }), [topicsEnabled]);
   const blockCounts = useMemo(() => communityFilterCounts(posts, filters, search), [posts, filters, search]);
-  // A filter that is no longer available (e.g. saved table missing) falls back to "Tudo".
+  // A filter that is no longer available falls back to "Tudo".
   useEffect(() => {
     if (!filters.includes(filter)) setFilter("all");
   }, [filters, filter]);
+  // Saved posts unavailable (table not applied): the Salvos section returns to Publicações.
+  useEffect(() => {
+    if (savedView && !loading && !savedEnabled) void navigate({ search: {}, replace: true });
+  }, [savedView, loading, savedEnabled, navigate]);
   const emptyFilterText = search.trim()
     ? t("communityV1.noResults")
     : filter === "help"
       ? t("communityV1.emptyHelp")
-      : filter === "saved"
+      : savedView || filter === "saved"
         ? t("communityV1.emptySaved")
         : t("communityV1.emptyTopic");
 
@@ -474,18 +483,18 @@ function CommunityPage() {
                 className="pl-9 bg-card"
               />
             </div>
-            {filters.length > 1 && <CommunityLayoutToggle value={layout} onChange={setLayout} t={t} />}
+            {!savedView && filters.length > 1 && <CommunityLayoutToggle value={layout} onChange={setLayout} t={t} />}
           </div>
 
           {/* Blocos: the categories as tiles (the filter bar would repeat them, so it is hidden here). */}
-          {layout === "blocks" && filters.length > 1 && !loading && !loadError ? (
+          {!savedView && layout === "blocks" && filters.length > 1 && !loading && !loadError ? (
             <CommunityBlocks filters={filters} counts={blockCounts} active={filter} t={t}
               onOpen={(next) => { setFilter(next); setLayout("feed"); }} />
           ) : (<>
-          {filters.length > 1 && (
+          {!savedView && filters.length > 1 && (
             <CommunityFilterBar value={filter} onChange={setFilter} helpCount={helpCount} t={t} filters={filters} />
           )}
-          {topicsEnabled && filter === "help" && (
+          {!savedView && topicsEnabled && filter === "help" && (
             <p className="text-xs text-muted-foreground">{t("communityV1.helpHint")}</p>
           )}
 
@@ -686,11 +695,12 @@ function CommunityPage() {
           )}
         </aside>
 
-        {/* Community tabs, below the leaderboard: posts or My Contacts (same page, ?view=contacts). */}
-        <nav aria-label={t("communityV1.sectionsLabel")} className="order-first grid grid-cols-2 gap-1 rounded-xl border border-border bg-card p-1 lg:order-none lg:grid-cols-1" data-testid="community-tabs">
+        {/* Community sections, below the leaderboard: posts, My Contacts (?view=contacts) or Saved (?view=saved). */}
+        <nav aria-label={t("communityV1.sectionsLabel")} className={`order-first grid ${savedEnabled ? "grid-cols-3" : "grid-cols-2"} gap-1 rounded-xl border border-border bg-card p-1 lg:order-none lg:grid-cols-1`} data-testid="community-tabs">
           {([
-            { id: "feed", icon: Newspaper, label: t("communityV1.postsTab"), active: !contactsView, search: {} },
+            { id: "feed", icon: Newspaper, label: t("communityV1.postsTab"), active: !contactsView && !savedView, search: {} },
             { id: "contacts", icon: Contact, label: t("contacts.title"), active: contactsView, search: { view: "contacts" as const } },
+            ...(savedEnabled ? [{ id: "saved", icon: Bookmark, label: t("communityV1.filterSaved"), active: savedView, search: { view: "saved" as const } }] : []),
           ]).map((item) => (
             <button key={item.id} type="button" aria-current={item.active ? "page" : undefined} data-testid={`community-tab-${item.id}`}
               onClick={() => { if (!item.active) void navigate({ search: item.search }); }}
