@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { queryOptions, useSuspenseQuery, type QueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { GraduationCap, RotateCcw } from "lucide-react";
@@ -48,9 +48,13 @@ function AuthorizedGate({ userId, children }: { userId: string; children: ReactN
   return <>{children}</>;
 }
 
-export function AcademyRouteError({ reset }: { reset: () => void }) {
+export function AcademyRouteError({ error, reset }: { error?: unknown; reset: () => void }) {
   const { t } = useLanguage();
   const router = useRouter();
+  // The screen stays generic; the real cause (e.g. ACADEMY_ACCESS_UNAVAILABLE) goes to the console.
+  useEffect(() => {
+    if (error) console.error("[academy] Access check failed:", error);
+  }, [error]);
   return (
     <section className="mx-auto max-w-md space-y-5 py-20 text-center">
       <GraduationCap className="mx-auto h-10 w-10 text-primary" strokeWidth={1.5} aria-hidden="true" />
