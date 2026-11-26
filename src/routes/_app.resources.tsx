@@ -263,7 +263,11 @@ function ResourcesPage() {
     } catch (error) {
       if (isLibrarySoonError(error)) showSoonNotice();
       else if (isLibraryPremiumError(error)) setPremiumOpen(true);
-      else toast.error(translate("libraryAccess.accessError"));
+      else {
+        // Generic message for the teacher; the real cause stays visible in the console.
+        console.error("[resources] Access check failed:", error);
+        toast.error(translate("libraryAccess.accessError"));
+      }
       return null;
     } finally {
       if (attempt === accessAttempt.current) setAccessBusy(false);
@@ -442,7 +446,10 @@ function ResourcesPage() {
         setBuilderTemplate(null);
         setPreviewTemplate(null);
         setPremiumOpen(true);
-      } else toast.error(translate("libraryAccess.accessError"));
+      } else {
+        console.error("[resources] Access check failed:", error);
+        toast.error(translate("libraryAccess.accessError"));
+      }
     } finally { setAccessBusy(false); }
   };
 

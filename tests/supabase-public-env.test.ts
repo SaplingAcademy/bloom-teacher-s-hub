@@ -77,3 +77,32 @@ describe("Library with the Vercel variable names", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("assert_library_resource_access", { _resource_id: "ped-placement-test" });
   });
 });
+
+describe("Library access scenarios with only VITE_* (Vercel)", () => {
+  const request = { accessToken: "test-only-token", resourceId: "ped-placement-test", operation: "open" as const };
+  it("Pro teacher: the database confirms the Premium resource and the content is returned", async () => {
+    onlyVite();
+    mocks.rpc.mockResolvedValue({ data: "pro", error: null });
+    await expect(handleLibraryContent(request)).resolves.toMatchObject({ accessLevel: "pro" });
+  });
+  it("Free teacher on a Premium resource: the database refusal is kept (LIBRARY_PREMIUM_REQUIRED), no content", async () => {
+    onlyVite();
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "LIBRARY_PREMIUM_REQUIRED" } });
+    await expect(handleLibraryContent(request)).rejects.toThrow("LIBRARY_PREMIUM_REQUIRED");
+    await expect(handleLibraryContent({ ...request, operation: "generate", fields: {} })).rejects.toThrow("LIBRARY_PREMIUM_REQUIRED");
+  });
+  it("not authenticated / invalid session: refused before the access check", async () => {
+    onlyVite();
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: { message: "invalid" } });
+    await expect(handleLibraryContent({ ...request, accessToken: "sonda-invalida" })).rejects.toThrow("LIBRARY_AUTH_REQUIRED");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+  it("nothing configured: fails closed with the configuration error and logs only names", async () => {
+    clearAll();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(handleLibraryContent(request)).rejects.toThrow("LIBRARY_CONFIGURATION_UNAVAILABLE");
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(String(log.mock.calls[0][0])).toContain("[library]");
+    log.mockRestore();
+  });
+});
