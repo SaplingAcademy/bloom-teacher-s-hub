@@ -1,20 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
 import { ACADEMY_PUBLISHED, canEnterAcademy, type AcademyAccess } from "./academy-access";
 import type { SubscriptionPlan } from "./plans";
+import { PUBLIC_SUPABASE_ENV_NAMES, readPublicSupabaseEnv } from "./supabase-public-env";
 
 /** The authenticated database role is the boundary, never a client-supplied role. */
 export async function authorizeAcademy(authorization: string | undefined): Promise<AcademyAccess> {
   const bearer = authorization?.match(/^Bearer\s+(\S+)$/i)?.[1];
   if (!bearer) throw new Error("ACADEMY_AUTH_REQUIRED");
 
-  const url = process.env["BLOOM_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
-  const key = process.env["BLOOM_SUPABASE_PUBLISHABLE_KEY"] ??
-    process.env["BLOOM_SUPABASE_ANON_KEY"] ?? process.env["SUPABASE_PUBLISHABLE_KEY"] ??
-    process.env["SUPABASE_ANON_KEY"];
-  if (!url || !key) throw new Error("ACADEMY_ACCESS_UNAVAILABLE");
+  // Same public Supabase settings (and accepted variable names) as the browser configuration.
+  const { url, publishableKey: key } = readPublicSupabaseEnv();
+  if (!url || !key) {
+    console.error("[academy] Public Supabase configuration missing on the server. Expected one of", PUBLIC_SUPABASE_ENV_NAMES);
+    throw new Error("ACADEMY_ACCESS_UNAVAILABLE");
+  }
 
   const client = createClient(
-    url.replace(/\/+$/, "").replace(/\/(rest|auth|storage|realtime|functions)\/v\d+$/, ""),
+    url,
     key,
     {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },

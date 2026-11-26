@@ -1,12 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 import type { LibraryContentRequest } from "./library-content.functions";
+import { PUBLIC_SUPABASE_ENV_NAMES, readPublicSupabaseEnv } from "./supabase-public-env";
 
 /** Server-only boundary, shared by the transport and focused authorization tests. */
 export async function handleLibraryContent(data: LibraryContentRequest) {
-    const url = process.env["BLOOM_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
-    const key = process.env["BLOOM_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["BLOOM_SUPABASE_ANON_KEY"] ?? process.env["SUPABASE_PUBLISHABLE_KEY"];
-    if (!url || !key) throw new Error("LIBRARY_CONFIGURATION_UNAVAILABLE");
-    const client = createClient(url.replace(/\/+$/, "").replace(/\/(rest|auth|storage|realtime|functions)\/v\d+$/, ""), key, {
+    // Same public Supabase settings (and accepted variable names) as the browser configuration.
+    const { url, publishableKey: key } = readPublicSupabaseEnv();
+    if (!url || !key) {
+      console.error("[library] Public Supabase configuration missing on the server. Expected one of", PUBLIC_SUPABASE_ENV_NAMES);
+      throw new Error("LIBRARY_CONFIGURATION_UNAVAILABLE");
+    }
+    const client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       global: { headers: { Authorization: `Bearer ${data.accessToken}` } },
     });
