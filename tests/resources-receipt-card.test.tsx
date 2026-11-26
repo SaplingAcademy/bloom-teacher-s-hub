@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ access: vi.fn() }));
+vi.mock("@tanstack/react-router", async (importOriginal) => ({ ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ to, children, ...rest }: { to: string; children?: React.ReactNode }) => createElement("a", { href: to, ...rest }, children) }));
 vi.mock("@/hooks/use-auth", () => ({ useAuth: () => ({ user: { id: "t1" }, session: { user: { id: "t1" } }, loading: false }) }));
 vi.mock("@/hooks/use-language", () => ({ useLanguage: () => ({ lang: "pt", t: (key: string) => key }) }));
 vi.mock("@/hooks/use-library-access", () => ({ useLibraryAccess: () => ({ data: undefined, isLoading: false, isPending: false, isError: false, error: null, refetch: vi.fn(),

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -655,14 +655,12 @@ function ResourcesPage() {
                 </div>
               </Button>
 
-              <Button variant="ghost"
-                onClick={(e) => {
-                  const temp = allTemplates.find((x) => x.id === "ped-placement-test");
-                  if (temp) handleUseTemplate(temp, e);
-                }}
-                aria-disabled={soonLocked("ped-placement-test") || undefined}
-                className={`h-auto whitespace-normal flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer${soonDim("ped-placement-test")}`}
+              {/* Shortcut to the Bloom Placement module (main access: Gestão → Nivelamento). The Pro
+                  rule is enforced by /placement itself and by the database, never here. */}
+              <Button variant="ghost" asChild
+                className="h-auto whitespace-normal flex flex-col items-start justify-start gap-2.5 rounded-2xl border border-border bg-card p-5 text-left hover:border-primary/45 hover:shadow-md transition-all group cursor-pointer"
               >
+                <Link to="/placement" data-testid="resources-placement-shortcut">
                 <div className="rounded-xl bg-warning/10 p-2.5 text-warning border border-warning/10">
                   <Target className="h-5 w-5" />
                 </div>
@@ -670,13 +668,13 @@ function ResourcesPage() {
                   <h3 className="font-display font-bold text-foreground text-sm group-hover:text-warning transition-colors">
                     {t.newPlacement}
                   </h3>
-                  {accessBadge("ped-placement-test")}
                   <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
                     {lang === "pt"
                       ? "Iniciar teste de nivelamento"
                       : "Begin onboarding oral interview"}
                   </p>
                 </div>
+                </Link>
               </Button>
 
               <Button variant="ghost"
