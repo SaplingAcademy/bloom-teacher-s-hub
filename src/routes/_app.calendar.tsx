@@ -1487,37 +1487,19 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`relative min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-2 text-left transition-all hover:shadow-sm space-y-1 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`relative min-w-0 w-full max-w-full overflow-hidden rounded-lg border px-2 py-1 text-left transition-all hover:shadow-sm space-y-0.5 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
                               </div>
-                              <div className="min-w-0 text-[10px] font-semibold flex items-center justify-between gap-1 opacity-80">
+                              <div className="min-w-0 text-[10px] font-semibold leading-tight flex items-center justify-between gap-1 opacity-80">
                                 <span data-calendar-event-time="" className="min-w-0 truncate">
                                   {fmtTime(evt.startTime)}–{fmtTime(evt.endTime)}
                                 </span>
                                 {evt.eventType !== "custom" && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}
                               </div>
-                              <div className="min-w-0 text-[9px] font-medium opacity-70 truncate">
-                                {evt.eventType === "custom" ? evt.category : evt.focus}
-                              </div>
-                              {/* Small status indicator pill */}
-                              {evt.eventType !== "custom" && <div className="min-w-0 max-w-full truncate text-[8px] font-bold uppercase tracking-wider mt-1 inline-block border border-current px-1.5 py-0.5 rounded-md">
-                                {evt.status === "Needs Preparation" &&
-                                  (t("auditUi.prepNeeded"))}
-                                {evt.status === "Lesson Ready" &&
-                                  (t("auditUi.ready"))}
-                                {evt.status === "Homework Pending" &&
-                                  (t("auditUi.hwPending"))}
-                                {evt.status === "Homework Sent" &&
-                                  (t("auditUi.hwSent"))}
-                                {evt.status === "Feedback Pending" &&
-                                  (t("auditUi.fbPending"))}
-                                {evt.status === "Completed" &&
-                                  (t("auditUi.completed"))}
-                                {evt.status === "Closed" &&
-                                  (t("auditUi.closed"))}
-                              </div>}
+                              {/* Compact summary: name, time and level only. Focus/category and lesson status
+                                  live in the details opened on click (the empty status pill is gone). */}
                             </div>
                           );
                         })}
