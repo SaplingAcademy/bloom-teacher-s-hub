@@ -11,7 +11,7 @@ describe("top navigation (mega menu groups)", () => {
 
   it("distributes the modules in the three requested columns, in order", () => {
     expect(getNavGroups().map((g) => [g.id, g.items.map((i) => i.id)])).toEqual([
-      ["management", ["today", "calendar", "students", "leads"]],
+      ["management", ["today", "calendar", "students", "leads", "placement"]],
       ["business", ["finance", "growth", "workspaceHub"]],
       ["resources", ["resources", "community", "academy", "marketplace"]],
     ]);
