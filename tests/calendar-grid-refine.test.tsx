@@ -18,7 +18,7 @@ describe("compact grid", () => {
 });
 
 describe("15-minute snapping on the compact rows", () => {
-  const cardAt = (top: number, minutes: number) => top + 4 + (minutes / 60) * ROW;
+  const cardAt = (top: number, minutes: number) => top + (minutes / 60) * ROW; // no vertical padding
   it("snaps the card's top to :00, :15, :30 and :45 (nearest quarter)", () => {
     const top = 300;
     const at = (minutes: number) => weekDropPosition("2026-11-18", "10:00", cardAt(top, minutes), top).startTime;
@@ -75,5 +75,43 @@ describe("indicator refresh", () => {
     await act(async () => { vi.advanceTimersByTime(60_000 * 29); }); // 14:30
     expect(currentTimeMarker(seen!).fraction).toBe(0.5);
     await act(async () => root.unmount());
+  });
+});
+
+describe("week cards on the fixed hour scale", () => {
+  it("17:00, 17:30 and 17:45 start on the hour line, halfway and at 75% of the row", async () => {
+    const { layoutWeekDayCards } = await import("../src/lib/calendar-grid");
+    const layout = layoutWeekDayCards([
+      { id: "a", startTime: "17:00", durationMinutes: 15 },
+      { id: "b", startTime: "17:30", durationMinutes: 10 },
+      { id: "c", startTime: "17:45", durationMinutes: 10 },
+    ]);
+    expect(layout.get("a")!.top).toBe(0);
+    expect(layout.get("b")!.top).toBe(ROW / 2);
+    expect(layout.get("c")!.top).toBe(ROW * 0.75);
+  });
+  it("card height follows the duration on the same scale, never taller than the compact card", async () => {
+    const { weekCardHeightPx, CALENDAR_CARD_MAX_PX, CALENDAR_CARD_MIN_PX } = await import("../src/lib/calendar-grid");
+    expect(weekCardHeightPx(30)).toBe(ROW / 2);
+    expect(weekCardHeightPx(60)).toBe(CALENDAR_CARD_MAX_PX);
+    expect(weekCardHeightPx(120)).toBe(CALENDAR_CARD_MAX_PX);
+    expect(weekCardHeightPx(5)).toBe(CALENDAR_CARD_MIN_PX);
+  });
+  it("back-to-back short lessons stack; overlapping boxes share the width side by side", async () => {
+    const { layoutWeekDayCards } = await import("../src/lib/calendar-grid");
+    const stacked = layoutWeekDayCards([
+      { id: "a", startTime: "17:00", durationMinutes: 30 },
+      { id: "b", startTime: "17:30", durationMinutes: 30 },
+    ]);
+    expect([stacked.get("a")!.columns, stacked.get("b")!.columns]).toEqual([1, 1]);
+    const clash = layoutWeekDayCards([
+      { id: "a", startTime: "17:00", durationMinutes: 60 },
+      { id: "b", startTime: "17:00", durationMinutes: 60 },
+      { id: "c", startTime: "17:30", durationMinutes: 60 },
+      { id: "d", startTime: "19:00", durationMinutes: 60 },
+    ]);
+    // 17:30 (top 27px) overlaps both 40px cards that start at 17:00 → three lanes.
+    expect(["a", "b", "c"].map((id) => [clash.get(id)!.column, clash.get(id)!.columns])).toEqual([[0, 3], [1, 3], [2, 3]]);
+    expect(clash.get("d")).toMatchObject({ column: 0, columns: 1 });
   });
 });

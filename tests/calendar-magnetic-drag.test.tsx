@@ -59,37 +59,38 @@ const move = async (x: number, y: number) => { await act(async () => { pointer(w
 describe("magnetic quarter-hour drag (the card itself snaps)", () => {
   it("the card jumps between :00/:15/:30/:45 and stays put between two quarters", async () => {
     const { preview } = await setup();
-    await move(310, 424); // card top 404 → :00
-    expect(preview().style.transform).toBe(`translate3d(304px, ${400 + CALENDAR_CELL_PAD_PX}px, 0)`);
-    await move(310, 428); // a few px further: still :00 (magnet holds)
-    expect(preview().style.transform).toBe(`translate3d(304px, ${400 + CALENDAR_CELL_PAD_PX}px, 0)`);
-    await move(310, 436); // past half a quarter → snaps to :15
-    expect(preview().style.transform).toBe(`translate3d(304px, ${404 + minuteOffsetPx(15)}px, 0)`);
-    await move(310, 460); // card top 440 → 36px into the cell → :45
-    expect(preview().style.transform).toBe(`translate3d(304px, ${404 + minuteOffsetPx(45)}px, 0)`);
+    // No vertical padding: the card's top is measured from the hour line on the 54px scale.
+    await move(310, 420); // card top 400 → :00, drawn on the hour line
+    expect(preview().style.transform).toBe(`translate3d(304px, 400px, 0)`);
+    await move(310, 424); // a few px further: still :00 (magnet holds)
+    expect(preview().style.transform).toBe(`translate3d(304px, 400px, 0)`);
+    await move(310, 432); // past half a quarter → snaps to :15
+    expect(preview().style.transform).toBe(`translate3d(304px, ${400 + minuteOffsetPx(15)}px, 0)`);
+    await move(310, 456); // card top 436 → 36px into the cell → :45 (75% of the row)
+    expect(preview().style.transform).toBe(`translate3d(304px, ${400 + minuteOffsetPx(45)}px, 0)`);
   });
   it("the time inside the card follows the snapped position and keeps the duration", async () => {
     const { preview } = await setup();
-    await move(310, 436);
+    await move(310, 432);
     expect(preview().textContent).toContain("16:15–17:05");
-    await move(310, 449);
+    await move(310, 445);
     expect(preview().textContent).toContain("16:30–17:20");
     expect(preview().querySelector<HTMLElement>("[data-calendar-event-time]")!.parentElement!.style.marginTop).toBe("0px"); // no doubled offset
   });
   it("moves across days: the card snaps into the other column", async () => {
     const { preview } = await setup();
-    await move(510, 449);
-    expect(preview().style.transform).toBe(`translate3d(504px, ${404 + minuteOffsetPx(30)}px, 0)`);
+    await move(510, 445);
+    expect(preview().style.transform).toBe(`translate3d(504px, ${400 + minuteOffsetPx(30)}px, 0)`); // exactly halfway
   });
   it("drops exactly at the shown day and time, and the saved card is drawn at that same spot", async () => {
     const { onDrop, preview } = await setup(vi.fn(() => new Promise<boolean>(() => {}))); // save still running
-    await move(510, 449);
+    await move(510, 445);
     const shown = preview().style.transform;
-    await act(async () => { pointer(window, "pointerup", 510, 449); });
+    await act(async () => { pointer(window, "pointerup", 510, 445); });
     expect(onDrop).toHaveBeenCalledWith("l1", expect.objectContaining({ date: "2026-11-20", startTime: "16:30" }));
     expect(onDrop).toHaveBeenCalledTimes(1);
     expect(preview().style.transform).toBe(shown); // no jump while saving
-    // The grid draws a saved 16:30 card at cell top + padding + the same minute offset.
-    expect(weekSnappedCardPoint({ left: 500, top: 400 }, "16:30")).toEqual({ x: 500 + CALENDAR_CELL_PAD_PX, y: 400 + CALENDAR_CELL_PAD_PX + minuteOffsetPx(30) });
+    // The grid draws a saved 16:30 card at cell top + the same minute offset (horizontal inset only).
+    expect(weekSnappedCardPoint({ left: 500, top: 400 }, "16:30")).toEqual({ x: 500 + CALENDAR_CELL_PAD_PX, y: 400 + minuteOffsetPx(30) });
   });
 });

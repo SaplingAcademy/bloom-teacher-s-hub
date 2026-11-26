@@ -105,7 +105,7 @@ import { customEventDefaults, customEventErrorKey, moveCustomEvent } from "@/lib
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { calendarEventsQueryKey, calendarEventsRootKey, calendarEventsWindow } from "@/lib/calendar-events-window";
 import { lessonSlotDefaults, type SchedulingContext } from "@/lib/scheduling-context";
-import { calendarGridHours, currentTimeMarker, minuteOffsetPx } from "@/lib/calendar-grid";
+import { CALENDAR_CARD_TWO_LINE_PX, CALENDAR_CELL_PAD_PX, CALENDAR_HOUR_ROW_PX, calendarGridHours, currentTimeMarker, layoutWeekDayCards } from "@/lib/calendar-grid";
 import { useCurrentMinute } from "@/hooks/use-current-minute";
 import { CalendarNowLine } from "@/components/bloom/CalendarNowLine";
 import { useCalendarGridScroll } from "@/hooks/use-calendar-grid-scroll";
@@ -792,6 +792,19 @@ function CalendarPage() {
     return matchType && matchFormat && matchStatus;
   });
 
+  // Week view: each day's cards laid out on the hour scale (position, duration-based height and
+  // side-by-side lanes for overlapping cards). Display only; times and durations are just read.
+  const eventsByDay = new Map<string, typeof filteredEvents>();
+  for (const evt of filteredEvents) eventsByDay.set(evt.date, [...(eventsByDay.get(evt.date) ?? []), evt]);
+  const dayCardLayouts = new Map<string, ReturnType<typeof layoutWeekDayCards>>();
+  for (const [date, dayEvents] of eventsByDay) {
+    dayCardLayouts.set(date, layoutWeekDayCards(dayEvents.map((evt) => ({
+      id: evt.id,
+      startTime: evt.startTime,
+      durationMinutes: Number(evt.duration) || 60,
+    }))));
+  }
+
   // Capacity calculations for side information panel
   const totalSlots = availability.reduce((sum, item) => {
     if (!item.enabled) return sum;
@@ -1424,7 +1437,7 @@ function CalendarPage() {
               ) : (
               <div className="divide-y divide-border/60">
                 {gridHours.map((hour) => (
-                  <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[54px]">
+                  <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)]" style={{ height: CALENDAR_HOUR_ROW_PX }}>
                     {/* Hour cell */}
                     <div className="p-2 border-r border-border text-right text-[11px] font-semibold text-muted-foreground bg-secondary/5 shrink-0 flex justify-end items-start pt-1">
                       {hour}
@@ -1451,7 +1464,7 @@ function CalendarPage() {
                           data-hour={hour}
                           onClick={(event) => createFromCell(event, dateStr, hour)}
                           title={unavailable ? (t("auditUi.outsideAvailability")) : undefined}
-                          className={`p-1 border-r border-border/60 relative transition-colors flex flex-col gap-1 min-h-[54px] min-w-0 overflow-hidden ${
+                          className={`border-r border-border/60 relative transition-colors min-w-0 ${
                             unavailable
                               ? "bg-muted/60 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,hsl(var(--border)/0.35)_6px,hsl(var(--border)/0.35)_7px)]"
                               : "bg-card hover:bg-secondary/10"
@@ -1466,11 +1479,12 @@ function CalendarPage() {
                           {nowMarker.date === dateStr && nowMarker.hour === hour && (
                             <CalendarNowLine fraction={nowMarker.fraction} className="left-1 right-0" />
                           )}
-                          {cellEvents.map((evt, evtIndex) => {
+                          {cellEvents.map((evt) => {
                             const canDrag = !["Completed", "Closed", "Cancelled"].includes(evt.status) && !movingIds.has(evt.id);
-                            // The first card sits at its start minute (same offset as the magnetic drag), so a
-                            // dropped card stays exactly where it was shown; later cards stack below it.
-                            const minuteOffset = evtIndex === 0 ? minuteOffsetPx(Number(evt.startTime.slice(3, 5))) : 0;
+                            // Same hour scale as the magnetic drag: top = start minute, height = duration
+                            // (compact bounds), overlapping cards side by side. Rows never stretch.
+                            const box = dayCardLayouts.get(dateStr)?.get(evt.id) ?? { top: 0, height: 40, column: 0, columns: 1 };
+                            const singleLine = box.height < CALENDAR_CARD_TWO_LINE_PX;
                             const colorMeta = eventColor(evt);
                             return (
                               <div
@@ -1478,7 +1492,13 @@ function CalendarPage() {
                                 data-calendar-event=""
                                 data-calendar-event-id={evt.id}
                                 aria-busy={movingIds.has(evt.id)}
-                                style={minuteOffset ? { marginTop: minuteOffset } : undefined}
+                                title={`${evt.studentName} · ${fmtTime(evt.startTime)}–${fmtTime(evt.endTime)}`}
+                                style={{
+                                  top: box.top,
+                                  height: box.height,
+                                  left: `calc((100% - ${CALENDAR_CELL_PAD_PX * 2}px) * ${box.column / box.columns} + ${CALENDAR_CELL_PAD_PX}px)`,
+                                  width: `calc((100% - ${CALENDAR_CELL_PAD_PX * 2}px) / ${box.columns} - ${box.columns > 1 ? 2 : 0}px)`,
+                                }}
                                 onPointerDown={(event) => {
                                   if (canDrag && !pendingMoves.current.has(evt.id)) weekDrag.start(event, evt.id);
                                 }}
@@ -1487,16 +1507,16 @@ function CalendarPage() {
                                   setSelectedEvent(evt);
                                   setNotesText(evt.notes || "");
                                 }}
-                                className={`relative min-w-0 w-full max-w-full overflow-hidden rounded-lg border px-2 py-1 text-left transition-all hover:shadow-sm space-y-0.5 ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
+                                className={`absolute z-10 min-w-0 overflow-hidden rounded-lg border px-2 text-left transition-all hover:z-20 hover:shadow-sm ${singleLine ? "flex items-center gap-1.5" : "py-1 space-y-0.5"} ${evt.eventType === "custom" ? `${colorMeta ? colorMeta.calendarEventClass : "bg-lilac-soft text-foreground border-lilac/40"} border-dashed` : colorMeta?.calendarEventClass} ${canDrag ? "touch-auto select-none cursor-grab" : "cursor-pointer"} ${weekDrag.draggedId === evt.id ? "opacity-40 cursor-grabbing ring-2 ring-primary" : ""} ${movingIds.has(evt.id) ? "opacity-60 cursor-wait" : ""}`}
                               >
                               <div className="min-w-0 font-display text-xs font-bold leading-tight truncate text-foreground">
                                 {evt.studentName}
                               </div>
-                              <div className="min-w-0 text-[10px] font-semibold leading-tight flex items-center justify-between gap-1 opacity-80">
+                              <div className={`min-w-0 text-[10px] font-semibold leading-tight flex items-center justify-between gap-1 opacity-80 ${singleLine ? "shrink-0" : ""}`}>
                                 <span data-calendar-event-time="" className="min-w-0 truncate">
                                   {fmtTime(evt.startTime)}–{fmtTime(evt.endTime)}
                                 </span>
-                                {evt.eventType !== "custom" && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}
+                                {evt.eventType !== "custom" && !singleLine && <span className="shrink-0 max-w-[45%] truncate text-right">{evt.level}</span>}
                               </div>
                               {/* Compact summary: name, time and level only. Focus/category and lesson status
                                   live in the details opened on click (the empty status pill is gone). */}
