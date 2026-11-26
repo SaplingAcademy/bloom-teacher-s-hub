@@ -8,9 +8,9 @@ describe("week-view drop coordinates", () => {
     expect(weekLessonPreviewTimeRange("23:00", 60)).toBe("23:00");
     expect(weekLessonPreviewTimeRange("23:45", 60)).toBe("23:45");
   });
-  // Quarter-hour slots are 13.5px apart on the compact 54px rows, below the cell's 4px padding.
+  // Quarter-hour slots are 13.5px apart on the 54px rows, measured from the hour line.
   const top = 200;
-  const cardAt = (minutes: number) => top + 4 + (minutes / 60) * 54;
+  const cardAt = (minutes: number) => top + (minutes / 60) * 54;
   it("Tuesday 14:00 dragged to Thursday 16:00 resolves the Thursday slot", () => {
     expect(weekDropPosition("2026-10-22", "16:00", cardAt(0), top)).toEqual({ date: "2026-10-22", startTime: "16:00" });
   });

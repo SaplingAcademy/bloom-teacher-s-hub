@@ -122,8 +122,9 @@ describe("week drag presentation lifecycle", () => {
     await act(async () => { flushRaf(); flushRaf(); });
     expect(area.scrollTop).toBe(20);
     await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 290 }); });
-    // Card top = 290 − 20 (grab offset) = 270 → first quarter of the newly revealed 23h cell.
-    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ startTime: "23:00" }));
+    // Card top = 290 − 20 (grab offset) = 270 → 10px below the 23h line of the newly revealed cell
+    // (no vertical padding) → nearest quarter :15, still inside the 23h cell.
+    expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ startTime: "23:15" }));
     expect(rafCallbacks.size).toBe(0);
   });
   it("clones the original lesson, snaps magnetically to quarter hours and returns after a cancelled save", async () => {
@@ -139,20 +140,20 @@ describe("week drag presentation lifecycle", () => {
     await startMouseDrag();
     const preview = document.querySelector<HTMLElement>("[data-calendar-drag-preview]")!;
     expect(preview.textContent).toContain("Julia · English");
-    // Grabbed 20px below its top; card top 112 → 8px into the cell → snaps to :15 (13.5px per quarter).
+    // Grabbed 20px below its top; card top 112 → 12px below the hour line → snaps to :15 (13.5px per quarter).
     expect(preview.textContent).toContain("16:15–17:15");
     expect(preview.textContent).not.toContain("2026-11-06");
     expect(preview.textContent).not.toContain("60 min");
-    expect(preview.style.transform).toBe("translate3d(304px, 117.5px, 0)"); // the card itself sits on :15
+    expect(preview.style.transform).toBe("translate3d(304px, 113.5px, 0)"); // the card itself sits on :15 (25% of the row)
 
     await act(async () => { pointer(window, "pointermove", { clientX: 310, clientY: 148 }); });
     await act(async () => { flushRaf(); });
     expect(preview.textContent).toContain("16:30–17:30");
-    expect(preview.style.transform).toBe("translate3d(304px, 131px, 0)"); // jumped to :30
+    expect(preview.style.transform).toBe("translate3d(304px, 127px, 0)"); // jumped to :30 (exactly halfway)
 
     await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 148 }); });
     expect(onDrop).toHaveBeenCalledWith("lesson-1", expect.objectContaining({ date: "2026-11-06", startTime: "16:30" }));
-    expect(preview.style.transform).toBe("translate3d(304px, 131px, 0)"); // stays where it was shown
+    expect(preview.style.transform).toBe("translate3d(304px, 127px, 0)"); // stays where it was shown
     expect(preview.dataset.dragPhase).toBe("pending");
     expect(preview.textContent).toContain("Saving new time...");
 
@@ -179,7 +180,7 @@ describe("week drag presentation lifecycle", () => {
     await act(async () => { pointer(window, "pointerup", { clientX: 310, clientY: 132 }); });
     const preview = document.querySelector<HTMLElement>("[data-calendar-drag-preview]")!;
     expect(preview.dataset.dragPhase).toBe("settling");
-    expect(preview.style.transform).toBe("translate3d(304px, 104px, 0)");
+    expect(preview.style.transform).toBe("translate3d(304px, 100px, 0)"); // cell top: no vertical padding
     expect(preview.textContent).toContain("Time updated");
     expect(onDrop).toHaveBeenCalledTimes(1);
   });

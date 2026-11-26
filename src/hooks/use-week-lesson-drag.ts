@@ -45,7 +45,7 @@ export const WEEK_DRAG_TOUCH_HOLD_MS = 450;
  * :30, :45); no booking rules. `cardTop` and `cellTop` are viewport coordinates.
  */
 export function weekDropPosition(date: string, hour: string, cardTop: number, cellTop: number): WeekDropPosition {
-  const minutes = snapMinutesInCell(cardTop - cellTop - CALENDAR_CELL_PAD_PX);
+  const minutes = snapMinutesInCell(cardTop - cellTop);
   return { date, startTime: `${hour.slice(0, 2)}:${String(minutes).padStart(2, "0")}` };
 }
 
@@ -53,7 +53,7 @@ export function weekDropPosition(date: string, hour: string, cardTop: number, ce
 export function weekSnappedCardPoint(cell: { left: number; top: number }, startTime: string): { x: number; y: number } {
   return {
     x: cell.left + CALENDAR_CELL_PAD_PX,
-    y: cell.top + CALENDAR_CELL_PAD_PX + minuteOffsetPx(Number(startTime.slice(3, 5))),
+    y: cell.top + minuteOffsetPx(Number(startTime.slice(3, 5))),
   };
 }
 
@@ -135,7 +135,7 @@ export function useWeekLessonDrag(onDrop: (eventId: string, position: WeekDropPo
       const destination = canonical?.getBoundingClientRect() ?? cell?.getBoundingClientRect();
       if (destination) {
         nextPhase = "settling";
-        paint(destination.left + (canonical ? 0 : 4), destination.top + (canonical ? 0 : 4), true);
+        paint(destination.left + (canonical ? 0 : CALENDAR_CELL_PAD_PX), destination.top, true);
       } else {
         paint(current.origin.left, current.origin.top, true);
       }

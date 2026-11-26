@@ -53,6 +53,11 @@ export function WeekLessonDragPreview({
     clone.style.transform = "none";
     // The in-cell minute offset belongs to the grid; the floating card is positioned by the drag itself.
     clone.style.marginTop = "0";
+    // The grid card is absolutely placed in its hour cell; the floating copy fills its own box.
+    clone.style.position = "relative";
+    clone.style.top = "0";
+    clone.style.left = "0";
+    clone.style.width = "100%";
     clone.style.transition = "none";
     clone.querySelectorAll<HTMLElement>("[id]").forEach((element) => element.removeAttribute("id"));
     originalTime.current = clone.querySelector<HTMLElement>("[data-calendar-event-time]")?.textContent ?? "";
