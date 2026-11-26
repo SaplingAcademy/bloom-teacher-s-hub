@@ -51,7 +51,6 @@ export const navSections: NavSection[] = [
         description: "Profiles, progress and history",
       },
       { id: "leads", label: "Leads", to: "/leads", icon: UserPlus, description: "Turn inquiries into students" },
-      { id: "placement", label: "Placement", to: "/placement", icon: ClipboardCheck, description: "English placement tests" },
       {
         id: "calendar",
         label: "Calendar",
@@ -151,14 +150,29 @@ export const aiNav: NavItem = {
   description: "Your teaching assistant",
 };
 
-export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav, ...accountNav];
+/**
+ * Modules temporarily hidden from the menus (desktop sidebar/top panel and mobile). Their routes keep
+ * working and they stay reachable through in-app shortcuts (e.g. Placement from /resources). To show
+ * one again, move it back into its `navSections` entry and add its id to its `navGroups` column
+ * ("placement" belongs to "management", after "leads").
+ */
+export const placementNav: NavItem = {
+  id: "placement",
+  label: "Placement",
+  to: "/placement",
+  icon: ClipboardCheck,
+  description: "English placement tests",
+};
+export const hiddenNavItems: NavItem[] = [placementNav];
+
+export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), ...bottomNav, ...accountNav, ...hiddenNavItems];
 
 /**
  * Mega menu (top navigation panel): modules grouped in three columns. Every item of `navSections`
  * belongs to exactly one group (see getNavGroups), so no module is ever dropped.
  */
 export const navGroups: { id: "management" | "business" | "resources"; itemIds: string[] }[] = [
-  { id: "management", itemIds: ["today", "calendar", "students", "leads", "placement"] },
+  { id: "management", itemIds: ["today", "calendar", "students", "leads"] },
   { id: "business", itemIds: ["finance", "growth", "workspaceHub"] },
   { id: "resources", itemIds: ["resources", "community", "academy", "marketplace"] },
 ];
