@@ -2,6 +2,7 @@ import {
   PanelsTopLeft,
   Users,
   UserPlus,
+  ClipboardCheck,
   CalendarDays,
   LibraryBig,
   Wallet,
@@ -50,6 +51,7 @@ export const navSections: NavSection[] = [
         description: "Profiles, progress and history",
       },
       { id: "leads", label: "Leads", to: "/leads", icon: UserPlus, description: "Turn inquiries into students" },
+      { id: "placement", label: "Placement", to: "/placement", icon: ClipboardCheck, description: "English placement tests" },
       {
         id: "calendar",
         label: "Calendar",
@@ -156,7 +158,7 @@ export const allNavItems: NavItem[] = [...navSections.flatMap((s) => s.items), .
  * belongs to exactly one group (see getNavGroups), so no module is ever dropped.
  */
 export const navGroups: { id: "management" | "business" | "resources"; itemIds: string[] }[] = [
-  { id: "management", itemIds: ["today", "calendar", "students", "leads"] },
+  { id: "management", itemIds: ["today", "calendar", "students", "leads", "placement"] },
   { id: "business", itemIds: ["finance", "growth", "workspaceHub"] },
   { id: "resources", itemIds: ["resources", "community", "academy", "marketplace"] },
 ];

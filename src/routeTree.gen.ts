@@ -26,12 +26,14 @@ import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppLessonsRouteImport } from './routes/_app.lessons'
 import { Route as AppMarketplaceRouteImport } from './routes/_app.marketplace'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
+import { Route as AppPlacementRouteImport } from './routes/_app.placement'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppResourcesRouteImport } from './routes/_app.resources'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
 import { Route as AppWorkspaceRouteImport } from './routes/_app.workspace'
 import { Route as AppCommunityContactsRouteImport } from './routes/_app.community_.contacts'
+import { Route as AppPlacementTemplateIdRouteImport } from './routes/_app.placement_.$templateId'
 import { Route as AppWorkspaceIndexRouteImport } from './routes/_app.workspace.index'
 import { Route as AppWorkspaceMuralRouteImport } from './routes/_app.workspace.mural'
 import { Route as AppWorkspaceNotebooksRouteImport } from './routes/_app.workspace.notebooks'
@@ -126,6 +128,11 @@ const AppMessagesRoute = AppMessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPlacementRoute = AppPlacementRouteImport.update({
+  id: '/placement',
+  path: '/placement',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -154,6 +161,11 @@ const AppWorkspaceRoute = AppWorkspaceRouteImport.update({
 const AppCommunityContactsRoute = AppCommunityContactsRouteImport.update({
   id: '/community_/contacts',
   path: '/community/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlacementTemplateIdRoute = AppPlacementTemplateIdRouteImport.update({
+  id: '/placement_/$templateId',
+  path: '/placement/$templateId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppWorkspaceIndexRoute = AppWorkspaceIndexRouteImport.update({
@@ -223,12 +235,14 @@ export interface FileRoutesByFullPath {
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
   '/messages': typeof AppMessagesRoute
+  '/placement': typeof AppPlacementRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/workspace': typeof AppWorkspaceRouteWithChildren
   '/community/contacts': typeof AppCommunityContactsRoute
+  '/placement/$templateId': typeof AppPlacementTemplateIdRoute
   '/workspace/mural': typeof AppWorkspaceMuralRoute
   '/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
   '/workspace/projects': typeof AppWorkspaceProjectsRoute
@@ -255,12 +269,14 @@ export interface FileRoutesByTo {
   '/lessons': typeof AppLessonsRoute
   '/marketplace': typeof AppMarketplaceRoute
   '/messages': typeof AppMessagesRoute
+  '/placement': typeof AppPlacementRoute
   '/profile': typeof AppProfileRoute
   '/resources': typeof AppResourcesRoute
   '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/': typeof AppIndexRoute
   '/community/contacts': typeof AppCommunityContactsRoute
+  '/placement/$templateId': typeof AppPlacementTemplateIdRoute
   '/workspace/mural': typeof AppWorkspaceMuralRoute
   '/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
   '/workspace/projects': typeof AppWorkspaceProjectsRoute
@@ -289,6 +305,7 @@ export interface FileRoutesById {
   '/_app/lessons': typeof AppLessonsRoute
   '/_app/marketplace': typeof AppMarketplaceRoute
   '/_app/messages': typeof AppMessagesRoute
+  '/_app/placement': typeof AppPlacementRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/resources': typeof AppResourcesRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -296,6 +313,7 @@ export interface FileRoutesById {
   '/_app/workspace': typeof AppWorkspaceRouteWithChildren
   '/_app/': typeof AppIndexRoute
   '/_app/community_/contacts': typeof AppCommunityContactsRoute
+  '/_app/placement_/$templateId': typeof AppPlacementTemplateIdRoute
   '/_app/workspace/mural': typeof AppWorkspaceMuralRoute
   '/_app/workspace/notebooks': typeof AppWorkspaceNotebooksRoute
   '/_app/workspace/projects': typeof AppWorkspaceProjectsRoute
@@ -325,12 +343,14 @@ export interface FileRouteTypes {
     | '/lessons'
     | '/marketplace'
     | '/messages'
+    | '/placement'
     | '/profile'
     | '/resources'
     | '/settings'
     | '/students'
     | '/workspace'
     | '/community/contacts'
+    | '/placement/$templateId'
     | '/workspace/mural'
     | '/workspace/notebooks'
     | '/workspace/projects'
@@ -357,12 +377,14 @@ export interface FileRouteTypes {
     | '/lessons'
     | '/marketplace'
     | '/messages'
+    | '/placement'
     | '/profile'
     | '/resources'
     | '/settings'
     | '/students'
     | '/'
     | '/community/contacts'
+    | '/placement/$templateId'
     | '/workspace/mural'
     | '/workspace/notebooks'
     | '/workspace/projects'
@@ -390,6 +412,7 @@ export interface FileRouteTypes {
     | '/_app/lessons'
     | '/_app/marketplace'
     | '/_app/messages'
+    | '/_app/placement'
     | '/_app/profile'
     | '/_app/resources'
     | '/_app/settings'
@@ -397,6 +420,7 @@ export interface FileRouteTypes {
     | '/_app/workspace'
     | '/_app/'
     | '/_app/community_/contacts'
+    | '/_app/placement_/$templateId'
     | '/_app/workspace/mural'
     | '/_app/workspace/notebooks'
     | '/_app/workspace/projects'
@@ -538,6 +562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMessagesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/placement': {
+      id: '/_app/placement'
+      path: '/placement'
+      fullPath: '/placement'
+      preLoaderRoute: typeof AppPlacementRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/profile': {
       id: '/_app/profile'
       path: '/profile'
@@ -578,6 +609,13 @@ declare module '@tanstack/react-router' {
       path: '/community/contacts'
       fullPath: '/community/contacts'
       preLoaderRoute: typeof AppCommunityContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/placement_/$templateId': {
+      id: '/_app/placement_/$templateId'
+      path: '/placement/$templateId'
+      fullPath: '/placement/$templateId'
+      preLoaderRoute: typeof AppPlacementTemplateIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/workspace/': {
@@ -679,6 +717,7 @@ interface AppRouteChildren {
   AppLessonsRoute: typeof AppLessonsRoute
   AppMarketplaceRoute: typeof AppMarketplaceRoute
   AppMessagesRoute: typeof AppMessagesRoute
+  AppPlacementRoute: typeof AppPlacementRoute
   AppProfileRoute: typeof AppProfileRoute
   AppResourcesRoute: typeof AppResourcesRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -686,6 +725,7 @@ interface AppRouteChildren {
   AppWorkspaceRoute: typeof AppWorkspaceRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppCommunityContactsRoute: typeof AppCommunityContactsRoute
+  AppPlacementTemplateIdRoute: typeof AppPlacementTemplateIdRoute
   AppAcademyCourseCourseIdRoute: typeof AppAcademyCourseCourseIdRoute
   AppAcademyLessonLessonIdRoute: typeof AppAcademyLessonLessonIdRoute
   AppAcademyVideoVideoIdRoute: typeof AppAcademyVideoVideoIdRoute
@@ -702,6 +742,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLessonsRoute: AppLessonsRoute,
   AppMarketplaceRoute: AppMarketplaceRoute,
   AppMessagesRoute: AppMessagesRoute,
+  AppPlacementRoute: AppPlacementRoute,
   AppProfileRoute: AppProfileRoute,
   AppResourcesRoute: AppResourcesRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -709,6 +750,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWorkspaceRoute: AppWorkspaceRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppCommunityContactsRoute: AppCommunityContactsRoute,
+  AppPlacementTemplateIdRoute: AppPlacementTemplateIdRoute,
   AppAcademyCourseCourseIdRoute: AppAcademyCourseCourseIdRoute,
   AppAcademyLessonLessonIdRoute: AppAcademyLessonLessonIdRoute,
   AppAcademyVideoVideoIdRoute: AppAcademyVideoVideoIdRoute,

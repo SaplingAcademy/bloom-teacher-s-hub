@@ -63,7 +63,8 @@ export type PlanFeature =
   | "library_full"
   | "academy_courses"
   | "marketplace"
-  | "community_rewards";
+  | "community_rewards"
+  | "placement";
 
 export const PLAN_FEATURES: Record<SubscriptionPlan, Readonly<Record<PlanFeature, boolean>>> = {
   free: {
@@ -72,6 +73,7 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, Readonly<Record<PlanFeature
     academy_courses: false,
     marketplace: false,
     community_rewards: false,
+    placement: false,
   },
   pro: {
     growth_insights: true,
@@ -79,6 +81,7 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, Readonly<Record<PlanFeature
     academy_courses: true,
     marketplace: true,
     community_rewards: true,
+    placement: true,
   },
 };
 
