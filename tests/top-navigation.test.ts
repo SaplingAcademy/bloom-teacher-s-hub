@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNavGroups, isNavItemActive, navSections } from "../src/lib/navigation";
+import { getNavGroups, hiddenNavItems, isNavItemActive, navSections } from "../src/lib/navigation";
 
 describe("top navigation (mega menu groups)", () => {
   it("shows every module exactly once, nothing removed", () => {
@@ -11,7 +11,7 @@ describe("top navigation (mega menu groups)", () => {
 
   it("distributes the modules in the three requested columns, in order", () => {
     expect(getNavGroups().map((g) => [g.id, g.items.map((i) => i.id)])).toEqual([
-      ["management", ["today", "calendar", "students", "leads", "placement"]],
+      ["management", ["today", "calendar", "students", "leads"]],
       ["business", ["finance", "growth", "workspaceHub"]],
       ["resources", ["resources", "community", "academy", "marketplace"]],
     ]);
@@ -35,5 +35,11 @@ describe("top navigation (mega menu groups)", () => {
     const byId = Object.fromEntries(navSections.flatMap((s) => s.items).map((i) => [i.id, i]));
     expect(byId.contacts).toBeUndefined();
     expect(isNavItemActive(byId.community, "/community")).toBe(true);
+  });
+
+  it("Placement is temporarily hidden from the menus but kept defined to restore later", () => {
+    const menuIds = [...getNavGroups().flatMap((g) => g.items), ...navSections.flatMap((s) => s.items)].map((i) => i.id);
+    expect(menuIds).not.toContain("placement");
+    expect(hiddenNavItems.map((i) => [i.id, i.to])).toEqual([["placement", "/placement"]]);
   });
 });
