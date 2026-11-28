@@ -12,30 +12,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/hooks/use-language";
 import {
   CEFR_LEVELS, EDITABLE_ITEM_TYPES, buildItemPayload, emptyItemDraft, itemDraftFrom, itemTypesForSkill,
-  type ItemDraft, type ItemDraftError, type ItemPayload, type PlacementItem, type PlacementItemType, type PlacementSkill,
+  type ItemDraft, type ItemDraftError, type ItemDraftSource, type ItemPayload, type PlacementItemType, type PlacementSkill,
 } from "@/lib/placement";
+import { validateBankMeta, type BankMeta, type BankMetaError } from "@/lib/placement-bank";
 
 /**
- * Create/edit one question of a draft section. Only formats that can be persisted and validated
- * now are selectable; the payload is checked with the same rules as the database before saving.
+ * Create/edit one question of a draft section — or, with `bank`, a reusable Question Bank question
+ * (adds topic/subskill; super_admin also chooses whether an official question is published). Only
+ * formats that can be persisted and validated now are selectable; the payload is checked with the
+ * same rules as the database before saving.
  */
 export function PlacementItemDialog({
-  open, skill, item, itemTimeLimits, busy, onClose, onSave,
+  open, skill, item, itemTimeLimits, busy, onClose, onSave, bank,
 }: {
   open: boolean;
   skill: PlacementSkill;
-  item: PlacementItem | null;
+  item: ItemDraftSource | null;
   /** Template timing mode is "per task": the item carries its own limit. */
   itemTimeLimits: boolean;
   busy: boolean;
   onClose: () => void;
-  onSave: (payload: ItemPayload) => void;
+  onSave: (payload: ItemPayload, meta?: BankMeta) => void;
+  /** Question Bank mode: initial topic/subskill and whether the publish switch is shown (official bank). */
+  bank?: { initial: BankMeta; official: boolean };
 }) {
   const { t } = useLanguage();
   const [draft, setDraft] = useState<ItemDraft>(() => (item ? itemDraftFrom(item) : emptyItemDraft(skill)));
   const [errors, setErrors] = useState<ItemDraftError[]>([]);
+  const [meta, setMeta] = useState<BankMeta>(() => bank?.initial ?? { topic: "", subskill: "", published: true });
+  const [metaErrors, setMetaErrors] = useState<BankMetaError[]>([]);
   useEffect(() => {
-    if (open) { setDraft(item ? itemDraftFrom(item) : emptyItemDraft(skill)); setErrors([]); }
+    if (open) {
+      setDraft(item ? itemDraftFrom(item) : emptyItemDraft(skill)); setErrors([]);
+      setMeta(bank?.initial ?? { topic: "", subskill: "", published: true }); setMetaErrors([]);
+    }
+    // bank.initial is read only when the dialog opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, skill]);
 
   const set = <K extends keyof ItemDraft>(key: K, value: ItemDraft[K]) => setDraft((d) => ({ ...d, [key]: value }));
@@ -48,19 +60,41 @@ export function PlacementItemDialog({
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     const result = buildItemPayload(skill, draft, item?.metadata ?? {});
+    const nextMetaErrors = bank ? validateBankMeta(meta.topic, meta.subskill) : [];
+    setMetaErrors(nextMetaErrors);
     if (!result.ok) { setErrors(result.errors); return; }
     setErrors([]);
-    onSave(result.payload);
+    if (nextMetaErrors.length) return;
+    onSave(result.payload, bank ? meta : undefined);
   };
+  const title = bank
+    ? (item ? t("placement.bank.editTitle") : bank.official ? t("placement.bank.createOfficialTitle") : t("placement.bank.createTitle"))
+    : (item ? t("placement.item.editTitle") : t("placement.item.createTitle"));
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl" data-testid="placement-item-dialog">
         <DialogHeader>
-          <DialogTitle>{(item ? t("placement.item.editTitle") : t("placement.item.createTitle")).replace("{skill}", skillLabel)}</DialogTitle>
+          <DialogTitle>{title.replace("{skill}", skillLabel)}</DialogTitle>
           <DialogDescription className="sr-only">{skillLabel}</DialogDescription>
         </DialogHeader>
         <form onSubmit={save} className="space-y-4" noValidate>
+          {bank && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="placement-bank-topic">{t("placement.bank.topic")}</Label>
+                <Input id="placement-bank-topic" maxLength={80} value={meta.topic} placeholder={t("placement.bank.topicPlaceholder")}
+                  aria-invalid={metaErrors.includes("topic") || undefined} onChange={(e) => setMeta((m) => ({ ...m, topic: e.target.value }))} />
+                {metaErrors.includes("topic") && <p role="alert" className="text-xs text-destructive">{t("placement.bank.errors.topic")}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="placement-bank-subskill">{t("placement.bank.subskill")}</Label>
+                <Input id="placement-bank-subskill" maxLength={80} value={meta.subskill} placeholder={t("placement.bank.subskillPlaceholder")}
+                  aria-invalid={metaErrors.includes("subskill") || undefined} onChange={(e) => setMeta((m) => ({ ...m, subskill: e.target.value }))} />
+                {metaErrors.includes("subskill") && <p role="alert" className="text-xs text-destructive">{t("placement.bank.errors.subskill")}</p>}
+              </div>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>{t("placement.item.type")}</Label>
@@ -198,7 +232,7 @@ export function PlacementItemDialog({
                 onChange={(e) => set("estimated_seconds", e.target.value ? Number(e.target.value) : null)} />
               {err("estimated")}
             </div>
-            {itemTimeLimits && (
+            {itemTimeLimits && !bank && (
               <div className="space-y-1.5">
                 <Label htmlFor="placement-item-limit">{t("placement.item.timeLimit")}</Label>
                 <Input id="placement-item-limit" type="number" min={5} max={3600} value={draft.timeLimitSeconds ?? ""}
@@ -218,6 +252,16 @@ export function PlacementItemDialog({
             </label>
           )}
           {err("screening")}
+
+          {bank?.official && (
+            <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-2">
+              <Switch checked={meta.published} onCheckedChange={(v) => setMeta((m) => ({ ...m, published: v }))} className="mt-0.5" data-testid="placement-bank-published" />
+              <span>
+                <span className="block text-sm font-medium">{t("placement.bank.publishOfficial")}</span>
+                <span className="block text-xs text-muted-foreground">{t("placement.bank.publishOfficialHint")}</span>
+              </span>
+            </label>
+          )}
 
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>{t("placement.cancel")}</Button>
