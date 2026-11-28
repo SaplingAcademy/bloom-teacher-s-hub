@@ -184,8 +184,10 @@ export function emptyItemDraft(skill: PlacementSkill): ItemDraft {
   };
 }
 
-/** Rebuilds the editor draft from a saved item (only for editable formats). */
-export function itemDraftFrom(item: PlacementItem): ItemDraft {
+export type ItemDraftSource = Pick<PlacementItem, "item_type" | "level" | "prompt" | "options" | "answer_key" | "rubric" | "points" | "is_screening" | "estimated_seconds" | "metadata">;
+
+/** Rebuilds the editor draft from a saved question (placement item or bank question). */
+export function itemDraftFrom(item: ItemDraftSource): ItemDraft {
   const key = item.answer_key ?? {};
   return {
     item_type: item.item_type,
@@ -401,6 +403,17 @@ export async function duplicatePlacementTemplate(sourceId: string, ownerId: stri
   if (!detail) throw new Error("placement_template_not_found");
   const { template, sections, items } = detail;
   const ownVersion = template.teacher_id === ownerId;
+  // Question Bank origin (column added by the bank migration). Read separately so duplication keeps
+  // working when that migration is not applied yet; copied only when present.
+  const bankSources = new Map<string, string>();
+  if (items.length) {
+    const sourceRead = await supabase.from("placement_items").select("id,source_bank_item_id").eq("template_id", sourceId);
+    if (!sourceRead.error) {
+      for (const row of (sourceRead.data ?? []) as { id: string; source_bank_item_id: string | null }[]) {
+        if (row.source_bank_item_id) bankSources.set(row.id, row.source_bank_item_id);
+      }
+    }
+  }
   const { data, error } = await supabase.from("placement_templates").insert({
     title: `${template.title}${titleSuffix}`.slice(0, 160),
     description: template.description,
@@ -428,6 +441,7 @@ export async function duplicatePlacementTemplate(sourceId: string, ownerId: stri
         item_type: item.item_type, level: item.level, is_screening: item.is_screening, points: item.points,
         estimated_seconds: item.estimated_seconds, tags: item.tags ?? [], prompt: item.prompt, options: item.options,
         answer_key: item.answer_key, rubric: item.rubric, media: item.media, metadata: item.metadata ?? {}, active: item.active,
+        ...(bankSources.has(item.id) ? { source_bank_item_id: bankSources.get(item.id) } : {}),
       })));
       check(iErr);
     }

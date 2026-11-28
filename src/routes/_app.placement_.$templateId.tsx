@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Library, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { PlacementBankDialog } from "@/components/placement/PlacementBankDialog";
 import { PlacementItemDialog } from "@/components/placement/PlacementItemDialog";
 import { PlacementTemplateForm } from "@/components/placement/PlacementTemplateForm";
 import { PlacementConfirm, PlacementStatusBadge, PlacementUnavailable, placementErrorMessage } from "@/components/placement/PlacementShared";
@@ -19,6 +20,7 @@ import {
   updatePlacementItem, updatePlacementTemplate, updateSectionSettings,
   type ItemPayload, type PlacementItem, type PlacementSection, type TemplateDraftInput,
 } from "@/lib/placement";
+import type { BankImportResult } from "@/lib/placement-bank";
 
 export const Route = createFileRoute("/_app/placement_/$templateId")({
   head: () => ({ meta: [{ title: "Placement · Bloom" }] }),
@@ -60,6 +62,7 @@ function PlacementEditor({ templateId }: { templateId: string }) {
   const key = ["placement-template", user?.id, templateId] as const;
   const detail = useQuery({ queryKey: key, enabled: Boolean(user?.id), queryFn: () => fetchPlacementTemplate(templateId), retry: false });
   const [itemDialog, setItemDialog] = useState<{ section: PlacementSection; item: PlacementItem | null } | null>(null);
+  const [bankSection, setBankSection] = useState<PlacementSection | null>(null);
   const [confirm, setConfirm] = useState<null | { kind: "deleteItem"; item: PlacementItem } | { kind: "publish" } | { kind: "deleteTemplate" }>(null);
 
   const refresh = async () => {
@@ -118,6 +121,14 @@ function PlacementEditor({ templateId }: { templateId: string }) {
     onSuccess: async () => { toast.success(t("placement.deleted")); await queryClient.invalidateQueries({ queryKey: ["placement-templates", user?.id] }); void navigate({ to: "/placement" }); },
     onError,
   });
+
+  const onBankImported = async (result: BankImportResult) => {
+    setBankSection(null);
+    const added = result.inserted === 1 ? t("placement.bank.importedOne") : t("placement.bank.importedMany").replace("{n}", String(result.inserted));
+    const skipped = result.skipped_ids.length;
+    toast.success(skipped ? `${added} ${(skipped === 1 ? t("placement.bank.skippedOne") : t("placement.bank.skippedMany")).replace("{n}", String(skipped))}` : added);
+    await refresh();
+  };
 
   const sections = useMemo(() => [...(detail.data?.sections ?? [])].sort((a, b) => a.position - b.position), [detail.data]);
 
@@ -206,9 +217,14 @@ function PlacementEditor({ templateId }: { templateId: string }) {
                   )}
                 </div>
                 {canAdd && (
-                  <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => setItemDialog({ section, item: null })} data-testid={`placement-add-${section.skill}`}>
-                    <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t("placement.editor.addQuestion")}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => setBankSection(section)} data-testid={`placement-bank-${section.skill}`}>
+                      <Library className="h-3.5 w-3.5" aria-hidden="true" /> {t("placement.editor.addFromBank")}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs" onClick={() => setItemDialog({ section, item: null })} data-testid={`placement-add-${section.skill}`}>
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t("placement.editor.createQuestion")}
+                    </Button>
+                  </div>
                 )}
               </div>
               {editable && timing.mode === "skill" && (
@@ -257,6 +273,10 @@ function PlacementEditor({ templateId }: { templateId: string }) {
         <PlacementItemDialog open skill={itemDialog.section.skill} item={itemDialog.item} itemTimeLimits={timing.mode === "item"}
           busy={saveItem.isPending} onClose={() => setItemDialog(null)}
           onSave={(payload) => saveItem.mutate({ section: itemDialog.section, item: itemDialog.item, payload })} />
+      )}
+
+      {bankSection && (
+        <PlacementBankDialog open section={bankSection} onClose={() => setBankSection(null)} onImported={(result) => void onBankImported(result)} />
       )}
 
       <PlacementConfirm open={confirm?.kind === "deleteItem"} title={t("placement.editor.confirmDeleteQuestionTitle")} body={t("placement.editor.confirmDeleteQuestionBody")}
